@@ -1,0 +1,76 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Transaction } from "@shared/schema";
+import { TransactionList } from "@/components/dashboard/transaction-list";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { AddTransactionDialog } from "@/components/transactions/add-transaction-dialog";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+
+export default function TransactionsPage() {
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: transactions = [], isLoading } = useQuery<Transaction[]>({
+    queryKey: ["/api/transactions"],
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/transactions/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({
+        title: "Success",
+        description: "Transaction deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-20" />
+        <Skeleton className="h-96" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Transactions</h1>
+          <p className="text-muted-foreground">Manage all your income and expenses</p>
+        </div>
+        <Button onClick={() => setShowAddDialog(true)} data-testid="button-add-transaction-page">
+          <Plus className="h-4 w-4 mr-2" />
+          Add Transaction
+        </Button>
+      </div>
+
+      <TransactionList
+        transactions={transactions}
+        onDelete={(id) => deleteMutation.mutate(id)}
+        showDelete={true}
+      />
+
+      <AddTransactionDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+      />
+    </div>
+  );
+}
