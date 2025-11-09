@@ -151,6 +151,29 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### Security Hardening (November 9, 2025)
+
+**Critical Security Fixes:**
+- **userId Injection Prevention:** All PATCH endpoints now strip `userId` from request bodies to prevent users from reassigning ownership of records
+  - Affected routes: transactions, wishlist, settings, budgets
+  - Pattern: `const { userId, ...sanitizedBody } = req.body;`
+  
+- **Foreign Key Ownership Verification:** Added cross-tenant association prevention
+  - `categoryId` ownership verified in budgets POST/PATCH (prevents linking to other users' categories)
+  - `walletId` ownership verified in transactions POST/PATCH (prevents linking to other users' wallets)
+  - Returns 400 "Invalid category/wallet" on ownership failure
+
+- **Ownership Checks Verified:** Confirmed all PATCH/DELETE routes verify record ownership
+  - Pattern: `if (!record || record.userId !== req.user.id) return 404`
+  - Routes protected: transactions, wallets, categories, recurring, wishlist, budgets
+  - Prevents privilege escalation attacks
+
+**Security Architecture:**
+- All POST endpoints force `userId` from authenticated session (`req.user.id`)
+- All PATCH endpoints sanitize `userId` before validation
+- Foreign key references verified for ownership before persistence
+- Consistent 404 responses for both "not found" and "not yours" (prevents entity existence leaks)
+
 ### Budget Management Feature (November 2025)
 
 **Implementation:**
