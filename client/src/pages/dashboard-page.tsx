@@ -62,19 +62,19 @@ export default function DashboardPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <StatCard
           title="Total Income"
-          value={`$${stats?.totalIncome.toFixed(2) || "0.00"}`}
+          value={`$${stats?.totalIncome?.toFixed(2) ?? "0.00"}`}
           icon={TrendingUp}
           className="border-l-4 border-l-green-500"
         />
         <StatCard
           title="Total Expense"
-          value={`$${stats?.totalExpense.toFixed(2) || "0.00"}`}
+          value={`$${stats?.totalExpense?.toFixed(2) ?? "0.00"}`}
           icon={TrendingDown}
           className="border-l-4 border-l-red-500"
         />
         <StatCard
           title="Balance"
-          value={`$${stats?.balance.toFixed(2) || "0.00"}`}
+          value={`$${stats?.balance?.toFixed(2) ?? "0.00"}`}
           icon={Wallet}
           className="border-l-4 border-l-primary"
         />

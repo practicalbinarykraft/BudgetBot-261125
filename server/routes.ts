@@ -64,7 +64,18 @@ export function registerRoutes(app: Express) {
       }
       
       // Validate update data
-      const data = insertTransactionSchema.partial().parse(req.body);
+      let data = insertTransactionSchema.partial().parse(req.body);
+      
+      // Recompute amountUsd if amount or currency changed
+      if (data.amount || data.currency) {
+        const amount = data.amount ? parseFloat(data.amount) : parseFloat(transaction.amount);
+        const currency = data.currency || transaction.currency || "USD";
+        const amountUsd = currency !== "USD" 
+          ? convertToUSD(amount, currency).toFixed(2)
+          : amount.toFixed(2);
+        data = { ...data, amountUsd };
+      }
+      
       const updated = await storage.updateTransaction(id, data);
       res.json(updated);
     } catch (error: any) {

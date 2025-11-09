@@ -42,11 +42,12 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
       date: new Date().toISOString().split("T")[0],
       type: "expense",
       amount: "",
-      amountUsd: "",
+      amountUsd: "0",
       description: "",
       category: "",
       currency: "USD",
       source: "manual",
+      walletId: undefined,
     },
   });
 
@@ -81,6 +82,8 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
   });
 
   const onSubmit = (data: FormData) => {
+    console.log("Form submitted with data:", data);
+    console.log("Form errors:", form.formState.errors);
     createMutation.mutate(data);
   };
 
@@ -154,7 +157,7 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category (Optional)</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value || ""}>
                     <FormControl>
                       <SelectTrigger data-testid="select-category">
                         <SelectValue placeholder="Select category" />

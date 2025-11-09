@@ -11,17 +11,29 @@ export default function AIAnalysisPage() {
 
   const handleAnalyze = async () => {
     setIsAnalyzing(true);
-    // Simulated AI analysis
-    setTimeout(() => {
-      setAnalysis(`Based on your spending patterns over the last 30 days, here are some insights:
-
-• Your monthly expenses average $2,450, which is 15% higher than last month
-• Largest spending category: Food & Dining ($850)
-• Recommendation: Consider meal planning to reduce dining out expenses
-• You're on track to meet your savings goal for the month
-• Alert: Subscription costs have increased by $45 this month`);
+    try {
+      const response = await fetch("/api/ai/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Analysis failed");
+      }
+      
+      const data = await response.json();
+      setAnalysis(data.analysis);
+    } catch (error: any) {
+      // Graceful fallback if API key is missing
+      if (error.message.includes("API key not configured")) {
+        setAnalysis("⚠️ AI Analysis is not available yet.\n\nTo enable AI-powered insights, please add your Anthropic API key in your Replit profile settings (BYOK - Bring Your Own Key).\n\n1. Visit https://console.anthropic.com/\n2. Create an API key\n3. Add it to your Replit profile settings\n4. Restart the application\n\nOnce configured, you'll get personalized spending insights and recommendations!");
+      } else {
+        setAnalysis(`Error: ${error.message}`);
+      }
+    } finally {
       setIsAnalyzing(false);
-    }, 2000);
+    }
   };
 
   return (
