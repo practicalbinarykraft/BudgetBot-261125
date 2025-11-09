@@ -60,6 +60,14 @@ export function registerRoutes(app: Express) {
         userId: req.user.id,
       });
       
+      // 🔒 Security: Verify walletId ownership if provided
+      if (data.walletId) {
+        const wallet = await storage.getWalletById(data.walletId);
+        if (!wallet || wallet.userId !== req.user.id) {
+          return res.status(400).json({ error: "Invalid wallet" });
+        }
+      }
+      
       // 🔄 Hybrid migration: populate categoryId from category name (server-side only!)
       if (data.category) {
         const category = await storage.getCategoryByNameAndUserId(data.category, req.user.id);
@@ -86,6 +94,14 @@ export function registerRoutes(app: Express) {
       
       // Validate update data
       let data = insertTransactionSchema.partial().parse(sanitizedBody);
+      
+      // 🔒 Security: Verify walletId ownership if being updated
+      if (data.walletId) {
+        const wallet = await storage.getWalletById(data.walletId);
+        if (!wallet || wallet.userId !== req.user.id) {
+          return res.status(400).json({ error: "Invalid wallet" });
+        }
+      }
       
       // Recompute amountUsd if amount or currency changed
       if (data.amount || data.currency) {
@@ -352,6 +368,14 @@ export function registerRoutes(app: Express) {
       // Parse sanitized input (userId NOT in schema anymore)
       const validated = insertBudgetSchema.parse(sanitizedBody);
       
+      // 🔒 Security: Verify categoryId ownership if provided
+      if (validated.categoryId) {
+        const category = await storage.getCategoryById(validated.categoryId);
+        if (!category || category.userId !== req.user.id) {
+          return res.status(400).json({ error: "Invalid category" });
+        }
+      }
+      
       // Add userId from authenticated session (trusted source)
       const data = { ...validated, userId: req.user.id };
       
@@ -377,6 +401,14 @@ export function registerRoutes(app: Express) {
       
       // Parse sanitized input (userId NOT in schema anymore)
       const data = insertBudgetSchema.partial().parse(sanitizedBody);
+      
+      // 🔒 Security: Verify categoryId ownership if being updated
+      if (data.categoryId) {
+        const category = await storage.getCategoryById(data.categoryId);
+        if (!category || category.userId !== req.user.id) {
+          return res.status(400).json({ error: "Invalid category" });
+        }
+      }
       
       // Update budget (userId already verified above, no need to pass it)
       const updated = await storage.updateBudget(id, data);
