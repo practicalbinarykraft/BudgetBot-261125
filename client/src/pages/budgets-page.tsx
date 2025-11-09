@@ -1,171 +1,28 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Budget, Category, Transaction } from "@shared/schema";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Pencil, TrendingDown, AlertCircle } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, AlertCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertBudgetSchema } from "@shared/schema";
 import { z } from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-// ⏰ Budget calculation helpers extracted to separate file for reusability
 import { format } from "date-fns";
-import { getBudgetPeriodDates, calculateBudgetProgress } from "@/lib/budget-helpers";
+import { calculateBudgetProgress } from "@/lib/budget-helpers";
+import { BudgetMissingCategoryCard } from "@/components/budgets/BudgetMissingCategoryCard";
+import { BudgetCard } from "@/components/budgets/BudgetCard";
+import { BudgetFormDialog } from "@/components/budgets/BudgetFormDialog";
+import { BudgetEmptyState } from "@/components/budgets/BudgetEmptyState";
 
 type FormData = z.infer<typeof insertBudgetSchema>;
-
-// 🚨 MissingCategory card shown when category is deleted before CASCADE completes
-// Edit/Delete disabled - user must wait for automatic CASCADE cleanup
-function MissingCategoryBudgetCard({
-  budget,
-}: {
-  budget: Budget;
-}) {
-  const limitAmount = parseFloat(budget.limitAmount);
-  
-  return (
-    <Card className="border-destructive/50 bg-destructive/5" data-testid={`budget-missing-${budget.id}`}>
-      <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="h-3 w-3 rounded-full flex-shrink-0 bg-destructive" />
-          <h3 className="font-semibold truncate text-destructive">Unknown Category</h3>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="text-sm">
-            This budget's category was deleted. This budget will be automatically removed. Please refresh the page.
-          </AlertDescription>
-        </Alert>
-        
-        <div className="flex items-center justify-between text-sm opacity-60">
-          <span className="text-muted-foreground">
-            {budget.period === "week" ? "Weekly" : budget.period === "month" ? "Monthly" : "Yearly"} limit
-          </span>
-          <span className="font-mono font-semibold">${limitAmount.toFixed(2)}</span>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function BudgetCard({
-  budget,
-  category,
-  progress,
-  onEdit,
-  onDelete,
-}: {
-  budget: Budget;
-  category?: Category;
-  progress: { spent: number; percentage: number; status: "ok" | "warning" | "exceeded" };
-  onEdit: () => void;
-  onDelete: () => void;
-}) {
-  const limitAmount = parseFloat(budget.limitAmount);
-  
-  const statusColors = {
-    ok: "bg-green-500",
-    warning: "bg-yellow-500",
-    exceeded: "bg-red-500",
-  };
-
-  const statusMessages = {
-    ok: "Within budget",
-    warning: "Approaching limit",
-    exceeded: "Budget exceeded",
-  };
-
-  return (
-    <Card className="hover-elevate" data-testid={`budget-${budget.id}`}>
-      <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <div
-            className="h-3 w-3 rounded-full flex-shrink-0 bg-muted-foreground"
-            style={category?.color ? { backgroundColor: category.color } : undefined}
-          />
-          <h3 className="font-semibold truncate">{category?.name || "Unknown"}</h3>
-        </div>
-        <div className="flex gap-1 flex-shrink-0">
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onEdit}
-            data-testid={`button-edit-budget-${budget.id}`}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onDelete}
-            data-testid={`button-delete-budget-${budget.id}`}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">
-            {budget.period === "week" ? "Weekly" : budget.period === "month" ? "Monthly" : "Yearly"} limit
-          </span>
-          <span className="font-mono font-semibold">${limitAmount.toFixed(2)}</span>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Spent</span>
-            <span className={`font-mono font-semibold ${progress.status === "exceeded" ? "text-red-600 dark:text-red-400" : ""}`}>
-              ${progress.spent.toFixed(2)}
-            </span>
-          </div>
-          <Progress
-            value={Math.min(progress.percentage, 100)}
-            className="h-2"
-            indicatorClassName={statusColors[progress.status]}
-            data-testid={`progress-budget-${budget.id}`}
-          />
-          <div className="flex items-center justify-between text-xs">
-            <span className={`${progress.status === "exceeded" ? "text-red-600 dark:text-red-400 font-semibold" : "text-muted-foreground"}`}>
-              {progress.percentage.toFixed(0)}% used
-            </span>
-            <span className="text-muted-foreground">
-              ${Math.max(0, limitAmount - progress.spent).toFixed(2)} remaining
-            </span>
-          </div>
-        </div>
-
-        {progress.status !== "ok" && (
-          <div className="flex items-center gap-2 text-xs">
-            <AlertCircle className={`h-3 w-3 flex-shrink-0 ${
-              progress.status === "exceeded" ? "text-red-600 dark:text-red-400" : "text-yellow-600 dark:text-yellow-400"
-            }`} />
-            <span className={progress.status === "exceeded" ? "text-red-600 dark:text-red-400" : "text-yellow-600 dark:text-yellow-400"}>
-              {statusMessages[progress.status]}
-            </span>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
 
 export default function BudgetsPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
-  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -188,7 +45,7 @@ export default function BudgetsPage() {
     defaultValues: {
       // userId removed - backend handles it from session
       categoryId: 0,
-      limitAmount: "0",
+      limitAmount: 0,
       period: "month",
       startDate: format(new Date(), "yyyy-MM-dd"),
     },
@@ -208,7 +65,7 @@ export default function BudgetsPage() {
       // Reset form to default values (userId removed)
       form.reset({
         categoryId: 0,
-        limitAmount: "0",
+        limitAmount: 0,
         period: "month" as const,
         startDate: format(new Date(), "yyyy-MM-dd"),
       });
@@ -279,7 +136,7 @@ export default function BudgetsPage() {
     // Fill form with budget data (userId removed - not editable)
     form.reset({
       categoryId: budget.categoryId,
-      limitAmount: budget.limitAmount,
+      limitAmount: parseFloat(budget.limitAmount), // Convert DB string to number
       period: budget.period as "week" | "month" | "year",
       startDate: budget.startDate,
     });
@@ -291,7 +148,7 @@ export default function BudgetsPage() {
     // Reset form to default values (userId removed - handled by backend)
     form.reset({
       categoryId: 0,
-      limitAmount: "0",
+      limitAmount: 0,
       period: "month" as const,
       startDate: format(new Date(), "yyyy-MM-dd"),
     });
@@ -342,19 +199,7 @@ export default function BudgetsPage() {
       )}
 
       {budgets.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <TrendingDown className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No budgets yet</h3>
-            <p className="text-muted-foreground mb-4">
-              Create your first budget to start tracking your spending
-            </p>
-            <Button onClick={handleAddNew} data-testid="button-add-first-budget">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Budget
-            </Button>
-          </CardContent>
-        </Card>
+        <BudgetEmptyState onAddClick={handleAddNew} />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {budgets.map((budget) => {
@@ -364,7 +209,7 @@ export default function BudgetsPage() {
             // Edit/Delete disabled - CASCADE will clean up automatically
             if (!category) {
               return (
-                <MissingCategoryBudgetCard
+                <BudgetMissingCategoryCard
                   key={budget.id}
                   budget={budget}
                 />
@@ -387,126 +232,15 @@ export default function BudgetsPage() {
         </div>
       )}
 
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent data-testid="dialog-budget-form">
-          <DialogHeader>
-            <DialogTitle>{editingBudget ? "Edit Budget" : "Add Budget"}</DialogTitle>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="categoryId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Category</FormLabel>
-                    <Select
-                      onValueChange={(value) => field.onChange(parseInt(value))}
-                      value={field.value?.toString() || ""}
-                    >
-                      <FormControl>
-                        <SelectTrigger data-testid="select-category">
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {expenseCategories.map((category) => (
-                          <SelectItem key={category.id} value={category.id.toString()}>
-                            <div className="flex items-center gap-2">
-                              <div
-                                className="h-3 w-3 rounded-full bg-muted-foreground"
-                                style={category.color ? { backgroundColor: category.color } : undefined}
-                              />
-                              {category.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="limitAmount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Limit Amount (USD)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="100.00"
-                        {...field}
-                        data-testid="input-limit"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="period"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Period</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-period">
-                          <SelectValue placeholder="Select period" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="week">Weekly</SelectItem>
-                        <SelectItem value="month">Monthly</SelectItem>
-                        <SelectItem value="year">Yearly</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="startDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Start Date</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} data-testid="input-start-date" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="flex gap-2 justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowAddDialog(false)}
-                  data-testid="button-cancel"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                  data-testid="button-submit"
-                >
-                  {editingBudget ? "Update" : "Create"}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      <BudgetFormDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        form={form}
+        onSubmit={onSubmit}
+        editingBudget={!!editingBudget}
+        expenseCategories={expenseCategories}
+        isPending={createMutation.isPending || updateMutation.isPending}
+      />
     </div>
   );
 }
