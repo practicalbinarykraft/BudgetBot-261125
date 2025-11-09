@@ -8,6 +8,7 @@ Budget Buddy is a solo personal finance management application that allows users
 - Transaction tracking (income/expense)
 - Multi-wallet support (cards, cash, crypto)
 - Category management
+- Budget tracking with spending limits (weekly/monthly/yearly)
 - Recurring payments planning
 - Wishlist for desired purchases
 - AI-powered spending analysis (via Anthropic Claude)
@@ -66,6 +67,7 @@ Preferred communication style: Simple, everyday language.
 - Transactions table with multi-currency support (stores both original and USD amounts)
 - Wallets table for different account types
 - Categories table for transaction classification
+- Budgets table for category-based spending limits with period tracking
 - Recurring payments table for scheduled transactions
 - Wishlist table for savings goals
 - Settings table for user preferences
@@ -146,3 +148,34 @@ Preferred communication style: Simple, everyday language.
 **Password Security:** BCrypt with automatic salt generation
 
 **CORS & Trust Proxy:** Configured for production deployment with secure cookies
+
+## Recent Changes
+
+### Budget Management Feature (November 2025)
+
+**Implementation:**
+- Complete budget tracking system with database schema, API endpoints, and full-featured UI
+- Budgets table with categoryId foreign key (migrated from text category to integer categoryId)
+- Budget periods: week, month, year with automatic date range calculation
+- Progress tracking based on expense transactions in USD within the budget period
+- Color-coded status indicators: green (under 80%), yellow (80-100% warning), red (exceeded 100%)
+
+**User Interface:**
+- `/budgets` page with create/edit/delete functionality
+- Budget cards showing progress bars with spent/limit amounts and percentages
+- Alert components on dashboard showing exceeded and warning budgets
+- Navigation link in sidebar with TrendingDown icon
+- Empty state with call-to-action for new users
+
+**Technical Details:**
+- Enhanced Progress component with `indicatorClassName` prop for custom colors
+- Budget progress calculation using date-fns for period bounds (startOfWeek, startOfMonth, startOfYear)
+- Expense-only filtering with category name matching
+- Security: userId sanitization in PATCH endpoint to prevent ownership hijacking
+- Comprehensive test IDs on all interactive elements
+
+**Architecture Notes:**
+- Budget-category relationship: budgets.categoryId references categories.id
+- Transaction matching by category name (transactions.category is text field)
+- Fixed date ranges (non-rolling): budget periods calculated from startDate
+- Warning thresholds: 80% (yellow alert), 100% (red alert and exceeded status)
