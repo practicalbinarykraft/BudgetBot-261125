@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { WishlistItem } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Heart, Check } from "lucide-react";
+import { Plus, Trash2, Check } from "lucide-react";
+import { WishlistEmptyState } from "@/components/wishlist/WishlistEmptyState";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -141,13 +142,7 @@ export default function WishlistPage() {
       </div>
 
       {wishlist.length === 0 ? (
-        <Card>
-          <CardContent className="text-center py-12">
-            <Heart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Your wishlist is empty</p>
-            <p className="text-sm text-muted-foreground mt-1">Add items you want to save up for</p>
-          </CardContent>
-        </Card>
+        <WishlistEmptyState />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {wishlist.map((item) => (
@@ -269,7 +264,7 @@ export default function WishlistPage() {
                   <FormItem>
                     <FormLabel>Target Date (Optional)</FormLabel>
                     <FormControl>
-                      <Input type="date" data-testid="input-wishlist-date" {...field} />
+                      <Input type="date" data-testid="input-wishlist-date" {...field} value={field.value ?? ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

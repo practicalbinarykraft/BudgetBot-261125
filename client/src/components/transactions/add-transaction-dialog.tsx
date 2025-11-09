@@ -82,8 +82,6 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
   });
 
   const onSubmit = (data: FormData) => {
-    console.log("Form submitted with data:", data);
-    console.log("Form errors:", form.formState.errors);
     createMutation.mutate(data);
   };
 

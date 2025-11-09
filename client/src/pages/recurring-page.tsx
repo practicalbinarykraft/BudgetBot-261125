@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Recurring } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Repeat } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { RecurringEmptyState } from "@/components/recurring/RecurringEmptyState";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -121,13 +122,7 @@ export default function RecurringPage() {
       </div>
 
       {recurring.length === 0 ? (
-        <Card>
-          <CardContent className="text-center py-12">
-            <Repeat className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No recurring payments yet</p>
-            <p className="text-sm text-muted-foreground mt-1">Add your subscriptions and regular bills</p>
-          </CardContent>
-        </Card>
+        <RecurringEmptyState />
       ) : (
         <div className="space-y-3">
           {recurring.map((item) => (
