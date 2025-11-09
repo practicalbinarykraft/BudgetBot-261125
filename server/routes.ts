@@ -81,8 +81,8 @@ export function registerRoutes(app: Express) {
         return res.status(404).json({ error: "Transaction not found" });
       }
       
-      // 🔒 Security: Strip categoryId from client - always resolve server-side!
-      const { categoryId, ...sanitizedBody } = req.body;
+      // 🔒 Security: Strip categoryId AND userId from client - always resolve server-side!
+      const { categoryId, userId, ...sanitizedBody } = req.body;
       
       // Validate update data
       let data = insertTransactionSchema.partial().parse(sanitizedBody);
@@ -266,8 +266,11 @@ export function registerRoutes(app: Express) {
         return res.status(404).json({ error: "Wishlist item not found" });
       }
       
+      // 🔒 Security: Strip userId from client payload
+      const { userId, ...sanitizedBody } = req.body;
+      
       // Validate update data
-      const data = insertWishlistSchema.partial().parse(req.body);
+      const data = insertWishlistSchema.partial().parse(sanitizedBody);
       const updated = await storage.updateWishlist(id, data);
       res.json(updated);
     } catch (error: any) {
@@ -310,7 +313,10 @@ export function registerRoutes(app: Express) {
 
   app.patch("/api/settings", requireAuth, async (req, res) => {
     try {
-      const data = insertSettingsSchema.partial().parse(req.body);
+      // 🔒 Security: Strip userId from client payload
+      const { userId, ...sanitizedBody } = req.body;
+      
+      const data = insertSettingsSchema.partial().parse(sanitizedBody);
       let settings = await storage.getSettingsByUserId(req.user.id);
       
       if (!settings) {
