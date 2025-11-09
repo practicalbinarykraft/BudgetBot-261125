@@ -1,13 +1,30 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sparkles, TrendingUp, AlertCircle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+
+interface FinancialHealthScore {
+  score: number;
+  status: string;
+  metrics: {
+    budgetAdherence: number;
+    cashflowBalance: number;
+    expenseStability: number;
+  };
+}
 
 export default function AIAnalysisPage() {
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  // Fetch real financial health score
+  const { data: healthScore, isLoading: isLoadingHealth } = useQuery<FinancialHealthScore>({
+    queryKey: ["/api/financial-health"],
+  });
 
   const handleAnalyze = async () => {
     setIsAnalyzing(true);
@@ -66,8 +83,33 @@ export default function AIAnalysisPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold text-green-600">78/100</div>
-            <p className="text-sm text-muted-foreground mt-2">Good financial health</p>
+            {isLoadingHealth ? (
+              <div className="space-y-2">
+                <Skeleton className="h-12 w-32" data-testid="skeleton-health-score" />
+                <Skeleton className="h-4 w-48" />
+              </div>
+            ) : healthScore ? (
+              <>
+                <div 
+                  className={`text-4xl font-bold ${
+                    healthScore.score >= 80 ? 'text-green-600' :
+                    healthScore.score >= 60 ? 'text-blue-600' :
+                    healthScore.score >= 40 ? 'text-yellow-600' :
+                    'text-red-600'
+                  }`}
+                  data-testid="text-health-score"
+                >
+                  {healthScore.score}/100
+                </div>
+                <p className="text-sm text-muted-foreground mt-2" data-testid="text-health-status">
+                  {healthScore.status}
+                </p>
+              </>
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                No data available yet. Add some transactions to see your score.
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

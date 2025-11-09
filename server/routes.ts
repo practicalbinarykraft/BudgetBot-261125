@@ -463,6 +463,24 @@ export function registerRoutes(app: Express) {
     }
   }));
 
+  // Financial Health Score
+  app.get("/api/financial-health", withAuth(async (req, res) => {
+    try {
+      const { calculateFinancialHealth } = await import("./services/financial-health");
+      let daysWindow = 30;
+      if (req.query.days) {
+        const parsed = parseInt(String(req.query.days));
+        if (!isNaN(parsed) && parsed > 0) {
+          daysWindow = parsed;
+        }
+      }
+      const result = await calculateFinancialHealth(storage, req.user.id, daysWindow);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }));
+
   // AI Analysis
   app.post("/api/ai/analyze", withAuth(async (req, res) => {
     try {
