@@ -44,20 +44,27 @@ export function registerRoutes(app: Express) {
 
   app.post("/api/transactions", requireAuth, async (req, res) => {
     try {
-      const { amount, currency, ...rest } = req.body;
+      // 🔒 Security: Strip categoryId from client - always resolve server-side!
+      const { amount, currency, categoryId, ...rest } = req.body;
       
       // Convert to USD for storage
       const amountUsd = currency && currency !== "USD" 
         ? convertToUSD(parseFloat(amount), currency).toFixed(2)
         : amount;
       
-      const data = insertTransactionSchema.parse({
+      let data = insertTransactionSchema.parse({
         ...rest,
         amount,
         amountUsd,
         currency: currency || "USD",
         userId: req.user.id,
       });
+      
+      // 🔄 Hybrid migration: populate categoryId from category name (server-side only!)
+      if (data.category) {
+        const category = await storage.getCategoryByNameAndUserId(data.category, req.user.id);
+        data = { ...data, categoryId: category?.id ?? null };
+      }
       
       const transaction = await storage.createTransaction(data);
       res.json(transaction);
@@ -74,8 +81,11 @@ export function registerRoutes(app: Express) {
         return res.status(404).json({ error: "Transaction not found" });
       }
       
+      // 🔒 Security: Strip categoryId from client - always resolve server-side!
+      const { categoryId, ...sanitizedBody } = req.body;
+      
       // Validate update data
-      let data = insertTransactionSchema.partial().parse(req.body);
+      let data = insertTransactionSchema.partial().parse(sanitizedBody);
       
       // Recompute amountUsd if amount or currency changed
       if (data.amount || data.currency) {
@@ -85,6 +95,12 @@ export function registerRoutes(app: Express) {
           ? convertToUSD(amount, currency).toFixed(2)
           : amount.toFixed(2);
         data = { ...data, amountUsd };
+      }
+      
+      // 🔄 Hybrid migration: populate categoryId from category name (server-side only!)
+      if (data.category) {
+        const category = await storage.getCategoryByNameAndUserId(data.category, req.user.id);
+        data = { ...data, categoryId: category?.id ?? null };
       }
       
       const updated = await storage.updateTransaction(id, data);

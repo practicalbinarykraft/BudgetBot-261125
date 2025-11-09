@@ -22,7 +22,9 @@ export const transactions = pgTable("transactions", {
   type: text("type").notNull(), // 'income' or 'expense'
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   description: text("description").notNull(),
-  category: text("category"),
+  // 🔄 Hybrid migration: new transactions use categoryId, legacy uses text category
+  category: text("category"), // Legacy field - will be deprecated
+  categoryId: integer("category_id").references(() => categories.id, { onDelete: "set null" }), // Nullable for backward compat
   currency: text("currency").default("USD"),
   amountUsd: decimal("amount_usd", { precision: 10, scale: 2 }).notNull(),
   source: text("source").default("manual"), // 'manual', 'telegram', 'ocr'
@@ -241,4 +243,8 @@ export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;
 
 export type InsertBudget = z.infer<typeof insertBudgetSchema>;
+
+// 🔐 Helper type for storage layer: public insert schemas omit userId for security,
+// but storage needs userId from authenticated session
+export type OwnedInsert<T> = T & { userId: number };
 export type Budget = typeof budgets.$inferSelect;

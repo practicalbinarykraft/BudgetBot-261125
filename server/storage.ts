@@ -14,7 +14,8 @@ import {
   Settings,
   InsertSettings,
   Budget,
-  InsertBudget
+  InsertBudget,
+  OwnedInsert
 } from "@shared/schema";
 
 export interface IStorage {
@@ -40,6 +41,7 @@ export interface IStorage {
   // Categories
   getCategoriesByUserId(userId: number): Promise<Category[]>;
   getCategoryById(id: number): Promise<Category | null>;
+  getCategoryByNameAndUserId(name: string, userId: number): Promise<Category | null>;
   createCategory(category: InsertCategory): Promise<Category>;
   updateCategory(id: number, category: Partial<InsertCategory>): Promise<Category>;
   deleteCategory(id: number): Promise<void>;
@@ -66,7 +68,7 @@ export interface IStorage {
   // Budgets
   getBudgetsByUserId(userId: number): Promise<Budget[]>;
   getBudgetById(id: number): Promise<Budget | null>;
-  createBudget(budget: InsertBudget): Promise<Budget>;
+  createBudget(budget: OwnedInsert<InsertBudget>): Promise<Budget>;
   updateBudget(id: number, budget: Partial<InsertBudget>): Promise<Budget>;
   deleteBudget(id: number): Promise<void>;
 }
@@ -82,7 +84,7 @@ import {
   settings,
   budgets
 } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export class DatabaseStorage implements IStorage {
   // Users
@@ -156,6 +158,15 @@ export class DatabaseStorage implements IStorage {
 
   async getCategoryById(id: number): Promise<Category | null> {
     const result = await db.select().from(categories).where(eq(categories.id, id)).limit(1);
+    return result[0] || null;
+  }
+
+  async getCategoryByNameAndUserId(name: string, userId: number): Promise<Category | null> {
+    const result = await db
+      .select()
+      .from(categories)
+      .where(and(eq(categories.name, name), eq(categories.userId, userId)))
+      .limit(1);
     return result[0] || null;
   }
 
@@ -247,7 +258,7 @@ export class DatabaseStorage implements IStorage {
     return result[0] || null;
   }
 
-  async createBudget(budgetData: InsertBudget): Promise<Budget> {
+  async createBudget(budgetData: OwnedInsert<InsertBudget>): Promise<Budget> {
     const result = await db.insert(budgets).values(budgetData).returning();
     return result[0];
   }

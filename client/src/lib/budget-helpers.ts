@@ -58,14 +58,17 @@ export function getBudgetPeriodDates(budget: Budget): { start: Date; end: Date }
 /**
  * Calculate budget spending progress and status
  * 
+ * 🔄 Hybrid matching: Prefers categoryId (new transactions), 
+ * falls back to category name (legacy transactions)
+ * 
  * Filters transactions by:
- * - Matching category name
+ * - Matching categoryId (preferred) OR category name (fallback)
  * - Type = "expense"
  * - Date within budget period
  * 
- * @param budget - Budget with limitAmount and period info
+ * @param budget - Budget with categoryId and limitAmount
  * @param transactions - All user transactions
- * @param categoryName - Category name to filter by
+ * @param categoryName - Category name for fallback matching (legacy support)
  * @returns Object with spent amount, percentage, and status
  * 
  * Status thresholds:
@@ -76,20 +79,27 @@ export function getBudgetPeriodDates(budget: Budget): { start: Date; end: Date }
 export function calculateBudgetProgress(
   budget: Budget,
   transactions: Transaction[],
-  categoryName: string
+  categoryName: string // Still needed for legacy transactions without categoryId
 ): { spent: number; percentage: number; status: "ok" | "warning" | "exceeded" } {
   const { start, end } = getBudgetPeriodDates(budget);
   
-  // Filter transactions by category, type, and date range
+  // 🔄 Hybrid filter: Match by categoryId (new) OR category text (legacy)
   const categoryTransactions = transactions.filter((t) => {
     // ⏰ parseISO prevents timezone bugs when comparing dates
     const transactionDate = parseISO(t.date);
-    return (
-      t.category === categoryName &&
-      t.type === "expense" &&
-      transactionDate >= start &&
-      transactionDate <= end
-    );
+    
+    // Check date and type first
+    if (t.type !== "expense" || transactionDate < start || transactionDate > end) {
+      return false;
+    }
+    
+    // Prefer categoryId matching (new transactions)
+    if (t.categoryId !== undefined && t.categoryId !== null) {
+      return t.categoryId === budget.categoryId;
+    }
+    
+    // Fallback to text category matching (legacy transactions)
+    return t.category === categoryName;
   });
 
   // Sum up spending in USD
