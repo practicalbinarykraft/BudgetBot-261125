@@ -69,7 +69,10 @@ export default function CategoriesPage() {
       await apiRequest("DELETE", `/api/categories/${id}`);
     },
     onSuccess: () => {
+      // 🔄 CASCADE: Category deletion also removes budgets via DB CASCADE DELETE
+      // Invalidate both queries to ensure UI stays consistent
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/budgets"] });
       toast({
         title: "Success",
         description: "Category deleted successfully",
@@ -127,7 +130,7 @@ export default function CategoriesPage() {
                   <div className="flex items-center gap-3">
                     <div
                       className="w-10 h-10 rounded-md flex items-center justify-center"
-                      style={{ backgroundColor: category.color }}
+                      style={{ backgroundColor: category.color ?? undefined }}
                     >
                       <Tag className="w-5 h-5 text-white" />
                     </div>
@@ -166,7 +169,7 @@ export default function CategoriesPage() {
                   <div className="flex items-center gap-3">
                     <div
                       className="w-10 h-10 rounded-md flex items-center justify-center"
-                      style={{ backgroundColor: category.color }}
+                      style={{ backgroundColor: category.color ?? undefined }}
                     >
                       <Tag className="w-5 h-5 text-white" />
                     </div>
@@ -247,7 +250,7 @@ export default function CategoriesPage() {
                   <FormItem>
                     <FormLabel>Color</FormLabel>
                     <FormControl>
-                      <Input type="color" data-testid="input-category-color" {...field} />
+                      <Input type="color" data-testid="input-category-color" {...field} value={field.value ?? undefined} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
