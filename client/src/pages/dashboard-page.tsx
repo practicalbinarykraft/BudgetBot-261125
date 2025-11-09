@@ -3,6 +3,7 @@ import { Transaction } from "@shared/schema";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { TransactionList } from "@/components/dashboard/transaction-list";
 import { SpendingChart } from "@/components/dashboard/spending-chart";
+import { DateFilter, DateFilterValue, getDateRange } from "@/components/dashboard/date-filter";
 import { TrendingUp, TrendingDown, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -12,9 +13,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [dateFilter, setDateFilter] = useState<DateFilterValue>("month");
+
+  const dateRange = getDateRange(dateFilter);
+  const queryParams = dateRange 
+    ? `?from=${dateRange.from}&to=${dateRange.to}` 
+    : "";
 
   const { data: transactions = [], isLoading } = useQuery<Transaction[]>({
-    queryKey: ["/api/transactions"],
+    queryKey: ["/api/transactions", dateRange],
+    queryFn: async () => {
+      const res = await fetch(`/api/transactions${queryParams}`);
+      if (!res.ok) throw new Error("Failed to fetch transactions");
+      return res.json();
+    },
   });
 
   const { data: stats } = useQuery<{
@@ -22,7 +34,12 @@ export default function DashboardPage() {
     totalExpense: number;
     balance: number;
   }>({
-    queryKey: ["/api/stats"],
+    queryKey: ["/api/stats", dateRange],
+    queryFn: async () => {
+      const res = await fetch(`/api/stats${queryParams}`);
+      if (!res.ok) throw new Error("Failed to fetch stats");
+      return res.json();
+    },
   });
 
   const recentTransactions = transactions.slice(0, 5);
@@ -58,6 +75,8 @@ export default function DashboardPage() {
           Add Transaction
         </Button>
       </div>
+
+      <DateFilter value={dateFilter} onChange={setDateFilter} />
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <StatCard

@@ -24,7 +24,17 @@ export function registerRoutes(app: Express) {
   // Transactions
   app.get("/api/transactions", requireAuth, async (req, res) => {
     try {
-      const transactions = await storage.getTransactionsByUserId(req.user.id);
+      const { from, to } = req.query;
+      let transactions = await storage.getTransactionsByUserId(req.user.id);
+      
+      // Apply date filters if provided
+      if (from) {
+        transactions = transactions.filter(t => t.date >= String(from));
+      }
+      if (to) {
+        transactions = transactions.filter(t => t.date <= String(to));
+      }
+      
       res.json(transactions);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -304,7 +314,16 @@ export function registerRoutes(app: Express) {
   // Stats
   app.get("/api/stats", requireAuth, async (req, res) => {
     try {
-      const transactions = await storage.getTransactionsByUserId(req.user.id);
+      const { from, to } = req.query;
+      let transactions = await storage.getTransactionsByUserId(req.user.id);
+      
+      // Apply date filters if provided
+      if (from) {
+        transactions = transactions.filter(t => t.date >= String(from));
+      }
+      if (to) {
+        transactions = transactions.filter(t => t.date <= String(to));
+      }
       
       const totalIncome = transactions
         .filter((t) => t.type === "income")
