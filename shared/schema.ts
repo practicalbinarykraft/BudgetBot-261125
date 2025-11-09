@@ -88,6 +88,17 @@ export const settings = pgTable("settings", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Budgets table
+export const budgets = pgTable("budgets", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  category: text("category").notNull(),
+  limitAmount: decimal("limit_amount", { precision: 10, scale: 2 }).notNull(),
+  period: text("period").notNull(), // 'week', 'month', 'year'
+  startDate: date("start_date").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   transactions: many(transactions),
@@ -95,6 +106,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   categories: many(categories),
   recurring: many(recurring),
   wishlist: many(wishlist),
+  budgets: many(budgets),
   settings: one(settings),
 }));
 
@@ -145,6 +157,13 @@ export const settingsRelations = relations(settings, ({ one }) => ({
   }),
 }));
 
+export const budgetsRelations = relations(budgets, ({ one }) => ({
+  user: one(users, {
+    fields: [budgets.userId],
+    references: [users.id],
+  }),
+}));
+
 // Zod Schemas
 export const insertUserSchema = createInsertSchema(users, {
   email: z.string().email(),
@@ -184,6 +203,11 @@ export const insertSettingsSchema = createInsertSchema(settings, {
   currency: z.enum(["USD", "RUB", "IDR"]),
 }).omit({ id: true, createdAt: true });
 
+export const insertBudgetSchema = createInsertSchema(budgets, {
+  limitAmount: z.string().regex(/^\d+(\.\d{1,2})?$/),
+  period: z.enum(["week", "month", "year"]),
+}).omit({ id: true, createdAt: true });
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -205,3 +229,6 @@ export type WishlistItem = typeof wishlist.$inferSelect;
 
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;
+
+export type InsertBudget = z.infer<typeof insertBudgetSchema>;
+export type Budget = typeof budgets.$inferSelect;

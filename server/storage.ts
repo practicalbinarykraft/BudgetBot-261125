@@ -12,7 +12,9 @@ import {
   WishlistItem,
   InsertWishlist,
   Settings,
-  InsertSettings
+  InsertSettings,
+  Budget,
+  InsertBudget
 } from "@shared/schema";
 
 export interface IStorage {
@@ -60,6 +62,13 @@ export interface IStorage {
   getSettingsByUserId(userId: number): Promise<Settings | null>;
   createSettings(settings: InsertSettings): Promise<Settings>;
   updateSettings(userId: number, settings: Partial<InsertSettings>): Promise<Settings>;
+  
+  // Budgets
+  getBudgetsByUserId(userId: number): Promise<Budget[]>;
+  getBudgetById(id: number): Promise<Budget | null>;
+  createBudget(budget: InsertBudget): Promise<Budget>;
+  updateBudget(id: number, budget: Partial<InsertBudget>): Promise<Budget>;
+  deleteBudget(id: number): Promise<void>;
 }
 
 import { db } from "./db";
@@ -70,7 +79,8 @@ import {
   categories, 
   recurring, 
   wishlist, 
-  settings 
+  settings,
+  budgets
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
@@ -225,6 +235,30 @@ export class DatabaseStorage implements IStorage {
   async updateSettings(userId: number, settingsData: Partial<InsertSettings>): Promise<Settings> {
     const result = await db.update(settings).set(settingsData).where(eq(settings.userId, userId)).returning();
     return result[0];
+  }
+
+  // Budgets
+  async getBudgetsByUserId(userId: number): Promise<Budget[]> {
+    return db.select().from(budgets).where(eq(budgets.userId, userId));
+  }
+
+  async getBudgetById(id: number): Promise<Budget | null> {
+    const result = await db.select().from(budgets).where(eq(budgets.id, id)).limit(1);
+    return result[0] || null;
+  }
+
+  async createBudget(budgetData: InsertBudget): Promise<Budget> {
+    const result = await db.insert(budgets).values(budgetData).returning();
+    return result[0];
+  }
+
+  async updateBudget(id: number, budgetData: Partial<InsertBudget>): Promise<Budget> {
+    const result = await db.update(budgets).set(budgetData).where(eq(budgets.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteBudget(id: number): Promise<void> {
+    await db.delete(budgets).where(eq(budgets.id, id));
   }
 }
 
