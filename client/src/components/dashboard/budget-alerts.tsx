@@ -1,0 +1,162 @@
+import { useQuery } from "@tanstack/react-query";
+import { Budget, Category, Transaction } from "@shared/schema";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle, TrendingDown } from "lucide-react";
+import { Link } from "wouter";
+import { Button } from "@/components/ui/button";
+import { startOfWeek, startOfMonth, startOfYear, endOfWeek, endOfMonth, endOfYear } from "date-fns";
+
+function getBudgetPeriodDates(budget: Budget): { start: Date; end: Date } {
+  const startDate = new Date(budget.startDate);
+  
+  switch (budget.period) {
+    case "week":
+      return {
+        start: startOfWeek(startDate, { weekStartsOn: 1 }),
+        end: endOfWeek(startDate, { weekStartsOn: 1 }),
+      };
+    case "month":
+      return {
+        start: startOfMonth(startDate),
+        end: endOfMonth(startDate),
+      };
+    case "year":
+      return {
+        start: startOfYear(startDate),
+        end: endOfYear(startDate),
+      };
+    default:
+      return { start: startDate, end: startDate };
+  }
+}
+
+function calculateBudgetProgress(
+  budget: Budget,
+  transactions: Transaction[],
+  categoryName: string
+): { spent: number; percentage: number; status: "ok" | "warning" | "exceeded" } {
+  const { start, end } = getBudgetPeriodDates(budget);
+  
+  const categoryTransactions = transactions.filter((t) => {
+    const transactionDate = new Date(t.date);
+    return (
+      t.category === categoryName &&
+      t.type === "expense" &&
+      transactionDate >= start &&
+      transactionDate <= end
+    );
+  });
+
+  const spent = categoryTransactions.reduce(
+    (sum, t) => sum + parseFloat(t.amountUsd),
+    0
+  );
+
+  const limitAmount = parseFloat(budget.limitAmount);
+  const percentage = limitAmount > 0 ? (spent / limitAmount) * 100 : 0;
+
+  let status: "ok" | "warning" | "exceeded" = "ok";
+  if (percentage >= 100) {
+    status = "exceeded";
+  } else if (percentage >= 80) {
+    status = "warning";
+  }
+
+  return { spent, percentage, status };
+}
+
+export function BudgetAlerts() {
+  const { data: budgets = [] } = useQuery<Budget[]>({
+    queryKey: ["/api/budgets"],
+  });
+
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ["/api/categories"],
+  });
+
+  const { data: transactions = [] } = useQuery<Transaction[]>({
+    queryKey: ["/api/transactions"],
+  });
+
+  if (budgets.length === 0) {
+    return null;
+  }
+
+  const problematicBudgets = budgets
+    .map((budget) => {
+      const category = categories.find((c) => c.id === budget.categoryId);
+      if (!category) return null;
+      
+      const progress = calculateBudgetProgress(budget, transactions, category.name);
+      
+      if (progress.status === "ok") return null;
+      
+      return {
+        budget,
+        category,
+        progress,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
+
+  if (problematicBudgets.length === 0) {
+    return null;
+  }
+
+  const exceededBudgets = problematicBudgets.filter((b) => b.progress.status === "exceeded");
+  const warningBudgets = problematicBudgets.filter((b) => b.progress.status === "warning");
+
+  return (
+    <div className="space-y-4" data-testid="budget-alerts">
+      {exceededBudgets.length > 0 && (
+        <Alert variant="destructive" data-testid="alert-budgets-exceeded">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Budget Exceeded</AlertTitle>
+          <AlertDescription className="space-y-2">
+            <p>
+              {exceededBudgets.length === 1
+                ? "1 budget has exceeded its limit:"
+                : `${exceededBudgets.length} budgets have exceeded their limits:`}
+            </p>
+            <ul className="list-disc pl-5 space-y-1">
+              {exceededBudgets.map(({ budget, category, progress }) => (
+                <li key={budget.id}>
+                  <strong>{category.name}</strong>: ${progress.spent.toFixed(2)} / ${parseFloat(budget.limitAmount).toFixed(2)} ({progress.percentage.toFixed(0)}%)
+                </li>
+              ))}
+            </ul>
+            <div className="pt-2">
+              <Link href="/budgets">
+                <Button variant="outline" size="sm" data-testid="button-view-budgets">
+                  <TrendingDown className="h-4 w-4 mr-2" />
+                  Manage Budgets
+                </Button>
+              </Link>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {warningBudgets.length > 0 && (
+        <Alert data-testid="alert-budgets-warning">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Budget Warning</AlertTitle>
+          <AlertDescription className="space-y-2">
+            <p>
+              {warningBudgets.length === 1
+                ? "1 budget is approaching its limit (80%+):"
+                : `${warningBudgets.length} budgets are approaching their limits (80%+):`}
+            </p>
+            <ul className="list-disc pl-5 space-y-1">
+              {warningBudgets.map(({ budget, category, progress }) => (
+                <li key={budget.id}>
+                  <strong>{category.name}</strong>: ${progress.spent.toFixed(2)} / ${parseFloat(budget.limitAmount).toFixed(2)} ({progress.percentage.toFixed(0)}%)
+                </li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+    </div>
+  );
+}

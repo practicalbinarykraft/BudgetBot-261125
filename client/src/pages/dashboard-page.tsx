@@ -3,6 +3,7 @@ import { Transaction } from "@shared/schema";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { TransactionList } from "@/components/dashboard/transaction-list";
 import { SpendingChart } from "@/components/dashboard/spending-chart";
+import { BudgetAlerts } from "@/components/dashboard/budget-alerts";
 import { DateFilter, DateFilterValue, getDateRange } from "@/components/dashboard/date-filter";
 import { TrendingUp, TrendingDown, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -77,6 +78,8 @@ export default function DashboardPage() {
       </div>
 
       <DateFilter value={dateFilter} onChange={setDateFilter} />
+
+      <BudgetAlerts />
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <StatCard
