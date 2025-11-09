@@ -1,3 +1,18 @@
+/**
+ * Central routing composition for Budget Buddy API
+ * 
+ * This module splits the legacy monolithic routes.ts into domain-specific Express routers
+ * to improve code organization and junior developer readability. Each router handles
+ * a single domain (transactions, budgets, etc.) and preserves all security checks:
+ * 
+ * - withAuth middleware for authentication
+ * - Ownership verification before updates/deletes
+ * - userId sanitization in PATCH endpoints
+ * - Foreign key ownership validation (categoryId, walletId)
+ * 
+ * Pattern: Each router exports relative paths ('/' instead of '/api/transactions')
+ * and is mounted here with the full prefix (e.g., app.use('/api/transactions', router))
+ */
 import type { Express } from "express";
 import transactionsRouter from "./transactions.routes";
 import walletsRouter from "./wallets.routes";

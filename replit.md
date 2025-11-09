@@ -58,7 +58,8 @@ Preferred communication style: Simple, everyday language.
 
 **API Structure:**
 - RESTful API endpoints under `/api` prefix
-- Route organization in `server/routes.ts`
+- Modular route organization in `server/routes/` (domain-specific routers)
+- Central composition via `server/routes/index.ts` → `registerRoutes()`
 - Storage abstraction layer (`IStorage` interface) for data access
 - Middleware-based authentication protection
 
@@ -150,6 +151,42 @@ Preferred communication style: Simple, everyday language.
 **CORS & Trust Proxy:** Configured for production deployment with secure cookies
 
 ## Recent Changes
+
+### Routing Refactoring (November 9, 2025)
+
+**Implementation:**
+- Split monolithic `server/routes.ts` (509 lines) into 9 domain-specific Express routers
+- Created modular structure in `server/routes/` directory with clean separation of concerns
+- Total refactored size: 579 lines across all router files (no net code increase, just reorganization)
+- Each router handles a single domain: transactions, wallets, categories, recurring, wishlist, budgets, settings, stats, AI
+
+**Router Organization:**
+```
+server/routes/
+├─ index.ts (26 lines) - Central composition with registerRoutes()
+├─ transactions.routes.ts (130 lines) - Transaction CRUD operations
+├─ budgets.routes.ts (94 lines) - Budget management with categoryId validation
+├─ wishlist.routes.ts (68 lines) - Wishlist CRUD with PATCH support
+├─ stats.routes.ts (59 lines) - Stats and financial-health endpoints
+├─ settings.routes.ts (53 lines) - User settings management
+├─ wallets.routes.ts (47 lines) - Wallet CRUD operations
+├─ categories.routes.ts (47 lines) - Category CRUD operations
+├─ recurring.routes.ts (47 lines) - Recurring payment CRUD
+└─ ai.routes.ts (34 lines) - AI analysis and receipt scanning
+```
+
+**Architecture Benefits:**
+- **Junior developer friendly:** Each file <150 lines, single responsibility
+- **Easy navigation:** Find endpoints by domain (budgets → budgets.routes.ts)
+- **Preserved security:** All withAuth, ownership checks, userId sanitization intact
+- **No breaking changes:** All endpoints maintain original REST URLs and behavior
+- **Type safety:** Full TypeScript coverage with 0 errors after refactor
+
+**Technical Pattern:**
+- Each router exports relative paths (`router.get('/')` instead of `app.get('/api/transactions')`)
+- Central composition in `routes/index.ts` mounts routers with full prefixes
+- Pattern documented in module-level JSDoc for future contributors
+- Security checklist preserved: withAuth → ownership verification → userId sanitization → foreign key validation
 
 ### Financial Health Score Feature (November 9, 2025)
 
