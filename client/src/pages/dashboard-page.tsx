@@ -2,12 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Transaction } from "@shared/schema";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { TransactionList } from "@/components/dashboard/transaction-list";
-import { DollarSign, TrendingUp, TrendingDown, Wallet } from "lucide-react";
+import { SpendingChart } from "@/components/dashboard/spending-chart";
+import { TrendingUp, TrendingDown, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { AddTransactionDialog } from "@/components/transactions/add-transaction-dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
@@ -80,17 +80,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Spending by Category</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <p>Chart visualization coming soon</p>
-            <p className="text-sm mt-1">Track your spending patterns visually</p>
-          </div>
-        </CardContent>
-      </Card>
+      <SpendingChart transactions={transactions} />
 
       <TransactionList transactions={recentTransactions} />
 
