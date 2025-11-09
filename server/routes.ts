@@ -6,7 +6,8 @@ import {
   insertCategorySchema,
   insertRecurringSchema,
   insertWishlistSchema,
-  insertSettingsSchema
+  insertSettingsSchema,
+  insertBudgetSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { analyzeSpending, scanReceipt } from "./services/ai-service";
@@ -308,6 +309,62 @@ export function registerRoutes(app: Express) {
       res.json(settings);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Budgets
+  app.get("/api/budgets", requireAuth, async (req, res) => {
+    try {
+      const budgets = await storage.getBudgetsByUserId(req.user.id);
+      res.json(budgets);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/budgets", requireAuth, async (req, res) => {
+    try {
+      const data = insertBudgetSchema.parse({
+        ...req.body,
+        userId: req.user.id,
+      });
+      const budget = await storage.createBudget(data);
+      res.json(budget);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/budgets/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const budget = await storage.getBudgetById(id);
+      if (!budget || budget.userId !== req.user.id) {
+        return res.status(404).json({ error: "Budget not found" });
+      }
+      
+      // Parse and sanitize - prevent userId hijacking
+      const { userId, ...sanitizedBody } = req.body;
+      const data = insertBudgetSchema.partial().parse(sanitizedBody);
+      const updated = await storage.updateBudget(id, data);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/budgets/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const budget = await storage.getBudgetById(id);
+      if (!budget || budget.userId !== req.user.id) {
+        return res.status(404).json({ error: "Budget not found" });
+      }
+      
+      await storage.deleteBudget(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 
