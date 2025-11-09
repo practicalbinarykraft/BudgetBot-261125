@@ -5,12 +5,14 @@ import { TransactionList } from "@/components/dashboard/transaction-list";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { AddTransactionDialog } from "@/components/transactions/add-transaction-dialog";
+import { EditTransactionDialog } from "@/components/transactions/edit-transaction-dialog";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function TransactionsPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -63,13 +65,21 @@ export default function TransactionsPage() {
 
       <TransactionList
         transactions={transactions}
+        onEdit={(transaction) => setEditingTransaction(transaction)}
         onDelete={(id) => deleteMutation.mutate(id)}
+        showEdit={true}
         showDelete={true}
       />
 
       <AddTransactionDialog
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
+      />
+
+      <EditTransactionDialog
+        transaction={editingTransaction}
+        open={!!editingTransaction}
+        onOpenChange={(open) => !open && setEditingTransaction(null)}
       />
     </div>
   );
