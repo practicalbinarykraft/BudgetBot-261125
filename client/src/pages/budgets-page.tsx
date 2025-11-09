@@ -202,10 +202,12 @@ export default function BudgetsPage() {
     queryKey: ["/api/transactions"],
   });
 
+  // 🔒 Security: userId is NOT sent from client anymore!
+  // Backend adds userId from authenticated session (req.user.id)
   const form = useForm<FormData>({
     resolver: zodResolver(insertBudgetSchema),
     defaultValues: {
-      userId: user?.id || 0,
+      // userId removed - backend handles it from session
       categoryId: 0,
       limitAmount: "0",
       period: "month",
@@ -224,8 +226,8 @@ export default function BudgetsPage() {
         title: "Success",
         description: "Budget created successfully",
       });
+      // Reset form to default values (userId removed)
       form.reset({
-        userId: user?.id || 0,
         categoryId: 0,
         limitAmount: "0",
         period: "month" as const,
@@ -295,8 +297,8 @@ export default function BudgetsPage() {
 
   const handleEdit = (budget: Budget) => {
     setEditingBudget(budget);
+    // Fill form with budget data (userId removed - not editable)
     form.reset({
-      userId: budget.userId,
       categoryId: budget.categoryId,
       limitAmount: budget.limitAmount,
       period: budget.period as "week" | "month" | "year",
@@ -307,8 +309,8 @@ export default function BudgetsPage() {
 
   const handleAddNew = () => {
     setEditingBudget(null);
+    // Reset form to default values (userId removed - handled by backend)
     form.reset({
-      userId: user?.id || 0,
       categoryId: 0,
       limitAmount: "0",
       period: "month" as const,

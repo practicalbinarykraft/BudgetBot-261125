@@ -1,0 +1,208 @@
+🔴 КРИТИЧНЫЕ ПРОБЛЕМЫ (исправить обязательно!)
+1. Утечка безопасности: userId в форме клиента
+Где проблема:
+
+// ❌ Frontend отправляет userId
+defaultValues: {
+  userId: user.id,  // <-- Можно подделать!
+  categoryId: 0,
+  limitAmount: "",
+  ...
+}
+
+Почему опасно:
+
+Злоумышленник может изменить userId в DevTools → создать бюджет для другого пользователя
+Хотя backend "вроде бы" переопределяет userId, но если insertBudgetSchema его пропускает, есть риск hijacking
+Как исправить:
+
+// ✅ Backend должен ВСЕГДА игнорировать userId из клиента
+router.post("/api/budgets", requireAuth, async (req, res) => {
+  const { userId, ...body } = req.body; // Удалить userId явно!
+  const validated = insertBudgetSchema.omit({ userId: true }).parse(body);
+  const budgetData = { ...validated, userId: req.user.id }; // Только из сессии
+  // ...
+});
+// ✅ Frontend вообще не должен отправлять userId
+const form = useForm({
+  defaultValues: {
+    // userId: user.id,  // <-- УДАЛИТЬ
+    categoryId: 0,
+    limitAmount: "",
+    ...
+  }
+});
+
+Zod схема должна быть:
+
+// shared/schema.ts
+export const insertBudgetSchema = createInsertSchema(budgets).omit({ 
+  id: true,
+  userId: true  // <-- ВАЖНО! userId не должен приходить с клиента
+});
+
+2. Timezone баг: периоды сдвигаются на 1 день
+Где проблема:
+
+// ❌ НЕПРАВИЛЬНО
+const start = new Date(budget.startDate); // "2024-01-15" → 15 января в UTC, но локально может быть 14
+const periodStart = startOfWeek(start);
+
+Что происходит:
+
+startDate хранится как строка "2024-01-15"
+new Date("2024-01-15") парсит как UTC midnight → локально может быть вчера!
+startOfWeek() считает от локального времени → недельный бюджет съезжает на день
+Как исправить:
+
+// ✅ ПРАВИЛЬНО - parseISO + date-fns UTC
+import { parseISO, startOfWeek, endOfWeek } from 'date-fns';
+import { utcToZonedTime } from 'date-fns-tz';
+function getBudgetPeriodDates(budget: Budget) {
+  const start = parseISO(budget.startDate); // Безопасный парсинг
+  
+  switch (budget.period) {
+    case "week":
+      return {
+        start: startOfWeek(start, { weekStartsOn: 1 }), // Понедельник
+        end: endOfWeek(start, { weekStartsOn: 1 })
+      };
+    // ...
+  }
+}
+
+Или хранить периоды в БД:
+
+-- Вместо хранения только startDate, храним оба края
+ALTER TABLE budgets ADD COLUMN period_start DATE;
+ALTER TABLE budgets ADD COLUMN period_end DATE;
+
+3. Прогресс бюджета сломается при переименовании категории
+Где проблема:
+
+// ❌ Фильтрация по НАЗВАНИЮ категории
+const filtered = transactions.filter(t => 
+  t.category === categoryName  // <-- Если категория переименована, прогресс обнулится!
+);
+
+Что сломается:
+
+Пользователь создаёт бюджет для категории "Еда" (id=5)
+Делает транзакции
+Переименовывает "Еда" → "Продукты"
+Прогресс обнуляется! Все старые транзакции теперь с другим названием
+Как исправить:
+
+// ✅ Фильтровать по categoryId, а не названию
+const filtered = transactions.filter(t => {
+  const txCategory = categories.find(c => c.name === t.category);
+  return t.type === "expense" && 
+         txCategory?.id === budget.categoryId && // <-- По ID!
+         isWithinInterval(parseISO(t.date), { start, end });
+});
+
+Ещё лучше: хранить categoryId в транзакциях:
+
+// shared/schema.ts
+export const dailyTransactions = pgTable("daily_transactions", {
+  // ...
+  categoryId: integer("category_id").references(() => categories.id),
+  category: text("category"), // Оставить для legacy, но использовать categoryId
+});
+
+⚠️ ПОТЕНЦИАЛЬНЫЕ БАГИ (желательно исправить)
+4. Что если категория удалена?
+Проблема:
+
+// Если category удалена (CASCADE), бюджет остаётся "осиротевшим"
+const category = categories.find(c => c.id === budget.categoryId);
+// category === undefined → UI крашится
+
+Решение:
+
+// ✅ Defensive coding
+const category = categories.find(c => c.id === budget.categoryId);
+if (!category) {
+  return (
+    <Card className="border-red-200">
+      <CardContent>
+        <p className="text-red-600">
+          Category deleted. Please update or remove this budget.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+Или CASCADE DELETE в schema:
+
+// shared/schema.ts
+export const budgets = pgTable("budgets", {
+  // ...
+  categoryId: integer("category_id")
+    .references(() => categories.id, { onDelete: "cascade" }) // <-- Удалить бюджет если категория удалена
+    .notNull(),
+});
+
+5. N+1 Query проблема (если транзакций много)
+Проблема:
+
+// Для КАЖДОГО бюджета идёт расчёт по ВСЕМ транзакциям
+budgets.map(budget => {
+  const progress = calculateBudgetProgress(budget, transactions, categoryName);
+  // ...
+});
+
+Что делать:
+
+Если транзакций <1000 → OK
+Если транзакций >10000 → тормоза в UI
+Решение: Backend должен возвращать pre-calculated spent/percentage
+Оптимизация:
+
+// Backend: GET /api/budgets возвращает spent сразу
+router.get("/api/budgets", requireAuth, async (req, res) => {
+  const budgets = await storage.getBudgets(req.user.id);
+  const budgetsWithProgress = await Promise.all(
+    budgets.map(async (budget) => {
+      const spent = await storage.getBudgetSpent(budget.id);
+      return { ...budget, spent, percentage: (spent / budget.limitAmount) * 100 };
+    })
+  );
+  res.json(budgetsWithProgress);
+});
+
+6. Validation: limitAmount может быть 0 или отрицательным
+// ✅ Добавить проверку в Zod schema
+export const insertBudgetSchema = createInsertSchema(budgets).extend({
+  limitAmount: z.string().refine(
+    (val) => parseFloat(val) > 0,
+    { message: "Limit must be greater than 0" }
+  ),
+});
+
+✅ ЧТО СДЕЛАНО ПРАВИЛЬНО
+✅ Authorization checks - storage.updateBudget() и deleteBudget() проверяют userId
+✅ React Query cache invalidation - правильная инвалидация после мутаций
+✅ Color-coded status - зелёный/жёлтый/красный для UX
+✅ Empty state - подсказка для первого бюджета
+✅ Dashboard alerts - удобно видеть превышения сразу
+💡 РЕКОМЕНДАЦИИ
+Приоритет исправлений:
+🔴 СРОЧНО: Убрать userId из клиентской формы (security!)
+🔴 СРОЧНО: Исправить timezone баг с датами
+⚠️ ВАЖНО: Привязать прогресс к categoryId, не названию
+⚠️ ВАЖНО: Обработать удалённые категории
+💡 Опционально: Оптимизировать расчёт прогресса на backend
+📋 CHECKLIST ДЛЯ АГЕНТА
+[ ] Удалить userId из frontend формы
+[ ] Добавить .omit({ userId: true }) в insertBudgetSchema
+[ ] Явно удалять userId из req.body в PATCH
+[ ] Использовать parseISO вместо new Date()
+[ ] Фильтровать транзакции по categoryId, не названию
+[ ] Добавить обработку удалённых категорий
+[ ] Добавить validation limitAmount > 0
+[ ] Тестировать timezone edge cases
+[ ] Проверить что нет логики partners (СОЛО режим!)
+
+Вот основные слабые места! Главное - security с userId и timezone баг.

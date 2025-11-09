@@ -207,10 +207,16 @@ export const insertSettingsSchema = createInsertSchema(settings, {
   currency: z.enum(["USD", "RUB", "IDR"]),
 }).omit({ id: true, createdAt: true });
 
+// 🔒 Security: userId must come from session, NOT from client
+// Omitting userId prevents client from hijacking budgets
 export const insertBudgetSchema = createInsertSchema(budgets, {
   limitAmount: z.string().regex(/^\d+(\.\d{1,2})?$/),
   period: z.enum(["week", "month", "year"]),
-}).omit({ id: true, createdAt: true });
+}).omit({ 
+  id: true, 
+  userId: true,  // ← IMPORTANT: Never accept userId from client!
+  createdAt: true 
+});
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;

@@ -324,10 +324,15 @@ export function registerRoutes(app: Express) {
 
   app.post("/api/budgets", requireAuth, async (req, res) => {
     try {
-      const data = insertBudgetSchema.parse({
-        ...req.body,
-        userId: req.user.id,
-      });
+      // 🔒 Security: Remove userId from client payload BEFORE validation
+      const { userId, ...sanitizedBody } = req.body;
+      
+      // Parse sanitized input (userId NOT in schema anymore)
+      const validated = insertBudgetSchema.parse(sanitizedBody);
+      
+      // Add userId from authenticated session (trusted source)
+      const data = { ...validated, userId: req.user.id };
+      
       const budget = await storage.createBudget(data);
       res.json(budget);
     } catch (error: any) {
@@ -338,14 +343,20 @@ export function registerRoutes(app: Express) {
   app.patch("/api/budgets/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // 🔒 Security: Verify ownership BEFORE allowing update
       const budget = await storage.getBudgetById(id);
       if (!budget || budget.userId !== req.user.id) {
         return res.status(404).json({ error: "Budget not found" });
       }
       
-      // Parse and sanitize - prevent userId hijacking
+      // 🔒 Security: Remove userId from client payload BEFORE validation
       const { userId, ...sanitizedBody } = req.body;
+      
+      // Parse sanitized input (userId NOT in schema anymore)
       const data = insertBudgetSchema.partial().parse(sanitizedBody);
+      
+      // Update budget (userId already verified above, no need to pass it)
       const updated = await storage.updateBudget(id, data);
       res.json(updated);
     } catch (error: any) {
