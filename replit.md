@@ -94,7 +94,7 @@ Preferred communication style: Simple, everyday language.
 
 **Session Management:** 7-day cookie expiration with secure flag in production
 
-**Route Protection:** `requireAuth` middleware checks session validity before API access
+**Route Protection:** `withAuth` middleware wrapper checks session validity, narrows types, and propagates errors
 
 ## External Dependencies
 
@@ -150,6 +150,39 @@ Preferred communication style: Simple, everyday language.
 **CORS & Trust Proxy:** Configured for production deployment with secure cookies
 
 ## Recent Changes
+
+### Financial Health Score Feature (November 9, 2025)
+
+**Implementation:**
+- Created `/api/financial-health` endpoint with deterministic scoring algorithm
+- Real-time calculation based on user's actual transaction and budget data
+- No hardcoded or mock data - all values computed from database
+- Scoring algorithm uses three weighted metrics:
+  - **Budget Adherence (40%):** Percentage of budgets not exceeded in current period
+  - **Cashflow Balance (35%):** Income vs expenses ratio (savings rate)
+  - **Expense Stability (25%):** Current vs previous period comparison
+- Score ranges: 0-100 with status bands (Excellent 80+, Stable 60-79, Needs Attention 40-59, Critical <40)
+- Handles edge cases: empty data defaults to neutral 50, prevents division by zero
+
+**User Interface:**
+- `/ai-analysis` page displays live financial health score
+- Dynamic color coding based on score (green/blue/yellow/red)
+- Loading skeleton while fetching data
+- Empty state for users without transaction data
+- Replaces previous hardcoded "78/100" placeholder
+
+**Technical Details:**
+- Query parameter validation: ?days=N (default 30, sanitized for NaN/negative)
+- Budget-transaction matching: supports both categoryId and legacy category name matching
+- Date filtering using date-fns (startOfDay, subDays) for rolling windows
+- Lazy-loaded service import for better performance
+- All TypeScript errors resolved (18 LSP diagnostics fixed)
+
+**Architecture Notes:**
+- Service layer: `server/services/financial-health.ts` with typed Transaction/Budget callbacks
+- Categories fetched alongside budgets/transactions to enable legacy data matching
+- withAuth middleware ensures authenticated access only
+- React Query integration on frontend for automatic caching and refetching
 
 ### Security Hardening (November 9, 2025)
 
