@@ -212,7 +212,8 @@ export const insertSettingsSchema = createInsertSchema(settings, {
 // 🔒 Security: userId must come from session, NOT from client
 // Omitting userId prevents client from hijacking budgets
 export const insertBudgetSchema = createInsertSchema(budgets, {
-  limitAmount: z.string().regex(/^\d+(\.\d{1,2})?$/),
+  // ✅ Validation: limitAmount must be > 0 (coerces string to number)
+  limitAmount: z.coerce.number().gt(0, "Limit amount must be greater than 0"),
   period: z.enum(["week", "month", "year"]),
 }).omit({ 
   id: true, 
