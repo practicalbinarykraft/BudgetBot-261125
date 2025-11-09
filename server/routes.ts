@@ -12,18 +12,12 @@ import {
 import { z } from "zod";
 import { analyzeSpending, scanReceipt } from "./services/ai-service";
 import { convertToUSD } from "./services/currency-service";
+import { withAuth } from "./middleware/auth-utils";
 
 export function registerRoutes(app: Express) {
-  // Auth middleware
-  const requireAuth = (req: any, res: any, next: any) => {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    next();
-  };
 
   // Transactions
-  app.get("/api/transactions", requireAuth, async (req, res) => {
+  app.get("/api/transactions", withAuth(async (req, res) => {
     try {
       const { from, to } = req.query;
       let transactions = await storage.getTransactionsByUserId(req.user.id);
@@ -40,9 +34,9 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
-  });
+  }));
 
-  app.post("/api/transactions", requireAuth, async (req, res) => {
+  app.post("/api/transactions", withAuth(async (req, res) => {
     try {
       // 🔒 Security: Strip categoryId from client - always resolve server-side!
       const { amount, currency, categoryId, ...rest } = req.body;
@@ -79,9 +73,9 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
-  });
+  }));
 
-  app.patch("/api/transactions/:id", requireAuth, async (req, res) => {
+  app.patch("/api/transactions/:id", withAuth(async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const transaction = await storage.getTransactionById(id);
@@ -124,9 +118,9 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
-  });
+  }));
 
-  app.delete("/api/transactions/:id", requireAuth, async (req, res) => {
+  app.delete("/api/transactions/:id", withAuth(async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const transaction = await storage.getTransactionById(id);
@@ -138,19 +132,19 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
-  });
+  }));
 
   // Wallets
-  app.get("/api/wallets", requireAuth, async (req, res) => {
+  app.get("/api/wallets", withAuth(async (req, res) => {
     try {
       const wallets = await storage.getWalletsByUserId(req.user.id);
       res.json(wallets);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
-  });
+  }));
 
-  app.post("/api/wallets", requireAuth, async (req, res) => {
+  app.post("/api/wallets", withAuth(async (req, res) => {
     try {
       const data = insertWalletSchema.parse({
         ...req.body,
@@ -161,9 +155,9 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
-  });
+  }));
 
-  app.delete("/api/wallets/:id", requireAuth, async (req, res) => {
+  app.delete("/api/wallets/:id", withAuth(async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const wallet = await storage.getWalletById(id);
@@ -175,19 +169,19 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
-  });
+  }));
 
   // Categories
-  app.get("/api/categories", requireAuth, async (req, res) => {
+  app.get("/api/categories", withAuth(async (req, res) => {
     try {
       const categories = await storage.getCategoriesByUserId(req.user.id);
       res.json(categories);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
-  });
+  }));
 
-  app.post("/api/categories", requireAuth, async (req, res) => {
+  app.post("/api/categories", withAuth(async (req, res) => {
     try {
       const data = insertCategorySchema.parse({
         ...req.body,
@@ -198,9 +192,9 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
-  });
+  }));
 
-  app.delete("/api/categories/:id", requireAuth, async (req, res) => {
+  app.delete("/api/categories/:id", withAuth(async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const category = await storage.getCategoryById(id);
@@ -212,19 +206,19 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
-  });
+  }));
 
   // Recurring
-  app.get("/api/recurring", requireAuth, async (req, res) => {
+  app.get("/api/recurring", withAuth(async (req, res) => {
     try {
       const recurring = await storage.getRecurringByUserId(req.user.id);
       res.json(recurring);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
-  });
+  }));
 
-  app.post("/api/recurring", requireAuth, async (req, res) => {
+  app.post("/api/recurring", withAuth(async (req, res) => {
     try {
       const data = insertRecurringSchema.parse({
         ...req.body,
@@ -235,9 +229,9 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
-  });
+  }));
 
-  app.delete("/api/recurring/:id", requireAuth, async (req, res) => {
+  app.delete("/api/recurring/:id", withAuth(async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const recurringItem = await storage.getRecurringById(id);
@@ -249,19 +243,19 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
-  });
+  }));
 
   // Wishlist
-  app.get("/api/wishlist", requireAuth, async (req, res) => {
+  app.get("/api/wishlist", withAuth(async (req, res) => {
     try {
       const wishlist = await storage.getWishlistByUserId(req.user.id);
       res.json(wishlist);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
-  });
+  }));
 
-  app.post("/api/wishlist", requireAuth, async (req, res) => {
+  app.post("/api/wishlist", withAuth(async (req, res) => {
     try {
       const data = insertWishlistSchema.parse({
         ...req.body,
@@ -272,9 +266,9 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
-  });
+  }));
 
-  app.patch("/api/wishlist/:id", requireAuth, async (req, res) => {
+  app.patch("/api/wishlist/:id", withAuth(async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const wishlistItem = await storage.getWishlistById(id);
@@ -292,9 +286,9 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
-  });
+  }));
 
-  app.delete("/api/wishlist/:id", requireAuth, async (req, res) => {
+  app.delete("/api/wishlist/:id", withAuth(async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const wishlistItem = await storage.getWishlistById(id);
@@ -306,10 +300,10 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
-  });
+  }));
 
   // Settings
-  app.get("/api/settings", requireAuth, async (req, res) => {
+  app.get("/api/settings", withAuth(async (req, res) => {
     try {
       let settings = await storage.getSettingsByUserId(req.user.id);
       if (!settings) {
@@ -325,9 +319,9 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
-  });
+  }));
 
-  app.patch("/api/settings", requireAuth, async (req, res) => {
+  app.patch("/api/settings", withAuth(async (req, res) => {
     try {
       // 🔒 Security: Strip userId from client payload
       const { userId, ...sanitizedBody } = req.body;
@@ -338,7 +332,9 @@ export function registerRoutes(app: Express) {
       if (!settings) {
         settings = await storage.createSettings({
           userId: req.user.id,
-          ...data,
+          language: data.language || "en",
+          currency: data.currency || "USD",
+          telegramNotifications: data.telegramNotifications ?? true,
         });
       } else {
         settings = await storage.updateSettings(req.user.id, data);
@@ -348,19 +344,19 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
-  });
+  }));
 
   // Budgets
-  app.get("/api/budgets", requireAuth, async (req, res) => {
+  app.get("/api/budgets", withAuth(async (req, res) => {
     try {
       const budgets = await storage.getBudgetsByUserId(req.user.id);
       res.json(budgets);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
-  });
+  }));
 
-  app.post("/api/budgets", requireAuth, async (req, res) => {
+  app.post("/api/budgets", withAuth(async (req, res) => {
     try {
       // 🔒 Security: Remove userId from client payload BEFORE validation
       const { userId, ...sanitizedBody } = req.body;
@@ -384,9 +380,9 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
-  });
+  }));
 
-  app.patch("/api/budgets/:id", requireAuth, async (req, res) => {
+  app.patch("/api/budgets/:id", withAuth(async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -416,9 +412,9 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
-  });
+  }));
 
-  app.delete("/api/budgets/:id", requireAuth, async (req, res) => {
+  app.delete("/api/budgets/:id", withAuth(async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const budget = await storage.getBudgetById(id);
@@ -431,10 +427,10 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
-  });
+  }));
 
   // Stats
-  app.get("/api/stats", requireAuth, async (req, res) => {
+  app.get("/api/stats", withAuth(async (req, res) => {
     try {
       const { from, to } = req.query;
       let transactions = await storage.getTransactionsByUserId(req.user.id);
@@ -465,10 +461,10 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
-  });
+  }));
 
   // AI Analysis
-  app.post("/api/ai/analyze", requireAuth, async (req, res) => {
+  app.post("/api/ai/analyze", withAuth(async (req, res) => {
     try {
       const transactions = await storage.getTransactionsByUserId(req.user.id);
       const analysis = await analyzeSpending(transactions);
@@ -476,9 +472,9 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
-  });
+  }));
 
-  app.post("/api/ai/scan-receipt", requireAuth, async (req, res) => {
+  app.post("/api/ai/scan-receipt", withAuth(async (req, res) => {
     try {
       const { image } = req.body;
       if (!image) {
@@ -490,5 +486,5 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
-  });
+  }));
 }

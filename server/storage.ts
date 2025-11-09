@@ -259,12 +259,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createBudget(budgetData: OwnedInsert<InsertBudget>): Promise<Budget> {
-    const result = await db.insert(budgets).values(budgetData).returning();
+    const payload: typeof budgets.$inferInsert = {
+      ...budgetData,
+      limitAmount: budgetData.limitAmount.toFixed(2),
+    };
+    const result = await db.insert(budgets).values(payload).returning();
     return result[0];
   }
 
   async updateBudget(id: number, budgetData: Partial<InsertBudget>): Promise<Budget> {
-    const result = await db.update(budgets).set(budgetData).where(eq(budgets.id, id)).returning();
+    const { limitAmount, ...rest } = budgetData;
+    const payload: Partial<typeof budgets.$inferInsert> = { ...rest };
+    if (limitAmount !== undefined && limitAmount !== null) {
+      payload.limitAmount = limitAmount.toFixed(2);
+    }
+    const result = await db.update(budgets).set(payload).where(eq(budgets.id, id)).returning();
     return result[0];
   }
 

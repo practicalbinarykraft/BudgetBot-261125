@@ -29,8 +29,8 @@ export default function SettingsPage() {
     resolver: zodResolver(insertSettingsSchema),
     values: settings ? {
       userId: settings.userId,
-      language: settings.language || "en",
-      currency: settings.currency || "USD",
+      language: (settings.language || "en") as "en" | "ru",
+      currency: (settings.currency || "USD") as "USD" | "RUB" | "IDR",
       telegramNotifications: settings.telegramNotifications,
     } : {
       userId: user?.id || 0,

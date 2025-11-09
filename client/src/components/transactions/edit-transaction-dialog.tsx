@@ -55,7 +55,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
       description: transaction.description,
       category: transaction.category || "",
       currency: transaction.currency || "USD",
-      source: (transaction.source || "manual") as "manual" | "telegram" | "receipt",
+      source: (transaction.source || "manual") as "manual" | "telegram" | "ocr",
       walletId: transaction.walletId || undefined,
     } : undefined,
   });
