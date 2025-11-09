@@ -4,73 +4,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, TrendingDown } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-// ⏰ parseISO prevents timezone bugs when parsing date strings from DB
-import { parseISO, startOfWeek, startOfMonth, startOfYear, endOfWeek, endOfMonth, endOfYear } from "date-fns";
-
-/**
- * Get budget period boundaries (start and end dates)
- * Uses parseISO to prevent timezone bugs when parsing date strings from database
- */
-function getBudgetPeriodDates(budget: Budget): { start: Date; end: Date } {
-  // ⏰ parseISO correctly parses "2024-01-15" without timezone shifts
-  const startDate = parseISO(budget.startDate);
-  
-  switch (budget.period) {
-    case "week":
-      return {
-        start: startOfWeek(startDate, { weekStartsOn: 1 }),
-        end: endOfWeek(startDate, { weekStartsOn: 1 }),
-      };
-    case "month":
-      return {
-        start: startOfMonth(startDate),
-        end: endOfMonth(startDate),
-      };
-    case "year":
-      return {
-        start: startOfYear(startDate),
-        end: endOfYear(startDate),
-      };
-    default:
-      return { start: startDate, end: startDate };
-  }
-}
-
-function calculateBudgetProgress(
-  budget: Budget,
-  transactions: Transaction[],
-  categoryName: string
-): { spent: number; percentage: number; status: "ok" | "warning" | "exceeded" } {
-  const { start, end } = getBudgetPeriodDates(budget);
-  
-  const categoryTransactions = transactions.filter((t) => {
-    // ⏰ parseISO prevents timezone bugs when comparing dates
-    const transactionDate = parseISO(t.date);
-    return (
-      t.category === categoryName &&
-      t.type === "expense" &&
-      transactionDate >= start &&
-      transactionDate <= end
-    );
-  });
-
-  const spent = categoryTransactions.reduce(
-    (sum, t) => sum + parseFloat(t.amountUsd),
-    0
-  );
-
-  const limitAmount = parseFloat(budget.limitAmount);
-  const percentage = limitAmount > 0 ? (spent / limitAmount) * 100 : 0;
-
-  let status: "ok" | "warning" | "exceeded" = "ok";
-  if (percentage >= 100) {
-    status = "exceeded";
-  } else if (percentage >= 80) {
-    status = "warning";
-  }
-
-  return { spent, percentage, status };
-}
+// ⏰ Budget calculation helpers extracted to separate file for reusability
+import { calculateBudgetProgress } from "@/lib/budget-helpers";
 
 export function BudgetAlerts() {
   const { data: budgets = [] } = useQuery<Budget[]>({

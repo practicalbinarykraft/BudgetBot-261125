@@ -18,75 +18,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-// ⏰ parseISO prevents timezone bugs when parsing date strings from DB
-import { format, parseISO, startOfWeek, startOfMonth, startOfYear, endOfWeek, endOfMonth, endOfYear } from "date-fns";
+// ⏰ Budget calculation helpers extracted to separate file for reusability
+import { format } from "date-fns";
+import { getBudgetPeriodDates, calculateBudgetProgress } from "@/lib/budget-helpers";
 
 type FormData = z.infer<typeof insertBudgetSchema>;
-
-/**
- * Get budget period boundaries (start and end dates)
- * Uses parseISO to prevent timezone bugs when parsing date strings from database
- */
-function getBudgetPeriodDates(budget: Budget): { start: Date; end: Date } {
-  // ⏰ parseISO correctly parses "2024-01-15" without timezone shifts
-  const startDate = parseISO(budget.startDate);
-  
-  switch (budget.period) {
-    case "week":
-      return {
-        start: startOfWeek(startDate, { weekStartsOn: 1 }),
-        end: endOfWeek(startDate, { weekStartsOn: 1 }),
-      };
-    case "month":
-      return {
-        start: startOfMonth(startDate),
-        end: endOfMonth(startDate),
-      };
-    case "year":
-      return {
-        start: startOfYear(startDate),
-        end: endOfYear(startDate),
-      };
-    default:
-      return { start: startDate, end: startDate };
-  }
-}
-
-function calculateBudgetProgress(
-  budget: Budget,
-  transactions: Transaction[],
-  categoryName: string
-): { spent: number; percentage: number; status: "ok" | "warning" | "exceeded" } {
-  const { start, end } = getBudgetPeriodDates(budget);
-  
-  const categoryTransactions = transactions.filter((t) => {
-    // ⏰ parseISO prevents timezone bugs when comparing dates
-    const transactionDate = parseISO(t.date);
-    return (
-      t.category === categoryName &&
-      t.type === "expense" &&
-      transactionDate >= start &&
-      transactionDate <= end
-    );
-  });
-
-  const spent = categoryTransactions.reduce(
-    (sum, t) => sum + parseFloat(t.amountUsd),
-    0
-  );
-
-  const limitAmount = parseFloat(budget.limitAmount);
-  const percentage = limitAmount > 0 ? (spent / limitAmount) * 100 : 0;
-
-  let status: "ok" | "warning" | "exceeded" = "ok";
-  if (percentage >= 100) {
-    status = "exceeded";
-  } else if (percentage >= 80) {
-    status = "warning";
-  }
-
-  return { spent, percentage, status };
-}
 
 function BudgetCard({
   budget,
