@@ -18,12 +18,18 @@ import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { format, startOfWeek, startOfMonth, startOfYear, endOfWeek, endOfMonth, endOfYear } from "date-fns";
+// ⏰ parseISO prevents timezone bugs when parsing date strings from DB
+import { format, parseISO, startOfWeek, startOfMonth, startOfYear, endOfWeek, endOfMonth, endOfYear } from "date-fns";
 
 type FormData = z.infer<typeof insertBudgetSchema>;
 
+/**
+ * Get budget period boundaries (start and end dates)
+ * Uses parseISO to prevent timezone bugs when parsing date strings from database
+ */
 function getBudgetPeriodDates(budget: Budget): { start: Date; end: Date } {
-  const startDate = new Date(budget.startDate);
+  // ⏰ parseISO correctly parses "2024-01-15" without timezone shifts
+  const startDate = parseISO(budget.startDate);
   
   switch (budget.period) {
     case "week":
@@ -54,7 +60,8 @@ function calculateBudgetProgress(
   const { start, end } = getBudgetPeriodDates(budget);
   
   const categoryTransactions = transactions.filter((t) => {
-    const transactionDate = new Date(t.date);
+    // ⏰ parseISO prevents timezone bugs when comparing dates
+    const transactionDate = parseISO(t.date);
     return (
       t.category === categoryName &&
       t.type === "expense" &&

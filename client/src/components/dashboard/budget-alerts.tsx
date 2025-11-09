@@ -4,10 +4,16 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, TrendingDown } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { startOfWeek, startOfMonth, startOfYear, endOfWeek, endOfMonth, endOfYear } from "date-fns";
+// ⏰ parseISO prevents timezone bugs when parsing date strings from DB
+import { parseISO, startOfWeek, startOfMonth, startOfYear, endOfWeek, endOfMonth, endOfYear } from "date-fns";
 
+/**
+ * Get budget period boundaries (start and end dates)
+ * Uses parseISO to prevent timezone bugs when parsing date strings from database
+ */
 function getBudgetPeriodDates(budget: Budget): { start: Date; end: Date } {
-  const startDate = new Date(budget.startDate);
+  // ⏰ parseISO correctly parses "2024-01-15" without timezone shifts
+  const startDate = parseISO(budget.startDate);
   
   switch (budget.period) {
     case "week":
@@ -38,7 +44,8 @@ function calculateBudgetProgress(
   const { start, end } = getBudgetPeriodDates(budget);
   
   const categoryTransactions = transactions.filter((t) => {
-    const transactionDate = new Date(t.date);
+    // ⏰ parseISO prevents timezone bugs when comparing dates
+    const transactionDate = parseISO(t.date);
     return (
       t.category === categoryName &&
       t.type === "expense" &&

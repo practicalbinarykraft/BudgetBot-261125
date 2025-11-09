@@ -16,7 +16,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+// ⏰ parseISO prevents timezone bugs when parsing date strings from DB
+import { format, parseISO } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const formSchema = insertWishlistSchema.extend({
@@ -176,7 +177,8 @@ export default function WishlistPage() {
                   </Badge>
                   {item.targetDate && (
                     <p className="text-xs text-muted-foreground">
-                      Target: {format(new Date(item.targetDate), "MMM dd, yyyy")}
+                      {/* ⏰ parseISO prevents timezone bugs */}
+                      Target: {format(parseISO(item.targetDate), "MMM dd, yyyy")}
                     </p>
                   )}
                 </div>

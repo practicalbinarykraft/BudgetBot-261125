@@ -16,7 +16,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+// ⏰ parseISO prevents timezone bugs when parsing date strings from DB
+import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -145,7 +146,8 @@ export default function RecurringPage() {
                         </Badge>
                       )}
                       <p className="text-sm text-muted-foreground">
-                        Next: {format(new Date(item.nextDate), "MMM dd, yyyy")}
+                        {/* ⏰ parseISO prevents timezone bugs */}
+                        Next: {format(parseISO(item.nextDate), "MMM dd, yyyy")}
                       </p>
                     </div>
                   </div>

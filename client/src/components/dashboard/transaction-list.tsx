@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Trash2, Pencil } from "lucide-react";
-import { format } from "date-fns";
+// ⏰ parseISO prevents timezone bugs when parsing date strings from DB
+import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 
 interface TransactionListProps {
@@ -48,7 +49,8 @@ export function TransactionList({ transactions, onDelete, onEdit, showDelete = f
                 <p className="font-medium">{transaction.description}</p>
                 <div className="flex items-center gap-2 mt-1">
                   <p className="text-sm text-muted-foreground">
-                    {format(new Date(transaction.date), "MMM dd, yyyy")}
+                    {/* ⏰ parseISO prevents timezone bugs */}
+                    {format(parseISO(transaction.date), "MMM dd, yyyy")}
                   </p>
                   {transaction.category && (
                     <Badge variant="secondary" className="text-xs">
