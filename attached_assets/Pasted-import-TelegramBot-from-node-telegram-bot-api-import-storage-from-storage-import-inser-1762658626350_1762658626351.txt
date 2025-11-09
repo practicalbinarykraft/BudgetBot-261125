@@ -1,0 +1,2162 @@
+import TelegramBot from 'node-telegram-bot-api';
+import { storage } from './storage';
+import { insertDailyTransactionSchema, budgetLimits } from '@shared/schema';
+import { convertRubToUsd, convertUsdToRub, getExchangeRateInfo } from './currency-service';
+import { logger } from './logger';
+import { parseExpenseMessage, detectCategory, ParsedExpense } from './telegram-parser';
+import { Currency, ExpenseCategory } from './telegram-config';
+import { OcrService } from './ocr-service';
+import { AnalyticsService } from './analytics-service';
+import { aiService } from './ai-service';
+import { gamificationService } from './gamification-service';
+import fs from 'fs/promises';
+import OpenAI from 'openai';
+import { db } from './db';
+import { eq } from 'drizzle-orm';
+
+const token = process.env.TELEGRAM_BOT_TOKEN;
+
+if (!token) {
+  logger.error('TELEGRAM_BOT_TOKEN not found in environment variables');
+  process.exit(1);
+}
+
+// Создаем бота с улучшенными настройками для стабильности
+export const bot = new TelegramBot(token, { 
+  polling: {
+    interval: 1000, // Проверяем сообщения каждую секунду
+    autoStart: false, // Запустим вручную после настройки обработчиков ошибок
+    params: {
+      timeout: 30 // Таймаут для long polling в секундах
+    }
+  }
+});
+
+// Карта Telegram пользователей к нашим пользователям
+const telegramUserMap = new Map<number, number>();
+
+// Карта состояний пользователей для многошаговых команд
+const userStates = new Map<number, { action: string; data?: any }>();
+
+// Переменные для управления retry логикой
+let isPollingStarted = false;
+let restartAttempts = 0;
+let restartTimeoutId: NodeJS.Timeout | null = null;
+const MAX_RESTART_ATTEMPTS = 3;
+const RESTART_DELAY = 5000; // 5 секунд между попытками
+
+// Функция для безопасного запуска polling
+async function startPolling() {
+  if (isPollingStarted) {
+    logger.info('Polling already started, skipping');
+    return;
+  }
+  
+  try {
+    // Ensure any previous polling is stopped
+    try {
+      await bot.stopPolling();
+    } catch (e) {
+      // Ignore stopPolling errors if already stopped
+    }
+    
+    // Clear pending updates manually via deleteWebHook
+    try {
+      await bot.deleteWebHook();
+    } catch (e) {
+      // Ignore webhook errors
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for cleanup
+    
+    await bot.startPolling();
+    isPollingStarted = true;
+    restartAttempts = 0;
+    logger.info('Telegram bot polling started');
+  } catch (error) {
+    logger.error('Failed to start polling', error instanceof Error ? error : new Error(String(error)));
+    if (restartAttempts < MAX_RESTART_ATTEMPTS) {
+      scheduleRestart();
+    }
+  }
+}
+
+// Функция для безопасной остановки polling
+async function stopPolling() {
+  if (!isPollingStarted) return;
+  
+  try {
+    await bot.stopPolling();
+    isPollingStarted = false;
+    logger.info('Telegram bot polling stopped');
+  } catch (error) {
+    logger.error('Error stopping polling', error instanceof Error ? error : new Error(String(error)));
+    isPollingStarted = false; // Mark as stopped anyway
+  }
+}
+
+// Функция для планирования перезапуска
+function scheduleRestart() {
+  // Clear any existing restart timeout
+  if (restartTimeoutId) {
+    clearTimeout(restartTimeoutId);
+    restartTimeoutId = null;
+  }
+  
+  if (restartAttempts >= MAX_RESTART_ATTEMPTS) {
+    logger.error(`Максимальное количество попыток перезапуска (${MAX_RESTART_ATTEMPTS}) превышено. Остановка бота.`);
+    return;
+  }
+  
+  restartAttempts++;
+  logger.info(`Планируется перезапуск бота через ${RESTART_DELAY}ms (попытка ${restartAttempts}/${MAX_RESTART_ATTEMPTS})`);
+  
+  restartTimeoutId = setTimeout(async () => {
+    logger.info(`Перезапуск бота (попытка ${restartAttempts}/${MAX_RESTART_ATTEMPTS})`);
+    await stopPolling();
+    
+    // Небольшая задержка между остановкой и запуском
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    await startPolling();
+  }, RESTART_DELAY);
+}
+
+// Вспомогательная функция для проверки бюджетных лимитов и отправки уведомлений
+async function checkBudgetLimitsAndNotify(
+  chatId: number,
+  userId: number,
+  category: string | null,
+  transactionAmount: number
+) {
+  if (!category) return; // Нет категории - нечего проверять
+  
+  try {
+    const budgets = await storage.getBudgetLimits(userId);
+    const budget = budgets.find(b => b.category.name === category);
+    
+    if (!budget || !budget.isActive || !budget.enableTelegramNotifications) return;
+    
+    // Получаем все транзакции за текущий месяц для расчета spent
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+    
+    const transactions = await storage.getDailyTransactions(userId, monthStart, monthEnd);
+    const categoryTransactions = transactions.filter(t => 
+      t.type === 'expense' && t.category === category
+    );
+    
+    const totalSpent = categoryTransactions.reduce((sum, t) => sum + parseFloat(t.amount), 0);
+    const limit = parseFloat(budget.monthlyLimit);
+    const percentage = (totalSpent / limit) * 100;
+    
+    // Всегда обновляем currentSpent и percentageUsed
+    const now_ts = new Date();
+    const updateData: any = {
+      currentSpent: totalSpent.toString(),
+      percentageUsed: percentage.toFixed(2)
+    };
+    
+    const lastWarning = budget.lastWarningAt ? new Date(budget.lastWarningAt) : null;
+    const lastAlert = budget.lastAlertAt ? new Date(budget.lastAlertAt) : null;
+    
+    const alertThreshold = budget.alertThreshold || 100;
+    const warningThreshold = budget.warningThreshold || 80;
+    
+    // Проверяем 100% порог
+    if (percentage >= alertThreshold) {
+      // Отправляем уведомление только если не отправляли в этом месяце
+      const shouldNotify = !lastAlert || 
+        lastAlert.getMonth() !== now_ts.getMonth() ||
+        lastAlert.getFullYear() !== now_ts.getFullYear();
+        
+      if (shouldNotify) {
+        const message = `🔴 *ПРЕВЫШЕН БЮДЖЕТ!*\n\n` +
+          `Категория: *${category}*\n` +
+          `Лимит: $${limit.toFixed(2)}\n` +
+          `Потрачено: $${totalSpent.toFixed(2)} (${percentage.toFixed(0)}%)\n` +
+          `Превышение: $${(totalSpent - limit).toFixed(2)}\n\n` +
+          `⚠️ Рекомендуем сократить расходы в этой категории!`;
+        
+        await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+        updateData.lastAlertAt = now_ts;
+      }
+    }
+    // Проверяем 80% порог
+    else if (percentage >= warningThreshold) {
+      // Отправляем предупреждение только если не отправляли в этом месяце
+      const shouldNotify = !lastWarning || 
+        lastWarning.getMonth() !== now_ts.getMonth() ||
+        lastWarning.getFullYear() !== now_ts.getFullYear();
+        
+      if (shouldNotify) {
+        const remaining = limit - totalSpent;
+        const message = `⚠️ *Предупреждение о бюджете*\n\n` +
+          `Категория: *${category}*\n` +
+          `Лимит: $${limit.toFixed(2)}\n` +
+          `Потрачено: $${totalSpent.toFixed(2)} (${percentage.toFixed(0)}%)\n` +
+          `Осталось: $${remaining.toFixed(2)}\n\n` +
+          `💡 Вы приближаетесь к лимиту!`;
+        
+        await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+        updateData.lastWarningAt = now_ts;
+      }
+    }
+    
+    // Обновляем лимит одним запросом
+    await db.update(budgetLimits)
+      .set(updateData)
+      .where(eq(budgetLimits.id, budget.id));
+    
+  } catch (error) {
+    logger.error('Error checking budget limits', error instanceof Error ? error : new Error(String(error)));
+  }
+}
+
+// Инициализация бота
+export function initializeTelegramBot() {
+  logger.info('Telegram bot initialized');
+  
+  // Инициализируем OCR сервис
+  const ocrService = new OcrService();
+  
+  // Инициализируем Analytics сервис
+  const analyticsService = new AnalyticsService(storage);
+  
+  // Инициализируем OpenAI клиент для распознавания голоса
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+  });
+  
+  // Загружаем существующие связи пользователей с Telegram
+  loadExistingTelegramUsers();
+
+  // Обработчик команды /start
+  bot.onText(/\/start/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramUserId = msg.from?.id;
+    
+    if (!telegramUserId) return;
+    
+    // Проверяем, авторизован ли уже пользователь
+    const existingUserId = telegramUserMap.get(telegramUserId);
+    let isAuthenticated = false;
+    
+    if (existingUserId) {
+      // Проверяем что пользователь все еще существует в базе
+      const user = await storage.getUser(existingUserId);
+      if (user) {
+        isAuthenticated = true;
+      } else {
+        // Пользователь удален из базы, удаляем из карты
+        telegramUserMap.delete(telegramUserId);
+      }
+    }
+    
+    const welcomeMessage = isAuthenticated 
+      ? `Добро пожаловать обратно! 👋 
+
+📝 Вы уже авторизованы и можете отправлять расходы:
+• "кофе 200₽" → 200₽ за кофе на сегодня
+• "coffee $5 вчера" → $5 за кофе на вчерашнюю дату
+• "обед 1500₽ в понедельник" → 1500₽ за обед в ближайший понедельник
+• "такси 50$ 25 сентября" → $50 за такси на 25.09
+• "продукты 800₽ 25.09" → 800₽ за продукты на 25.09
+
+📅 **НОВОЕ!** Поддержка дат:
+• Относительные: "вчера", "позавчера", "в понедельник"
+• Абсолютные: "25.09", "1 октября", "25 сентября 2025"
+
+💱 Поддерживаются рубли (₽) и доллары ($) с автоматической конвертацией!
+🎙️ Голосовые сообщения тоже поддерживаются!
+📸 Отправьте фото чека для автоматического распознавания!
+
+Используйте кнопки ниже для быстрого доступа! ⬇️`
+      : `Привет! 👋 Я TogetherBudget бот для учета расходов.
+
+🔐 Для начала работы авторизуйтесь:
+1. Зайдите на сайт TogetherBudget
+2. Войдите в свой аккаунт
+3. Скопируйте токен авторизации
+4. Используйте команду /auth <токен>
+
+📝 После авторизации вы сможете отправлять расходы с указанием даты:
+• "кофе 200₽" → 200₽ за кофе на сегодня
+• "обед $15 вчера" → $15 за обед на вчерашнюю дату
+• "такси 300₽ в среду" → 300₽ за такси в ближайшую среду
+• "продукты 50$ 25.09" → $50 за продукты на 25 сентября
+
+📅 Поддержка дат: "вчера", "в понедельник", "25.09", "1 октября"
+💱 Поддерживаются рубли (₽) и доллары ($) с автоматической конвертацией!
+🎙️ Голосовые сообщения тоже поддерживаются!
+📸 Отправьте фото чека для автоматического распознавания!`;
+    
+    // Создаем клавиатуру для авторизованных пользователей
+    const keyboard = isAuthenticated ? {
+      keyboard: [
+        [{ text: '💸 Добавить расход' }, { text: '💰 Добавить доход' }],
+        [{ text: '📊 Статистика' }, { text: '❓ Помощь' }]
+      ],
+      resize_keyboard: true,
+      persistent: true
+    } : { remove_keyboard: true };
+    
+    bot.sendMessage(chatId, welcomeMessage, {
+      reply_markup: keyboard
+    });
+  });
+
+  // Команда /menu для показа клавиатуры
+  bot.onText(/\/menu/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramUserId = msg.from?.id;
+    
+    if (!telegramUserId) return;
+    
+    const appUserId = telegramUserMap.get(telegramUserId);
+    
+    if (!appUserId) {
+      bot.sendMessage(chatId, '❌ Вы не авторизованы. Используйте команду /auth <токен>');
+      return;
+    }
+    
+    const menuKeyboard = {
+      keyboard: [
+        [{ text: '💸 Добавить расход' }, { text: '💰 Добавить доход' }],
+        [{ text: '📊 Статистика' }, { text: '❓ Помощь' }]
+      ],
+      resize_keyboard: true,
+      persistent: true
+    };
+    
+    bot.sendMessage(chatId, '📱 Меню активировано! Используйте кнопки ниже для быстрого доступа к функциям.', {
+      reply_markup: menuKeyboard
+    });
+  });
+
+  // Команда /auth для авторизации через токен
+  bot.onText(/\/auth (.+)/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    const telegramUserId = msg.from?.id;
+    const authToken = match?.[1]?.trim();
+    
+    if (!telegramUserId) return;
+    
+    if (!authToken) {
+      bot.sendMessage(chatId, "❌ Укажите токен авторизации.\nПример: /auth abc123");
+      return;
+    }
+    
+    try {
+      // Ищем пользователя по токену
+      const users = await storage.getUsers();
+      const user = users.find(u => u.authToken === authToken);
+      
+      if (!user) {
+        bot.sendMessage(chatId, "❌ Неверный токен авторизации. Проверьте токен в веб-приложении.");
+        return;
+      }
+      
+      // Проверяем, не привязан ли уже другой Telegram аккаунт
+      if (user.telegramId && user.telegramId !== telegramUserId.toString()) {
+        bot.sendMessage(chatId, "❌ Этот аккаунт уже привязан к другому Telegram пользователю.");
+        return;
+      }
+      
+      // Обновляем telegramId в базе данных
+      await storage.updateUser(user.id, { telegramId: telegramUserId.toString() });
+      
+      // Сохраняем в карте для быстрого доступа
+      telegramUserMap.set(telegramUserId, user.id);
+      
+      // Клавиатура для авторизованных пользователей
+      const authKeyboard = {
+        keyboard: [
+          [{ text: '💸 Добавить расход' }, { text: '💰 Добавить доход' }],
+          [{ text: '📊 Статистика' }, { text: '❓ Помощь' }]
+        ],
+        resize_keyboard: true,
+        persistent: true
+      };
+
+      bot.sendMessage(chatId, `✅ Авторизация успешна!
+
+👤 Пользователь: ${user.name}
+📧 Email: ${user.email}
+
+📝 Теперь вы можете отправлять расходы:
+• "кофе 200" 
+• "продукты 1500₽"
+• 🎙️ Голосовые сообщения
+• 📸 Фото чеков
+
+Используйте кнопки ниже для быстрого доступа! ⬇️`, {
+        reply_markup: authKeyboard
+      });
+      
+    } catch (error) {
+      logger.error('Ошибка при авторизации', error instanceof Error ? error : new Error(String(error)));
+      bot.sendMessage(chatId, "❌ Ошибка при авторизации. Попробуйте еще раз.");
+    }
+  });
+
+  // Команда /help для справки
+  bot.onText(/\/help/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramUserId = msg.from?.id;
+    
+    if (!telegramUserId) return;
+    
+    const isAuthenticated = telegramUserMap.has(telegramUserId);
+    
+    const helpMessage = isAuthenticated 
+      ? `📚 *Справка по командам TogetherBudget*
+
+📝 *Добавление расходов:*
+• "кофе 200₽" → на сегодня
+• "обед $15 вчера" → на вчерашнюю дату  
+• "такси 300₽ в понедельник" → на ближайший понедельник
+• "продукты 50$ 25.09" → на 25 сентября
+• 🎙️ Голосовые сообщения
+• 📸 Фото чеков
+
+📊 *Аналитика:*
+/stats - статистика за сегодня
+/week - статистика за неделю
+/month - подробная статистика за месяц
+/year - годовой обзор
+/compare - сравнение текущего и прошлого месяца
+/trends - анализ трендов расходов
+/categories - детальный анализ по категориям
+
+🤖 *AI Анализ:*
+/analyze - умный анализ ваших финансов
+/predict - предсказание и советы по расходам
+
+💰 *Бюджеты:*
+/budget <категория> <лимит> - установить лимит
+/budgets - просмотр всех бюджетных лимитов
+
+🏆 *Геймификация:*
+/achievements - ваши достижения и прогресс
+/challenges - активные челленджи
+/streaks - стрики активности
+
+⚙️ *Общее:*
+/status - статус аккаунта
+/help - эта справка
+
+💱 *Валюты:* ₽ (рубли) и $ (доллары)
+🔄 *Конвертация:* автоматическая`
+      : `📚 *Справка по TogetherBudget*
+
+🔐 *Для начала работы:*
+1. Войдите на сайт TogetherBudget
+2. Скопируйте токен авторизации  
+3. Используйте /auth <токен>
+
+📝 *После авторизации:*
+• Добавляйте расходы: "кофе 200₽"
+• Используйте даты: "обед $15 вчера"
+• Голосовые сообщения
+• Фото чеков
+• Просматривайте статистику: /stats
+
+📅 *Форматы дат:* "вчера", "в среду", "25.09", "1 октября"
+
+❓ *Нужна помощь?* Напишите /help после авторизации`;
+
+    bot.sendMessage(chatId, helpMessage, { parse_mode: 'Markdown' });
+  });
+
+  // Команда /status для проверки статуса
+  bot.onText(/\/status/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramUserId = msg.from?.id;
+    
+    if (!telegramUserId) return;
+    
+    const appUserId = telegramUserMap.get(telegramUserId);
+    
+    if (!appUserId) {
+      bot.sendMessage(chatId, `❌ Вы не авторизованы
+      
+🔐 Для авторизации:
+1. Получите токен в веб-приложении
+2. Используйте /auth <токен>`);
+      return;
+    }
+    
+    try {
+      const user = await storage.getUser(appUserId);
+      
+      if (!user) {
+        telegramUserMap.delete(telegramUserId);
+        bot.sendMessage(chatId, '❌ Пользователь не найден. Повторите авторизацию.');
+        return;
+      }
+      
+      const statusMessage = `✅ Статус аккаунта:
+
+👤 Имя: ${user.name}
+📧 Email: ${user.email}
+🔗 Telegram: подключен
+
+📝 Готов к добавлению расходов!`;
+
+      bot.sendMessage(chatId, statusMessage);
+      
+    } catch (error) {
+      logger.error('Error checking status', error instanceof Error ? error : new Error(String(error)));
+      bot.sendMessage(chatId, '❌ Ошибка при проверке статуса');
+    }
+  });
+
+  // Команда /reset_password для сброса пароля
+  bot.onText(/\/reset_password/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramUserId = msg.from?.id;
+    
+    if (!telegramUserId) return;
+    
+    bot.sendMessage(chatId, `🔐 *Сброс пароля*
+
+Пожалуйста, отправьте ваш email для сброса пароля.
+
+📧 Пример: kraftinvesting@gmail.com`, { parse_mode: 'Markdown' });
+    
+    // Set user state to waiting for email
+    userStates.set(telegramUserId, { action: 'reset_password_waiting_email' });
+  });
+
+  // Команда /stats для статистики за сегодня
+  bot.onText(/\/stats/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramUserId = msg.from?.id;
+    
+    if (!telegramUserId) return;
+    
+    const appUserId = telegramUserMap.get(telegramUserId);
+    
+    if (!appUserId) {
+      bot.sendMessage(chatId, '❌ Сначала авторизуйтесь: /auth <токен>');
+      return;
+    }
+    
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const transactions = await storage.getDailyTransactions(appUserId, today, today);
+      
+      const expenses = transactions.filter(t => t.type === 'expense');
+      const incomes = transactions.filter(t => t.type === 'income');
+      
+      const totalExpenses = expenses.reduce((sum, t) => sum + Number(t.amount), 0);
+      const totalIncomes = incomes.reduce((sum, t) => sum + Number(t.amount), 0);
+      
+      const statsMessage = `📊 Статистика за сегодня (${today}):
+
+💸 **Расходы:** $${totalExpenses.toFixed(2)} (${expenses.length} транзакций)
+💰 **Доходы:** $${totalIncomes.toFixed(2)} (${incomes.length} транзакций)
+📈 **Баланс:** $${(totalIncomes - totalExpenses).toFixed(2)}
+
+${expenses.length > 0 ? '\n📝 **Последние расходы:**' : ''}${expenses.slice(-3).map(t => `\n• $${Number(t.amount).toFixed(2)} - ${t.description}`).join('')}`;
+
+      bot.sendMessage(chatId, statsMessage);
+      
+    } catch (error) {
+      logger.error('Error getting stats', error instanceof Error ? error : new Error(String(error)));
+      bot.sendMessage(chatId, '❌ Ошибка при получении статистики');
+    }
+  });
+
+  // Команда /week для статистики за неделю
+  bot.onText(/\/week/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramUserId = msg.from?.id;
+    
+    if (!telegramUserId) return;
+    
+    const appUserId = telegramUserMap.get(telegramUserId);
+    
+    if (!appUserId) {
+      bot.sendMessage(chatId, '❌ Сначала авторизуйтесь: /auth <токен>');
+      return;
+    }
+    
+    try {
+      const today = new Date();
+      const weekAgo = new Date(today);
+      weekAgo.setDate(today.getDate() - 7);
+      
+      const startDate = weekAgo.toISOString().split('T')[0];
+      const endDate = today.toISOString().split('T')[0];
+      
+      const transactions = await storage.getDailyTransactions(appUserId, startDate, endDate);
+      
+      const expenses = transactions.filter(t => t.type === 'expense');
+      const incomes = transactions.filter(t => t.type === 'income');
+      
+      const totalExpenses = expenses.reduce((sum, t) => sum + Number(t.amount), 0);
+      const totalIncomes = incomes.reduce((sum, t) => sum + Number(t.amount), 0);
+      
+      // Группировка по категориям
+      const expensesByCategory = expenses.reduce((acc, t) => {
+        const category = t.category || 'Разное';
+        acc[category] = (acc[category] || 0) + Number(t.amount);
+        return acc;
+      }, {} as Record<string, number>);
+      
+      const topCategories = Object.entries(expensesByCategory)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 3);
+      
+      const statsMessage = `📊 Статистика за неделю (${startDate} - ${endDate}):
+
+💸 **Расходы:** $${totalExpenses.toFixed(2)} (${expenses.length} транзакций)
+💰 **Доходы:** $${totalIncomes.toFixed(2)} (${incomes.length} транзакций)
+📈 **Баланс:** $${(totalIncomes - totalExpenses).toFixed(2)}
+
+📊 **Топ категории расходов:**${topCategories.map(([cat, amount]) => `\n• ${cat}: $${amount.toFixed(2)}`).join('')}
+
+📅 **Средний расход в день:** $${(totalExpenses / 7).toFixed(2)}`;
+
+      bot.sendMessage(chatId, statsMessage);
+      
+    } catch (error) {
+      logger.error('Error getting week stats', error instanceof Error ? error : new Error(String(error)));
+      bot.sendMessage(chatId, '❌ Ошибка при получении статистики за неделю');
+    }
+  });
+
+  // Команда /month для подробной статистики за текущий месяц
+  bot.onText(/\/month/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramUserId = msg.from?.id;
+    
+    if (!telegramUserId) return;
+    
+    const appUserId = telegramUserMap.get(telegramUserId);
+    
+    if (!appUserId) {
+      bot.sendMessage(chatId, '❌ Сначала авторизуйтесь: /auth <токен>');
+      return;
+    }
+    
+    try {
+      const now = new Date();
+      const monthStats = await analyticsService.getMonthStats(appUserId, now.getFullYear(), now.getMonth() + 1);
+      
+      if (!monthStats) {
+        bot.sendMessage(chatId, '❌ Нет данных за текущий месяц');
+        return;
+      }
+      
+      const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
+                          'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+      
+      const topCategories = monthStats.topCategories.slice(0, 5);
+      
+      let message = `📊 *Статистика за ${monthNames[now.getMonth()]} ${now.getFullYear()}*\n\n`;
+      
+      message += `💰 *Финансовый обзор:*\n`;
+      message += `• Расходы: $${monthStats.totalExpenses.toFixed(2)}\n`;
+      message += `• Доходы: $${monthStats.totalIncome.toFixed(2)}\n`;
+      message += `• Баланс: $${monthStats.balance.toFixed(2)}\n`;
+      message += `• Сбережения: $${(monthStats.totalIncome - monthStats.totalExpenses).toFixed(2)}\n\n`;
+      
+      message += `📊 *Транзакции:*\n`;
+      message += `• Всего: ${monthStats.transactionCount}\n`;
+      message += `• Средний расход в день: $${monthStats.avgDailyExpense.toFixed(2)}\n\n`;
+      
+      if (topCategories.length > 0) {
+        message += `🏆 *Топ категории расходов:*\n`;
+        topCategories.forEach((cat: { category: string; amount: number; percentage: number }, idx: number) => {
+          message += `${idx + 1}. ${cat.category}: $${cat.amount.toFixed(2)} (${cat.percentage.toFixed(1)}%)\n`;
+        });
+        message += '\n';
+      }
+      
+      if (monthStats.dayByDayExpenses.length > 0) {
+        const maxDay = monthStats.dayByDayExpenses.reduce((max, day) => day.amount > max.amount ? day : max);
+        const minDay = monthStats.dayByDayExpenses.filter(d => d.amount > 0).reduce((min, day) => day.amount < min.amount ? day : min, monthStats.dayByDayExpenses[0]);
+        
+        message += `📈 *Статистика по дням:*\n`;
+        message += `• Макс. расход в день: $${maxDay.amount.toFixed(2)} (${maxDay.date})\n`;
+        if (minDay && minDay.amount > 0) {
+          message += `• Мин. расход в день: $${minDay.amount.toFixed(2)} (${minDay.date})\n`;
+        }
+      }
+      
+      bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      
+    } catch (error) {
+      logger.error('Error getting month stats', error instanceof Error ? error : new Error(String(error)));
+      bot.sendMessage(chatId, '❌ Ошибка при получении статистики за месяц');
+    }
+  });
+
+  // Команда /year для подробной статистики за текущий год
+  bot.onText(/\/year/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramUserId = msg.from?.id;
+    
+    if (!telegramUserId) return;
+    
+    const appUserId = telegramUserMap.get(telegramUserId);
+    
+    if (!appUserId) {
+      bot.sendMessage(chatId, '❌ Сначала авторизуйтесь: /auth <токен>');
+      return;
+    }
+    
+    try {
+      const now = new Date();
+      const yearStats = await analyticsService.getYearStats(appUserId, now.getFullYear());
+      
+      if (!yearStats) {
+        bot.sendMessage(chatId, '❌ Нет данных за текущий год');
+        return;
+      }
+      
+      const topCategories = yearStats.topCategories.slice(0, 5);
+      
+      let message = `📊 *Статистика за ${now.getFullYear()} год*\n\n`;
+      
+      message += `💰 *Финансовый обзор:*\n`;
+      message += `• Расходы: $${yearStats.totalExpenses.toFixed(2)}\n`;
+      message += `• Доходы: $${yearStats.totalIncome.toFixed(2)}\n`;
+      message += `• Баланс: $${yearStats.balance.toFixed(2)}\n`;
+      message += `• Сбережения: $${(yearStats.totalIncome - yearStats.totalExpenses).toFixed(2)}\n\n`;
+      
+      message += `📊 *Транзакции:*\n`;
+      message += `• Всего: ${yearStats.transactionCount}\n`;
+      message += `• Средний расход в день: $${yearStats.avgDailyExpense.toFixed(2)}\n`;
+      message += `• Средний расход в месяц: $${(yearStats.totalExpenses / 12).toFixed(2)}\n\n`;
+      
+      if (topCategories.length > 0) {
+        message += `🏆 *Топ категории расходов за год:*\n`;
+        topCategories.forEach((cat: { category: string; amount: number; percentage: number }, idx: number) => {
+          message += `${idx + 1}. ${cat.category}: $${cat.amount.toFixed(2)} (${cat.percentage.toFixed(1)}%)\n`;
+        });
+        message += '\n';
+      }
+      
+      if (yearStats.dayByDayExpenses.length > 0) {
+        const maxDay = yearStats.dayByDayExpenses.reduce((max, day) => day.amount > max.amount ? day : max);
+        const minDay = yearStats.dayByDayExpenses.filter(d => d.amount > 0).reduce((min, day) => day.amount < min.amount ? day : min, yearStats.dayByDayExpenses[0]);
+        
+        message += `📈 *Статистика по дням:*\n`;
+        message += `• Макс. расход в день: $${maxDay.amount.toFixed(2)} (${maxDay.date})\n`;
+        if (minDay && minDay.amount > 0) {
+          message += `• Мин. расход в день: $${minDay.amount.toFixed(2)} (${minDay.date})\n`;
+        }
+      }
+      
+      bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      
+    } catch (error) {
+      logger.error('Error getting year stats', error instanceof Error ? error : new Error(String(error)));
+      bot.sendMessage(chatId, '❌ Ошибка при получении статистики за год');
+    }
+  });
+
+  // Команда /compare для сравнения текущего месяца с прошлым
+  bot.onText(/\/compare/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramUserId = msg.from?.id;
+    
+    if (!telegramUserId) return;
+    
+    const appUserId = telegramUserMap.get(telegramUserId);
+    
+    if (!appUserId) {
+      bot.sendMessage(chatId, '❌ Сначала авторизуйтесь: /auth <токен>');
+      return;
+    }
+    
+    try {
+      const now = new Date();
+      const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+      
+      const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
+      const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
+      
+      const comparison = await analyticsService.comparePeriods(appUserId, currentMonthStart, currentMonthEnd, previousMonthStart, previousMonthEnd);
+      
+      const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
+                          'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+      
+      const currentMonth = monthNames[now.getMonth()];
+      const previousMonth = monthNames[(now.getMonth() - 1 + 12) % 12];
+      
+      let message = `📊 *Сравнение: ${currentMonth} vs ${previousMonth}*\n\n`;
+      
+      message += `💸 *Расходы:*\n`;
+      message += `• Текущий: $${comparison.current.totalExpenses.toFixed(2)}\n`;
+      message += `• Прошлый: $${comparison.previous.totalExpenses.toFixed(2)}\n`;
+      message += `• Изменение: ${comparison.changes.expensesChange > 0 ? '+' : ''}$${comparison.changes.expensesChange.toFixed(2)} (${comparison.changes.expensesChangePercent > 0 ? '+' : ''}${comparison.changes.expensesChangePercent.toFixed(1)}%)\n\n`;
+      
+      message += `💰 *Доходы:*\n`;
+      message += `• Текущий: $${comparison.current.totalIncome.toFixed(2)}\n`;
+      message += `• Прошлый: $${comparison.previous.totalIncome.toFixed(2)}\n`;
+      message += `• Изменение: ${comparison.changes.incomeChange > 0 ? '+' : ''}$${comparison.changes.incomeChange.toFixed(2)} (${comparison.changes.incomeChangePercent > 0 ? '+' : ''}${comparison.changes.incomeChangePercent.toFixed(1)}%)\n\n`;
+      
+      message += `📈 *Баланс:*\n`;
+      message += `• Текущий: $${comparison.current.balance.toFixed(2)}\n`;
+      message += `• Прошлый: $${comparison.previous.balance.toFixed(2)}\n`;
+      message += `• Изменение: ${comparison.changes.balanceChange > 0 ? '+' : ''}$${comparison.changes.balanceChange.toFixed(2)}\n`;
+      
+      bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      
+    } catch (error) {
+      logger.error('Error comparing periods', error instanceof Error ? error : new Error(String(error)));
+      bot.sendMessage(chatId, '❌ Ошибка при сравнении периодов');
+    }
+  });
+
+  // Команда /trends для анализа трендов расходов
+  bot.onText(/\/trends/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramUserId = msg.from?.id;
+    
+    if (!telegramUserId) return;
+    
+    const appUserId = telegramUserMap.get(telegramUserId);
+    
+    if (!appUserId) {
+      bot.sendMessage(chatId, '❌ Сначала авторизуйтесь: /auth <токен>');
+      return;
+    }
+    
+    try {
+      const trends = await analyticsService.getTrends(appUserId, 3);
+      
+      let message = `📈 *Анализ трендов расходов (последние 3 месяца)*\n\n`;
+      
+      if (trends.monthlyTrend.length > 0) {
+        message += `📊 *Помесячные расходы:*\n`;
+        trends.monthlyTrend.forEach(month => {
+          const trendIcon = month.trend === 'up' ? '📈' : month.trend === 'down' ? '📉' : '➡️';
+          message += `• ${month.month}: $${month.totalExpenses.toFixed(2)} ${trendIcon}\n`;
+        });
+        message += '\n';
+      }
+      
+      const velocityIcon = trends.spendingVelocity === 'increasing' ? '⚠️ Увеличивается' : 
+                           trends.spendingVelocity === 'decreasing' ? '✅ Снижается' : 
+                           '➡️ Стабильная';
+      message += `⚡ *Динамика расходов:* ${velocityIcon}\n\n`;
+      
+      if (trends.weekdayPattern.length > 0) {
+        message += `📅 *Средние расходы по дням недели:*\n`;
+        const sortedDays = trends.weekdayPattern.sort((a, b) => b.avgExpense - a.avgExpense).slice(0, 3);
+        sortedDays.forEach((day, idx) => {
+          message += `${idx + 1}. ${day.day}: $${day.avgExpense.toFixed(2)}\n`;
+        });
+        message += '\n';
+      }
+      
+      if (trends.topSpendingDays.length > 0) {
+        message += `💰 *Самые затратные дни:*\n`;
+        trends.topSpendingDays.slice(0, 3).forEach((day, idx) => {
+          message += `${idx + 1}. ${day.date}: $${day.amount.toFixed(2)}\n   ${day.description}\n`;
+        });
+      }
+      
+      bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      
+    } catch (error) {
+      logger.error('Error getting trends', error instanceof Error ? error : new Error(String(error)));
+      bot.sendMessage(chatId, '❌ Ошибка при получении трендов');
+    }
+  });
+
+  // Команда /categories для детального анализа категорий
+  bot.onText(/\/categories/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramUserId = msg.from?.id;
+    
+    if (!telegramUserId) return;
+    
+    const appUserId = telegramUserMap.get(telegramUserId);
+    
+    if (!appUserId) {
+      bot.sendMessage(chatId, '❌ Сначала авторизуйтесь: /auth <токен>');
+      return;
+    }
+    
+    try {
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+      
+      const categories = await analyticsService.getCategoryBreakdown(appUserId, monthStart, monthEnd);
+      
+      const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
+                          'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+      
+      let message = `📊 *Анализ категорий за ${monthNames[now.getMonth()]}*\n\n`;
+      
+      if (categories.length === 0) {
+        message += 'Нет данных о расходах за текущий месяц.';
+      } else {
+        categories.forEach((cat, idx) => {
+          const trendIcon = cat.trend === 'up' ? '📈' : cat.trend === 'down' ? '📉' : '➡️';
+          message += `*${idx + 1}. ${cat.category}* ${trendIcon}\n`;
+          message += `• Всего: $${cat.amount.toFixed(2)} (${cat.percentage.toFixed(1)}%)\n`;
+          message += `• Транзакций: ${cat.transactionCount}\n`;
+          message += `• Средний чек: $${cat.avgTransactionAmount.toFixed(2)}\n\n`;
+        });
+      }
+      
+      bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      
+    } catch (error) {
+      logger.error('Error getting category breakdown', error instanceof Error ? error : new Error(String(error)));
+      bot.sendMessage(chatId, '❌ Ошибка при получении анализа категорий');
+    }
+  });
+
+  // Команда /achievements для просмотра достижений
+  bot.onText(/\/achievements/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramUserId = msg.from?.id;
+    
+    if (!telegramUserId) return;
+    
+    const appUserId = telegramUserMap.get(telegramUserId);
+    
+    if (!appUserId) {
+      bot.sendMessage(chatId, '❌ Сначала авторизуйтесь: /auth <токен>');
+      return;
+    }
+    
+    try {
+      const achievements = await storage.getAchievements(appUserId);
+      
+      if (achievements.length === 0) {
+        bot.sendMessage(chatId, '❌ Нет доступных достижений');
+        return;
+      }
+      
+      const unlocked = achievements.filter(a => a.isUnlocked);
+      const locked = achievements.filter(a => !a.isUnlocked);
+      
+      let message = `🏆 *Ваши достижения* (${unlocked.length}/${achievements.length})\n\n`;
+      
+      if (unlocked.length > 0) {
+        message += `✅ *Открыто:*\n`;
+        unlocked.forEach(a => {
+          message += `🏅 *${a.title}*\n`;
+          message += `   ${a.description}\n`;
+          message += `   Открыто: ${new Date(a.unlockedAt!).toLocaleDateString()}\n\n`;
+        });
+      }
+      
+      if (locked.length > 0) {
+        message += `🔒 *В процессе:*\n`;
+        locked.forEach(a => {
+          const currentVal = a.currentValue || 0;
+          const progress = Math.min((currentVal / a.targetValue) * 100, 100).toFixed(0);
+          message += `⭐ *${a.title}*\n`;
+          message += `   ${a.description}\n`;
+          message += `   Прогресс: ${currentVal}/${a.targetValue} (${progress}%)\n\n`;
+        });
+      }
+      
+      bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      
+    } catch (error) {
+      logger.error('Error getting achievements', error instanceof Error ? error : new Error(String(error)));
+      bot.sendMessage(chatId, '❌ Ошибка при получении достижений');
+    }
+  });
+
+  // Команда /challenges для просмотра активных челленджей
+  bot.onText(/\/challenges/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramUserId = msg.from?.id;
+    
+    if (!telegramUserId) return;
+    
+    const appUserId = telegramUserMap.get(telegramUserId);
+    
+    if (!appUserId) {
+      bot.sendMessage(chatId, '❌ Сначала авторизуйтесь: /auth <токен>');
+      return;
+    }
+    
+    try {
+      const challenges = await storage.getChallenges(appUserId);
+      
+      if (challenges.length === 0) {
+        bot.sendMessage(chatId, '❌ Нет доступных челленджей');
+        return;
+      }
+      
+      const active = challenges.filter(c => c.status === 'active');
+      const completed = challenges.filter(c => c.status === 'completed');
+      const failed = challenges.filter(c => c.status === 'failed');
+      
+      let message = `🎯 *Ваши челленджи*\n\n`;
+      
+      if (active.length > 0) {
+        message += `⚡ *Активные:*\n`;
+        active.forEach(c => {
+          const currentVal = c.currentValue || '0';
+          const progress = Math.min((parseFloat(currentVal) / parseFloat(c.targetValue)) * 100, 100).toFixed(0);
+          const daysLeft = Math.ceil((new Date(c.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+          message += `🔥 *${c.title}*\n`;
+          message += `   ${c.description}\n`;
+          message += `   Прогресс: ${currentVal}/${c.targetValue} (${progress}%)\n`;
+          message += `   Осталось: ${daysLeft} дней\n`;
+          message += `   Награда: ${c.rewardPoints || 0} очков\n\n`;
+        });
+      }
+      
+      if (completed.length > 0) {
+        message += `✅ *Завершены:*\n`;
+        completed.slice(0, 3).forEach(c => {
+          message += `🏆 *${c.title}* - ${c.rewardPoints || 0} очков\n`;
+        });
+        if (completed.length > 3) {
+          message += `   ...и еще ${completed.length - 3}\n`;
+        }
+        message += '\n';
+      }
+      
+      if (failed.length > 0) {
+        message += `❌ *Проваленные:* ${failed.length}\n`;
+      }
+      
+      bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      
+    } catch (error) {
+      logger.error('Error getting challenges', error instanceof Error ? error : new Error(String(error)));
+      bot.sendMessage(chatId, '❌ Ошибка при получении челленджей');
+    }
+  });
+
+  // Команда /streaks для просмотра текущих стриков
+  bot.onText(/\/streaks/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramUserId = msg.from?.id;
+    
+    if (!telegramUserId) return;
+    
+    const appUserId = telegramUserMap.get(telegramUserId);
+    
+    if (!appUserId) {
+      bot.sendMessage(chatId, '❌ Сначала авторизуйтесь: /auth <токен>');
+      return;
+    }
+    
+    try {
+      const streaks = await storage.getActivityStreaks(appUserId);
+      
+      if (streaks.length === 0) {
+        bot.sendMessage(chatId, '❌ Нет доступных стриков');
+        return;
+      }
+      
+      let message = `🔥 *Ваши стрики активности*\n\n`;
+      
+      streaks.forEach(streak => {
+        const icon = streak.type === 'daily_tracking' ? '📝' : 
+                     streak.type === 'budget_adherence' ? '💰' : 
+                     streak.type === 'goal_progress' ? '🎯' : '⭐';
+        
+        message += `${icon} *${streak.type.replace(/_/g, ' ')}*\n`;
+        message += `   Текущий стрик: ${streak.currentStreak || 0} дней 🔥\n`;
+        message += `   Лучший стрик: ${streak.longestStreak || 0} дней 🏆\n`;
+        message += `   Всего активных дней: ${streak.totalActiveDays || 0}\n`;
+        if (streak.lastActivityDate) {
+          message += `   Последняя активность: ${new Date(streak.lastActivityDate).toLocaleDateString()}\n`;
+        }
+        message += '\n';
+      });
+      
+      bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      
+    } catch (error) {
+      logger.error('Error getting streaks', error instanceof Error ? error : new Error(String(error)));
+      bot.sendMessage(chatId, '❌ Ошибка при получении стриков');
+    }
+  });
+
+  // Команда /analyze для AI-анализа расходов
+  bot.onText(/\/analyze/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramUserId = msg.from?.id;
+    
+    if (!telegramUserId) return;
+    
+    const appUserId = telegramUserMap.get(telegramUserId);
+    
+    if (!appUserId) {
+      bot.sendMessage(chatId, '❌ Сначала авторизуйтесь: /auth <токен>');
+      return;
+    }
+    
+    try {
+      // Отправляем сообщение о начале анализа
+      bot.sendMessage(chatId, '🤖 Анализирую ваши финансы...');
+      
+      // Получаем данные для анализа
+      const now = new Date();
+      const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString().split('T')[0];
+      const today = now.toISOString().split('T')[0];
+      
+      const transactions = await storage.getDailyTransactions(appUserId, threeMonthsAgo, today);
+      const goals = await storage.getGoals();
+      const user = await storage.getUser(appUserId);
+      
+      // Вызываем AI анализ (теперь передаем массив с user вместо partner)
+      const analysis = await aiService.analyzeFinancialData(user ? [user] : [], goals, transactions, appUserId);
+      
+      // Форматируем и отправляем результат
+      let message = `🤖 *AI Анализ ваших финансов*\n\n`;
+      
+      if (analysis.insights.length > 0) {
+        message += `💡 *Основные выводы:*\n`;
+        analysis.insights.forEach((insight, idx) => {
+          message += `${idx + 1}. ${insight}\n`;
+        });
+        message += '\n';
+      }
+      
+      if (analysis.recommendations.length > 0) {
+        message += `📋 *Рекомендации:*\n`;
+        analysis.recommendations.forEach((rec, idx) => {
+          message += `${idx + 1}. ${rec}\n`;
+        });
+        message += '\n';
+      }
+      
+      if (analysis.expenseOptimization.length > 0) {
+        message += `💰 *Оптимизация расходов:*\n`;
+        analysis.expenseOptimization.forEach(opt => {
+          const savings = opt.potentialSavings;
+          message += `• *${opt.category}*: $${opt.currentAmount} → $${opt.recommendedAmount}\n`;
+          message += `  Экономия: $${savings.toFixed(2)}/мес\n`;
+          message += `  ${opt.reasoning}\n\n`;
+        });
+      }
+      
+      bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      
+    } catch (error) {
+      logger.error('Error in AI analysis', error instanceof Error ? error : new Error(String(error)));
+      bot.sendMessage(chatId, '❌ Ошибка при выполнении AI-анализа. Попробуйте позже.');
+    }
+  });
+
+  // Команда /predict для AI-предсказания расходов
+  bot.onText(/\/predict/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramUserId = msg.from?.id;
+    
+    if (!telegramUserId) return;
+    
+    const appUserId = telegramUserMap.get(telegramUserId);
+    
+    if (!appUserId) {
+      bot.sendMessage(chatId, '❌ Сначала авторизуйтесь: /auth <токен>');
+      return;
+    }
+    
+    try {
+      // Отправляем сообщение о начале предсказания
+      bot.sendMessage(chatId, '🔮 Предсказываю ваши расходы...');
+      
+      // Получаем последние транзакции
+      const now = new Date();
+      const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, 1).toISOString().split('T')[0];
+      const today = now.toISOString().split('T')[0];
+      
+      const transactions = await storage.getDailyTransactions(appUserId, sixMonthsAgo, today);
+      
+      if (transactions.length < 10) {
+        bot.sendMessage(chatId, '❌ Недостаточно данных для предсказания. Добавьте больше транзакций.');
+        return;
+      }
+      
+      // Генерируем умные советы на основе паттернов
+      const tips = await aiService.generateSmartTips(transactions, appUserId);
+      
+      let message = `🔮 *AI Предсказания и Советы*\n\n`;
+      message += `На основе анализа ${transactions.length} транзакций за последние 6 месяцев:\n\n`;
+      
+      if (tips.length > 0) {
+        message += `💡 *Рекомендации:*\n`;
+        tips.forEach((tip, idx) => {
+          message += `${idx + 1}. ${tip}\n\n`;
+        });
+      }
+      
+      bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      
+    } catch (error) {
+      logger.error('Error in AI prediction', error instanceof Error ? error : new Error(String(error)));
+      bot.sendMessage(chatId, '❌ Ошибка при выполнении предсказания. Попробуйте позже.');
+    }
+  });
+
+  // Команда /budgets для просмотра всех бюджетных лимитов
+  bot.onText(/\/budgets/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramUserId = msg.from?.id;
+    
+    if (!telegramUserId) return;
+    
+    const appUserId = telegramUserMap.get(telegramUserId);
+    
+    if (!appUserId) {
+      bot.sendMessage(chatId, '❌ Сначала авторизуйтесь: /auth <токен>');
+      return;
+    }
+    
+    try {
+      const budgets = await storage.getBudgetLimits(appUserId);
+      
+      if (budgets.length === 0) {
+        bot.sendMessage(chatId, `💰 *Бюджетные лимиты*\n\nУ вас пока нет установленных лимитов.\n\nИспользуйте /budget <категория> <лимит> для создания.\n\n*Пример:*\n/budget Продукты 500`, { parse_mode: 'Markdown' });
+        return;
+      }
+      
+      let message = `💰 *Ваши бюджетные лимиты*\n\n`;
+      
+      budgets.forEach(budget => {
+        const spent = parseFloat(budget.currentSpent || '0');
+        const limit = parseFloat(budget.monthlyLimit);
+        const percentage = limit > 0 ? (spent / limit) * 100 : 0;
+        
+        let statusIcon = '✅';
+        if (percentage >= 100) statusIcon = '🔴';
+        else if (percentage >= 80) statusIcon = '⚠️';
+        else if (percentage >= 50) statusIcon = '🟡';
+        
+        message += `${statusIcon} *${budget.category.name}*\n`;
+        message += `   Лимит: $${limit.toFixed(2)} / месяц\n`;
+        message += `   Потрачено: $${spent.toFixed(2)} (${percentage.toFixed(0)}%)\n`;
+        message += `   Осталось: $${(limit - spent).toFixed(2)}\n\n`;
+      });
+      
+      message += `\n💡 Используйте /budget <категория> <лимит> для изменения`;
+      
+      bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      
+    } catch (error) {
+      logger.error('Error getting budgets', error instanceof Error ? error : new Error(String(error)));
+      bot.sendMessage(chatId, '❌ Ошибка при получении бюджетов');
+    }
+  });
+
+  // Команда /budget для установки лимита по категории
+  bot.onText(/\/budget\s+(.+)\s+(\d+\.?\d*)/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    const telegramUserId = msg.from?.id;
+    
+    if (!telegramUserId || !match) return;
+    
+    const appUserId = telegramUserMap.get(telegramUserId);
+    
+    if (!appUserId) {
+      bot.sendMessage(chatId, '❌ Сначала авторизуйтесь: /auth <токен>');
+      return;
+    }
+    
+    const categoryName = match[1].trim();
+    const limit = parseFloat(match[2]);
+    
+    if (limit <= 0) {
+      bot.sendMessage(chatId, '❌ Лимит должен быть больше нуля');
+      return;
+    }
+    
+    try {
+      const allCategories = await storage.getCategories(appUserId);
+      const category = allCategories.find(c => c.name.toLowerCase() === categoryName.toLowerCase());
+      
+      if (!category) {
+        bot.sendMessage(chatId, `❌ Категория "${categoryName}" не найдена.\n\nИспользуйте существующие категории из веб-приложения.`);
+        return;
+      }
+      
+      const existingBudgets = await storage.getBudgetLimits(appUserId);
+      const existingBudget = existingBudgets.find(b => b.categoryId === category.id);
+      
+      if (existingBudget) {
+        await storage.updateBudgetLimit(existingBudget.id, {
+          monthlyLimit: limit.toString()
+        });
+        
+        bot.sendMessage(chatId, `✅ Лимит для категории *${category.name}* обновлён!\n\n💰 Новый лимит: $${limit.toFixed(2)} / месяц`, { parse_mode: 'Markdown' });
+      } else {
+        const couple = await storage.getCoupleByUserId(appUserId);
+        
+        await storage.createBudgetLimit({
+          userId: appUserId,
+          coupleId: couple?.id || null,
+          categoryId: category.id,
+          monthlyLimit: limit.toString(),
+          period: 'monthly',
+          warningThreshold: 80,
+          alertThreshold: 100,
+          enableTelegramNotifications: true,
+          enableEmailNotifications: false,
+          isActive: true
+        });
+        
+        bot.sendMessage(chatId, `✅ Лимит для категории *${category.name}* создан!\n\n💰 Лимит: $${limit.toFixed(2)} / месяц\n⚠️ Уведомления: 80% и 100%`, { parse_mode: 'Markdown' });
+      }
+      
+    } catch (error) {
+      logger.error('Error setting budget', error instanceof Error ? error : new Error(String(error)));
+      bot.sendMessage(chatId, '❌ Ошибка при установке лимита');
+    }
+  });
+
+
+  // Обработчик текстовых сообщений (только для чистого текста, медиа обрабатываются отдельными обработчиками)
+  bot.on('text', async (msg) => {
+    const chatId = msg.chat.id;
+    const text = msg.text;
+    const userId = msg.from?.id;
+
+    // Игнорируем команды
+    if (text?.startsWith('/')) return;
+
+    if (!userId || !text) return;
+
+    // Проверяем состояние пользователя для многошаговых команд
+    const userState = userStates.get(userId);
+    
+    if (userState?.action === 'reset_password_waiting_email') {
+      // Пользователь ввел email для сброса пароля
+      const email = text.trim().toLowerCase();
+      
+      // Простая валидация email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        bot.sendMessage(chatId, '❌ Неверный формат email. Попробуйте еще раз.');
+        return;
+      }
+      
+      try {
+        // Вызываем API для запроса сброса пароля
+        const response = await fetch('http://localhost:5000/api/auth/request-password-reset', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email }),
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.token) {
+          // Формируем ссылку для сброса пароля
+          const resetLink = `http://localhost:5000/reset-password?token=${data.token}`;
+          
+          bot.sendMessage(chatId, `✅ *Ссылка для сброса пароля создана!*
+
+🔗 Перейдите по ссылке для установки нового пароля:
+${resetLink}
+
+⏰ Ссылка действительна в течение 1 часа.
+
+💡 После сброса пароля вы сможете войти в приложение с новыми данными.`, { parse_mode: 'Markdown' });
+        } else {
+          bot.sendMessage(chatId, '✅ Если аккаунт с таким email существует, ссылка для сброса пароля будет отправлена.');
+        }
+        
+        // Очищаем состояние пользователя
+        userStates.delete(userId);
+        
+      } catch (error) {
+        logger.error('Error requesting password reset', error instanceof Error ? error : new Error(String(error)));
+        bot.sendMessage(chatId, '❌ Ошибка при обработке запроса. Попробуйте позже.');
+        userStates.delete(userId);
+      }
+      
+      return;
+    }
+
+    // Обрабатываем кнопки клавиатуры
+    if (text === '💸 Добавить расход') {
+      const helpText = `📝 Как добавить расход:
+
+Просто напишите сообщение в формате:
+• "кофе 200" → 200₽ на сегодня
+• "обед $15 вчера" → $15 на вчера
+• "такси 300₽ в понедельник" → 300₽ на ближайший понедельник
+• "продукты 1500₽ 25.09" → 1500₽ на 25 сентября
+
+🎙️ Или отправьте голосовое сообщение
+📸 Или сфотографируйте чек для автоматического распознавания!`;
+      
+      bot.sendMessage(chatId, helpText);
+      return;
+    }
+
+    if (text === '💰 Добавить доход') {
+      const helpText = `💰 Как добавить доход:
+
+Просто напишите сообщение с префиксом "доход" или "income":
+• "доход зарплата 50000₽" → 50000₽ зарплаты на сегодня
+• "income salary $2000 вчера" → $2000 зарплаты на вчера
+• "доход фриланс 30000₽ 25.09" → 30000₽ фриланса на 25 сентября
+
+🎙️ Голосовые сообщения тоже поддерживаются!
+📝 Просто скажите: "Доход зарплата пятьдесят тысяч рублей"`;
+      
+      bot.sendMessage(chatId, helpText);
+      return;
+    }
+
+    if (text === '📊 Статистика') {
+      // Вызываем функционал статистики (аналогично /week)
+      const appUserId = telegramUserMap.get(userId);
+      
+      if (!appUserId) {
+        bot.sendMessage(chatId, '❌ Вы не авторизованы. Используйте команду /auth <токен>');
+        return;
+      }
+      
+      try {
+        const today = new Date();
+        const weekAgo = new Date(today);
+        weekAgo.setDate(today.getDate() - 7);
+        
+        const startDate = weekAgo.toISOString().split('T')[0];
+        const endDate = today.toISOString().split('T')[0];
+        
+        const transactions = await storage.getDailyTransactions(appUserId, startDate, endDate);
+        
+        const expenses = transactions.filter(t => t.type === 'expense');
+        const incomes = transactions.filter(t => t.type === 'income');
+        
+        const totalExpenses = expenses.reduce((sum, t) => sum + Number(t.amount), 0);
+        const totalIncomes = incomes.reduce((sum, t) => sum + Number(t.amount), 0);
+        
+        const expensesByCategory = expenses.reduce((acc, t) => {
+          const category = t.category || 'Разное';
+          acc[category] = (acc[category] || 0) + Number(t.amount);
+          return acc;
+        }, {} as Record<string, number>);
+        
+        const topCategories = Object.entries(expensesByCategory)
+          .sort(([,a], [,b]) => b - a)
+          .slice(0, 3);
+        
+        const statsMessage = `📊 Статистика за неделю (${startDate} - ${endDate}):
+
+💸 **Расходы:** $${totalExpenses.toFixed(2)} (${expenses.length} транзакций)
+💰 **Доходы:** $${totalIncomes.toFixed(2)} (${incomes.length} транзакций)
+📈 **Баланс:** $${(totalIncomes - totalExpenses).toFixed(2)}
+
+📊 **Топ категории расходов:**${topCategories.map(([cat, amount]) => `\n• ${cat}: $${amount.toFixed(2)}`).join('')}
+
+📅 **Средний расход в день:** $${(totalExpenses / 7).toFixed(2)}`;
+
+        bot.sendMessage(chatId, statsMessage);
+      } catch (error) {
+        logger.error('Error getting stats from button', error instanceof Error ? error : new Error(String(error)));
+        bot.sendMessage(chatId, '❌ Ошибка при получении статистики');
+      }
+      return;
+    }
+
+    if (text === '❓ Помощь') {
+      const helpMessage = `📚 Справка по TogetherBudget:
+
+📝 **Добавление расходов:**
+• "кофе 200₽" → на сегодня
+• "обед $15 вчера" → на вчерашнюю дату  
+• "такси 300₽ в понедельник" → на ближайший понедельник
+• "продукты 50$ 25.09" → на 25 сентября
+• 🎙️ Голосовые сообщения
+• 📸 Фото чеков
+
+💰 **Добавление доходов:**
+• "доход зарплата 50000₽" → на сегодня
+• "income salary $2000 вчера" → на вчерашнюю дату
+• "доход фриланс 30000₽ 25.09" → на 25 сентября
+• 🎙️ Голосовые: "Доход зарплата пятьдесят тысяч рублей"
+
+📅 **Поддерживаемые форматы дат:**
+• Относительные: "вчера", "позавчера", "в среду"
+• Абсолютные: "25.09", "1 октября", "25/09/2025"
+
+💡 **Команды:**
+/menu - показать кнопки меню
+/status - статус аккаунта
+/stats - статистика за сегодня
+/week - статистика за неделю
+/help - эта справка
+
+💱 **Валюты:** поддерживаются ₽ (рубли) и $ (доллары)
+🔄 **Конвертация:** автоматическая по текущему курсу`;
+      
+      bot.sendMessage(chatId, helpMessage);
+      return;
+    }
+
+    // Обрабатываем обычные текстовые сообщения
+    if (text) {
+      // Проверяем, является ли это доходом
+      const lowerText = text.toLowerCase().trim();
+      const isIncome = lowerText.startsWith('доход ') || lowerText.startsWith('income ') || 
+                       lowerText.startsWith('доход:') || lowerText.startsWith('income:');
+      
+      if (isIncome) {
+        // Убираем префикс и обрабатываем как доход
+        const cleanedText = text.replace(/^(доход|income)[:\s]+/i, '').trim();
+        await processIncomeMessage(chatId, userId, cleanedText);
+      } else {
+        // Обрабатываем как расход
+        await processExpenseMessage(chatId, userId, text);
+      }
+    }
+  });
+
+  // Обработчик голосовых сообщений
+  bot.on('voice', async (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from?.id;
+    
+    if (!userId) return;
+
+    try {
+      // Проверяем авторизацию
+      const appUserId = telegramUserMap.get(userId);
+      if (!appUserId) {
+        bot.sendMessage(chatId, '❌ Вы не авторизованы. Используйте команду /auth <токен>');
+        return;
+      }
+
+      // Получаем информацию о файле
+      const fileId = msg.voice?.file_id;
+      if (!fileId) {
+        bot.sendMessage(chatId, '❌ Не удалось получить голосовое сообщение');
+        return;
+      }
+
+      bot.sendMessage(chatId, '🎧 Распознаю голосовое сообщение...');
+      
+      // Получаем файл из Telegram
+      const file = await bot.getFile(fileId);
+      const filePath = file.file_path;
+      
+      if (!filePath) {
+        bot.sendMessage(chatId, '❌ Не удалось получить файл');
+        return;
+      }
+
+      // Скачиваем файл
+      const fileUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
+      const response = await fetch(fileUrl);
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = Buffer.from(arrayBuffer);
+
+      // Сохраняем временно как файл для Whisper API
+      const tempFilePath = `/tmp/voice_${Date.now()}.ogg`;
+      await fs.writeFile(tempFilePath, audioBuffer);
+
+      try {
+        // Распознаем голос с помощью Whisper API
+        const transcription = await openai.audio.transcriptions.create({
+          file: await fs.readFile(tempFilePath).then(buffer => 
+            new File([buffer], 'audio.ogg', { type: 'audio/ogg' })
+          ),
+          model: 'whisper-1',
+          language: 'ru', // Поддержка русского и английского
+          prompt: 'Транскрипция финансовых транзакций: доход, расход, зарплата, кофе, продукты, такси, рубли, доллары'
+        });
+
+        const transcribedText = transcription.text;
+        logger.info('Voice transcription successful', {
+          userId: appUserId,
+          text: transcribedText
+        });
+
+        if (transcribedText) {
+          // Проверяем, является ли это доходом
+          const lowerText = transcribedText.toLowerCase().trim();
+          const isIncome = lowerText.startsWith('доход ') || lowerText.startsWith('income ') || 
+                           lowerText.startsWith('доход:') || lowerText.startsWith('income:');
+          
+          if (isIncome) {
+            // Убираем префикс и обрабатываем как доход
+            const cleanedText = transcribedText.replace(/^(доход|income)[:\s]+/i, '').trim();
+            await processIncomeMessage(chatId, userId, cleanedText, true);
+          } else {
+            // Обрабатываем как расход
+            await processExpenseMessage(chatId, userId, transcribedText, true);
+          }
+        } else {
+          bot.sendMessage(chatId, '❌ Не удалось распознать голос. Попробуйте еще раз четче.');
+        }
+      } finally {
+        // Удаляем временный файл
+        try {
+          await fs.unlink(tempFilePath);
+        } catch (error) {
+          logger.error('Error deleting temp voice file', error instanceof Error ? error : new Error(String(error)));
+        }
+      }
+    } catch (error) {
+      logger.error('Error processing voice message', error instanceof Error ? error : new Error(String(error)));
+      bot.sendMessage(chatId, '❌ Ошибка при обработке голосового сообщения. Попробуйте еще раз или напишите текстом.');
+    }
+  });
+
+  // Обработчик фотографий (чеков)
+  bot.on('photo', async (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from?.id;
+    
+    if (!userId) return;
+
+    try {
+      // Проверяем авторизацию
+      const appUserId = telegramUserMap.get(userId);
+      
+      if (!appUserId) {
+        bot.sendMessage(chatId, '❌ Вы не авторизованы. Используйте команду /auth <токен>');
+        return;
+      }
+      
+      // Получаем самое большое фото (последнее в массиве)
+      const photo = msg.photo?.[msg.photo.length - 1];
+      if (!photo) {
+        bot.sendMessage(chatId, '❌ Не удалось получить фото');
+        return;
+      }
+
+      bot.sendMessage(chatId, '📸 Обрабатываю чек, подождите...');
+
+      // Получаем информацию о файле и скачиваем его
+      const file = await bot.getFile(photo.file_id);
+      const filePath = file.file_path;
+      
+      if (!filePath) {
+        bot.sendMessage(chatId, '❌ Не удалось получить файл');
+        return;
+      }
+
+      // Скачиваем файл
+      const fileUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
+      const response = await fetch(fileUrl);
+      const arrayBuffer = await response.arrayBuffer();
+      const imageBuffer = Buffer.from(arrayBuffer);
+
+      // Анализируем чек с помощью OCR
+      const result = await ocrService.analyzeReceipt(imageBuffer, `receipt_${Date.now()}.jpg`);
+
+      if (!result.success || !result.receiptData) {
+        bot.sendMessage(chatId, `❌ Не удалось распознать чек.\n${result.error || 'Попробуйте сфотографировать четче'}`);
+        return;
+      }
+
+      const receipt = result.receiptData;
+      
+      // Создаем транзакцию из чека (используем userId напрямую)
+      const transaction = await ocrService.createTransactionFromReceipt(receipt, appUserId);
+
+      // Формируем сообщение с результатом
+      const confirmationMessage = `✅ Чек распознан и добавлен!
+
+💵 Сумма: ${receipt.currency || 'USD'} ${receipt.amount.toFixed(2)}
+🏪 Магазин: ${receipt.merchant || 'Не указан'}
+📝 Описание: ${receipt.description}
+🏷️ Категория: ${receipt.category || 'Разное'}
+📅 Дата: ${receipt.date || 'Сегодня'}
+🎯 Точность: ${receipt.confidence}
+
+Транзакция #${transaction.id} добавлена в ваш бюджет!`;
+
+      // Добавим inline кнопки для редактирования
+      const inlineKeyboard = {
+        inline_keyboard: [
+          [
+            { text: '✏️ Изменить категорию', callback_data: `edit_category_${transaction.id}` },
+            { text: '❌ Удалить', callback_data: `delete_${transaction.id}` }
+          ]
+        ]
+      };
+
+      bot.sendMessage(chatId, confirmationMessage, {
+        reply_markup: inlineKeyboard
+      });
+
+      logger.info('Receipt processed via Telegram', {
+        userId: appUserId,
+        transactionId: transaction.id,
+        amount: receipt.amount,
+        confidence: receipt.confidence
+      });
+
+    } catch (error) {
+      logger.error('Error processing receipt photo', error instanceof Error ? error : new Error(String(error)));
+      bot.sendMessage(chatId, '❌ Ошибка при обработке фото чека. Попробуйте еще раз.');
+    }
+  });
+
+  // Обработчик inline кнопок
+  bot.on('callback_query', async (query) => {
+    const chatId = query.message?.chat.id;
+    const userId = query.from.id;
+    const data = query.data;
+
+    if (!chatId || !data) return;
+
+    try {
+      // Отвечаем на callback чтобы убрать "часики"
+      await bot.answerCallbackQuery(query.id);
+
+      if (data.startsWith('delete_')) {
+        const transactionId = parseInt(data.replace('delete_', ''));
+        
+        // Проверяем авторизацию
+        const appUserId = telegramUserMap.get(userId);
+        if (!appUserId) {
+          bot.sendMessage(chatId, '❌ Вы не авторизованы');
+          return;
+        }
+
+        // Удаляем транзакцию
+        await storage.deleteDailyTransaction(transactionId);
+        
+        bot.editMessageText(`❌ Транзакция #${transactionId} удалена`, {
+          chat_id: chatId,
+          message_id: query.message?.message_id
+        });
+
+        logger.info('Transaction deleted via Telegram', {
+          userId: appUserId,
+          transactionId
+        });
+      } 
+      else if (data.startsWith('edit_category_')) {
+        const transactionId = parseInt(data.replace('edit_category_', ''));
+        
+        // Показываем кнопки с категориями
+        const categories = ['Еда', 'Транспорт', 'Здоровье', 'Развлечения', 'Красота', 'Дом', 'Образование', 'Работа', 'Подарки', 'Разное'];
+        
+        const categoryKeyboard = {
+          inline_keyboard: categories.map(cat => [{
+            text: cat,
+            callback_data: `set_category_${transactionId}_${cat}`
+          }])
+        };
+
+        bot.sendMessage(chatId, '🏷️ Выберите новую категорию:', {
+          reply_markup: categoryKeyboard
+        });
+      }
+      else if (data.startsWith('set_category_')) {
+        const parts = data.replace('set_category_', '').split('_');
+        const transactionId = parseInt(parts[0]);
+        const category = parts.slice(1).join('_');
+        
+        // Проверяем авторизацию
+        const appUserId = telegramUserMap.get(userId);
+        if (!appUserId) {
+          bot.sendMessage(chatId, '❌ Вы не авторизованы');
+          return;
+        }
+
+        // Обновляем категорию
+        await storage.updateDailyTransaction(transactionId, { category });
+        
+        bot.sendMessage(chatId, `✅ Категория транзакции #${transactionId} изменена на "${category}"`);
+
+        logger.info('Transaction category updated via Telegram', {
+          userId: appUserId,
+          transactionId,
+          newCategory: category
+        });
+      }
+    } catch (error) {
+      logger.error('Error handling callback query', error instanceof Error ? error : new Error(String(error)));
+      bot.sendMessage(chatId, '❌ Ошибка при обработке действия');
+    }
+  });
+
+  // Улучшенная обработка ошибок polling
+  bot.on('polling_error', async (error) => {
+    console.error('Telegram bot polling error:', error);
+    
+    // Анализируем тип ошибки
+    const errorMessage = error.message || error.toString();
+    
+    // Для ошибки 409 (conflict) останавливаем попытки - другой экземпляр уже работает
+    if (errorMessage.includes('409')) {
+      console.log('🔄 409 Конфликт - другой экземпляр бота уже запущен. Останавливаем текущий.');
+      
+      // Clear any pending restart
+      if (restartTimeoutId) {
+        clearTimeout(restartTimeoutId);
+        restartTimeoutId = null;
+      }
+      
+      await stopPolling();
+      restartAttempts = MAX_RESTART_ATTEMPTS; // Prevent further restarts
+      return;
+    }
+    
+    if (errorMessage.includes('ECONNRESET') || 
+        errorMessage.includes('ENOTFOUND') || 
+        errorMessage.includes('ETIMEDOUT') ||
+        errorMessage.includes('ECONNREFUSED')) {
+      console.log('🔄 Сетевая ошибка - планируется перезапуск...');
+      isPollingStarted = false; // Помечаем как остановленный
+      scheduleRestart();
+    } else if (errorMessage.includes('401')) {
+      console.error('❌ Ошибка аутентификации! Проверьте TELEGRAM_BOT_TOKEN');
+      // Не перезапускаем при ошибке токена
+    } else {
+      console.log('🔄 Неизвестная ошибка - попытка перезапуска...');
+      isPollingStarted = false;
+      scheduleRestart();
+    }
+  });
+
+  // Обработчик успешного подключения
+  bot.on('polling_start', () => {
+    console.log('✅ Telegram bot polling started successfully');
+    isPollingStarted = true;
+    restartAttempts = 0;
+  });
+
+  // Обработчик остановки polling
+  bot.on('polling_stop', () => {
+    logger.info('Telegram bot polling stopped');
+    isPollingStarted = false;
+  });
+
+  // Запускаем polling
+  startPolling();
+  
+  logger.info('Telegram bot is running and listening for messages');
+}
+
+// Обработка сообщения о расходе
+async function processExpenseMessage(chatId: number, telegramUserId: number, text: string, isVoice: boolean = false) {
+  try {
+    // Проверяем авторизацию пользователя
+    const appUserId = telegramUserMap.get(telegramUserId);
+    
+    if (!appUserId) {
+      bot.sendMessage(chatId, '❌ Вы не авторизованы. Используйте команду /auth <токен> для авторизации.');
+      return;
+    }
+    
+    // Получаем пользователя
+    const user = await storage.getUser(appUserId);
+    if (!user) {
+      bot.sendMessage(chatId, '❌ Пользователь не найден. Повторите авторизацию командой /auth <токен>');
+      telegramUserMap.delete(telegramUserId);
+      return;
+    }
+
+    // Парсим сообщение
+    const parsed = parseExpenseMessage(text);
+    
+    if (!parsed) {
+      const helpMessage = isVoice ? 
+        `❌ Не могу найти сумму в голосовом сообщении: "${text}"\n\nПопробуйте говорить четче, например: "Потратил двести рублей на кофе" или "Spent 20 dollars on coffee"` :
+        `❌ Не могу понять сумму расхода.\n\nПопробуйте так:\n• "Кофе 200₽" или "Coffee $5"\n• "Продукты 1500 рублей"\n• "Потратил 20 долларов на обед"`;
+      
+      bot.sendMessage(chatId, helpMessage);
+      return;
+    }
+
+    // Конвертируем сумму в доллары для хранения в базе
+    const originalAmount = parsed.amount;
+    const originalCurrency = parsed.currency;
+    let usdAmount: number;
+    let exchangeRate: number;
+
+    if (originalCurrency === 'USD') {
+      // Уже в долларах
+      usdAmount = originalAmount;
+      exchangeRate = 1.0;
+    } else {
+      // Конвертируем рубли в доллары
+      usdAmount = await convertRubToUsd(originalAmount);
+      const rateInfo = await getExchangeRateInfo();
+      exchangeRate = rateInfo.rate;
+    }
+
+    // Используем распознанную дату или fallback на сегодня
+    const transactionDate = parsed.date || new Date();
+    
+    // Создаем транзакцию с валютными метаданными
+    const transactionData = {
+      userId: appUserId,
+      date: transactionDate.toISOString().split('T')[0], // YYYY-MM-DD
+      type: 'expense' as const,
+      amount: usdAmount, // Всегда в USD для хранения
+      description: parsed.description,
+      category: detectCategory(parsed.description),
+      originalCurrency,
+      originalAmount: originalAmount,
+      exchangeRate: exchangeRate
+    };
+
+    const validatedData = insertDailyTransactionSchema.parse(transactionData);
+    const transaction = await storage.createDailyTransaction(validatedData);
+
+    // Проверяем бюджетные лимиты и отправляем уведомления если нужно
+    await checkBudgetLimitsAndNotify(chatId, appUserId, validatedData.category || null, usdAmount);
+    
+    // Проверяем и обновляем достижения
+    const updatedAchievements = await gamificationService.checkAndUnlockAchievements(appUserId);
+    if (updatedAchievements.length > 0) {
+      const achievement = updatedAchievements[0];
+      bot.sendMessage(chatId, `🏆 *Достижение разблокировано!*\n\n*${achievement.title}*\n${achievement.description}`, { parse_mode: 'Markdown' });
+    }
+
+    // Имя пользователя
+    const userName = user.name;
+
+    // Подготавливаем сообщение с обеими валютами для удобства
+    let amountDisplay = '';
+    let conversionInfo = '';
+    
+    if (originalCurrency === 'USD') {
+      amountDisplay = `$${originalAmount.toLocaleString('en-US')}`;
+      // Показываем эквивалент в рублях для справки
+      const rubEquivalent = await convertUsdToRub(originalAmount);
+      conversionInfo = `\n💱 Курс: $1 = ${exchangeRate.toFixed(2)}₽ (≈${rubEquivalent.toLocaleString('ru-RU')}₽)`;
+    } else {
+      amountDisplay = `${originalAmount.toLocaleString('ru-RU')}₽`;
+      conversionInfo = `\n💱 Курс: $1 = ${exchangeRate.toFixed(2)}₽ (≈$${usdAmount.toFixed(2)})`;
+    }
+
+    // Отправляем подтверждение
+    const prefix = isVoice ? '🎙️ Голосовой расход добавлен!' : '✅ Расход добавлен!';
+    const confirmMessage = `${prefix}
+
+💰 Сумма: ${amountDisplay}
+📝 Описание: ${parsed.description}
+👤 Пользователь: ${userName}
+📅 Дата: ${transactionDate.toLocaleDateString('ru-RU')}${validatedData.category ? `\n🏷️ Категория: ${validatedData.category}` : ''}${conversionInfo}`;
+
+    // Добавляем inline кнопки для редактирования и удаления
+    const inlineKeyboard = {
+      inline_keyboard: [
+        [
+          { text: '✏️ Изменить категорию', callback_data: `edit_category_${transaction.id}` },
+          { text: '❌ Удалить', callback_data: `delete_${transaction.id}` }
+        ]
+      ]
+    };
+
+    bot.sendMessage(chatId, confirmMessage, {
+      reply_markup: inlineKeyboard
+    });
+
+    logger.info(`Expense added via Telegram${isVoice ? ' (voice)' : ''}: ${originalAmount} ${originalCurrency} (${usdAmount.toFixed(2)} USD) for "${parsed.description}" on ${transactionDate.toISOString().split('T')[0]}`);
+
+  } catch (error) {
+    logger.error('Error processing expense message', error instanceof Error ? error : new Error(String(error)));
+    
+    // Более информативная обработка ошибок для пользователя
+    let errorMessage = '❌ Ошибка при сохранении расхода. Попробуйте еще раз.';
+    
+    if (error instanceof Error) {
+      if (error.message.includes('validation')) {
+        errorMessage = '❌ Ошибка валидации данных. Проверьте корректность суммы и описания.';
+      } else if (error.message.includes('database') || error.message.includes('connect')) {
+        errorMessage = '❌ Проблема с базой данных. Попробуйте через несколько минут.';
+      } else if (error.message.includes('rate limit')) {
+        errorMessage = '❌ Слишком много запросов. Подождите немного и попробуйте снова.';
+      }
+    }
+    
+    bot.sendMessage(chatId, errorMessage);
+  }
+}
+
+// Обработка сообщения о доходе
+async function processIncomeMessage(chatId: number, telegramUserId: number, text: string, isVoice: boolean = false) {
+  try {
+    // Проверяем авторизацию пользователя
+    const appUserId = telegramUserMap.get(telegramUserId);
+    
+    if (!appUserId) {
+      bot.sendMessage(chatId, '❌ Вы не авторизованы. Используйте команду /auth <токен> для авторизации.');
+      return;
+    }
+    
+    // Получаем пользователя
+    const user = await storage.getUser(appUserId);
+    if (!user) {
+      bot.sendMessage(chatId, '❌ Пользователь не найден. Повторите авторизацию командой /auth <токен>');
+      telegramUserMap.delete(telegramUserId);
+      return;
+    }
+
+    // Парсим сообщение (используем ту же функцию парсинга)
+    const parsed = parseExpenseMessage(text);
+    
+    if (!parsed) {
+      const helpMessage = isVoice ? 
+        `❌ Не могу найти сумму в голосовом сообщении: "${text}"\n\nПопробуйте говорить четче, например: "Доход зарплата пятьдесят тысяч рублей" или "Income salary two thousand dollars"` :
+        `❌ Не могу понять сумму дохода.\n\nПопробуйте так:\n• "доход зарплата 50000₽"\n• "income salary $2000"\n• "доход фриланс тридцать тысяч рублей"`;
+      
+      bot.sendMessage(chatId, helpMessage);
+      return;
+    }
+
+    // Конвертируем сумму в доллары для хранения в базе
+    const originalAmount = parsed.amount;
+    const originalCurrency = parsed.currency;
+    let usdAmount: number;
+    let exchangeRate: number;
+
+    if (originalCurrency === 'USD') {
+      // Уже в долларах
+      usdAmount = originalAmount;
+      exchangeRate = 1.0;
+    } else {
+      // Конвертируем рубли в доллары
+      usdAmount = await convertRubToUsd(originalAmount);
+      const rateInfo = await getExchangeRateInfo();
+      exchangeRate = rateInfo.rate;
+    }
+
+    // Используем распознанную дату или fallback на сегодня
+    const transactionDate = parsed.date || new Date();
+    
+    // Создаем транзакцию с валютными метаданными (type: income)
+    const transactionData = {
+      userId: appUserId,
+      date: transactionDate.toISOString().split('T')[0], // YYYY-MM-DD
+      type: 'income' as const,
+      amount: usdAmount, // Всегда в USD для хранения
+      description: parsed.description,
+      category: null, // Доходы обычно без категорий
+      originalCurrency,
+      originalAmount: originalAmount,
+      exchangeRate: exchangeRate
+    };
+
+    const validatedData = insertDailyTransactionSchema.parse(transactionData);
+    const transaction = await storage.createDailyTransaction(validatedData);
+
+    // Проверяем бюджетные лимиты и отправляем уведомления если нужно
+    await checkBudgetLimitsAndNotify(chatId, appUserId, validatedData.category || null, usdAmount);
+    
+    // Проверяем и обновляем достижения
+    const updatedAchievements = await gamificationService.checkAndUnlockAchievements(appUserId);
+    if (updatedAchievements.length > 0) {
+      const achievement = updatedAchievements[0];
+      bot.sendMessage(chatId, `🏆 *Достижение разблокировано!*\n\n*${achievement.title}*\n${achievement.description}`, { parse_mode: 'Markdown' });
+    }
+
+    // Имя пользователя
+    const userName = user.name;
+
+    // Подготавливаем сообщение с обеими валютами для удобства
+    let amountDisplay = '';
+    let conversionInfo = '';
+    
+    if (originalCurrency === 'USD') {
+      amountDisplay = `$${originalAmount.toLocaleString('en-US')}`;
+      // Показываем эквивалент в рублях для справки
+      const rubEquivalent = await convertUsdToRub(originalAmount);
+      conversionInfo = `\n💱 Курс: $1 = ${exchangeRate.toFixed(2)}₽ (≈${rubEquivalent.toLocaleString('ru-RU')}₽)`;
+    } else {
+      amountDisplay = `${originalAmount.toLocaleString('ru-RU')}₽`;
+      conversionInfo = `\n💱 Курс: $1 = ${exchangeRate.toFixed(2)}₽ (≈$${usdAmount.toFixed(2)})`;
+    }
+
+    // Отправляем подтверждение
+    const prefix = isVoice ? '🎙️ Голосовой доход добавлен!' : '✅ Доход добавлен!';
+    const confirmMessage = `${prefix}
+
+💰 Сумма: ${amountDisplay}
+📝 Описание: ${parsed.description}
+👤 Пользователь: ${userName}
+📅 Дата: ${transactionDate.toLocaleDateString('ru-RU')}${conversionInfo}`;
+
+    // Добавляем inline кнопку для удаления (без категории для доходов)
+    const inlineKeyboard = {
+      inline_keyboard: [
+        [
+          { text: '❌ Удалить', callback_data: `delete_${transaction.id}` }
+        ]
+      ]
+    };
+
+    bot.sendMessage(chatId, confirmMessage, {
+      reply_markup: inlineKeyboard
+    });
+
+    logger.info(`Income added via Telegram${isVoice ? ' (voice)' : ''}: ${originalAmount} ${originalCurrency} (${usdAmount.toFixed(2)} USD) for "${parsed.description}" on ${transactionDate.toISOString().split('T')[0]}`);
+
+  } catch (error) {
+    logger.error('Error processing income message', error instanceof Error ? error : new Error(String(error)));
+    
+    // Более информативная обработка ошибок для пользователя
+    let errorMessage = '❌ Ошибка при сохранении дохода. Попробуйте еще раз.';
+    
+    if (error instanceof Error) {
+      if (error.message.includes('validation')) {
+        errorMessage = '❌ Ошибка валидации данных. Проверьте корректность суммы и описания.';
+      } else if (error.message.includes('database') || error.message.includes('connect')) {
+        errorMessage = '❌ Проблема с базой данных. Попробуйте через несколько минут.';
+      } else if (error.message.includes('rate limit')) {
+        errorMessage = '❌ Слишком много запросов. Подождите немного и попробуйте снова.';
+      }
+    }
+    
+    bot.sendMessage(chatId, errorMessage);
+  }
+}
+
+// detectCategory now imported from telegram-parser.ts module
+
+// Загрузка существующих связей Telegram пользователей при запуске
+async function loadExistingTelegramUsers() {
+  try {
+    const users = await storage.getUsers();
+    let loadedCount = 0;
+    
+    for (const user of users) {
+      if (user.telegramId) {
+        const telegramId = parseInt(user.telegramId);
+        if (!isNaN(telegramId)) {
+          telegramUserMap.set(telegramId, user.id);
+          loadedCount++;
+        }
+      }
+    }
+    
+    logger.info(`Loaded ${loadedCount} existing Telegram user connections`);
+  } catch (error) {
+    logger.error('Error loading existing Telegram users', error instanceof Error ? error : new Error(String(error)));
+  }
+}
+
+// Graceful shutdown обработчик
+function setupGracefulShutdown() {
+  const cleanup = () => {
+    logger.info('Graceful shutdown initiated...');
+    stopPolling();
+    process.exit(0);
+  };
+
+  process.on('SIGINT', cleanup);
+  process.on('SIGTERM', cleanup);
+  process.on('SIGQUIT', cleanup);
+}
+
+// Инициализируем graceful shutdown
+setupGracefulShutdown();

@@ -1,0 +1,507 @@
+/**
+ * Receipt OCR Service
+ * Powered by Anthropic Claude Vision API for accurate receipt analysis
+ * Extracts amount, description, merchant, and suggests categories from receipt images
+ */
+
+import Anthropic from '@anthropic-ai/sdk';
+import { logger } from './logger';
+import { storage } from './storage';
+import { convertRubToUsd, getExchangeRateInfo, convertIdrToUsd } from './currency-service';
+import fs from 'fs/promises';
+import path from 'path';
+
+// Receipt data structure extracted from OCR
+export interface ReceiptData {
+  amount: number;
+  description: string;
+  merchant?: string;
+  date?: string;
+  category?: string;
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  rawText?: string;
+  currency?: string;
+}
+
+// OCR analysis result
+export interface OcrAnalysisResult {
+  success: boolean;
+  receiptData?: ReceiptData;
+  error?: string;
+  processingTime: number;
+}
+
+export class OcrService {
+  private anthropic: Anthropic;
+  private readonly uploadDir: string;
+
+  constructor() {
+    // Initialize Anthropic client with existing API key
+    this.anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY!
+    });
+
+    // Create uploads directory if it doesn't exist
+    this.uploadDir = path.join(process.cwd(), 'uploads', 'receipts');
+    this.ensureUploadDirectory();
+  }
+
+  private async ensureUploadDirectory(): Promise<void> {
+    try {
+      await fs.mkdir(this.uploadDir, { recursive: true });
+    } catch (error) {
+      logger.error('Failed to create upload directory', error as Error);
+    }
+  }
+
+  /**
+   * Analyze receipt image using Anthropic Claude Vision
+   */
+  async analyzeReceipt(imageBuffer: Buffer, filename: string): Promise<OcrAnalysisResult> {
+    const startTime = Date.now();
+
+    try {
+      // Save uploaded image for audit purposes
+      const savedFilePath = await this.saveReceiptImage(imageBuffer, filename);
+
+      // Convert image to base64 for Anthropic API
+      const base64Image = imageBuffer.toString('base64');
+      const mimeType = this.getMimeType(filename);
+
+      // Prepare prompt for receipt analysis
+      const analysisPrompt = `
+Analyze this receipt image and extract the following information in JSON format:
+
+{
+  "amount": <total amount as number>,
+  "description": "<brief description of purchase>",
+  "merchant": "<store/merchant name>",
+  "date": "<date in YYYY-MM-DD format if visible>",
+  "category": "<suggested category: Food, Transport, Shopping, Entertainment, Health, Utilities, etc.>",
+  "confidence": "<HIGH/MEDIUM/LOW based on text clarity>",
+  "currency": "<currency code if visible, default to USD>",
+  "rawText": "<all visible text from receipt>"
+}
+
+Rules:
+- Extract the TOTAL amount (not individual item prices)
+- If multiple totals exist, use the final total after tax
+- For description, summarize the main purchase (e.g., "Grocery shopping", "Coffee and pastry", "Gas station fuel")
+- Suggest the most appropriate category based on the merchant and items
+- Set confidence HIGH only if text is very clear, MEDIUM if mostly readable, LOW if difficult to read
+- If you cannot find the total amount, return null for amount
+- Be concise but descriptive
+
+Return only valid JSON, no additional text.
+`;
+
+      // Call Anthropic API with vision capability
+      const response = await this.anthropic.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 1024,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: analysisPrompt
+            },
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: mimeType as any,
+                data: base64Image
+              }
+            }
+          ]
+        }]
+      });
+
+      // Parse Claude's response
+      const analysisText = response.content[0].type === 'text' ? response.content[0].text : '';
+      const receiptData = await this.parseClaudeResponse(analysisText);
+
+      const processingTime = Date.now() - startTime;
+
+      // Log successful analysis
+      logger.info('Receipt OCR analysis completed', {
+        filename,
+        processingTime,
+        confidence: receiptData.confidence,
+        amount: receiptData.amount,
+        merchant: receiptData.merchant
+      });
+
+      return {
+        success: true,
+        receiptData,
+        processingTime
+      };
+
+    } catch (error) {
+      const processingTime = Date.now() - startTime;
+      
+      logger.error('Receipt OCR analysis failed', error as Error, {
+        filename,
+        processingTime
+      });
+
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown OCR error',
+        processingTime
+      };
+    }
+  }
+
+  /**
+   * 🔒 SECURITY: Enhanced parsing of Claude's JSON response with validation
+   */
+  private async parseClaudeResponse(responseText: string): Promise<ReceiptData> {
+    try {
+      // 🔒 SECURITY: Limit response text length to prevent DoS
+      if (responseText.length > 10000) {
+        logger.warn('Claude response too long, truncating', { length: responseText.length });
+        responseText = responseText.substring(0, 10000);
+      }
+
+      // 🔒 SECURITY: Remove potentially dangerous content
+      const cleanedText = responseText
+        .replace(/```json\n?|\n?```/g, '')  // Remove markdown
+        .replace(/<!--.*?-->/g, '')         // Remove HTML comments
+        .replace(/<script.*?<\/script>/gi, '') // Remove script tags
+        .trim();
+
+      // 🔒 SECURITY: Strict JSON parsing with size limits
+      if (cleanedText.length > 5000) {
+        throw new Error('Response too large after cleaning');
+      }
+
+      const parsed = JSON.parse(cleanedText);
+
+      // 🔒 SECURITY: Comprehensive validation with strict limits
+      const validatedData: ReceiptData = {
+        amount: this.validateAmount(parsed.amount),
+        description: this.validateString(parsed.description, 'Receipt transaction', 200) || 'Receipt transaction',
+        merchant: this.validateString(parsed.merchant, undefined, 100),
+        date: this.validateDate(parsed.date),
+        category: this.validateCategory(parsed.category),
+        confidence: this.validateConfidence(parsed.confidence),
+        rawText: this.validateString(parsed.rawText, undefined, 1000),
+        currency: this.validateCurrency(parsed.currency)
+      };
+
+      logger.info('Claude OCR response parsed successfully', {
+        amount: validatedData.amount,
+        confidence: validatedData.confidence,
+        hasDescription: !!validatedData.description
+      });
+
+      return validatedData;
+
+    } catch (parseError) {
+      logger.error('Failed to parse Claude OCR response', parseError instanceof Error ? parseError : new Error(String(parseError)), {
+        responseLength: responseText.length,
+        responseStart: responseText.substring(0, 200)
+      });
+      
+      // 🔒 SECURITY: Safe fallback data
+      return {
+        amount: 0,
+        description: 'Unable to parse receipt',
+        confidence: 'LOW',
+        currency: 'USD'
+      };
+    }
+  }
+
+  /**
+   * 🔒 SECURITY: Validate numeric amount
+   */
+  private validateAmount(amount: any): number {
+    if (typeof amount === 'number' && !isNaN(amount) && isFinite(amount)) {
+      // Limit to reasonable receipt amounts (0-50000)
+      return Math.max(0, Math.min(50000, Math.round(amount * 100) / 100));
+    }
+    return 0;
+  }
+
+  /**
+   * 🔒 SECURITY: Validate string fields with length limits
+   */
+  private validateString(value: any, fallback?: string, maxLength: number = 100): string | undefined {
+    if (typeof value === 'string' && value.trim().length > 0) {
+      // Remove potential XSS/injection content
+      const cleaned = value
+        .trim()
+        .replace(/<[^>]*>/g, '')  // Remove HTML tags
+        .replace(/[^\w\s\-.,!?@#$%&*()+=\[\]{}|;:'"\/]/g, '') // Remove special chars
+        .substring(0, maxLength);
+      
+      return cleaned.length > 0 ? cleaned : fallback;
+    }
+    return fallback;
+  }
+
+  /**
+   * 🔒 SECURITY: Validate date format
+   */
+  private validateDate(date: any): string | undefined {
+    if (typeof date === 'string') {
+      // Strict date format validation (YYYY-MM-DD)
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (dateRegex.test(date)) {
+        const parsedDate = new Date(date);
+        const currentYear = new Date().getFullYear();
+        
+        // Reasonable date range (last 2 years to next month)
+        if (parsedDate.getFullYear() >= currentYear - 2 && 
+            parsedDate.getFullYear() <= currentYear + 1) {
+          return date;
+        }
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * 🔒 SECURITY: Validate category against whitelist
+   */
+  private validateCategory(category: any): string | undefined {
+    if (typeof category === 'string') {
+      const allowedCategories = [
+        'Food', 'Transport', 'Shopping', 'Entertainment', 'Health', 
+        'Utilities', 'Groceries', 'Restaurant', 'Gas', 'Medical',
+        'Clothing', 'Electronics', 'Home', 'Education', 'Other'
+      ];
+      
+      const cleaned = category.trim();
+      return allowedCategories.includes(cleaned) ? cleaned : 'Other';
+    }
+    return undefined;
+  }
+
+  /**
+   * 🔒 SECURITY: Validate confidence level
+   */
+  private validateConfidence(confidence: any): 'HIGH' | 'MEDIUM' | 'LOW' {
+    const validLevels = ['HIGH', 'MEDIUM', 'LOW'];
+    return validLevels.includes(confidence) ? confidence : 'MEDIUM';
+  }
+
+  /**
+   * 🔒 SECURITY: Validate currency code
+   */
+  private validateCurrency(currency: any): string {
+    if (typeof currency === 'string') {
+      const allowedCurrencies = ['USD', 'EUR', 'RUB', 'GBP', 'JPY', 'CAD', 'AUD'];
+      const cleaned = currency.toUpperCase().trim();
+      return allowedCurrencies.includes(cleaned) ? cleaned : 'USD';
+    }
+    return 'USD';
+  }
+
+  /**
+   * Save receipt image to disk for audit trail
+   */
+  private async saveReceiptImage(imageBuffer: Buffer, originalFilename: string): Promise<string> {
+    try {
+      // Generate unique filename with timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const extension = path.extname(originalFilename);
+      const filename = `receipt_${timestamp}${extension}`;
+      const filePath = path.join(this.uploadDir, filename);
+
+      await fs.writeFile(filePath, imageBuffer);
+      
+      logger.info('Receipt image saved', { filePath, originalFilename });
+      return filePath;
+    } catch (error) {
+      logger.error('Failed to save receipt image', error as Error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get MIME type from filename
+   */
+  private getMimeType(filename: string): string {
+    const extension = path.extname(filename).toLowerCase();
+    
+    switch (extension) {
+      case '.jpg':
+      case '.jpeg':
+        return 'image/jpeg';
+      case '.png':
+        return 'image/png';
+      case '.webp':
+        return 'image/webp';
+      case '.gif':
+        return 'image/gif';
+      default:
+        return 'image/jpeg'; // Default fallback
+    }
+  }
+
+  /**
+   * Create transaction from receipt data
+   */
+  async createTransactionFromReceipt(
+    receiptData: ReceiptData, 
+    userId: number
+  ): Promise<any> {
+    try {
+      const originalAmount = receiptData.amount;
+      const originalCurrency = receiptData.currency?.toUpperCase() || 'USD';
+      
+      // Convert to USD if needed
+      let usdAmount: number;
+      let exchangeRate: number;
+      
+      if (originalCurrency === 'RUB') {
+        usdAmount = await convertRubToUsd(originalAmount);
+        const rateInfo = await getExchangeRateInfo();
+        exchangeRate = rateInfo.rate;
+      } else if (originalCurrency === 'IDR') {
+        usdAmount = await convertIdrToUsd(originalAmount);
+        // Get IDR rate from cache or use fallback
+        try {
+          const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+          const data = await response.json() as any;
+          exchangeRate = data.rates?.IDR || 16700;
+        } catch {
+          exchangeRate = 16700; // Fallback rate
+        }
+      } else {
+        // Assume USD or convert other currencies to USD 1:1 for now
+        usdAmount = originalAmount;
+        exchangeRate = 1.0;
+      }
+
+      // Convert amount to negative (expense)
+      const transactionAmount = -Math.abs(usdAmount);
+
+      // Try to find matching category by name
+      let categoryId: number | undefined;
+      if (receiptData.category) {
+        try {
+          const categories = await storage.getCategories(userId);
+          const matchingCategory = categories.find(cat => 
+            cat.name.toLowerCase().includes(receiptData.category!.toLowerCase()) ||
+            receiptData.category!.toLowerCase().includes(cat.name.toLowerCase())
+          );
+          categoryId = matchingCategory?.id;
+        } catch (categoryError) {
+          logger.warn('Failed to find matching category', categoryError as Error);
+        }
+      }
+
+      // Prepare transaction data with currency metadata
+      const transactionData = {
+        type: 'expense',
+        amount: transactionAmount,
+        description: `🧾 ${this.formatReceiptDescription(receiptData)} (${receiptData.confidence})`,
+        date: receiptData.date || new Date().toISOString().split('T')[0],
+        userId,
+        category: receiptData.category || null,
+        originalCurrency,
+        originalAmount: originalAmount.toString(),
+        exchangeRate: exchangeRate.toString()
+      };
+
+      // Create transaction
+      const transaction = await storage.createDailyTransaction(transactionData);
+
+      logger.info('Transaction created from receipt', {
+        transactionId: transaction.id,
+        userId,
+        amount: transactionAmount,
+        originalAmount,
+        originalCurrency,
+        merchant: receiptData.merchant,
+        confidence: receiptData.confidence
+      });
+
+      return transaction;
+    } catch (error) {
+      logger.error('Failed to create transaction from receipt', error as Error, {
+        userId,
+        receiptAmount: receiptData.amount
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Format receipt description for transaction
+   */
+  private formatReceiptDescription(receiptData: ReceiptData): string {
+    if (receiptData.merchant && receiptData.description) {
+      return `${receiptData.merchant}: ${receiptData.description}`;
+    } else if (receiptData.merchant) {
+      return receiptData.merchant;
+    } else {
+      return receiptData.description || 'Receipt transaction';
+    }
+  }
+
+  /**
+   * Get OCR statistics for monitoring
+   */
+  async getOcrStatistics(userId: number): Promise<{
+    totalReceipts: number;
+    successRate: number;
+    averageConfidence: string;
+    totalAmount: number;
+  }> {
+    try {
+      // Get all OCR-generated transactions (identified by description containing "🧾")
+      const transactions = await storage.getDailyTransactions(userId);
+      const ocrTransactions = transactions.filter(t => 
+        t.description && t.description.includes('🧾')
+      );
+
+      const totalReceipts = ocrTransactions.length;
+      const totalAmount = ocrTransactions.reduce((sum, t) => sum + Math.abs(parseFloat(t.amount)), 0);
+      
+      // Extract confidence levels from description
+      const confidenceLevels = ocrTransactions
+        .map(t => {
+          if (t.description?.includes('(HIGH)')) return 'HIGH';
+          if (t.description?.includes('(MEDIUM)')) return 'MEDIUM';
+          if (t.description?.includes('(LOW)')) return 'LOW';
+          return 'MEDIUM';
+        });
+
+      const successRate = totalReceipts > 0 
+        ? (confidenceLevels.filter(c => c === 'HIGH' || c === 'MEDIUM').length / totalReceipts) * 100
+        : 0;
+
+      const averageConfidence = confidenceLevels.length > 0
+        ? confidenceLevels.reduce((acc, curr) => {
+            const weights = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+            return acc + (weights[curr as keyof typeof weights] || 2);
+          }, 0) / confidenceLevels.length > 2.5 ? 'HIGH' : 'MEDIUM'
+        : 'MEDIUM';
+
+      return {
+        totalReceipts,
+        successRate: Math.round(successRate),
+        averageConfidence,
+        totalAmount
+      };
+    } catch (error) {
+      logger.error('Failed to get OCR statistics', error as Error);
+      return {
+        totalReceipts: 0,
+        successRate: 0,
+        averageConfidence: 'MEDIUM',
+        totalAmount: 0
+      };
+    }
+  }
+}
+
+// Export singleton instance
+export const ocrService = new OcrService();
