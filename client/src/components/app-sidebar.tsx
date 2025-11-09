@@ -5,6 +5,7 @@ import {
   Tag,
   Repeat,
   Heart,
+  TrendingDown,
   Sparkles,
   Settings,
   LogOut,
@@ -54,6 +55,11 @@ const menuItems = [
     title: "Wishlist",
     url: "/wishlist",
     icon: Heart,
+  },
+  {
+    title: "Budgets",
+    url: "/budgets",
+    icon: TrendingDown,
   },
   {
     title: "AI Analysis",

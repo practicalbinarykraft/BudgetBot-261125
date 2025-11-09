@@ -92,7 +92,7 @@ export const settings = pgTable("settings", {
 export const budgets = pgTable("budgets", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  category: text("category").notNull(),
+  categoryId: integer("category_id").notNull().references(() => categories.id, { onDelete: "cascade" }),
   limitAmount: decimal("limit_amount", { precision: 10, scale: 2 }).notNull(),
   period: text("period").notNull(), // 'week', 'month', 'year'
   startDate: date("start_date").notNull(),
@@ -161,6 +161,10 @@ export const budgetsRelations = relations(budgets, ({ one }) => ({
   user: one(users, {
     fields: [budgets.userId],
     references: [users.id],
+  }),
+  category: one(categories, {
+    fields: [budgets.categoryId],
+    references: [categories.id],
   }),
 }));
 
