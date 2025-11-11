@@ -76,13 +76,17 @@ export default function AuthPage() {
               <TabsTrigger value="register" data-testid="tab-register">Register</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="login">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Welcome back</CardTitle>
-                  <CardDescription>Enter your credentials to access your account</CardDescription>
-                </CardHeader>
-                <CardContent className="min-h-[280px]">
+            <Card>
+              <CardHeader>
+                <CardTitle>{activeTab === "login" ? "Welcome back" : "Create account"}</CardTitle>
+                <CardDescription>
+                  {activeTab === "login" 
+                    ? "Enter your credentials to access your account" 
+                    : "Get started with Budget Buddy today"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <TabsContent value="login" className="mt-0">
                   <Form {...loginForm}>
                     <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
                       <FormField
@@ -131,17 +135,9 @@ export default function AuthPage() {
                       </Button>
                     </form>
                   </Form>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                </TabsContent>
 
-            <TabsContent value="register">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Create account</CardTitle>
-                  <CardDescription>Get started with Budget Buddy today</CardDescription>
-                </CardHeader>
-                <CardContent className="min-h-[280px]">
+                <TabsContent value="register" className="mt-0">
                   <Form {...registerForm}>
                     <form onSubmit={registerForm.handleSubmit(onRegister)} className="space-y-4">
                       <FormField
@@ -207,9 +203,9 @@ export default function AuthPage() {
                       </Button>
                     </form>
                   </Form>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                </TabsContent>
+              </CardContent>
+            </Card>
           </Tabs>
         </div>
       </div>
