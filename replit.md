@@ -87,6 +87,17 @@ Preferred communication style: Simple, everyday language.
   - Security: userId always derived from authenticated session (never from request body), ownership verification on all database operations, bot initialization in server/index.ts post-listen
   - Frontend: Settings page Telegram card with real-time verification code timer, copy-to-clipboard, connection status badge, and disconnect flow
   - Integration: Bot modules in server/telegram/ (bot.ts, commands.ts, parser.ts, ocr.ts, config.ts), uses existing transaction/category/wallet systems
+**Financial Trend Chart with AI Forecasting:** Production-ready dashboard visualization showing cumulative income, expenses, and capital trends with AI-powered predictions:
+  - Architecture: Backend services (forecast.service.ts, chart-formatters.ts) + frontend hook/component (use-financial-trend.ts, financial-trend-chart.tsx)
+  - Chart Visualization: Three lines rendered via recharts - Income (green), Expense (red), Capital (blue solid for history, blue dashed for forecast)
+  - BYOK Pattern: User provides own Anthropic API key in Settings (anthropicApiKey field) for forecast generation, separate from system TELEGRAM_BOT_TOKEN used for bot OCR
+  - Configurable Periods: History (7/30/60/90/365 days), Forecast (0/7/30/90/365 days) via dropdown filters
+  - AI Forecast: Claude analyzes historical transactions + recurring payments to predict future capital trajectory
+  - Smart Fallback: Simple linear projection if Claude API fails (maintains usability without AI key)
+  - "Today" Marker: Vertical reference line separates historical data from predictions
+  - API: GET /api/analytics/trend?historyDays=30&forecastDays=365 returns combined historical + forecast data points
+  - Security: API key redacted in responses, userId from session, ownership verification
+  - Database: settings.anthropic_api_key column (nullable text) stores user BYOK key
 **Security Hardening:** Critical measures include stripping `userId` from request bodies in PATCH endpoints, foreign key ownership verification to prevent cross-tenant associations, and comprehensive ownership checks on all PATCH/DELETE routes. All POST endpoints force `userId` from the authenticated session.
 **Budget Management:** Comprehensive system with `categoryId` foreign key, period-based tracking (week, month, year), and progress calculation based on expenses. UI provides visual progress bars and alerts for exceeded budgets.
 
