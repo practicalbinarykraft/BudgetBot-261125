@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Wallet } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Wallet as WalletIcon, CreditCard, Coins, Bitcoin } from "lucide-react";
+import { Plus, Wallet as WalletIcon, CreditCard, Coins, Bitcoin, Settings2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -16,6 +16,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CalibrationDialog } from "@/components/wallets/calibration-dialog";
 
 const formSchema = insertWalletSchema.extend({
   balance: z.string().min(1, "Balance is required"),
@@ -31,6 +32,7 @@ const walletIcons = {
 
 export default function WalletsPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showCalibrateDialog, setShowCalibrateDialog] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -102,10 +104,20 @@ export default function WalletsPage() {
           <h1 className="text-3xl font-bold">Wallets</h1>
           <p className="text-muted-foreground">Manage your accounts and balances</p>
         </div>
-        <Button onClick={() => setShowAddDialog(true)} data-testid="button-add-wallet">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Wallet
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowCalibrateDialog(true)} 
+            data-testid="button-calibrate-wallets"
+          >
+            <Settings2 className="h-4 w-4 mr-2" />
+            Calibrate
+          </Button>
+          <Button onClick={() => setShowAddDialog(true)} data-testid="button-add-wallet">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Wallet
+          </Button>
+        </div>
       </div>
 
       <Card className="border-l-4 border-l-primary">
@@ -271,6 +283,11 @@ export default function WalletsPage() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      <CalibrationDialog
+        open={showCalibrateDialog}
+        onOpenChange={setShowCalibrateDialog}
+      />
     </div>
   );
 }
