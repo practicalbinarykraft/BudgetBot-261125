@@ -82,7 +82,7 @@ export default function AuthPage() {
                   <CardTitle>Welcome back</CardTitle>
                   <CardDescription>Enter your credentials to access your account</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="min-h-[280px]">
                   <Form {...loginForm}>
                     <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
                       <FormField
@@ -141,7 +141,7 @@ export default function AuthPage() {
                   <CardTitle>Create account</CardTitle>
                   <CardDescription>Get started with Budget Buddy today</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="min-h-[280px]">
                   <Form {...registerForm}>
                     <form onSubmit={registerForm.handleSubmit(onRegister)} className="space-y-4">
                       <FormField
