@@ -2,18 +2,14 @@
 
 ## Overview
 
-Budget Buddy is a solo personal finance management application that allows users to track income, expenses, wallets, and financial goals. The application features AI-powered spending analysis, receipt OCR capabilities, and multi-currency support. Built with a focus on simplicity and clarity, it provides users with an intuitive dashboard for managing their financial life.
+Budget Buddy is a solo personal finance management application designed to help users track income, expenses, wallets, and financial goals. It offers AI-powered spending analysis, receipt OCR, and multi-currency support, all within an intuitive and user-friendly interface. The project aims to provide a comprehensive and simplified tool for managing personal finances.
 
-**Key Features:**
-- Transaction tracking (income/expense)
-- Multi-wallet support (cards, cash, crypto)
-- Category management
-- Budget tracking with spending limits (weekly/monthly/yearly)
-- Recurring payments planning
-- Wishlist for desired purchases
-- AI-powered spending analysis (via Anthropic Claude)
-- Receipt OCR scanning
-- Multi-currency support (USD, RUB, IDR)
+**Key Capabilities:**
+- Transaction, wallet, category, and budget management
+- Recurring payments and wishlist tracking
+- AI-powered spending analysis and receipt OCR (via Anthropic Claude)
+- Multi-currency support with historical exchange rates (USD, RUB, IDR)
+- Financial Health Score based on user's spending habits
 
 ## User Preferences
 
@@ -21,254 +17,42 @@ Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend Architecture
+### Frontend
 
-**Framework:** React 18 with TypeScript and Vite as the build tool
+**Technology Stack:** React 18 (TypeScript, Vite), Wouter for routing, TanStack Query for server state, React Hook Form with Zod for forms, Context API for auth.
+**UI/UX:** Shadcn/ui (Radix UI primitives), Tailwind CSS with a custom design system adhering to Material Design principles. Features a neutral color scheme, Inter and JetBrains Mono fonts, responsive grid layouts, and consistent spacing.
+**Design Principles:** Emphasizes data clarity, trust, and intuitive user interaction through hover effects and elevation.
 
-**Routing:** Wouter (lightweight React router)
+### Backend
 
-**State Management:**
-- TanStack Query (React Query) for server state management
-- React Hook Form with Zod validation for form state
-- Context API for authentication state
+**Technology Stack:** Express.js (TypeScript), Drizzle ORM for PostgreSQL (Neon serverless).
+**Authentication:** Passport.js with Local Strategy, session-based using `express-session` (MemoryStore for dev), BCrypt for password hashing.
+**API Structure:** RESTful API (`/api` prefix) with modular routes organized by domain (e.g., `transactions.routes.ts`, `budgets.routes.ts`). Includes middleware for authentication and ownership checks.
+**Data Model:** Core entities include Users, Transactions (with multi-currency history), Wallets (dual balance tracking), Categories, Budgets, Recurring Payments, Wishlist, and Settings.
+**Database Schema Design:** User-centric, with cascade deletions, decimal precision for financial amounts, timestamp tracking, and robust currency handling (original amount + USD equivalent, stored exchange rates).
 
-**UI Components:**
-- Shadcn/ui component library (Radix UI primitives)
-- Tailwind CSS for styling with custom design system
-- Material Design principles with neutral color scheme
-- Custom typography using Inter (primary) and JetBrains Mono (currency amounts)
+### System Design Choices
 
-**Design System:**
-- Consistent spacing scale (2, 4, 6, 8, 12, 16, 20, 24 Tailwind units)
-- Responsive grid layouts (3-column on desktop, single column on mobile)
-- Hover and elevation effects for interactive elements
-- System-based approach prioritizing data clarity and trust
-
-### Backend Architecture
-
-**Framework:** Express.js with TypeScript
-
-**Database ORM:** Drizzle ORM configured for PostgreSQL via Neon serverless
-
-**Authentication:**
-- Passport.js with Local Strategy
-- Session-based authentication using express-session
-- MemoryStore for session storage (development)
-- BCrypt for password hashing
-
-**API Structure:**
-- RESTful API endpoints under `/api` prefix
-- Modular route organization in `server/routes/` (domain-specific routers)
-- Central composition via `server/routes/index.ts` → `registerRoutes()`
-- Storage abstraction layer (`IStorage` interface) for data access
-- Middleware-based authentication protection
-
-**Data Model:**
-- Users table with email/password authentication and optional Telegram integration
-- Transactions table with multi-currency support (stores both original and USD amounts)
-- Wallets table for different account types
-- Categories table for transaction classification
-- Budgets table for category-based spending limits with period tracking
-- Recurring payments table for scheduled transactions
-- Wishlist table for savings goals
-- Settings table for user preferences
-
-### Database Schema Design
-
-**Core Principles:**
-- Simple user-centric model (single user per account, no sharing/partnerships)
-- Cascade deletions to maintain referential integrity
-- Decimal precision for financial amounts (10,2)
-- Timestamp tracking for audit trails
-- Nullable foreign keys where appropriate (e.g., walletId on transactions)
-
-**Currency Handling:**
-- Dual storage: original currency + USD equivalent
-- Static exchange rates in `currency-service.ts`
-- Centralized conversion functions for consistency
-
-### Authentication Flow
-
-**Registration:** User provides email, password, and name → BCrypt hashing → Database storage
-
-**Login:** Passport Local Strategy validates credentials → Session creation → Cookie-based session management
-
-**Session Management:** 7-day cookie expiration with secure flag in production
-
-**Route Protection:** `withAuth` middleware wrapper checks session validity, narrows types, and propagates errors
+**Multi-Currency System:** Implemented with full history tracking, storing `originalAmount`, `originalCurrency`, and `exchangeRate` in transactions. Wallets track both native and USD equivalent balances. Exchange rates are currently static but designed for future API integration.
+**Financial Health Score:** A real-time, deterministic score (0-100) based on Budget Adherence (40%), Cashflow Balance (35%), and Expense Stability (25%). Scores are categorized into status bands (Excellent, Stable, Needs Attention, Critical).
+**Security Hardening:** Critical measures include stripping `userId` from request bodies in PATCH endpoints, foreign key ownership verification to prevent cross-tenant associations, and comprehensive ownership checks on all PATCH/DELETE routes. All POST endpoints force `userId` from the authenticated session.
+**Budget Management:** Comprehensive system with `categoryId` foreign key, period-based tracking (week, month, year), and progress calculation based on expenses. UI provides visual progress bars and alerts for exceeded budgets.
 
 ## External Dependencies
 
 ### Third-Party Services
 
-**Anthropic Claude API:**
-- Purpose: AI-powered spending analysis and receipt OCR
-- Integration: `@anthropic-ai/sdk` package
-- Configuration: Requires `ANTHROPIC_API_KEY` environment variable
-- Usage: Optional feature with graceful degradation if API key not configured
-- Models: claude-3-5-sonnet-20241022 for text analysis
-
-**Neon Serverless PostgreSQL:**
-- Purpose: Primary database
-- Integration: `@neondatabase/serverless` package with WebSocket support
-- Configuration: Requires `DATABASE_URL` environment variable
-- Connection pooling via `Pool` from Neon package
+-   **Anthropic Claude API:** Used for AI-powered spending analysis and receipt OCR. Integrated via `@anthropic-ai/sdk`.
+-   **Neon Serverless PostgreSQL:** Primary database, integrated via `@neondatabase/serverless`.
 
 ### UI Component Libraries
 
-**Radix UI Primitives:**
-- Complete set of accessible, unstyled components
-- Packages: accordion, alert-dialog, avatar, checkbox, dialog, dropdown-menu, popover, select, tabs, toast, etc.
-- Wrapped with Tailwind styling via Shadcn/ui conventions
-
-**Utility Libraries:**
-- `class-variance-authority`: Component variant management
-- `clsx` + `tailwind-merge`: Conditional className handling
-- `date-fns`: Date formatting and manipulation
-- `zod`: Runtime schema validation
+-   **Radix UI Primitives:** Provides accessible, unstyled UI components, wrapped with Tailwind CSS via Shadcn/ui.
+-   **Utility Libraries:** `class-variance-authority`, `clsx`, `tailwind-merge` for styling; `date-fns` for date manipulation; `zod` for schema validation.
 
 ### Development Tools
 
-**Replit-Specific Plugins:**
-- `@replit/vite-plugin-runtime-error-modal`: Development error overlay
-- `@replit/vite-plugin-cartographer`: Code navigation
-- `@replit/vite-plugin-dev-banner`: Development environment indicator
-
-**Build Tools:**
-- Vite for frontend bundling and HMR
-- esbuild for backend bundling
-- TypeScript compiler for type checking
-- Drizzle Kit for database migrations
-
-### Session & Security
-
-**Session Storage:** 
-- Development: MemoryStore (in-memory sessions)
-- Production: Should be migrated to connect-pg-simple for PostgreSQL-backed sessions
-
-**Password Security:** BCrypt with automatic salt generation
-
-**CORS & Trust Proxy:** Configured for production deployment with secure cookies
-
-## Recent Changes
-
-### Routing Refactoring (November 9, 2025)
-
-**Implementation:**
-- Split monolithic `server/routes.ts` (509 lines) into 9 domain-specific Express routers
-- Created modular structure in `server/routes/` directory with clean separation of concerns
-- Total refactored size: 579 lines across all router files (no net code increase, just reorganization)
-- Each router handles a single domain: transactions, wallets, categories, recurring, wishlist, budgets, settings, stats, AI
-
-**Router Organization:**
-```
-server/routes/
-├─ index.ts (26 lines) - Central composition with registerRoutes()
-├─ transactions.routes.ts (130 lines) - Transaction CRUD operations
-├─ budgets.routes.ts (94 lines) - Budget management with categoryId validation
-├─ wishlist.routes.ts (68 lines) - Wishlist CRUD with PATCH support
-├─ stats.routes.ts (59 lines) - Stats and financial-health endpoints
-├─ settings.routes.ts (53 lines) - User settings management
-├─ wallets.routes.ts (47 lines) - Wallet CRUD operations
-├─ categories.routes.ts (47 lines) - Category CRUD operations
-├─ recurring.routes.ts (47 lines) - Recurring payment CRUD
-└─ ai.routes.ts (34 lines) - AI analysis and receipt scanning
-```
-
-**Architecture Benefits:**
-- **Junior developer friendly:** Each file <150 lines, single responsibility
-- **Easy navigation:** Find endpoints by domain (budgets → budgets.routes.ts)
-- **Preserved security:** All withAuth, ownership checks, userId sanitization intact
-- **No breaking changes:** All endpoints maintain original REST URLs and behavior
-- **Type safety:** Full TypeScript coverage with 0 errors after refactor
-
-**Technical Pattern:**
-- Each router exports relative paths (`router.get('/')` instead of `app.get('/api/transactions')`)
-- Central composition in `routes/index.ts` mounts routers with full prefixes
-- Pattern documented in module-level JSDoc for future contributors
-- Security checklist preserved: withAuth → ownership verification → userId sanitization → foreign key validation
-
-### Financial Health Score Feature (November 9, 2025)
-
-**Implementation:**
-- Created `/api/financial-health` endpoint with deterministic scoring algorithm
-- Real-time calculation based on user's actual transaction and budget data
-- No hardcoded or mock data - all values computed from database
-- Scoring algorithm uses three weighted metrics:
-  - **Budget Adherence (40%):** Percentage of budgets not exceeded in current period
-  - **Cashflow Balance (35%):** Income vs expenses ratio (savings rate)
-  - **Expense Stability (25%):** Current vs previous period comparison
-- Score ranges: 0-100 with status bands (Excellent 80+, Stable 60-79, Needs Attention 40-59, Critical <40)
-- Handles edge cases: empty data defaults to neutral 50, prevents division by zero
-
-**User Interface:**
-- `/ai-analysis` page displays live financial health score
-- Dynamic color coding based on score (green/blue/yellow/red)
-- Loading skeleton while fetching data
-- Empty state for users without transaction data
-- Replaces previous hardcoded "78/100" placeholder
-
-**Technical Details:**
-- Query parameter validation: ?days=N (default 30, sanitized for NaN/negative)
-- Budget-transaction matching: supports both categoryId and legacy category name matching
-- Date filtering using date-fns (startOfDay, subDays) for rolling windows
-- Lazy-loaded service import for better performance
-- All TypeScript errors resolved (18 LSP diagnostics fixed)
-
-**Architecture Notes:**
-- Service layer: `server/services/financial-health.ts` with typed Transaction/Budget callbacks
-- Categories fetched alongside budgets/transactions to enable legacy data matching
-- withAuth middleware ensures authenticated access only
-- React Query integration on frontend for automatic caching and refetching
-
-### Security Hardening (November 9, 2025)
-
-**Critical Security Fixes:**
-- **userId Injection Prevention:** All PATCH endpoints now strip `userId` from request bodies to prevent users from reassigning ownership of records
-  - Affected routes: transactions, wishlist, settings, budgets
-  - Pattern: `const { userId, ...sanitizedBody } = req.body;`
-  
-- **Foreign Key Ownership Verification:** Added cross-tenant association prevention
-  - `categoryId` ownership verified in budgets POST/PATCH (prevents linking to other users' categories)
-  - `walletId` ownership verified in transactions POST/PATCH (prevents linking to other users' wallets)
-  - Returns 400 "Invalid category/wallet" on ownership failure
-
-- **Ownership Checks Verified:** Confirmed all PATCH/DELETE routes verify record ownership
-  - Pattern: `if (!record || record.userId !== req.user.id) return 404`
-  - Routes protected: transactions, wallets, categories, recurring, wishlist, budgets
-  - Prevents privilege escalation attacks
-
-**Security Architecture:**
-- All POST endpoints force `userId` from authenticated session (`req.user.id`)
-- All PATCH endpoints sanitize `userId` before validation
-- Foreign key references verified for ownership before persistence
-- Consistent 404 responses for both "not found" and "not yours" (prevents entity existence leaks)
-
-### Budget Management Feature (November 2025)
-
-**Implementation:**
-- Complete budget tracking system with database schema, API endpoints, and full-featured UI
-- Budgets table with categoryId foreign key (migrated from text category to integer categoryId)
-- Budget periods: week, month, year with automatic date range calculation
-- Progress tracking based on expense transactions in USD within the budget period
-- Color-coded status indicators: green (under 80%), yellow (80-100% warning), red (exceeded 100%)
-
-**User Interface:**
-- `/budgets` page with create/edit/delete functionality
-- Budget cards showing progress bars with spent/limit amounts and percentages
-- Alert components on dashboard showing exceeded and warning budgets
-- Navigation link in sidebar with TrendingDown icon
-- Empty state with call-to-action for new users
-
-**Technical Details:**
-- Enhanced Progress component with `indicatorClassName` prop for custom colors
-- Budget progress calculation using date-fns for period bounds (startOfWeek, startOfMonth, startOfYear)
-- Expense-only filtering with category name matching
-- Security: userId sanitization in PATCH endpoint to prevent ownership hijacking
-- Comprehensive test IDs on all interactive elements
-
-**Architecture Notes:**
-- Budget-category relationship: budgets.categoryId references categories.id
-- Transaction matching by category name (transactions.category is text field)
-- Fixed date ranges (non-rolling): budget periods calculated from startDate
-- Warning thresholds: 80% (yellow alert), 100% (red alert and exceeded status)
+-   **Vite:** Frontend bundling and HMR.
+-   **esbuild:** Backend bundling.
+-   **TypeScript:** Language compiler.
+-   **Drizzle Kit:** Database migrations.

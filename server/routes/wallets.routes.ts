@@ -2,6 +2,7 @@ import { Router } from "express";
 import { storage } from "../storage";
 import { insertWalletSchema } from "@shared/schema";
 import { withAuth } from "../middleware/auth-utils";
+import { convertToUSD } from "../services/currency-service";
 
 const router = Router();
 
@@ -18,12 +19,56 @@ router.get("/", withAuth(async (req, res) => {
 // POST /api/wallets
 router.post("/", withAuth(async (req, res) => {
   try {
-    const data = insertWalletSchema.parse({
+    let data = insertWalletSchema.parse({
       ...req.body,
       userId: req.user.id,
     });
+    
+    // 💱 Multi-currency: Calculate USD equivalent for non-USD wallets
+    if (data.currency && data.currency !== "USD") {
+      const balanceAmount = parseFloat(data.balance);
+      const balanceUsdValue = convertToUSD(balanceAmount, data.currency);
+      data = { ...data, balanceUsd: balanceUsdValue.toFixed(2) };
+    } else {
+      // USD wallet - balanceUsd = balance
+      data = { ...data, balanceUsd: data.balance };
+    }
+    
     const wallet = await storage.createWallet(data);
     res.json(wallet);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+}));
+
+// PATCH /api/wallets/:id
+router.patch("/:id", withAuth(async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const wallet = await storage.getWalletById(id);
+    if (!wallet || wallet.userId !== req.user.id) {
+      return res.status(404).json({ error: "Wallet not found" });
+    }
+    
+    // 🔒 Security: Strip userId from client
+    const { userId, ...sanitizedBody } = req.body;
+    let data = insertWalletSchema.partial().parse(sanitizedBody);
+    
+    // 💱 Multi-currency: Recompute balanceUsd if balance or currency changed
+    if (data.balance || data.currency) {
+      const balance = data.balance ? parseFloat(data.balance) : parseFloat(wallet.balance);
+      const currency = data.currency || wallet.currency || "USD";
+      
+      if (currency !== "USD") {
+        const balanceUsdValue = convertToUSD(balance, currency);
+        data = { ...data, balanceUsd: balanceUsdValue.toFixed(2) };
+      } else {
+        data = { ...data, balanceUsd: balance.toFixed(2) };
+      }
+    }
+    
+    const updated = await storage.updateWallet(id, data);
+    res.json(updated);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }
