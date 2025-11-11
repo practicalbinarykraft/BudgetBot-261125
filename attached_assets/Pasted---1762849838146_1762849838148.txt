@@ -1,0 +1,513 @@
+🎯 ЭКСПЕРТНОЕ ТЗ: СИСТЕМА КАТЕГОРИЙ
+
+📊 АНАЛИЗ ПРОБЛЕМЫ
+Что не так в старом ТЗ:
+❌ Слишком много кода в одном месте
+❌ Inline Dialog прямо в форме (раздувает компонент)
+❌ ML логика смешана с UI
+❌ Нет разделения ответственности
+❌ Junior запутается в 300+ строках
+Правильный подход:
+✅ Отдельный компонент для создания категории
+✅ ML логика в сервисе (уже есть!)
+✅ Базовые категории через middleware
+✅ Каждый файл <200 строк
+✅ Понятно для junior
+
+💡 ПРАВИЛЬНОЕ ТЗ ДЛЯ REPLIT
+markdown# 📋 ТЗ: Система категорий (для junior разработчика)
+
+## 🎯 ПРОБЛЕМА
+
+У пользователя нет категорий при первом входе!
+
+## 🔧 РЕШЕНИЕ (3 простых шага)
+
+---
+
+## ШАГ 1: Базовые категории при регистрации (15 минут)
+
+### Что делать:
+
+При создании пользователя → автоматически создать 7 базовых категорий.
+
+### Где править:
+
+**Файл:** `server/routes/auth.ts` (или `server/routes.ts` если нет отдельного)
+
+**Найди:** POST `/api/auth/register` endpoint
+
+**Добавь ПОСЛЕ создания user:**
+```typescript
+// POST /api/auth/register
+router.post('/register', async (req, res) => {
+  try {
+    // ... валидация ...
+    
+    // Создать пользователя
+    const user = await createUser({
+      email: req.body.email,
+      passwordHash: hashedPassword,
+      name: req.body.name
+    });
+    
+    // ✅ ДОБАВЬ ЭТО:
+    // Создать базовые категории
+    await createDefaultCategories(user.id);
+    
+    res.status(201).json({ user });
+  } catch (error) {
+    res.status(500).json({ error: 'Registration failed' });
+  }
+});
+```
+
+### Создай функцию (в том же файле):
+```typescript
+/**
+ * Создать базовые категории для нового пользователя
+ */
+async function createDefaultCategories(userId: number) {
+  const defaultCategories = [
+    // Расходы
+    { name: 'Food & Drinks', type: 'expense', icon: '🍔', color: '#ef4444' },
+    { name: 'Transport', type: 'expense', icon: '🚗', color: '#f97316' },
+    { name: 'Shopping', type: 'expense', icon: '🛍️', color: '#8b5cf6' },
+    { name: 'Entertainment', type: 'expense', icon: '🎮', color: '#ec4899' },
+    { name: 'Bills', type: 'expense', icon: '💳', color: '#6366f1' },
+    // Доходы
+    { name: 'Salary', type: 'income', icon: '💰', color: '#10b981' },
+    { name: 'Freelance', type: 'income', icon: '💻', color: '#06b6d4' }
+  ];
+  
+  try {
+    for (const category of defaultCategories) {
+      await db.insert(categories).values({
+        userId,
+        name: category.name,
+        type: category.type,
+        icon: category.icon,
+        color: category.color
+      });
+    }
+  } catch (error) {
+    console.error('Failed to create default categories:', error);
+    // Не падаем - пользователь создаст сам
+  }
+}
+```
+
+**Критерий успеха:**
+- ✅ Зарегистрировал нового user
+- ✅ Открыл форму транзакции
+- ✅ В селекторе 7 категорий
+
+**Размер:** ~40 строк кода ✅
+
+---
+
+## ШАГ 2: Компонент создания категории (30 минут)
+
+### Что делать:
+
+Создать отдельный переиспользуемый компонент с Dialog.
+
+### Создай новый файл:
+
+**Файл:** `client/src/components/CategoryCreateDialog.tsx`
+```tsx
+import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle 
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue 
+} from '@/components/ui/select';
+import { apiRequest } from '@/lib/api';
+
+interface Props {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: (categoryName: string) => void;
+}
+
+/**
+ * Dialog для создания новой категории
+ * Используется в формах транзакций
+ */
+export function CategoryCreateDialog({ open, onOpenChange, onSuccess }: Props) {
+  const queryClient = useQueryClient();
+  
+  const [name, setName] = useState('');
+  const [type, setType] = useState('expense');
+  
+  const createMutation = useMutation({
+    mutationFn: async (data: { name: string; type: string }) => {
+      return await apiRequest('POST', '/api/categories', {
+        name: data.name,
+        type: data.type,
+        icon: 'Package',
+        color: '#3b82f6'
+      });
+    },
+    onSuccess: (response) => {
+      // Обновить список категорий
+      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+      
+      // Закрыть dialog
+      onOpenChange(false);
+      
+      // Очистить форму
+      setName('');
+      setType('expense');
+      
+      // Вызвать callback (автовыбор категории)
+      if (onSuccess) {
+        onSuccess(response.category.name);
+      }
+    }
+  });
+  
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (name.trim()) {
+      createMutation.mutate({ name: name.trim(), type });
+    }
+  };
+  
+  return (
+    
+      
+        
+          Create Category
+        
+        
+        
+          {/* Name */}
+          
+            Name
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Coffee shops"
+              autoFocus
+            />
+          
+          
+          {/* Type */}
+          
+            Type
+            <Select value={type} onValueChange={(v) => setType(v as any)}>
+              
+                
+              
+              
+                Expense
+                Income
+              
+            
+          
+          
+          {/* Buttons */}
+          
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            
+            
+              {createMutation.isPending ? 'Creating...' : 'Create'}
+            
+          
+        
+      
+    
+  );
+}
+```
+
+**Размер:** ~90 строк ✅  
+**Ответственность:** Только создание категории ✅  
+**Переиспользуемость:** Можно использовать везде ✅
+
+---
+
+## ШАГ 3: Интеграция в форму транзакций (20 минут)
+
+### Что делать:
+
+Добавить кнопку "Create new" в селектор категорий.
+
+### Где править:
+
+**Файл:** `client/src/components/TransactionForm.tsx` (или похожий)
+
+**Добавь imports:**
+```tsx
+import { CategoryCreateDialog } from './CategoryCreateDialog';
+import { Plus } from 'lucide-react';
+```
+
+**Добавь state:**
+```tsx
+const [showCreateCategory, setShowCreateCategory] = useState(false);
+```
+
+**Найди Select категории и добавь кнопку:**
+```tsx
+<Select
+  value={form.watch('category')}
+  onValueChange={(value) => form.setValue('category', value)}
+>
+  
+    
+  
+  
+    {/* Существующие категории */}
+    {categories?.map((cat) => (
+      
+        {cat.name}
+      
+    ))}
+    
+    {/* ✅ ДОБАВЬ ЭТО: Кнопка создания */}
+    
+      <button
+        type="button"
+        onClick={() => setShowCreateCategory(true)}
+        className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent rounded-sm flex items-center gap-2"
+      >
+        
+        Create new category
+      
+    
+  
+
+
+{/* ✅ ДОБАВЬ ЭТО: Dialog */}
+<CategoryCreateDialog
+  open={showCreateCategory}
+  onOpenChange={setShowCreateCategory}
+  onSuccess={(categoryName) => {
+    // Автоматически выбрать созданную категорию
+    form.setValue('category', categoryName);
+  }}
+/>
+```
+
+**Критерий успеха:**
+- ✅ Открыл форму транзакции
+- ✅ Кликнул на Select category
+- ✅ Внизу кнопка "Create new category"
+- ✅ Клик → Dialog открылся
+- ✅ Создал "Coffee" → автовыбрано в форме
+
+**Добавленный код:** ~15 строк ✅
+
+---
+
+## ШАГ 4: ML автоподстановка (ОПЦИОНАЛЬНО, 30 минут)
+
+### Что делать:
+
+Если уже есть `server/services/ml-categories.ts` и endpoints - добавить автоподстановку.
+
+### Проверь наличие:
+```bash
+# Проверь есть ли файлы:
+ls server/services/ml-categories.ts
+ls server/middleware/ml-middleware.ts
+```
+
+**Если НЕТ** → пропусти этот шаг (сделаем позже)!
+
+**Если ЕСТЬ** → добавь в форму:
+```tsx
+// В TransactionForm.tsx
+
+// Следить за description
+const watchDescription = form.watch('description');
+
+// Запрос ML suggestion
+const { data: mlSuggestion } = useQuery({
+  queryKey: ['/api/ml/suggest', { text: watchDescription }],
+  queryFn: async () => {
+    if (!watchDescription || watchDescription.length < 3) return null;
+    
+    const res = await fetch(
+      `/api/ml/suggest?text=${encodeURIComponent(watchDescription)}`,
+      { credentials: 'include' }
+    );
+    
+    return res.ok ? await res.json() : null;
+  },
+  enabled: watchDescription?.length > 2
+});
+
+// Показать badge если есть suggestion
+{mlSuggestion?.category && (
+  
+    💡 {mlSuggestion.category}
+  
+)}
+
+// При сохранении - обучить ML
+const createMutation = useMutation({
+  mutationFn: async (data) => {
+    const transaction = await apiRequest('POST', '/api/transactions', data);
+    
+    // Обучить ML (если категория указана)
+    if (data.description && data.category) {
+      try {
+        await apiRequest('POST', '/api/ml/learn', {
+          merchant: data.description,
+          category: data.category
+        });
+      } catch (error) {
+        // Не падаем если ML не работает
+        console.error('ML learning failed:', error);
+      }
+    }
+    
+    return transaction;
+  }
+});
+```
+
+**Размер:** ~30 строк ✅
+
+---
+
+## 📋 ИТОГОВЫЙ ЧЕКЛИСТ
+
+### Backend:
+- [ ] Функция createDefaultCategories() создана
+- [ ] Вызывается при регистрации
+- [ ] 7 категорий создаются автоматически
+- [ ] Не падает если ошибка
+
+### Frontend:
+- [ ] CategoryCreateDialog.tsx создан (<100 строк)
+- [ ] Кнопка "Create new" в селекторе
+- [ ] Dialog открывается/закрывается
+- [ ] После создания категория автовыбирается
+- [ ] ML badge показывается (если есть)
+
+### Тестирование:
+- [ ] Регистрация → 7 категорий в селекторе
+- [ ] Создание через кнопку → работает
+- [ ] ML подставляет категорию (если включено)
+
+---
+
+## 📂 СТРУКТУРА ФАЙЛОВ
+```
+server/
+  routes/
+    auth.ts                    (+40 строк - createDefaultCategories)
+
+client/src/
+  components/
+    CategoryCreateDialog.tsx   (90 строк - НОВЫЙ!)
+    TransactionForm.tsx        (+15 строк - кнопка + dialog)
+                               (+30 строк - ML, опционально)
+```
+
+**ИТОГО:** 
+- Новый код: ~145 строк
+- Файлы: 1 новый + 2 правки
+- Все файлы <200 строк ✅
+
+---
+
+## 🎯 ПРЕИМУЩЕСТВА ЭТОГО ПОДХОДА
+
+### 1. Модульность
+```
+✅ CategoryCreateDialog - отдельный компонент
+✅ Можно переиспользовать везде
+✅ TransactionForm не раздут
+```
+
+### 2. Простота для Junior
+```
+✅ Каждый файл делает ОДНО
+✅ Понятные названия
+✅ Комментарии где нужно
+✅ Разберётся за 15 минут
+```
+
+### 3. Удобно для ИИ
+```
+✅ Малые файлы (<100 строк)
+✅ Чёткая структура
+✅ Править CategoryCreateDialog → не трогает форму
+✅ Править форму → не трогает dialog
+✅ Контекст не теряется
+```
+
+### 4. Тестируемость
+```
+✅ Тестировать Dialog отдельно
+✅ Тестировать форму отдельно
+✅ Тестировать createDefaultCategories отдельно
+```
+
+---
+
+## ⚠️ ЧТО НЕ ДЕЛАТЬ
+```
+❌ НЕ пихать Dialog прямо в форму (раздувает файл)
+❌ НЕ создавать монстр-компонент 300+ строк
+❌ НЕ дублировать логику создания категории
+❌ НЕ забывать про userId (НЕ partnerId!)
+❌ НЕ делать сложную ML логику в UI
+```
+
+---
+
+## 🚀 ПОРЯДОК РАБОТЫ
+```
+1. ШАГ 1: createDefaultCategories() (15 мин)
+   → Тест: регистрация → 7 категорий
+   ↓
+2. ШАГ 2: CategoryCreateDialog.tsx (30 мин)
+   → Тест: компонент создан
+   ↓
+3. ШАГ 3: Интеграция в форму (20 мин)
+   → Тест: кнопка → dialog → создание
+   ↓
+4. ШАГ 4: ML (ОПЦИОНАЛЬНО, 30 мин)
+   → Тест: автоподстановка работает
+   ↓
+5. ✅ ГОТОВО!
+```
+
+**ИТОГО: 1-1.5 часа чистой работы**
+
+---
+
+## 💪 КРИТЕРИЙ УСПЕХА
+
+**Junior разработчик:**
+1. Клонирует проект
+2. Видит CategoryCreateDialog.tsx (90 строк)
+3. Открывает - понимает за 5 минут
+4. Может легко изменить (добавить поле, изменить стили)
+5. TransactionForm.tsx остался понятным
+6. **ВСЁ РАБОТАЕТ И ПОНЯТНО!** ✅
+
+---

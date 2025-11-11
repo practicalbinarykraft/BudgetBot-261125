@@ -1,13 +1,43 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { storage } from "./storage";
-import { insertUserSchema } from "@shared/schema";
+import { insertUserSchema, categories } from "@shared/schema";
 import type { Express } from "express";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import bcrypt from "bcryptjs";
+import { db } from "./db";
 
 const MemoryStore = createMemoryStore(session);
+
+/**
+ * Create default categories for new user
+ */
+async function createDefaultCategories(userId: number) {
+  const defaultCategories = [
+    { name: 'Food & Drinks', type: 'expense', icon: '🍔', color: '#ef4444' },
+    { name: 'Transport', type: 'expense', icon: '🚗', color: '#f97316' },
+    { name: 'Shopping', type: 'expense', icon: '🛍️', color: '#8b5cf6' },
+    { name: 'Entertainment', type: 'expense', icon: '🎮', color: '#ec4899' },
+    { name: 'Bills', type: 'expense', icon: '💳', color: '#6366f1' },
+    { name: 'Salary', type: 'income', icon: '💰', color: '#10b981' },
+    { name: 'Freelance', type: 'income', icon: '💻', color: '#06b6d4' }
+  ];
+  
+  try {
+    for (const category of defaultCategories) {
+      await db.insert(categories).values({
+        userId,
+        name: category.name,
+        type: category.type,
+        icon: category.icon,
+        color: category.color
+      });
+    }
+  } catch (error) {
+    console.error('Failed to create default categories:', error);
+  }
+}
 
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
@@ -90,6 +120,8 @@ export function setupAuth(app: Express) {
         password: hashedPassword,
         name,
       });
+
+      await createDefaultCategories(user.id);
 
       req.login(user, (err) => {
         if (err) {

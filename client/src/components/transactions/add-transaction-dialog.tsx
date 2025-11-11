@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Category } from "@shared/schema";
+import { Plus } from "lucide-react";
+import { CategoryCreateDialog } from "@/components/categories/category-create-dialog";
 
 interface AddTransactionDialogProps {
   open: boolean;
@@ -44,6 +47,7 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [showCreateCategory, setShowCreateCategory] = useState(false);
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
@@ -216,6 +220,19 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                           {cat.name}
                         </SelectItem>
                       ))}
+                      
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setShowCreateCategory(true);
+                        }}
+                        className="w-full px-2 py-1.5 text-sm text-left hover-elevate active-elevate-2 rounded-sm flex items-center gap-2 text-primary"
+                        data-testid="button-create-category"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Create new category
+                      </button>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -259,6 +276,15 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
           </form>
         </Form>
       </DialogContent>
+
+      <CategoryCreateDialog
+        open={showCreateCategory}
+        onOpenChange={setShowCreateCategory}
+        defaultType={form.watch("type") as "income" | "expense"}
+        onSuccess={(categoryName) => {
+          form.setValue("category", categoryName);
+        }}
+      />
     </Dialog>
   );
 }
