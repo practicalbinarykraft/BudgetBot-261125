@@ -24,6 +24,7 @@ import settingsRouter from "./settings.routes";
 import statsRouter from "./stats.routes";
 import aiRouter from "./ai.routes";
 import currencyRouter from "./currency.routes";
+import calibrationsRouter from "./calibrations.routes";
 
 export function registerRoutes(app: Express) {
   // Domain-specific routes
@@ -34,6 +35,7 @@ export function registerRoutes(app: Express) {
   app.use("/api/wishlist", wishlistRouter);
   app.use("/api/budgets", budgetsRouter);
   app.use("/api/settings", settingsRouter);
+  app.use("/api/calibrations", calibrationsRouter);
   
   // Stats and analytics (mounted on /api for /api/stats and /api/financial-health)
   app.use("/api", statsRouter);

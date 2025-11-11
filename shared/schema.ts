@@ -118,6 +118,19 @@ export const merchantCategories = pgTable("merchant_categories", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Calibrations table (Wallet balance calibration)
+export const calibrations = pgTable("calibrations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  walletId: integer("wallet_id").notNull().references(() => wallets.id, { onDelete: "cascade" }),
+  actualBalance: decimal("actual_balance", { precision: 10, scale: 2 }).notNull(),
+  expectedBalance: decimal("expected_balance", { precision: 10, scale: 2 }).notNull(),
+  difference: decimal("difference", { precision: 10, scale: 2 }).notNull(),
+  transactionId: integer("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
+  date: text("date").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   transactions: many(transactions),
@@ -127,6 +140,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   wishlist: many(wishlist),
   budgets: many(budgets),
   merchantCategories: many(merchantCategories),
+  calibrations: many(calibrations),
   settings: one(settings),
 }));
 
@@ -195,6 +209,21 @@ export const merchantCategoriesRelations = relations(merchantCategories, ({ one 
   }),
 }));
 
+export const calibrationsRelations = relations(calibrations, ({ one }) => ({
+  user: one(users, {
+    fields: [calibrations.userId],
+    references: [users.id],
+  }),
+  wallet: one(wallets, {
+    fields: [calibrations.walletId],
+    references: [wallets.id],
+  }),
+  transaction: one(transactions, {
+    fields: [calibrations.transactionId],
+    references: [transactions.id],
+  }),
+}));
+
 // Zod Schemas
 export const insertUserSchema = createInsertSchema(users, {
   email: z.string().email(),
@@ -257,6 +286,16 @@ export const insertMerchantCategorySchema = createInsertSchema(merchantCategorie
   lastUsedAt: true,
 });
 
+export const insertCalibrationSchema = createInsertSchema(calibrations, {
+  actualBalance: z.string().regex(/^\d+(\.\d{1,2})?$/),
+  expectedBalance: z.string().regex(/^\d+(\.\d{1,2})?$/),
+  difference: z.string().regex(/^-?\d+(\.\d{1,2})?$/),
+}).omit({
+  id: true,
+  userId: true,  // Server-side only
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -284,6 +323,9 @@ export type Budget = typeof budgets.$inferSelect;
 
 export type InsertMerchantCategory = z.infer<typeof insertMerchantCategorySchema>;
 export type MerchantCategory = typeof merchantCategories.$inferSelect;
+
+export type InsertCalibration = z.infer<typeof insertCalibrationSchema>;
+export type Calibration = typeof calibrations.$inferSelect;
 
 // 🔐 Helper type for storage layer: public insert schemas omit userId for security,
 // but storage needs userId from authenticated session

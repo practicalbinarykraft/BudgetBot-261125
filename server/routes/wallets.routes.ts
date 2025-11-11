@@ -3,6 +3,7 @@ import { storage } from "../storage";
 import { insertWalletSchema } from "@shared/schema";
 import { withAuth } from "../middleware/auth-utils";
 import { convertToUSD } from "../services/currency-service";
+import { calibrateWallet } from "../services/calibration.service";
 
 const router = Router();
 
@@ -86,6 +87,31 @@ router.delete("/:id", withAuth(async (req, res) => {
     res.json({ success: true });
   } catch (error: any) {
     res.status(400).json({ error: error.message });
+  }
+}));
+
+// POST /api/wallets/:id/calibrate
+router.post("/:id/calibrate", withAuth(async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const walletId = parseInt(req.params.id);
+    const { actualBalance } = req.body;
+    
+    if (actualBalance === undefined || actualBalance === null || Number.isNaN(Number(actualBalance))) {
+      return res.status(400).json({ error: 'actualBalance required' });
+    }
+    
+    const result = await calibrateWallet(
+      userId,
+      walletId,
+      parseFloat(actualBalance)
+    );
+    
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'Calibration failed' 
+    });
   }
 }));
 

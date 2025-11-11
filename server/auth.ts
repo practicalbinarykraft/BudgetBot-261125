@@ -21,7 +21,8 @@ async function createDefaultCategories(userId: number) {
     { name: 'Entertainment', type: 'expense', icon: '🎮', color: '#ec4899' },
     { name: 'Bills', type: 'expense', icon: '💳', color: '#6366f1' },
     { name: 'Salary', type: 'income', icon: '💰', color: '#10b981' },
-    { name: 'Freelance', type: 'income', icon: '💻', color: '#06b6d4' }
+    { name: 'Freelance', type: 'income', icon: '💻', color: '#06b6d4' },
+    { name: 'Unaccounted', type: 'expense', icon: '❓', color: '#dc2626' }
   ];
   
   try {

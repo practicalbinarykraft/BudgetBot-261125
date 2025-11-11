@@ -5,15 +5,17 @@ import { TransactionList } from "@/components/dashboard/transaction-list";
 import { SpendingChart } from "@/components/dashboard/spending-chart";
 import { BudgetAlerts } from "@/components/dashboard/budget-alerts";
 import { DateFilter, DateFilterValue, getDateRange } from "@/components/dashboard/date-filter";
-import { TrendingUp, TrendingDown, Wallet } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { AddTransactionDialog } from "@/components/transactions/add-transaction-dialog";
+import { CalibrationDialog } from "@/components/wallets/calibration-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showCalibrateDialog, setShowCalibrateDialog] = useState(false);
   const [dateFilter, setDateFilter] = useState<DateFilterValue>("month");
 
   const dateRange = getDateRange(dateFilter);
@@ -71,10 +73,20 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">Overview of your finances</p>
         </div>
-        <Button onClick={() => setShowAddDialog(true)} data-testid="button-add-transaction">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Transaction
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowCalibrateDialog(true)} 
+            data-testid="button-calibrate-wallets"
+          >
+            <Settings2 className="h-4 w-4 mr-2" />
+            Calibrate Wallets
+          </Button>
+          <Button onClick={() => setShowAddDialog(true)} data-testid="button-add-transaction">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Transaction
+          </Button>
+        </div>
       </div>
 
       <DateFilter value={dateFilter} onChange={setDateFilter} />
@@ -109,6 +121,11 @@ export default function DashboardPage() {
       <AddTransactionDialog
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
+      />
+      
+      <CalibrationDialog
+        open={showCalibrateDialog}
+        onOpenChange={setShowCalibrateDialog}
       />
     </div>
   );

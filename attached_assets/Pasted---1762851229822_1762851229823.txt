@@ -1,0 +1,597 @@
+🔧 ЭКСПЕРТНОЕ ТЗ: КАЛИБРОВКА КОШЕЛЬКОВ
+
+📊 АНАЛИЗ ФУНКЦИОНАЛА
+Что делает калибровка:
+ПРОБЛЕМА:
+Приложение: 10,000₽
+Реальность:  9,200₽
+Разница:       -800₽ (куда делись?)
+
+РЕШЕНИЕ:
+1. Пользователь вводит реальный баланс
+2. Система считает разницу
+3. Если минус → создаёт расход "Неучтённые"
+4. Обновляет баланс кошелька
+Зачем это нужно:
+✅ Статистика корректна
+✅ Свободный капитал точный
+✅ История сохранена
+✅ Учтены забытые расходы/комиссии
+
+💡 ПРАВИЛЬНОЕ ТЗ ДЛЯ НОВОГО ПРИЛОЖЕНИЯ
+markdown# 🔧 ТЗ: Калибровка кошельков (Simple & Clean)
+
+## 🎯 ЧТО ЭТО
+
+**Калибровка** = сверка баланса в приложении с реальным балансом карты/кошелька.
+
+**Пример:**
+- У тебя в приложении: Сбербанк = 10,000₽
+- Открыл банковское приложение: реально 9,200₽
+- Калибровка: создаст расход 800₽ "Неучтённые расходы"
+
+---
+
+## 🗄️ ШАГ 1: База данных (5 минут)
+
+### Добавь таблицу в `shared/schema.ts`:
+```typescript
+export const calibrations = pgTable("calibrations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  
+  walletId: integer("wallet_id")
+    .references(() => wallets.id, { onDelete: "cascade" })
+    .notNull(),
+  
+  // Балансы:
+  actualBalance: decimal("actual_balance", { precision: 10, scale: 2 }).notNull(),
+  expectedBalance: decimal("expected_balance", { precision: 10, scale: 2 }).notNull(),
+  difference: decimal("difference", { precision: 10, scale: 2 }).notNull(),
+  
+  // Связанная транзакция (если была создана):
+  transactionId: integer("transaction_id")
+    .references(() => transactions.id, { onDelete: "set null" }),
+  
+  // Даты:
+  date: text("date").notNull(),
+  createdAt: timestamp("created_at").defaultNow()
+});
+
+export type Calibration = typeof calibrations.$inferSelect;
+```
+
+**Запусти:** `npm run db:push`
+
+---
+
+## 🔧 ШАГ 2: Сервис калибровки (30 минут)
+
+### Создай: `server/services/calibration.service.ts`
+```typescript
+import { db } from '../db/client';
+import { calibrations, wallets, transactions } from '@shared/schema';
+import { eq } from 'drizzle-orm';
+
+/**
+ * Откалибровать кошелёк
+ * Создаёт расход "Неучтённые" если баланс меньше ожидаемого
+ */
+export async function calibrateWallet(
+  userId: number,
+  walletId: number,
+  actualBalance: number
+): Promise {
+  // 1. Получить текущий кошелёк
+  const [wallet] = await db
+    .select()
+    .from(wallets)
+    .where(eq(wallets.id, walletId))
+    .limit(1);
+  
+  if (!wallet || wallet.userId !== userId) {
+    throw new Error('Wallet not found');
+  }
+  
+  const expectedBalance = Number(wallet.balance);
+  const difference = actualBalance - expectedBalance;
+  
+  let transactionId: number | null = null;
+  
+  // 2. Если разница отрицательная → создать расход
+  if (difference < -0.01) {
+    const [transaction] = await db
+      .insert(transactions)
+      .values({
+        userId,
+        type: 'expense',
+        amount: Math.abs(difference),
+        amountUsd: Math.abs(difference), // TODO: currency conversion
+        description: `Unaccounted expenses (calibration of "${wallet.name}")`,
+        category: 'Unaccounted',
+        date: new Date().toISOString().split('T')[0],
+        currency: wallet.currency || 'USD',
+        source: 'calibration'
+      })
+      .returning();
+    
+    transactionId = transaction.id;
+  }
+  
+  // 3. Обновить баланс кошелька
+  await db
+    .update(wallets)
+    .set({ balance: actualBalance.toString() })
+    .where(eq(wallets.id, walletId));
+  
+  // 4. Сохранить запись о калибровке
+  const [calibration] = await db
+    .insert(calibrations)
+    .values({
+      userId,
+      walletId,
+      actualBalance: actualBalance.toString(),
+      expectedBalance: expectedBalance.toString(),
+      difference: difference.toString(),
+      transactionId,
+      date: new Date().toISOString().split('T')[0]
+    })
+    .returning();
+  
+  return {
+    calibration,
+    transactionCreated: transactionId !== null
+  };
+}
+
+/**
+ * Получить историю калибровок пользователя
+ */
+export async function getCalibrationHistory(userId: number) {
+  return await db
+    .select({
+      calibration: calibrations,
+      wallet: wallets
+    })
+    .from(calibrations)
+    .leftJoin(wallets, eq(calibrations.walletId, wallets.id))
+    .where(eq(calibrations.userId, userId))
+    .orderBy(calibrations.createdAt);
+}
+```
+
+**Размер:** ~90 строк ✅  
+**Функции:** 2 (calibrate + history) ✅  
+**Логика:** Простая и понятная ✅
+
+---
+
+## 🛣️ ШАГ 3: API Endpoint (10 минут)
+
+### Добавь в `server/routes/wallets.ts`:
+```typescript
+import { calibrateWallet, getCalibrationHistory } from '../services/calibration.service';
+
+/**
+ * POST /api/wallets/:id/calibrate
+ * Откалибровать кошелёк
+ */
+router.post('/:id/calibrate', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const walletId = parseInt(req.params.id);
+    const { actualBalance } = req.body;
+    
+    if (!actualBalance || isNaN(actualBalance)) {
+      return res.status(400).json({ error: 'actualBalance required' });
+    }
+    
+    const result = await calibrateWallet(
+      userId,
+      walletId,
+      parseFloat(actualBalance)
+    );
+    
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'Calibration failed' 
+    });
+  }
+});
+
+/**
+ * GET /api/calibrations
+ * История калибровок
+ */
+router.get('/calibrations', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const history = await getCalibrationHistory(userId);
+    res.json(history);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch history' });
+  }
+});
+```
+
+**Размер:** ~30 строк ✅
+
+---
+
+## 🎨 ШАГ 4: UI Компонент (40 минут)
+
+### Создай: `client/src/components/CalibrationDialog.tsx`
+```tsx
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { apiRequest } from '@/lib/api';
+import { toast } from '@/hooks/use-toast';
+
+interface Props {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+/**
+ * Dialog для калибровки кошельков
+ * Позволяет сверить балансы с реальностью
+ */
+export function CalibrationDialog({ open, onOpenChange }: Props) {
+  const queryClient = useQueryClient();
+  
+  // Загрузить кошельки
+  const { data: wallets = [] } = useQuery({
+    queryKey: ['/api/wallets'],
+    enabled: open
+  });
+  
+  // Состояние введённых балансов
+  const [balances, setBalances] = useState<Record>({});
+  
+  // Mutation для калибровки
+  const calibrateMutation = useMutation({
+    mutationFn: async (walletId: number) => {
+      const actualBalance = balances[walletId];
+      if (!actualBalance) return null;
+      
+      return await apiRequest('POST', `/api/wallets/${walletId}/calibrate`, {
+        actualBalance: parseFloat(actualBalance)
+      });
+    }
+  });
+  
+  const handleCalibrateAll = async () => {
+    let calibratedCount = 0;
+    let transactionsCreated = 0;
+    
+    // Откалибровать каждый изменённый кошелёк
+    for (const wallet of wallets) {
+      const newBalance = balances[wallet.id];
+      
+      // Пропустить если не изменено
+      if (!newBalance || newBalance === wallet.balance) {
+        continue;
+      }
+      
+      try {
+        const result = await calibrateMutation.mutateAsync(wallet.id);
+        
+        if (result) {
+          calibratedCount++;
+          if (result.transactionCreated) {
+            transactionsCreated++;
+          }
+        }
+      } catch (error) {
+        console.error(`Failed to calibrate wallet ${wallet.id}:`, error);
+      }
+    }
+    
+    // Показать результат
+    if (calibratedCount > 0) {
+      toast({
+        title: 'Calibration complete',
+        description: `${calibratedCount} wallet(s) calibrated. ${transactionsCreated} unaccounted expense(s) created.`
+      });
+      
+      // Обновить данные
+      queryClient.invalidateQueries({ queryKey: ['/api/wallets'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
+      
+      // Закрыть dialog
+      onOpenChange(false);
+      setBalances({});
+    } else {
+      toast({
+        title: 'No changes',
+        description: 'No wallets were modified.',
+        variant: 'destructive'
+      });
+    }
+  };
+  
+  return (
+    
+      
+        
+          🔧 Calibrate Wallets
+          
+            Enter actual balances from your bank/wallet apps
+          
+        
+        
+        
+          {wallets.map((wallet) => (
+            
+              
+                {wallet.name}
+              
+              
+              
+                Current: {wallet.balance} {wallet.currency}
+              
+              
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="Enter actual balance"
+                defaultValue={wallet.balance}
+                onChange={(e) => {
+                  setBalances(prev => ({
+                    ...prev,
+                    [wallet.id]: e.target.value
+                  }));
+                }}
+              />
+            
+          ))}
+        
+        
+        
+          <Button
+            variant="outline"
+            onClick={() => {
+              onOpenChange(false);
+              setBalances({});
+            }}
+          >
+            Cancel
+          
+          
+          
+            {calibrateMutation.isPending ? 'Calibrating...' : 'Calibrate'}
+          
+        
+      
+    
+  );
+}
+```
+
+**Размер:** ~140 строк ✅  
+**Ответственность:** Только калибровка ✅
+
+---
+
+## 🔗 ШАГ 5: Интеграция (10 минут)
+
+### Добавь кнопку в Dashboard или Wallets page:
+```tsx
+// pages/Dashboard.tsx или Wallets.tsx
+
+import { CalibrationDialog } from '@/components/CalibrationDialog';
+import { Settings2 } from 'lucide-react';
+
+export function Dashboard() {
+  const [showCalibration, setShowCalibration] = useState(false);
+  
+  return (
+    
+      {/* Total Capital Card */}
+      
+        
+          Total Capital
+        
+        
+          $12,345
+          
+          {/* ✅ ДОБАВЬ: Кнопка калибровки */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-4"
+            onClick={() => setShowCalibration(true)}
+          >
+            
+            Calibrate Wallets
+          
+        
+      
+      
+      {/* ✅ ДОБАВЬ: Dialog */}
+      
+    
+  );
+}
+```
+
+**Размер:** ~10 строк добавленного кода ✅
+
+---
+
+## 📋 ШАГ 6: Системная категория (5 минут)
+
+### Добавь в `createDefaultCategories()`:
+```typescript
+// В функции создания базовых категорий (auth.ts):
+
+const defaultCategories = [
+  // ... существующие ...
+  
+  // ✅ ДОБАВЬ: Системная категория
+  { 
+    name: 'Unaccounted', 
+    type: 'expense', 
+    icon: '❓', 
+    color: '#dc2626',
+    isSystem: true  // Нельзя удалить
+  }
+];
+```
+
+---
+
+## 🧪 ТЕСТИРОВАНИЕ
+
+### Test Case 1: Отрицательная разница
+```
+1. Кошелёк: Сбербанк = 10,000₽
+2. Открыть калибровку
+3. Ввести: 9,200₽
+4. Нажать Calibrate
+5. ПРОВЕРИТЬ:
+   ✅ Кошелёк обновился → 9,200₽
+   ✅ Создана транзакция: -800₽ "Unaccounted expenses"
+   ✅ Toast: "1 wallet calibrated. 1 unaccounted expense created"
+```
+
+### Test Case 2: Положительная разница
+```
+1. Кошелёк: Tinkoff = 5,000₽
+2. Ввести: 5,200₽
+3. Нажать Calibrate
+4. ПРОВЕРИТЬ:
+   ✅ Кошелёк обновился → 5,200₽
+   ❌ Транзакция НЕ создана
+   ✅ Toast: "1 wallet calibrated. 0 unaccounted expenses"
+```
+
+### Test Case 3: Без изменений
+```
+1. Кошелёк: Cash = 1,000₽
+2. НЕ менять значение
+3. Нажать Calibrate
+4. ПРОВЕРИТЬ:
+   ✅ Toast: "No changes"
+```
+
+### Test Case 4: Несколько кошельков
+```
+1. 3 кошелька: изменить 2 из них
+2. Нажать Calibrate
+3. ПРОВЕРИТЬ:
+   ✅ Toast: "2 wallets calibrated"
+```
+
+---
+
+## 📋 ИТОГОВЫЙ ЧЕКЛИСТ
+
+### Backend:
+- [ ] Таблица calibrations создана
+- [ ] calibration.service.ts создан (~90 строк)
+- [ ] API endpoints добавлены (~30 строк)
+- [ ] Системная категория "Unaccounted" создаётся
+
+### Frontend:
+- [ ] CalibrationDialog.tsx создан (~140 строк)
+- [ ] Кнопка добавлена в Dashboard/Wallets
+- [ ] Toast уведомления работают
+
+### Тестирование:
+- [ ] Test Case 1: минус баланс
+- [ ] Test Case 2: плюс баланс
+- [ ] Test Case 3: без изменений
+- [ ] Test Case 4: несколько кошельков
+
+---
+
+## 📂 СТРУКТУРА ФАЙЛОВ
+```
+server/
+  services/
+    calibration.service.ts      (90 строк - НОВЫЙ!)
+  routes/
+    wallets.ts                  (+30 строк - endpoints)
+
+client/src/
+  components/
+    CalibrationDialog.tsx       (140 строк - НОВЫЙ!)
+  pages/
+    Dashboard.tsx               (+10 строк - кнопка)
+
+shared/
+  schema.ts                     (+20 строк - таблица)
+```
+
+**ИТОГО:**
+- Новый код: ~290 строк
+- Файлы: 2 новых + 3 правки
+- Все файлы <200 строк ✅
+
+---
+
+## 🎯 ПРЕИМУЩЕСТВА
+
+### 1. Модульность
+```
+✅ Сервис отдельно от UI
+✅ Dialog переиспользуемый
+✅ Простая интеграция
+```
+
+### 2. Простота для Junior
+```
+✅ Понятная логика
+✅ Малые файлы
+✅ Комментарии везде
+✅ Разберётся за 20 минут
+```
+
+### 3. Удобно для ИИ
+```
+✅ Каждый файл <150 строк
+✅ Чёткая структура
+✅ Править сервис → UI не трогаем
+✅ Править UI → сервис не трогаем
+```
+
+---
+
+## ⚠️ ЧТО НЕ ДЕЛАТЬ
+```
+❌ НЕ создавать транзакцию если разница положительная
+❌ НЕ калибровать если баланс не изменился
+❌ НЕ забывать про системную категорию
+❌ НЕ раздувать компоненты >200 строк
+```
+
+---
+
+## 💪 КРИТЕРИЙ УСПЕХА
+
+**Junior разработчик:**
+1. Открывает CalibrationDialog.tsx
+2. Видит 140 строк чистого кода
+3. Понимает логику за 10 минут
+4. Может легко добавить поле "notes"
+5. **ВСЁ РАБОТАЕТ И ПОНЯТНО!** ✅
+
+---
+
+**ВРЕМЯ РЕАЛИЗАЦИИ: 1.5-2 часа**
+
+**ОТПРАВЛЯЙ REPLIT ЭТО ТЗ!** 🚀
