@@ -58,9 +58,16 @@ Preferred communication style: Simple, everyday language.
   - Conditional Transactions: Only creates "Unaccounted" expense if actualBalance < appBalance (difference < -0.01)
   - Category Linkage: Properly assigns categoryId for analytics inclusion in spending reports
   - Zero-Balance Support: Validation explicitly allows 0 as valid actualBalance
-  - UI: CalibrationDialog component with multi-wallet batch support, real-time balance preview, toast notifications
+  - Enhanced UI (Variant 1 - Compact with Real-time Preview):
+    - Shows all wallets simultaneously without checkboxes
+    - Real-time difference calculation with visual indicators (✅ green/⚠️ yellow/🔴 red based on % change)
+    - Smart badges: "Matches" (no change), percentage warnings (5-10% yellow, >10% red)
+    - Preview of transaction creation ("📝 Expense will be created")
+    - Summary section with total impact on net worth (USD) and count of expenses to create
+    - Dynamic button text showing changed wallet count: "Calibrate (N)"
+    - Card-based layout with icon, currency badge, two-column balance display
   - Security: userId from session, ownership verification, foreign key validation
-  - E2E Tested: Verified calibration flow, transaction creation, balance updates, and API data hydration
+  - E2E Tested: Verified real-time preview, visual indicators, multi-wallet calibration, summary calculations, transaction creation
 **Security Hardening:** Critical measures include stripping `userId` from request bodies in PATCH endpoints, foreign key ownership verification to prevent cross-tenant associations, and comprehensive ownership checks on all PATCH/DELETE routes. All POST endpoints force `userId` from the authenticated session.
 **Budget Management:** Comprehensive system with `categoryId` foreign key, period-based tracking (week, month, year), and progress calculation based on expenses. UI provides visual progress bars and alerts for exceeded budgets.
 
