@@ -68,6 +68,25 @@ Preferred communication style: Simple, everyday language.
     - Card-based layout with icon, currency badge, two-column balance display
   - Security: userId from session, ownership verification, foreign key validation
   - E2E Tested: Verified real-time preview, visual indicators, multi-wallet calibration, summary calculations, transaction creation
+**Telegram Bot Integration:** Centralized Telegram bot (@BudgetBuddyBot) for on-the-go expense tracking with AI-powered receipt OCR:
+  - Architecture: Single bot instance (polling mode) serves all users via unique verification codes with 10-minute TTL
+  - Database: telegram_verification_codes table (userId FK, code, expiresAt, isUsed) enforces code expiry and one-time use; users table extended with telegramId (bigint) and telegramUsername (text) for account linking
+  - Verification Flow: Users generate 6-digit code in Settings → send `/verify <code>` to bot → telegramId/username stored in users table → connection established
+  - Commands:
+    - `/start` - Welcome message with quick start guide
+    - `/verify <code>` - Link Telegram account using verification code from web app
+    - `/add <text>` - Parse expense from free-form text (e.g., "Coffee 50 RUB" → creates transaction)
+    - `/balance` - Show current balances across all wallets with USD equivalents
+  - Text Parsing (parser.ts): Extracts amount, currency, and merchant from natural language using regex patterns and category mapping (config.ts); supports formats like "50 RUB coffee", "taxi 300", "lunch $15"
+  - Receipt OCR (ocr.ts): Photo messages processed via Anthropic Vision API to extract merchant, total amount, and currency; user confirms/edits before transaction creation
+  - Transaction Creation: All bot-created transactions use primary wallet, convert to USD via centralized currency service, apply ML auto-categorization, and notify via toast on web app
+  - API Routes (/api/telegram):
+    - POST /generate-code - Creates verification code, invalidates previous codes
+    - POST /disconnect - Removes telegramId/telegramUsername, maintains historical data
+    - GET /status - Returns connection status and linked username
+  - Security: userId always derived from authenticated session (never from request body), ownership verification on all database operations, bot initialization in server/index.ts post-listen
+  - Frontend: Settings page Telegram card with real-time verification code timer, copy-to-clipboard, connection status badge, and disconnect flow
+  - Integration: Bot modules in server/telegram/ (bot.ts, commands.ts, parser.ts, ocr.ts, config.ts), uses existing transaction/category/wallet systems
 **Security Hardening:** Critical measures include stripping `userId` from request bodies in PATCH endpoints, foreign key ownership verification to prevent cross-tenant associations, and comprehensive ownership checks on all PATCH/DELETE routes. All POST endpoints force `userId` from the authenticated session.
 **Budget Management:** Comprehensive system with `categoryId` foreign key, period-based tracking (week, month, year), and progress calculation based on expenses. UI provides visual progress bars and alerts for exceeded budgets.
 
