@@ -36,7 +36,8 @@ Preferred communication style: Simple, everyday language.
 **Multi-Currency System:** Implemented with full history tracking, storing `originalAmount`, `originalCurrency`, and `exchangeRate` in transactions. Wallets track both native and USD equivalent balances. Exchange rates are currently static but designed for future API integration.
 **Financial Health Score:** A real-time, deterministic score (0-100) based on Budget Adherence (40%), Cashflow Balance (35%), and Expense Stability (25%). Scores are categorized into status bands (Excellent, Stable, Needs Attention, Critical).
 **Category Management:** Full-featured category system with automatic initialization and intuitive UI:
-  - Default Categories: 7 categories auto-created on user registration (Food & Drinks, Transport, Shopping, Entertainment, Bills, Salary, Freelance)
+  - Default Categories: 8 categories auto-created on user registration (Food & Drinks, Transport, Shopping, Entertainment, Bills, Salary, Freelance, Unaccounted)
+  - System Category: "Unaccounted" (expense type) reserved for calibration adjustments
   - Quick Creation: "Create new category" button integrated directly into transaction form selector
   - Type Synchronization: Category dialog automatically matches transaction type (income/expense)
   - CategoryCreateDialog: Standalone reusable component (client/src/components/categories/)
@@ -49,6 +50,17 @@ Preferred communication style: Simple, everyday language.
   - Merchant name normalization (lowercase, trimmed) ensures consistent matching
   - Frontend displays toast notifications showing auto-applied category with confidence percentage
   - Fully integrated with transaction creation workflow via transaction.service.ts
+**Wallet Calibration System:** Production-ready feature for syncing app balances with real-world bank/wallet balances:
+  - Database: calibrations table tracks old/new balance, difference, linked transaction
+  - API: POST /api/wallets/:id/calibrate, GET /api/calibrations with full transaction hydration
+  - "Unaccounted" Category: 8th default system category for calibration-generated adjustment expenses
+  - Multi-Currency: Converts to USD using centralized currency service (static rates: RUB=92.5, IDR=15750)
+  - Conditional Transactions: Only creates "Unaccounted" expense if actualBalance < appBalance (difference < -0.01)
+  - Category Linkage: Properly assigns categoryId for analytics inclusion in spending reports
+  - Zero-Balance Support: Validation explicitly allows 0 as valid actualBalance
+  - UI: CalibrationDialog component with multi-wallet batch support, real-time balance preview, toast notifications
+  - Security: userId from session, ownership verification, foreign key validation
+  - E2E Tested: Verified calibration flow, transaction creation, balance updates, and API data hydration
 **Security Hardening:** Critical measures include stripping `userId` from request bodies in PATCH endpoints, foreign key ownership verification to prevent cross-tenant associations, and comprehensive ownership checks on all PATCH/DELETE routes. All POST endpoints force `userId` from the authenticated session.
 **Budget Management:** Comprehensive system with `categoryId` foreign key, period-based tracking (week, month, year), and progress calculation based on expenses. UI provides visual progress bars and alerts for exceeded budgets.
 
