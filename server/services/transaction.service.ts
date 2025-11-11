@@ -91,7 +91,7 @@ export async function createTransaction(
   
   await trainMLCategory(userId, {
     description: transaction.description,
-    category: transaction.category || undefined
+    category: transaction.category ?? undefined
   });
   
   return {

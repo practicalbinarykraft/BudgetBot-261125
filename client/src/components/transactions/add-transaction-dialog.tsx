@@ -19,6 +19,21 @@ interface AddTransactionDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface TransactionResponse {
+  id: number;
+  userId: number;
+  date: string;
+  type: string;
+  amount: string;
+  description: string;
+  category: string | null;
+  categoryId: number | null;
+  currency: string | null;
+  amountUsd: string;
+  mlSuggested: boolean;
+  mlConfidence: number;
+}
+
 const formSchema = insertTransactionSchema.extend({
   amount: z.string().min(1, "Amount is required"),
 });
@@ -57,18 +72,27 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
       const payload = {
         ...data,
         amount: data.amount,
-        amountUsd: data.amount, // Will be converted on backend if needed
+        amountUsd: data.amount,
       };
       const res = await apiRequest("POST", "/api/transactions", payload);
-      return res.json();
+      return res.json() as Promise<TransactionResponse>;
     },
-    onSuccess: () => {
+    onSuccess: (transaction: TransactionResponse) => {
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
-      toast({
-        title: "Success",
-        description: "Transaction added successfully",
-      });
+      
+      if (transaction.mlSuggested && transaction.category) {
+        toast({
+          title: "Smart Suggestion Applied",
+          description: `Category "${transaction.category}" auto-selected (${Math.round(transaction.mlConfidence * 100)}% confidence)`,
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Transaction added successfully",
+        });
+      }
+      
       form.reset();
       onOpenChange(false);
     },
