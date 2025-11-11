@@ -35,6 +35,14 @@ Preferred communication style: Simple, everyday language.
 
 **Multi-Currency System:** Implemented with full history tracking, storing `originalAmount`, `originalCurrency`, and `exchangeRate` in transactions. Wallets track both native and USD equivalent balances. Exchange rates are currently static but designed for future API integration.
 **Financial Health Score:** A real-time, deterministic score (0-100) based on Budget Adherence (40%), Cashflow Balance (35%), and Expense Stability (25%). Scores are categorized into status bands (Excellent, Stable, Needs Attention, Critical).
+**ML Auto-Categorization:** Production-ready machine learning system that automatically suggests transaction categories based on merchant name patterns. Key features:
+  - merchant_categories table tracks merchant→category associations with usage counts
+  - Confidence-based thresholds: 60% (usageCount=1), 80% (usageCount=2-4), 95% (usageCount≥5)
+  - Auto-applies categories only when confidence ≥70% (usageCount≥2)
+  - Category changes reset usage count to prevent incorrect suggestions
+  - Merchant name normalization (lowercase, trimmed) ensures consistent matching
+  - Frontend displays toast notifications showing auto-applied category with confidence percentage
+  - Fully integrated with transaction creation workflow via transaction.service.ts
 **Security Hardening:** Critical measures include stripping `userId` from request bodies in PATCH endpoints, foreign key ownership verification to prevent cross-tenant associations, and comprehensive ownership checks on all PATCH/DELETE routes. All POST endpoints force `userId` from the authenticated session.
 **Budget Management:** Comprehensive system with `categoryId` foreign key, period-based tracking (week, month, year), and progress calculation based on expenses. UI provides visual progress bars and alerts for exceeded budgets.
 
