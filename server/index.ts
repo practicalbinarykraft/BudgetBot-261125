@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes/index";
 import { setupAuth } from "./auth";
 import { setupVite, serveStatic, log } from "./vite";
 import { createServer } from "http";
+import { initTelegramBot } from "./telegram/bot";
 
 const app = express();
 const server = createServer(app);
@@ -82,5 +83,7 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    
+    initTelegramBot();
   });
 })();
