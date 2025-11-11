@@ -64,15 +64,26 @@ export function TransactionList({ transactions, onDelete, onEdit, showDelete = f
                   )}
                 </div>
               </div>
-              <div className={cn(
-                "font-mono font-semibold text-lg",
-                transaction.type === "income" 
-                  ? "text-green-600 dark:text-green-400" 
-                  : "text-red-600 dark:text-red-400"
-              )}
-              data-testid={`amount-${transaction.id}`}
-              >
-                {transaction.type === "income" ? "+" : "-"}${transaction.amountUsd}
+              <div className="text-right">
+                <div className={cn(
+                  "font-mono font-semibold text-lg",
+                  transaction.type === "income" 
+                    ? "text-green-600 dark:text-green-400" 
+                    : "text-red-600 dark:text-red-400"
+                )}
+                data-testid={`amount-${transaction.id}`}
+                >
+                  {transaction.type === "income" ? "+" : "-"}
+                  {transaction.originalAmount && transaction.originalCurrency 
+                    ? `${transaction.originalCurrency === "RUB" ? "₽" : transaction.originalCurrency === "IDR" ? "Rp" : "$"}${transaction.originalAmount}`
+                    : `$${transaction.amountUsd}`
+                  }
+                </div>
+                {transaction.originalAmount && transaction.originalCurrency && transaction.originalCurrency !== "USD" && (
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    ≈ ${transaction.amountUsd}
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex gap-1">
