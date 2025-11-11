@@ -11,6 +11,7 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   name: text("name").notNull(),
   telegramId: text("telegram_id").unique(),
+  telegramUsername: text("telegram_username"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -131,6 +132,16 @@ export const calibrations = pgTable("calibrations", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Telegram Verification Codes table
+export const telegramVerificationCodes = pgTable("telegram_verification_codes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 6 }).notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  isUsed: boolean("is_used").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   transactions: many(transactions),
@@ -141,6 +152,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   budgets: many(budgets),
   merchantCategories: many(merchantCategories),
   calibrations: many(calibrations),
+  telegramVerificationCodes: many(telegramVerificationCodes),
   settings: one(settings),
 }));
 
@@ -296,6 +308,14 @@ export const insertCalibrationSchema = createInsertSchema(calibrations, {
   createdAt: true,
 });
 
+export const insertTelegramVerificationCodeSchema = createInsertSchema(telegramVerificationCodes, {
+  code: z.string().length(6).regex(/^\d{6}$/),
+}).omit({
+  id: true,
+  userId: true,  // Server-side only
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -326,6 +346,9 @@ export type MerchantCategory = typeof merchantCategories.$inferSelect;
 
 export type InsertCalibration = z.infer<typeof insertCalibrationSchema>;
 export type Calibration = typeof calibrations.$inferSelect;
+
+export type InsertTelegramVerificationCode = z.infer<typeof insertTelegramVerificationCodeSchema>;
+export type TelegramVerificationCode = typeof telegramVerificationCodes.$inferSelect;
 
 // 🔐 Helper type for storage layer: public insert schemas omit userId for security,
 // but storage needs userId from authenticated session
