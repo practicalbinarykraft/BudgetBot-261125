@@ -23,6 +23,7 @@ import budgetsRouter from "./budgets.routes";
 import settingsRouter from "./settings.routes";
 import statsRouter from "./stats.routes";
 import aiRouter from "./ai.routes";
+import currencyRouter from "./currency.routes";
 
 export function registerRoutes(app: Express) {
   // Domain-specific routes
@@ -36,6 +37,9 @@ export function registerRoutes(app: Express) {
   
   // Stats and analytics (mounted on /api for /api/stats and /api/financial-health)
   app.use("/api", statsRouter);
+  
+  // Currency exchange rates and conversions
+  app.use("/api", currencyRouter);
   
   // AI routes
   app.use("/api/ai", aiRouter);
