@@ -27,6 +27,10 @@ export const transactions = pgTable("transactions", {
   categoryId: integer("category_id").references(() => categories.id, { onDelete: "set null" }), // Nullable for backward compat
   currency: text("currency").default("USD"),
   amountUsd: decimal("amount_usd", { precision: 10, scale: 2 }).notNull(),
+  // 💱 Multi-currency support: preserve original values for history
+  originalAmount: decimal("original_amount", { precision: 10, scale: 2 }),
+  originalCurrency: text("original_currency"),
+  exchangeRate: decimal("exchange_rate", { precision: 10, scale: 4 }),
   source: text("source").default("manual"), // 'manual', 'telegram', 'ocr'
   walletId: integer("wallet_id").references(() => wallets.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -40,6 +44,8 @@ export const wallets = pgTable("wallets", {
   type: text("type").notNull(), // 'card', 'cash', 'crypto'
   balance: decimal("balance", { precision: 10, scale: 2 }).notNull().default("0"),
   currency: text("currency").default("USD"),
+  // 💱 Multi-currency: auto-converted balance in USD for aggregations
+  balanceUsd: decimal("balance_usd", { precision: 10, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -180,12 +186,16 @@ export const insertUserSchema = createInsertSchema(users, {
 export const insertTransactionSchema = createInsertSchema(transactions, {
   amount: z.string().regex(/^\d+(\.\d{1,2})?$/),
   amountUsd: z.string().regex(/^\d+(\.\d{1,2})?$/),
+  originalAmount: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
+  originalCurrency: z.string().optional(),
+  exchangeRate: z.string().regex(/^\d+(\.\d{1,4})?$/).optional(),
   type: z.enum(["income", "expense"]),
   source: z.enum(["manual", "telegram", "ocr"]).optional(),
 }).omit({ id: true, createdAt: true });
 
 export const insertWalletSchema = createInsertSchema(wallets, {
   balance: z.string().regex(/^\d+(\.\d{1,2})?$/),
+  balanceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
   type: z.enum(["card", "cash", "crypto"]),
 }).omit({ id: true, createdAt: true });
 

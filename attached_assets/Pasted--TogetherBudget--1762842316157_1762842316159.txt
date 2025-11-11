@@ -1,0 +1,216 @@
+# 💱 МУЛЬТИВАЛЮТНАЯ СИСТЕМА: Проверка и улучшения
+## 🎯 ЧТО УЖЕ РАБОТАЕТ
+TogetherBudget УЖЕ имеет мультивалютную систему! Проверь что работает:
+### ✅ База данных (уже настроена)
+**Таблица `dailyTransactions`:**
+- `amount` - ВСЕГДА хранится в USD
+- `originalCurrency` - исходная валюта (USD/RUB/IDR)
+- `originalAmount` - исходная сумма
+- `exchangeRate` - курс на момент создания
+**Таблица `wallets`:**
+- `currency` - валюта кошелька (USD/RUB/IDR)
+- `balance` - баланс в родной валюте кошелька
+- `balanceUsd` - автоконвертированный баланс в USD (УЖЕ ЕСТЬ!)
+**Таблица `recurringTransactions`:**
+- `amount` - в USD
+- `originalCurrency`, `originalAmount`, `exchangeRate` - для истории
+**Таблица `userSettings`:**
+- `preferredCurrency` - предпочитаемая валюта пользователя (USD/RUB/IDR)
+### ✅ Currency Service (уже работает)
+**Файл:** `server/currency-service.ts`
+**Функции:**
+- `convertRubToUsd(amount)` - конвертация RUB → USD
+- `convertUsdToRub(amount)` - конвертация USD → RUB
+- `convertIdrToUsd(amount)` - конвертация IDR → USD
+- `getExchangeRateInfo()` - получение актуальных курсов
+**Кэширование:**
+- В памяти (Map)
+- TTL: 1 час
+- Fallback курсы: RUB=83.75, IDR=16700
+---
+## 🔧 ЧТО НУЖНО ПРОВЕРИТЬ/ДОБАВИТЬ
+### 1. API endpoint для обновления курсов
+**Создай:** `server/routes.ts` (добавь endpoint)
+```typescript
+// GET /api/exchange-rates - получить актуальные курсы
+router.get("/api/exchange-rates", async (req, res) => {
+  try {
+    const rates = await getExchangeRateInfo();
+    res.json(rates);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch exchange rates" });
+  }
+});
+// POST /api/wallets/refresh-rates - обновить balanceUsd во всех кошельках
+router.post("/api/wallets/refresh-rates", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Получить кошельки пользователя
+    const wallets = await storage.getWallets(userId);
+    
+    // Обновить каждый кошелёк
+    for (const wallet of wallets) {
+      if (wallet.currency === "USD") {
+        // USD кошельки не нужно конвертировать
+        await storage.updateWallet(wallet.id, {
+          balanceUsd: wallet.balance
+        }, userId);
+        continue;
+      }
+      
+      // Конвертировать в USD
+      let balanceUsd;
+      if (wallet.currency === "RUB") {
+        balanceUsd = await convertRubToUsd(parseFloat(wallet.balance));
+      } else if (wallet.currency === "IDR") {
+        balanceUsd = await convertIdrToUsd(parseFloat(wallet.balance));
+      }
+      
+      // Обновить balanceUsd
+      await storage.updateWallet(wallet.id, {
+        balanceUsd: balanceUsd.toString()
+      }, userId);
+    }
+    
+    res.json({ message: "Wallet rates updated successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to refresh wallet rates" });
+  }
+});
+
+2. Frontend: Селектор валюты в формах
+Обнови: client/src/components/TransactionForm.tsx
+
+Добавь выбор валюты:
+
+const CURRENCIES = [
+  { value: "USD", label: "$ USD", symbol: "$" },
+  { value: "RUB", label: "₽ RUB", symbol: "₽" },
+  { value: "IDR", label: "Rp IDR", symbol: "Rp" }
+];
+// В форме добавь:
+<FormField
+  control={form.control}
+  name="currency"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Currency</FormLabel>
+      <Select onValueChange={field.onChange} defaultValue={field.value}>
+        <SelectTrigger data-testid="select-currency">
+          <SelectValue placeholder="Select currency" />
+        </SelectTrigger>
+        <SelectContent>
+          {CURRENCIES.map(curr => (
+            <SelectItem key={curr.value} value={curr.value}>
+              {curr.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </FormItem>
+  )}
+/>
+
+3. Display: показывать originalAmount + валюту
+В списках транзакций показывай:
+
+<div>
+  <span className="font-semibold">${transaction.amount}</span>
+  {transaction.originalCurrency !== "USD" && (
+    <span className="text-sm text-gray-500 ml-2">
+      ({transaction.originalAmount} {transaction.originalCurrency})
+    </span>
+  )}
+</div>
+
+4. Wallet Card: показывать обе валюты
+<div>
+  <span className="text-2xl font-bold">
+    {wallet.balance} {wallet.currency}
+  </span>
+  {wallet.currency !== "USD" && (
+    <span className="text-gray-500 text-sm block">
+      ≈ ${wallet.balanceUsd}
+    </span>
+  )}
+</div>
+
+5. Settings: выбор preferredCurrency
+Добавь в Settings:
+
+<FormField
+  control={form.control}
+  name="preferredCurrency"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Preferred Currency</FormLabel>
+      <FormDescription>
+        Your default currency for new transactions
+      </FormDescription>
+      <Select onValueChange={field.onChange} defaultValue={field.value}>
+        <SelectTrigger>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="USD">$ USD</SelectItem>
+          <SelectItem value="RUB">₽ RUB</SelectItem>
+          <SelectItem value="IDR">Rp IDR</SelectItem>
+        </SelectContent>
+      </Select>
+    </FormItem>
+  )}
+/>
+
+🧪 ТЕСТИРОВАНИЕ
+Проверь эти сценарии:
+Создание транзакции в RUB:
+
+Ввести 1000 RUB
+Проверить что amount = ~11.94 USD (при курсе 83.75)
+Проверить что originalAmount = 1000, originalCurrency = "RUB"
+Создание кошелька в IDR:
+
+Создать кошелёк с 1,000,000 IDR
+Проверить что balanceUsd = ~60 USD (при курсе 16700)
+Обновление курсов:
+
+Вызвать POST /api/wallets/refresh-rates
+Проверить что balanceUsd обновился
+Dashboard метрики:
+
+Все расчёты (income, expenses, free capital) должны быть в USD
+Отображение в preferredCurrency пользователя
+⚠️ ВАЖНО: НЕ СОЗДАВАЙ
+❌ НЕ создавай таблицу exchange_rates (используй кэш в памяти)
+❌ НЕ переименовывай dailyTransactions в transactions
+❌ НЕ меняй структуру amount (должен быть в USD)
+❌ НЕ добавляй новые поля в schema (все уже есть!)
+📋 CHECKLIST
+[ ] GET /api/exchange-rates endpoint
+[ ] POST /api/wallets/refresh-rates endpoint  
+[ ] Currency selector в TransactionForm
+[ ] Currency selector в WalletForm
+[ ] Display originalAmount в transaction lists
+[ ] Display both currencies в wallet cards
+[ ] Preferred currency в Settings
+[ ] Test: create RUB transaction
+[ ] Test: create IDR wallet
+[ ] Test: refresh wallet rates
+[ ] Test: dashboard metrics в USD
+
+🎯 РЕЗУЛЬТАТ
+После этих изменений:
+
+✅ Пользователь может вводить в СВОЕЙ валюте
+✅ Система автоматически конвертирует в USD
+✅ Все расчёты корректны (в USD)
+✅ Отображение в валюте пользователя
+✅ История сохраняется (originalAmount + курс)
+---
+## 💡 МОИ СОВЕТЫ:
+**Для Replit агента:**
+1. **Не давай готовый код** - дай ИНСТРУКЦИИ что проверить/добавить
+2. **Укажи СУЩЕСТВУЮЩИЕ файлы** - чтобы агент не создавал дубликаты
+3. **Дай checklist** - чтобы агент знал что тестировать
+4. **Явно скажи что НЕ делать** - предотврати ошибки
