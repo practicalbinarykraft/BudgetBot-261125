@@ -35,6 +35,12 @@ Preferred communication style: Simple, everyday language.
 
 **Multi-Currency System:** Implemented with full history tracking, storing `originalAmount`, `originalCurrency`, and `exchangeRate` in transactions. Wallets track both native and USD equivalent balances. Exchange rates are currently static but designed for future API integration.
 **Financial Health Score:** A real-time, deterministic score (0-100) based on Budget Adherence (40%), Cashflow Balance (35%), and Expense Stability (25%). Scores are categorized into status bands (Excellent, Stable, Needs Attention, Critical).
+**Category Management:** Full-featured category system with automatic initialization and intuitive UI:
+  - Default Categories: 7 categories auto-created on user registration (Food & Drinks, Transport, Shopping, Entertainment, Bills, Salary, Freelance)
+  - Quick Creation: "Create new category" button integrated directly into transaction form selector
+  - Type Synchronization: Category dialog automatically matches transaction type (income/expense)
+  - CategoryCreateDialog: Standalone reusable component (client/src/components/categories/)
+  - Immediate Feedback: Newly created category auto-selects in transaction form
 **ML Auto-Categorization:** Production-ready machine learning system that automatically suggests transaction categories based on merchant name patterns. Key features:
   - merchant_categories table tracks merchant→category associations with usage counts
   - Confidence-based thresholds: 60% (usageCount=1), 80% (usageCount=2-4), 95% (usageCount≥5)
