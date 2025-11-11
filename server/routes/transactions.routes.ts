@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { storage } from "../storage";
 import { insertTransactionSchema } from "@shared/schema";
-import { convertToUSD } from "../services/currency-service";
+import { convertToUSD, getExchangeRate } from "../services/currency-service";
 import { withAuth } from "../middleware/auth-utils";
 
 const router = Router();
@@ -32,16 +32,35 @@ router.post("/", withAuth(async (req, res) => {
     // 🔒 Security: Strip categoryId from client - always resolve server-side!
     const { amount, currency, categoryId, ...rest } = req.body;
     
-    // Convert to USD for storage
-    const amountUsd = currency && currency !== "USD" 
-      ? convertToUSD(parseFloat(amount), currency).toFixed(2)
-      : amount;
+    const inputCurrency = currency || "USD";
+    const inputAmount = parseFloat(amount);
+    
+    // 💱 Multi-currency: Calculate USD amount and save conversion history
+    let amountUsd: string;
+    let originalAmount: string | undefined;
+    let originalCurrency: string | undefined;
+    let exchangeRate: string | undefined;
+    
+    if (inputCurrency !== "USD") {
+      // Convert to USD and save original values
+      const usdValue = convertToUSD(inputAmount, inputCurrency);
+      amountUsd = usdValue.toFixed(2);
+      originalAmount = amount;
+      originalCurrency = inputCurrency;
+      exchangeRate = getExchangeRate(inputCurrency).toString();
+    } else {
+      // USD transaction - no conversion needed
+      amountUsd = amount;
+    }
     
     let data = insertTransactionSchema.parse({
       ...rest,
       amount,
       amountUsd,
-      currency: currency || "USD",
+      currency: inputCurrency,
+      originalAmount,
+      originalCurrency,
+      exchangeRate,
       userId: req.user.id,
     });
     
@@ -89,14 +108,32 @@ router.patch("/:id", withAuth(async (req, res) => {
       }
     }
     
-    // Recompute amountUsd if amount or currency changed
+    // 💱 Multi-currency: Recompute amountUsd and update conversion history if amount or currency changed
     if (data.amount || data.currency) {
       const amount = data.amount ? parseFloat(data.amount) : parseFloat(transaction.amount);
       const currency = data.currency || transaction.currency || "USD";
-      const amountUsd = currency !== "USD" 
-        ? convertToUSD(amount, currency).toFixed(2)
-        : amount.toFixed(2);
-      data = { ...data, amountUsd };
+      
+      if (currency !== "USD") {
+        // Convert to USD and update conversion history
+        const usdValue = convertToUSD(amount, currency);
+        const rate = getExchangeRate(currency);
+        data = { 
+          ...data, 
+          amountUsd: usdValue.toFixed(2),
+          originalAmount: amount.toString(),
+          originalCurrency: currency,
+          exchangeRate: rate.toString(),
+        };
+      } else {
+        // USD transaction - no conversion
+        data = { 
+          ...data, 
+          amountUsd: amount.toFixed(2),
+          originalAmount: undefined,
+          originalCurrency: undefined,
+          exchangeRate: undefined,
+        };
+      }
     }
     
     // 🔄 Hybrid migration: populate categoryId from category name (server-side only!)
