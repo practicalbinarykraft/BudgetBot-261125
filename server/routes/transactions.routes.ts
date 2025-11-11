@@ -3,6 +3,7 @@ import { storage } from "../storage";
 import { insertTransactionSchema } from "@shared/schema";
 import { convertToUSD, getExchangeRate } from "../services/currency-service";
 import { withAuth } from "../middleware/auth-utils";
+import { createTransaction } from "../services/transaction.service";
 
 const router = Router();
 
@@ -29,56 +30,28 @@ router.get("/", withAuth(async (req, res) => {
 // POST /api/transactions
 router.post("/", withAuth(async (req, res) => {
   try {
-    // 🔒 Security: Strip categoryId from client - always resolve server-side!
-    const { amount, currency, categoryId, ...rest } = req.body;
-    
-    const inputCurrency = currency || "USD";
-    const inputAmount = parseFloat(amount);
-    
-    // 💱 Multi-currency: Calculate USD amount and save conversion history
-    let amountUsd: string;
-    let originalAmount: string | undefined;
-    let originalCurrency: string | undefined;
-    let exchangeRate: string | undefined;
-    
-    if (inputCurrency !== "USD") {
-      // Convert to USD and save original values
-      const usdValue = convertToUSD(inputAmount, inputCurrency);
-      amountUsd = usdValue.toFixed(2);
-      originalAmount = amount;
-      originalCurrency = inputCurrency;
-      exchangeRate = getExchangeRate(inputCurrency).toString();
-    } else {
-      // USD transaction - no conversion needed
-      amountUsd = amount;
-    }
-    
-    let data = insertTransactionSchema.parse({
-      ...rest,
-      amount,
-      amountUsd,
-      currency: inputCurrency,
-      originalAmount,
-      originalCurrency,
-      exchangeRate,
-      userId: req.user.id,
-    });
+    const validated = insertTransactionSchema.omit({ userId: true }).parse(req.body);
     
     // 🔒 Security: Verify walletId ownership if provided
-    if (data.walletId) {
-      const wallet = await storage.getWalletById(data.walletId);
+    if (validated.walletId) {
+      const wallet = await storage.getWalletById(validated.walletId);
       if (!wallet || wallet.userId !== req.user.id) {
         return res.status(400).json({ error: "Invalid wallet" });
       }
     }
     
-    // 🔄 Hybrid migration: populate categoryId from category name (server-side only!)
-    if (data.category) {
-      const category = await storage.getCategoryByNameAndUserId(data.category, req.user.id);
-      data = { ...data, categoryId: category?.id ?? null };
-    }
+    // ✨ ML-powered transaction creation with auto-categorization
+    const transaction = await createTransaction(req.user.id, {
+      type: validated.type,
+      amount: parseFloat(validated.amount),
+      description: validated.description,
+      category: validated.category || undefined,
+      date: validated.date,
+      currency: validated.currency || undefined,
+      source: 'manual',
+      walletId: validated.walletId || undefined
+    });
     
-    const transaction = await storage.createTransaction(data);
     res.json(transaction);
   } catch (error: any) {
     res.status(400).json({ error: error.message });

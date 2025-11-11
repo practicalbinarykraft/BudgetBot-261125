@@ -107,6 +107,17 @@ export const budgets = pgTable("budgets", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Merchant Categories table (ML auto-categorization)
+export const merchantCategories = pgTable("merchant_categories", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  merchantName: text("merchant_name").notNull(), // Normalized merchant/description
+  categoryName: text("category_name").notNull(), // Learned category
+  usageCount: integer("usage_count").default(1).notNull(), // How many times this pairing was used
+  lastUsedAt: timestamp("last_used_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   transactions: many(transactions),
@@ -115,6 +126,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   recurring: many(recurring),
   wishlist: many(wishlist),
   budgets: many(budgets),
+  merchantCategories: many(merchantCategories),
   settings: one(settings),
 }));
 
@@ -176,6 +188,13 @@ export const budgetsRelations = relations(budgets, ({ one }) => ({
   }),
 }));
 
+export const merchantCategoriesRelations = relations(merchantCategories, ({ one }) => ({
+  user: one(users, {
+    fields: [merchantCategories.userId],
+    references: [users.id],
+  }),
+}));
+
 // Zod Schemas
 export const insertUserSchema = createInsertSchema(users, {
   email: z.string().email(),
@@ -231,6 +250,13 @@ export const insertBudgetSchema = createInsertSchema(budgets, {
   createdAt: true 
 });
 
+export const insertMerchantCategorySchema = createInsertSchema(merchantCategories).omit({
+  id: true,
+  userId: true,  // Server-side only
+  createdAt: true,
+  lastUsedAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -254,8 +280,11 @@ export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;
 
 export type InsertBudget = z.infer<typeof insertBudgetSchema>;
+export type Budget = typeof budgets.$inferSelect;
+
+export type InsertMerchantCategory = z.infer<typeof insertMerchantCategorySchema>;
+export type MerchantCategory = typeof merchantCategories.$inferSelect;
 
 // 🔐 Helper type for storage layer: public insert schemas omit userId for security,
 // but storage needs userId from authenticated session
 export type OwnedInsert<T> = T & { userId: number };
-export type Budget = typeof budgets.$inferSelect;

@@ -1,0 +1,500 @@
+🏗️ ПРАВИЛЬНАЯ АРХИТЕКТУРА
+1. Сервис ML (1 файл, ~100 строк)
+typescript// server/services/ml-categories.ts
+
+import { db } from '../db/client';
+import { merchantCategories } from '@shared/schema';
+import { eq, and } from 'drizzle-orm';
+
+/**
+ * Очистить название для поиска
+ * "STARBUCKS  Coffee" → "starbucks coffee"
+ */
+function normalize(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' '); // Множественные пробелы → один
+}
+
+/**
+ * Получить выученную категорию
+ * @returns { category: string, confidence: number } или null
+ */
+export async function getSuggestedCategory(
+  userId: number,
+  description: string
+): Promise<{ category: string; confidence: number } | null> {
+  const normalized = normalize(description);
+  
+  const [result] = await db
+    .select()
+    .from(merchantCategories)
+    .where(
+      and(
+        eq(merchantCategories.userId, userId),
+        eq(merchantCategories.merchantName, normalized)
+      )
+    )
+    .limit(1);
+  
+  if (!result) return null;
+  
+  // Confidence зависит от usageCount:
+  // 1 раз = 60%, 2-4 раза = 80%, 5+ = 95%
+  const confidence = result.usageCount === 1 
+    ? 0.6 
+    : result.usageCount < 5 
+    ? 0.8 
+    : 0.95;
+  
+  return {
+    category: result.categoryName,
+    confidence
+  };
+}
+
+/**
+ * Сохранить связку description → category
+ * Увеличивает счётчик если уже есть
+ */
+export async function learnCategory(
+  userId: number,
+  description: string,
+  category: string
+): Promise<void> {
+  const normalized = normalize(description);
+  
+  // Проверить существующую связку
+  const existing = await db
+    .select()
+    .from(merchantCategories)
+    .where(
+      and(
+        eq(merchantCategories.userId, userId),
+        eq(merchantCategories.merchantName, normalized)
+      )
+    )
+    .limit(1);
+  
+  if (existing.length > 0) {
+    // Обновить: +1 к счётчику, обновить категорию
+    await db
+      .update(merchantCategories)
+      .set({
+        categoryName: category,
+        usageCount: existing[0].usageCount + 1,
+        lastUsedAt: new Date()
+      })
+      .where(eq(merchantCategories.id, existing[0].id));
+  } else {
+    // Создать новую
+    await db
+      .insert(merchantCategories)
+      .values({
+        userId,
+        merchantName: normalized,
+        categoryName: category,
+        usageCount: 1
+      });
+  }
+}
+Размер: ~100 строк ✅
+Функции: 3 штуки, каждая <40 строк ✅
+Зависимости: Только DB ✅
+
+2. Middleware для автообучения (КЛЮЧЕВОЕ!)
+typescript// server/middleware/ml-middleware.ts
+
+import { getSuggestedCategory, learnCategory } from '../services/ml-categories';
+
+/**
+ * Middleware: автоматически применяет ML категорию
+ * Используется ПЕРЕД созданием транзакции
+ */
+export async function applyMLCategory(
+  userId: number,
+  transactionData: {
+    description: string;
+    category?: string;
+  }
+): Promise<{
+  description: string;
+  category: string | undefined;
+  mlSuggested: boolean;
+  mlConfidence: number;
+}> {
+  // Если категория уже указана - пропускаем ML
+  if (transactionData.category) {
+    return {
+      ...transactionData,
+      mlSuggested: false,
+      mlConfidence: 0
+    };
+  }
+  
+  // Получить ML suggestion
+  const suggestion = await getSuggestedCategory(
+    userId,
+    transactionData.description
+  );
+  
+  if (suggestion) {
+    // Применить автоматически ТОЛЬКО если confidence > 70%
+    const shouldApply = suggestion.confidence >= 0.7;
+    
+    return {
+      description: transactionData.description,
+      category: shouldApply ? suggestion.category : undefined,
+      mlSuggested: shouldApply,
+      mlConfidence: suggestion.confidence
+    };
+  }
+  
+  // ML не нашёл - возвращаем как есть
+  return {
+    ...transactionData,
+    mlSuggested: false,
+    mlConfidence: 0
+  };
+}
+
+/**
+ * Middleware: автоматически обучает ML после создания
+ * Используется ПОСЛЕ создания транзакции
+ */
+export async function trainMLCategory(
+  userId: number,
+  transactionData: {
+    description: string;
+    category?: string;
+  }
+): Promise<void> {
+  // Обучаем только если категория указана
+  if (transactionData.category) {
+    await learnCategory(
+      userId,
+      transactionData.description,
+      transactionData.category
+    );
+  }
+}
+Размер: ~60 строк ✅
+Логика: Вся в одном месте ✅
+Переиспользуемость: 100% ✅
+
+3. Transactions Service (централизация!)
+typescript// server/services/transaction.service.ts
+
+import { db } from '../db/client';
+import { transactions } from '@shared/schema';
+import { applyMLCategory, trainMLCategory } from '../middleware/ml-middleware';
+
+/**
+ * Создать транзакцию с автоматическим ML
+ * Используется ВЕЗДЕ: форма, Telegram, OCR, voice
+ */
+export async function createTransaction(
+  userId: number,
+  data: {
+    type: 'income' | 'expense';
+    amount: number;
+    description: string;
+    category?: string;
+    date: string;
+    currency?: string;
+    source?: string;
+  }
+) {
+  // ШАГ 1: Применить ML категорию (если нужно)
+  const enhanced = await applyMLCategory(userId, {
+    description: data.description,
+    category: data.category
+  });
+  
+  // ШАГ 2: Создать транзакцию
+  const [transaction] = await db
+    .insert(transactions)
+    .values({
+      userId,
+      type: data.type,
+      amount: data.amount,
+      amountUsd: data.amount, // TODO: currency conversion
+      description: enhanced.description,
+      category: enhanced.category,
+      date: data.date,
+      currency: data.currency || 'USD',
+      source: data.source || 'manual'
+    })
+    .returning();
+  
+  // ШАГ 3: Обучить ML (если категория была указана)
+  await trainMLCategory(userId, {
+    description: transaction.description,
+    category: transaction.category || undefined
+  });
+  
+  return {
+    ...transaction,
+    mlSuggested: enhanced.mlSuggested,
+    mlConfidence: enhanced.mlConfidence
+  };
+}
+Размер: ~50 строк ✅
+Весь ML: Скрыт внутри ✅
+Использование: Одна функция везде ✅
+
+4. API Endpoint (ОДИН!)
+typescript// server/routes/transactions.ts
+
+import { createTransaction } from '../services/transaction.service';
+
+/**
+ * POST /api/transactions
+ * Создать транзакцию (ML автоматически)
+ */
+router.post('/', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const transaction = await createTransaction(userId, {
+      type: req.body.type,
+      amount: req.body.amount,
+      description: req.body.description,
+      category: req.body.category, // Может быть undefined
+      date: req.body.date,
+      currency: req.body.currency,
+      source: 'manual'
+    });
+    
+    res.status(201).json(transaction);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create transaction' });
+  }
+});
+Размер: ~20 строк ✅
+ML логика: Нет! Всё в service ✅
+
+5. Frontend (ПРОСТОЙ!)
+tsx// components/TransactionForm.tsx
+
+const createMutation = useMutation({
+  mutationFn: async (data) => {
+    // Просто создаём транзакцию
+    // ML работает автоматически на backend!
+    return await apiRequest('POST', '/api/transactions', data);
+  },
+  onSuccess: (transaction) => {
+    // Показать если ML применил категорию
+    if (transaction.mlSuggested) {
+      toast.success(
+        `✨ Auto-categorized as "${transaction.category}" (${Math.round(transaction.mlConfidence * 100)}% confident)`
+      );
+    }
+    
+    queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
+  }
+});
+Размер: ~15 строк ✅
+ML код: НЕТ! ✅
+Просто создаём: Да ✅
+
+6. Telegram Bot
+typescript// server/telegram/handlers.ts
+
+import { createTransaction } from '../services/transaction.service';
+
+bot.on('text', async (ctx) => {
+  const userId = await getUserByTelegramId(ctx.from.id);
+  
+  // Парсим сообщение: "купил кофе 300"
+  const parsed = parseMessage(ctx.message.text);
+  
+  // Создаём транзакцию (ML автоматически!)
+  const transaction = await createTransaction(userId, {
+    type: parsed.type,
+    amount: parsed.amount,
+    description: parsed.description,
+    category: undefined, // ML сам подставит
+    date: new Date().toISOString().split('T')[0],
+    source: 'telegram'
+  });
+  
+  // Показываем результат
+  ctx.reply(`
+    ✅ Добавлено: ${transaction.amount} ${transaction.description}
+    ${transaction.mlSuggested ? `✨ Категория: ${transaction.category} (автоматически)` : ''}
+  `);
+});
+Размер: ~20 строк ✅
+ML код: НЕТ! ✅
+Работает: Автоматически ✅
+
+7. OCR Service
+typescript// server/services/ocr.service.ts
+
+import { createTransaction } from './transaction.service';
+
+export async function processReceipt(userId: number, imageBuffer: Buffer) {
+  // 1. OCR распознавание
+  const ocrData = await recognizeReceipt(imageBuffer);
+  
+  // 2. Создать транзакцию (ML автоматически!)
+  const transaction = await createTransaction(userId, {
+    type: 'expense',
+    amount: ocrData.amount,
+    description: ocrData.merchant,
+    category: undefined, // ML сам подставит
+    date: ocrData.date,
+    source: 'ocr'
+  });
+  
+  return transaction;
+}
+```
+
+**Размер:** ~15 строк ✅  
+**ML код:** НЕТ! ✅
+
+---
+
+## 📊 СРАВНЕНИЕ ПОДХОДОВ
+
+### ❌ ИСХОДНОЕ ТЗ (дублирование):
+```
+TransactionForm.tsx    (20 строк ML кода)
+telegram-bot.ts        (20 строк ML кода)
+ocr-service.ts         (20 строк ML кода)
+voice-handler.ts       (20 строк ML кода)
+───────────────────────────────────────────
+ИТОГО: 80 строк повторяющегося кода
+```
+
+### ✅ МОЁ РЕШЕНИЕ (централизация):
+```
+ml-categories.ts       (100 строк - сервис)
+ml-middleware.ts       (60 строк - middleware)
+transaction.service.ts (50 строк - использует ML)
+───────────────────────────────────────────
+TransactionForm.tsx    (0 строк ML кода!)
+telegram-bot.ts        (0 строк ML кода!)
+ocr-service.ts         (0 строк ML кода!)
+voice-handler.ts       (0 строк ML кода!)
+───────────────────────────────────────────
+ИТОГО: 210 строк в 3 файлах (один раз!)
+```
+
+---
+
+## 🎯 ПРЕИМУЩЕСТВА МОЕГО ПОДХОДА
+
+### 1. DRY (Don't Repeat Yourself)
+```
+✅ ML логика в ОДНОМ месте
+✅ Добавил 5-й источник? Работает автоматически!
+✅ Изменил ML? Исправил в одном месте
+```
+
+### 2. Простота для Junior
+```
+✅ Frontend: просто вызывает createTransaction()
+✅ Telegram: просто вызывает createTransaction()
+✅ OCR: просто вызывает createTransaction()
+✅ Junior НЕ думает про ML - он работает автоматически!
+```
+
+### 3. Легко для ИИ
+```
+✅ Малые файлы (<100 строк каждый)
+✅ Один файл = одна ответственность
+✅ Изменить ML? Править ml-categories.ts
+✅ Изменить логику транзакций? Править transaction.service.ts
+✅ Контекст не теряется!
+```
+
+### 4. Тестируемость
+```
+✅ Тестировать ML? Тестируй ml-categories.ts
+✅ Тестировать middleware? Тестируй ml-middleware.ts
+✅ Тестировать создание? Тестируй transaction.service.ts
+✅ Всё изолированно!
+
+📋 ФИНАЛЬНОЕ ТЗ ДЛЯ REPLIT
+markdown# 🧠 ML Категорий - Централизованный подход
+
+## Задача
+Автоматически запоминать и применять категории для транзакций.
+
+## Архитектура (3 файла)
+
+### 1. ML Сервис (server/services/ml-categories.ts)
+
+- normalize() - очистка текста
+- getSuggestedCategory() - получить выученную категорию
+- learnCategory() - сохранить связку
+
+**Размер:** ~100 строк
+
+### 2. ML Middleware (server/middleware/ml-middleware.ts)
+
+- applyMLCategory() - применить ML перед созданием
+- trainMLCategory() - обучить ML после создания
+
+**Размер:** ~60 строк
+
+### 3. Transaction Service (server/services/transaction.service.ts)
+
+- createTransaction() - создать транзакцию + ML автоматически
+
+**Размер:** ~50 строк
+
+## Использование
+
+**ВСЕ источники используют ОДНУ функцию:**
+```typescript
+// Frontend, Telegram, OCR, Voice - ВЕЗДЕ:
+const transaction = await createTransaction(userId, {
+  type: 'expense',
+  amount: 500,
+  description: 'Starbucks',
+  category: undefined, // ML сам подставит!
+  date: '2025-11-09',
+  source: 'manual'
+});
+
+// ML работает автоматически:
+// 1. Проверяет базу знаний
+// 2. Применяет категорию если confidence > 70%
+// 3. Сохраняет выбор пользователя
+```
+
+## База данных
+```sql
+CREATE TABLE merchant_categories (
+  id SERIAL PRIMARY KEY,
+  userId INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  merchantName VARCHAR(255) NOT NULL,
+  categoryName VARCHAR(50) NOT NULL,
+  usageCount INTEGER DEFAULT 1,
+  lastUsedAt TIMESTAMP DEFAULT NOW(),
+  createdAt TIMESTAMP DEFAULT NOW()
+);
+```
+
+## Тестирование
+
+1. Создать транзакцию "Starbucks" → выбрать "Кофейни"
+2. Создать снова "starbucks" → автоматически "Кофейни" ✨
+3. Использовать 5 раз → confidence 95%
+
+## Критерии успеха
+
+- ✅ Вся ML логика в 3 файлах
+- ✅ Frontend НЕ знает про ML
+- ✅ Работает для всех источников
+- ✅ Файлы <100 строк
+- ✅ Junior понимает за 15 минут
+
+---
+
+**РЕАЛИЗУЙ ПО ЭТОМУ ПЛАНУ!**
