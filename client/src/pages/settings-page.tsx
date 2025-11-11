@@ -7,7 +7,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertSettingsSchema } from "@shared/schema";
 import { z } from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -136,11 +137,13 @@ export default function SettingsPage() {
       language: (settings.language || "en") as "en" | "ru",
       currency: (settings.currency || "USD") as "USD" | "RUB" | "IDR",
       telegramNotifications: settings.telegramNotifications,
+      anthropicApiKey: settings.anthropicApiKey || undefined,
     } : {
       userId: user?.id || 0,
       language: "en",
       currency: "USD",
       telegramNotifications: true,
+      anthropicApiKey: undefined,
     },
   });
 
@@ -255,6 +258,37 @@ export default function SettingsPage() {
                         data-testid="switch-telegram"
                       />
                     </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="anthropicApiKey"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Anthropic API Key (Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="sk-ant-..."
+                        {...field}
+                        value={field.value || ""}
+                        data-testid="input-anthropic-key"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Your personal Anthropic API key for AI-powered forecasting and analysis. Get one at{" "}
+                      <a
+                        href="https://console.anthropic.com/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        console.anthropic.com
+                      </a>
+                    </FormDescription>
+                    <FormMessage />
                   </FormItem>
                 )}
               />

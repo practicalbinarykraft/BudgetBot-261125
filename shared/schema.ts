@@ -94,6 +94,7 @@ export const settings = pgTable("settings", {
   language: text("language").default("en"),
   currency: text("currency").default("USD"),
   telegramNotifications: boolean("telegram_notifications").default(true).notNull(),
+  anthropicApiKey: text("anthropic_api_key"), // User's BYOK for AI features (forecast, analysis)
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

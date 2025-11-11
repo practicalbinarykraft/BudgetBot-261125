@@ -26,6 +26,7 @@ import aiRouter from "./ai.routes";
 import currencyRouter from "./currency.routes";
 import calibrationsRouter from "./calibrations.routes";
 import telegramRouter from "./telegram.routes";
+import analyticsRouter from "./analytics.routes";
 
 export function registerRoutes(app: Express) {
   // Domain-specific routes
@@ -41,6 +42,7 @@ export function registerRoutes(app: Express) {
   
   // Stats and analytics (mounted on /api for /api/stats and /api/financial-health)
   app.use("/api", statsRouter);
+  app.use("/api/analytics", analyticsRouter);
   
   // Currency exchange rates and conversions
   app.use("/api", currencyRouter);

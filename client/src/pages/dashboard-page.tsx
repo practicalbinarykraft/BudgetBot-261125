@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Transaction } from "@shared/schema";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { TransactionList } from "@/components/dashboard/transaction-list";
-import { SpendingChart } from "@/components/dashboard/spending-chart";
+import { FinancialTrendChart } from "@/components/charts/financial-trend-chart";
 import { BudgetAlerts } from "@/components/dashboard/budget-alerts";
 import { DateFilter, DateFilterValue, getDateRange } from "@/components/dashboard/date-filter";
 import { TrendingUp, TrendingDown, Wallet, Settings2 } from "lucide-react";
@@ -114,7 +114,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      <SpendingChart transactions={transactions} />
+      <FinancialTrendChart />
 
       <TransactionList transactions={recentTransactions} />
 
