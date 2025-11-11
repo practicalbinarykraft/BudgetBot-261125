@@ -1,0 +1,392 @@
+/**
+ * Telegram Bot Message Parser
+ * 
+ * Refactored parsing logic with strong typing, configuration-based approach,
+ * and optimized performance.
+ */
+
+import { 
+  Currency, 
+  ExpenseCategory, 
+  CATEGORY_KEYWORDS, 
+  CURRENCY_PATTERNS, 
+  PARSING_LIMITS 
+} from './telegram-config';
+import { logger } from './logger';
+
+/**
+ * Parsed expense message result
+ */
+export interface ParsedExpense {
+  amount: number;
+  description: string;
+  currency: Currency;
+  date: Date | null;
+}
+
+/**
+ * Parse expense message from Telegram user input
+ * 
+ * @param text - Raw message text from user
+ * @returns Parsed expense data or null if parsing fails
+ * 
+ * @example
+ * ```typescript
+ * parseExpenseMessage("Продукты 30$") 
+ * // => { amount: 30, description: "Продукты", currency: "USD", date: null }
+ * ```
+ */
+export function parseExpenseMessage(text: string): ParsedExpense | null {
+  // Security: Input length limit protection
+  if (text.length > PARSING_LIMITS.MAX_MESSAGE_LENGTH) {
+    logger.warn(`Message too long: ${text.length} characters, truncating`);
+    text = text.substring(0, PARSING_LIMITS.MAX_MESSAGE_LENGTH);
+  }
+
+  // Security: Input sanitization
+  const sanitizedText = text.replace(/[<>]/g, '');
+  const cleanText = sanitizedText.trim();
+
+  if (cleanText.length < 1) {
+    return null;
+  }
+
+  let amount: number | null = null;
+  let currency: Currency = Currency.RUB;
+  let matchedPattern = '';
+
+  // Security: Timeout protection
+  const startTime = Date.now();
+
+  // Try to match currency patterns
+  for (const pattern of CURRENCY_PATTERNS) {
+    if (Date.now() - startTime > PARSING_LIMITS.PARSING_TIMEOUT) {
+      logger.warn('Parsing timeout exceeded');
+      return null;
+    }
+
+    pattern.regex.lastIndex = 0;
+    const match = pattern.regex.exec(cleanText);
+    
+    if (match) {
+      const amountStr = match[1] || match[2];
+      
+      if (amountStr) {
+        const parsedAmount = parseFloat(amountStr.replace(',', '.'));
+        
+        // Security: Validate amount
+        if (
+          !isNaN(parsedAmount) && 
+          parsedAmount > PARSING_LIMITS.MIN_AMOUNT && 
+          parsedAmount <= PARSING_LIMITS.MAX_AMOUNT
+        ) {
+          amount = parsedAmount;
+          currency = pattern.currency;
+          matchedPattern = match[0];
+          break;
+        }
+      }
+    }
+  }
+
+  // Fallback: Try written numbers
+  if (!amount) {
+    if (Date.now() - startTime > PARSING_LIMITS.PARSING_TIMEOUT) {
+      logger.warn('Parsing timeout before parseWrittenNumbers');
+      return null;
+    }
+
+    try {
+      const result = parseWrittenNumbers(cleanText);
+      if (result) {
+        if (
+          !isNaN(result.amount) && 
+          result.amount > PARSING_LIMITS.MIN_AMOUNT && 
+          result.amount <= PARSING_LIMITS.MAX_AMOUNT
+        ) {
+          amount = result.amount;
+          currency = Currency.RUB;
+          matchedPattern = result.matched;
+        }
+      }
+    } catch (error) {
+      logger.error('Error in parseWrittenNumbers', error instanceof Error ? error : new Error(String(error)));
+      return null;
+    }
+  }
+
+  if (!amount || amount <= 0) {
+    return null;
+  }
+
+  // Parse date from message
+  const parsedDate = parseDateFromMessage(cleanText);
+
+  // Clean description (optimized with single regex pipeline)
+  let description = cleanDescription(cleanText, matchedPattern);
+
+  // Validate description
+  if (!description || description.length < PARSING_LIMITS.MIN_DESCRIPTION_LENGTH) {
+    description = 'Расход';
+  }
+
+  // Capitalize first letter
+  description = description.charAt(0).toUpperCase() + description.slice(1);
+
+  return { amount, description, currency, date: parsedDate };
+}
+
+/**
+ * Clean description from matched amount and unwanted tokens
+ * 
+ * @param text - Original text
+ * @param matchedPattern - Matched currency pattern to remove
+ * @returns Cleaned description
+ */
+function cleanDescription(text: string, matchedPattern: string): string {
+  return text
+    .replace(matchedPattern, '') // Remove matched amount
+    .replace(/₽|\\\$|руб\.?|рублей?|р\.|долларов?|долл\.?|usd/gi, '') // Remove currency symbols
+    .replace(/^(потратил[а]?|заплатил[а]?|купил[а]?|за|на)\s+/gi, '') // Remove action words at start
+    .replace(/\s+(потратил[а]?|заплатил[а]?|купил[а]?|потрачено)$/gi, '') // Remove action words at end
+    .replace(/\b(вчера|позавчера|сегодня)\b/gi, '') // Remove relative dates
+    .replace(/\b(в|во)\s+(понедельник|вторник|среду|четверг|пятницу|субботу|воскресенье)\b/gi, '') // Remove weekdays with prepositions
+    .replace(/\b(понедельник|вторник|среда|четверг|пятница|суббота|воскресенье)\b/gi, '') // Remove weekdays
+    .replace(/\b\d{1,2}\.?\s*(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)(\s+\d{4})?\b/gi, '') // Remove month dates
+    .replace(/\b\d{1,2}[\.\/]\d{1,2}([\.\/]\d{4})?\b/gi, '') // Remove numeric dates
+    .replace(/\b\d{4}-\d{1,2}-\d{1,2}\b/gi, '') // Remove ISO dates
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .trim();
+}
+
+/**
+ * Detect expense category from description
+ * 
+ * @param description - Transaction description
+ * @returns Matched category or 'Разное' (Other)
+ * 
+ * @example
+ * ```typescript
+ * detectCategory("Кофе") // => "Еда"
+ * detectCategory("Такси") // => "Транспорт"
+ * ```
+ */
+export function detectCategory(description: string): ExpenseCategory {
+  const lowerDesc = description.toLowerCase();
+
+  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    if (keywords.some(keyword => lowerDesc.includes(keyword))) {
+      return category as ExpenseCategory;
+    }
+  }
+
+  return ExpenseCategory.OTHER;
+}
+
+/**
+ * Parse numbers written in Russian words
+ * 
+ * @param text - Text containing written numbers
+ * @returns Parsed amount and matched text, or null
+ */
+function parseWrittenNumbers(text: string): { amount: number; matched: string } | null {
+  const lowerText = text.toLowerCase();
+  
+  // Sort by length descending to check longer phrases first (more specific matches)
+  const numbers: Array<[string, number]> = [
+    ['полторы тысячи', 1500],
+    ['две тысячи', 2000],
+    ['три тысячи', 3000],
+    ['восемнадцать', 18],
+    ['девятнадцать', 19],
+    ['одиннадцать', 11],
+    ['двенадцать', 12],
+    ['тринадцать', 13],
+    ['четырнадцать', 14],
+    ['пятнадцать', 15],
+    ['шестнадцать', 16],
+    ['семнадцать', 17],
+    ['четыреста', 400],
+    ['шестьдесят', 60],
+    ['семьдесят', 70],
+    ['восемьдесят', 80],
+    ['девяносто', 90],
+    ['пятьсот', 500],
+    ['шестьсот', 600],
+    ['семьсот', 700],
+    ['восемьсот', 800],
+    ['девятьсот', 900],
+    ['тридцать', 30],
+    ['пятьдесят', 50],
+    ['двести', 200],
+    ['триста', 300],
+    ['двадцать', 20],
+    ['тысяча', 1000],
+    ['восемь', 8],
+    ['десять', 10],
+    ['четыре', 4],
+    ['девять', 9],
+    ['семь', 7],
+    ['шесть', 6],
+    ['сорок', 40],
+    ['пять', 5],
+    ['один', 1],
+    ['одну', 1],
+    ['одна', 1],
+    ['ноль', 0],
+    ['два', 2],
+    ['две', 2],
+    ['три', 3],
+    ['сто', 100]
+  ];
+
+  for (const [word, value] of numbers) {
+    // For phrases with spaces, use contains check (they're specific enough)
+    // For single words, use word boundary check to avoid partial matches
+    let matched = false;
+    
+    if (word.includes(' ')) {
+      matched = lowerText.includes(word);
+    } else {
+      // Use negative lookbehind/lookahead to ensure word boundaries
+      const regex = new RegExp(`(?<!\\S)${word}(?!\\S)`, 'i');
+      matched = regex.test(lowerText);
+    }
+    
+    if (matched && value > 0) {
+      return { amount: value, matched: word };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Parse date from message text
+ * 
+ * @param text - Message text
+ * @returns Parsed date or null
+ */
+function parseDateFromMessage(text: string): Date | null {
+  if (text.length > PARSING_LIMITS.MAX_MESSAGE_LENGTH) {
+    text = text.substring(0, PARSING_LIMITS.MAX_MESSAGE_LENGTH);
+  }
+
+  const cleanText = text.toLowerCase().trim();
+  const today = new Date();
+
+  // Relative dates
+  if (cleanText.includes('сегодня') || cleanText.includes('today')) {
+    return today;
+  }
+
+  if (cleanText.includes('вчера') || cleanText.includes('yesterday')) {
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    return yesterday;
+  }
+
+  if (cleanText.includes('позавчера')) {
+    const dayBeforeYesterday = new Date(today);
+    dayBeforeYesterday.setDate(today.getDate() - 2);
+    return dayBeforeYesterday;
+  }
+
+  // Weekdays
+  const weekdays: Record<string, number> = {
+    'понедельник': 1, 'вторник': 2, 'среда': 3, 'четверг': 4,
+    'пятница': 5, 'суббота': 6, 'воскресенье': 0
+  };
+
+  for (const [dayName, dayNumber] of Object.entries(weekdays)) {
+    const patterns = [
+      new RegExp(`\\bв\\s+${dayName}\\b`, 'i'),
+      new RegExp(`\\b${dayName}\\b`, 'i')
+    ];
+
+    for (const pattern of patterns) {
+      if (pattern.test(cleanText)) {
+        const targetDate = new Date(today);
+        const currentDay = today.getDay();
+        let daysBack = currentDay - dayNumber;
+        
+        if (daysBack <= 0) {
+          daysBack += 7;
+        }
+        
+        targetDate.setDate(today.getDate() - daysBack);
+        return targetDate;
+      }
+    }
+  }
+
+  // Month names
+  const monthNames: Record<string, number> = {
+    'января': 0, 'февраля': 1, 'марта': 2, 'апреля': 3, 'мая': 4, 'июня': 5,
+    'июля': 6, 'августа': 7, 'сентября': 8, 'октября': 9, 'ноября': 10, 'декабря': 11
+  };
+
+  const currentYear = today.getFullYear();
+
+  for (const [monthName, monthIndex] of Object.entries(monthNames)) {
+    const pattern = new RegExp(`(\\d{1,2})\\s+${monthName}(?:\\s+(\\d{4}))?`, 'i');
+    const match = pattern.exec(cleanText);
+    
+    if (match) {
+      const day = parseInt(match[1]);
+      const year = match[2] ? parseInt(match[2]) : currentYear;
+      
+      if (day >= 1 && day <= 31) {
+        const date = new Date(year, monthIndex, day);
+        if (date.getDate() === day) {
+          return date;
+        }
+      }
+    }
+  }
+
+  // Numeric dates
+  const numericDatePatterns = [
+    /(\d{1,2})\.(\d{1,2})\.(\d{4})/g,
+    /(\d{1,2})\/(\d{1,2})\/(\d{4})/g,
+    /(\d{1,2})\.(\d{1,2})/g,
+    /(\d{1,2})\/(\d{1,2})/g
+  ];
+
+  for (const pattern of numericDatePatterns) {
+    pattern.lastIndex = 0;
+    const match = pattern.exec(cleanText);
+    
+    if (match) {
+      const day = parseInt(match[1]);
+      const month = parseInt(match[2]);
+      const year = match[3] ? parseInt(match[3]) : currentYear;
+
+      if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+        const date = new Date(year, month - 1, day);
+        if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) {
+          return date;
+        }
+      }
+    }
+  }
+
+  // ISO format
+  const isoDatePattern = /(\d{4})-(\d{1,2})-(\d{1,2})/g;
+  const match = isoDatePattern.exec(cleanText);
+  
+  if (match) {
+    const year = parseInt(match[1]);
+    const month = parseInt(match[2]);
+    const day = parseInt(match[3]);
+
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      const date = new Date(year, month - 1, day);
+      if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) {
+        return date;
+      }
+    }
+  }
+
+  return null;
+}

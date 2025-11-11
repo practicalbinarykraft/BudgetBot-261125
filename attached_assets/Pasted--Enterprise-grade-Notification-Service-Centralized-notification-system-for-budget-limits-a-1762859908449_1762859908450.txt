@@ -1,0 +1,408 @@
+/**
+ * Enterprise-grade Notification Service
+ * Centralized notification system for budget limits, alerts, and user communication
+ * Supports Telegram notifications with future email/SMS extensibility
+ */
+
+import { logger } from './logger';
+import { storage } from './storage';
+import type { BudgetLimit, Partner, DailyTransaction } from '@shared/schema';
+
+// Notification types for structured messaging
+export interface NotificationPayload {
+  userId: number;
+  partnerId: number;
+  type: 'BUDGET_LIMIT_WARNING' | 'BUDGET_LIMIT_EXCEEDED' | 'RECURRING_TRANSACTION_PROCESSED' | 'GOAL_MILESTONE' | 'PURCHASE_REMINDER';
+  title: string;
+  message: string;
+  metadata?: {
+    limitId?: number;
+    categoryName?: string;
+    currentAmount?: number;
+    limitAmount?: number;
+    percentage?: number;
+    transactionId?: number;
+    goalId?: number;
+    purchaseId?: number;
+    purchaseTitle?: string;
+    purchaseAmount?: number;
+    targetDate?: string;
+    daysUntil?: number;
+  };
+  urgency: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+}
+
+// Budget limit threshold configuration
+const BUDGET_THRESHOLDS = {
+  WARNING: 80,    // 80% - yellow warning
+  CRITICAL: 100,  // 100% - red alert
+} as const;
+
+export class NotificationService {
+  private telegramBot: any = null;
+  
+  constructor() {
+    // Import telegram bot dynamically to avoid circular dependencies
+    this.initializeTelegramBot();
+  }
+
+  private async initializeTelegramBot() {
+    try {
+      // Import bot instance from telegram-bot module
+      const { bot } = await import('./telegram-bot.js');
+      this.telegramBot = bot;
+      logger.info('Notification service: Telegram bot integration initialized');
+    } catch (error) {
+      logger.error('Failed to initialize Telegram bot for notifications', error as Error);
+    }
+  }
+
+  /**
+   * Check and send budget limit notifications
+   * Called after transaction creation to verify spending against limits
+   */
+  async checkBudgetLimits(userId: number, transactionAmount: number, categoryId?: number): Promise<void> {
+    try {
+      // Get user's budget limits (user-centric architecture)
+      const budgetLimits = await storage.getBudgetLimits(userId);
+      if (budgetLimits.length === 0) return;
+
+      // Get current month spending by category
+      const currentDate = new Date();
+      const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+      for (const limit of budgetLimits) {
+        // Skip if category doesn't match transaction (when category is specified)
+        if (categoryId && limit.categoryId && limit.categoryId !== categoryId) {
+          continue;
+        }
+
+        // Calculate current spending for this category using existing method (user-centric)
+        const transactions = await storage.getDailyTransactions(
+          userId,
+          startOfMonth.toISOString().split('T')[0], // YYYY-MM-DD format
+          endOfMonth.toISOString().split('T')[0]
+        );
+
+        const categorySpending = transactions
+          .filter((t: any) => t.categoryId === limit.categoryId && t.amount < 0) // Only expenses
+          .reduce((sum: number, t: any) => sum + Math.abs(Number(t.amount)), 0);
+
+        // Update budget limit spent amount (only if we have new spending)
+        if (transactionAmount < 0 && categorySpending > 0 && limit.categoryId) {
+          await storage.updateBudgetLimitSpent(Number(limit.categoryId), userId, Math.abs(transactionAmount));
+        }
+
+        // Calculate percentage
+        const percentage = (categorySpending / Number(limit.monthlyLimit)) * 100;
+
+        // Check thresholds and send notifications
+        await this.processBudgetThreshold(limit, percentage, categorySpending);
+      }
+
+      logger.info('Budget limits check completed', {
+        userId,
+        transactionAmount,
+        categoryId,
+        limitsChecked: budgetLimits.length
+      });
+    } catch (error) {
+      logger.error('Error checking budget limits', error as Error, {
+        userId,
+        transactionAmount,
+        categoryId
+      });
+    }
+  }
+
+  /**
+   * Process budget threshold notifications
+   */
+  private async processBudgetThreshold(
+    limit: BudgetLimit,
+    percentage: number,
+    currentSpending: number
+  ): Promise<void> {
+    try {
+      // Avoid spam - only notify at specific thresholds
+      const shouldNotifyWarning = percentage >= BUDGET_THRESHOLDS.WARNING && percentage < BUDGET_THRESHOLDS.CRITICAL;
+      const shouldNotifyCritical = percentage >= BUDGET_THRESHOLDS.CRITICAL;
+
+      if (!shouldNotifyWarning && !shouldNotifyCritical) return;
+
+      // Get category name for better messaging  
+      const category = limit.categoryId ? await storage.getCategory(Number(limit.categoryId)) : null;
+      const categoryName = category?.name || 'Общие';
+
+      // Get partner and user info
+      const partner = await storage.getPartner(Number(limit.partnerId));
+      if (!partner) return;
+
+      const user = await storage.getUser(Number(partner.userId));
+      if (!user) return;
+
+      // Prepare notification payload
+      const payload: NotificationPayload = {
+        userId: user.id,
+        partnerId: partner.id,
+        type: shouldNotifyCritical ? 'BUDGET_LIMIT_EXCEEDED' : 'BUDGET_LIMIT_WARNING',
+        title: shouldNotifyCritical ? '🚨 Лимит превышен!' : '⚠️ Предупреждение о лимите',
+        message: this.formatBudgetMessage(categoryName, currentSpending, Number(limit.monthlyLimit), percentage),
+        metadata: {
+          limitId: limit.id,
+          categoryName,
+          currentAmount: currentSpending,
+          limitAmount: Number(limit.monthlyLimit),
+          percentage: Math.round(percentage)
+        },
+        urgency: shouldNotifyCritical ? 'CRITICAL' : 'HIGH'
+      };
+
+      // Send notification
+      await this.sendNotification(payload);
+
+      // Log alert sent to prevent duplicates (lastAlertSent field will be added later)
+      logger.info('Budget limit alert sent', {
+        limitId: limit.id,
+        partnerId: limit.partnerId,
+        percentage: Math.round(percentage),
+        alertType: shouldNotifyCritical ? 'CRITICAL' : 'WARNING'
+      });
+
+    } catch (error) {
+      logger.error('Error processing budget threshold', error as Error, {
+        limitId: limit.id,
+        percentage
+      });
+    }
+  }
+
+  /**
+   * Format budget limit message for user
+   */
+  private formatBudgetMessage(
+    categoryName: string,
+    currentSpending: number,
+    limitAmount: number,
+    percentage: number
+  ): string {
+    const formattedSpending = new Intl.NumberFormat('ru-RU', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(currentSpending);
+
+    const formattedLimit = new Intl.NumberFormat('ru-RU', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(limitAmount);
+
+    if (percentage >= 100) {
+      return `Лимит по категории "${categoryName}" превышен на ${Math.round(percentage - 100)}%!\n\nТраты: ${formattedSpending}\nЛимит: ${formattedLimit}\n\nРекомендуем пересмотреть расходы в этой категории.`;
+    } else {
+      return `Приближается лимит по категории "${categoryName}" (${Math.round(percentage)}%).\n\nТраты: ${formattedSpending}\nЛимит: ${formattedLimit}\n\nОстаток: ${new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'USD' }).format(limitAmount - currentSpending)}`;
+    }
+  }
+
+  /**
+   * Send notification through available channels
+   */
+  async sendNotification(payload: NotificationPayload): Promise<boolean> {
+    try {
+      let sent = false;
+
+      // Try Telegram first
+      if (this.telegramBot) {
+        const telegramSent = await this.sendTelegramNotification(payload);
+        sent = sent || telegramSent;
+      }
+
+      // Future: Add email notifications here
+      // const emailSent = await this.sendEmailNotification(payload);
+      // sent = sent || emailSent;
+
+      // Audit log
+      logger.info('Notification sent', {
+        userId: payload.userId,
+        success: sent,
+        type: payload.type,
+        urgency: payload.urgency,
+        telegramAttempted: !!this.telegramBot,
+        metadata: payload.metadata
+      });
+
+      return sent;
+    } catch (error) {
+      logger.error('Error sending notification', error as Error, {
+        userId: payload.userId,
+        type: payload.type
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Send Telegram notification
+   */
+  private async sendTelegramNotification(payload: NotificationPayload): Promise<boolean> {
+    try {
+      if (!this.telegramBot) return false;
+
+      // Get user's Telegram chat ID
+      const user = await storage.getUser(payload.userId);
+      if (!user?.telegramId) return false;
+
+      // Format message for Telegram
+      const telegramMessage = `${payload.title}\n\n${payload.message}`;
+
+      // Send through telegram service
+      const result = await this.telegramBot.sendMessage(user.telegramId, telegramMessage);
+
+      logger.info('Telegram notification sent', {
+        userId: payload.userId,
+        chatId: user.telegramId,
+        type: payload.type
+      });
+
+      return !!result;
+    } catch (error) {
+      logger.error('Failed to send Telegram notification', error as Error, {
+        userId: payload.userId,
+        type: payload.type
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Send recurring transaction notification
+   */
+  async notifyRecurringTransaction(
+    partnerId: number,
+    transactionAmount: number,
+    description: string,
+    categoryName?: string
+  ): Promise<void> {
+    try {
+      const partner = await storage.getPartner(partnerId);
+      if (!partner) return;
+
+      const user = await storage.getUser(partner.userId);
+      if (!user) return;
+
+      const formattedAmount = new Intl.NumberFormat('ru-RU', {
+        style: 'currency',
+        currency: 'USD'
+      }).format(Math.abs(transactionAmount));
+
+      const transactionType = transactionAmount > 0 ? 'доход' : 'расход';
+      const categoryText = categoryName ? ` в категории "${categoryName}"` : '';
+
+      const payload: NotificationPayload = {
+        userId: user.id,
+        partnerId: partner.id,
+        type: 'RECURRING_TRANSACTION_PROCESSED',
+        title: '💰 Автоматическая операция',
+        message: `Обработан автоматический ${transactionType} ${formattedAmount}${categoryText}.\n\nОписание: ${description}`,
+        metadata: {
+          currentAmount: transactionAmount,
+          categoryName
+        },
+        urgency: 'LOW'
+      };
+
+      await this.sendNotification(payload);
+    } catch (error) {
+      logger.error('Error sending recurring transaction notification', error as Error, {
+        partnerId,
+        transactionAmount
+      });
+    }
+  }
+
+  /**
+   * Send purchase reminder notification
+   */
+  async notifyPurchaseReminder(
+    purchaseId: number,
+    partnerId: number,
+    purchaseTitle: string,
+    purchaseAmount: number,
+    targetDate: string,
+    daysUntil: number
+  ): Promise<void> {
+    try {
+      const partner = await storage.getPartner(partnerId);
+      if (!partner) return;
+
+      const user = await storage.getUser(partner.userId);
+      if (!user) return;
+
+      const formattedAmount = new Intl.NumberFormat('ru-RU', {
+        style: 'currency',
+        currency: 'USD'
+      }).format(purchaseAmount);
+
+      // Format date in Russian
+      const dateObj = new Date(targetDate);
+      const formattedDate = dateObj.toLocaleDateString('ru-RU', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      });
+
+      // Different messages based on days until
+      let title: string;
+      let message: string;
+      let urgency: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+
+      if (daysUntil === 0) {
+        title = '🎯 Сегодня запланирована покупка!';
+        message = `Сегодня запланирована покупка "${purchaseTitle}" на сумму ${formattedAmount}.\n\nНе забудьте подтвердить или перенести покупку в приложении.`;
+        urgency = 'HIGH';
+      } else if (daysUntil === 1) {
+        title = '⏰ Завтра запланирована покупка';
+        message = `Завтра (${formattedDate}) запланирована покупка "${purchaseTitle}" на сумму ${formattedAmount}.\n\nПроверьте наличие средств и подготовьтесь к покупке.`;
+        urgency = 'MEDIUM';
+      } else {
+        title = `📅 Напоминание о покупке через ${daysUntil} дня`;
+        message = `Через ${daysUntil} дня (${formattedDate}) запланирована покупка "${purchaseTitle}" на сумму ${formattedAmount}.\n\nУбедитесь, что у вас будет достаточно средств.`;
+        urgency = 'LOW';
+      }
+
+      const payload: NotificationPayload = {
+        userId: user.id,
+        partnerId: partner.id,
+        type: 'PURCHASE_REMINDER',
+        title,
+        message,
+        metadata: {
+          purchaseId,
+          purchaseTitle,
+          purchaseAmount,
+          targetDate,
+          daysUntil
+        },
+        urgency
+      };
+
+      await this.sendNotification(payload);
+      
+      logger.info('Purchase reminder sent', {
+        purchaseId,
+        partnerId,
+        daysUntil,
+        targetDate
+      });
+    } catch (error) {
+      logger.error('Error sending purchase reminder notification', error as Error, {
+        purchaseId,
+        partnerId,
+        daysUntil
+      });
+    }
+  }
+}
+
+// Export singleton instance
+export const notificationService = new NotificationService();
