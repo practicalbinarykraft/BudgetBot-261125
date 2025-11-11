@@ -90,7 +90,10 @@ export default function WalletsPage() {
     );
   }
 
-  const totalBalance = wallets.reduce((sum, w) => sum + parseFloat(w.balance), 0);
+  const totalBalance = wallets.reduce((sum, w) => {
+    const usdAmount = w.balanceUsd ? parseFloat(w.balanceUsd) : parseFloat(w.balance);
+    return sum + usdAmount;
+  }, 0);
 
   return (
     <div className="space-y-6">
@@ -129,8 +132,14 @@ export default function WalletsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-mono font-bold">
-                  ${parseFloat(wallet.balance).toFixed(2)}
+                  {wallet.currency === "RUB" ? "₽" : wallet.currency === "IDR" ? "Rp" : "$"}
+                  {parseFloat(wallet.balance).toFixed(2)}
                 </div>
+                {wallet.currency !== "USD" && wallet.balanceUsd && (
+                  <div className="text-sm text-muted-foreground mt-1">
+                    ≈ ${parseFloat(wallet.balanceUsd).toFixed(2)}
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground mt-1 capitalize">
                   {wallet.type} • {wallet.currency}
                 </p>
