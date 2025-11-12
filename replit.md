@@ -73,8 +73,10 @@ Preferred communication style: Simple, everyday language.
   - Database: telegram_verification_codes table (userId FK, code, expiresAt, isUsed) enforces code expiry and one-time use; users table extended with telegramId (bigint) and telegramUsername (text) for account linking
   - Verification Flow: Users generate 6-digit code in Settings → send `/verify <code>` to bot → telegramId/username stored in users table → connection established
   - Internationalization (i18n): Full bilingual support (English/Russian) with language preference stored in settings.language
-    - Language Resolution: getUserSettings(telegramId) → getUserLanguage(settings) → fallback to 'en' when user not authenticated
-    - All bot messages localized: welcome, verification, balance, transactions, receipts, errors, help text
+    - Language Resolution: Centralized helpers in language.ts eliminate duplicate queries
+      - getUserLanguageByTelegramId(telegramId): Initial language fetch before user verification
+      - getUserLanguageByUserId(userId): Optimized fetch when user already loaded
+    - All bot messages localized: welcome, verification, balance, transactions, receipts, errors, help text, parsing feedback
     - Language persistence: User's choice saved in database and honored across all bot interactions
     - i18n System: server/telegram/i18n.ts contains translations object with 'en' and 'ru' keys, t() helper function
   - Commands:
@@ -82,15 +84,18 @@ Preferred communication style: Simple, everyday language.
     - `/verify <code>` - Link Telegram account using verification code from web app
     - `/language` or `/lang` - Toggle between English and Russian with inline keyboard
     - `/add <text>` - Parse expense from free-form text (e.g., "Coffee 50 RUB" → creates transaction)
+    - `/income <text>` - Parse income from free-form text with inline confirmation dialog (e.g., "Salary 50000 RUB" → creates income)
+    - `/last` - Display last 5 transactions with formatted date, type, description, amount, and category
     - `/balance` - Show current balances across all wallets with USD equivalents
   - Text Parsing (parser.ts): Extracts amount, currency, and merchant from natural language using regex patterns and category mapping (config.ts); supports formats like "50 RUB coffee", "taxi 300", "lunch $15"
+    - Enhanced Feedback: Pre-parse validation distinguishes empty text, missing amounts, and invalid amounts with detailed bilingual error messages and helpful examples
   - Receipt OCR (ocr.ts): Photo messages processed via Anthropic Vision API to extract merchant, total amount, and currency; user confirms/edits before transaction creation
   - Transaction Creation: All bot-created transactions use primary wallet, convert to USD via centralized currency service, apply ML auto-categorization, and notify via toast on web app
   - API Routes (/api/telegram):
     - POST /generate-code - Creates verification code, invalidates previous codes
     - POST /disconnect - Removes telegramId/telegramUsername, maintains historical data
     - GET /status - Returns connection status and linked username
-  - Security: userId always derived from authenticated session (never from request body), ownership verification on all database operations, bot initialization in server/index.ts post-listen
+  - Security: userId always derived from authenticated session (never from request body), callback handlers re-validate user via telegramId (prevents privilege escalation), ownership verification on all database operations, bot initialization in server/index.ts post-listen
   - Frontend: Settings page Telegram card with real-time verification code timer, copy-to-clipboard, connection status badge, and disconnect flow
   - Integration: Bot modules in server/telegram/ (bot.ts, commands.ts, parser.ts, ocr.ts, config.ts, i18n.ts), uses existing transaction/category/wallet systems
 **Financial Trend Chart with AI Forecasting:** Production-ready dashboard visualization showing cumulative income, expenses, and capital trends with AI-powered predictions:
