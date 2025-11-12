@@ -7,6 +7,7 @@ import { processReceiptImage } from './ocr';
 import { t, getWelcomeMessage, getHelpMessage, type Language } from './i18n';
 import { getUserLanguageByTelegramId, getUserLanguageByUserId } from './language';
 import { convertToUSD, getUserExchangeRates } from '../services/currency-service';
+import { resolveCategoryId } from '../services/category-resolution.service';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 
 async function formatTransactionMessage(
@@ -319,18 +320,8 @@ export async function handleTextMessage(bot: TelegramBot, msg: TelegramBot.Messa
       return;
     }
 
-    const userCategories = await db
-      .select()
-      .from(categories)
-      .where(
-        and(
-          eq(categories.userId, user.id),
-          eq(categories.name, parsed.category)
-        )
-      )
-      .limit(1);
-
-    const categoryId = userCategories[0]?.id || null;
+    // Resolve category using category resolution service
+    const categoryId = await resolveCategoryId(user.id, parsed.category);
 
     // Get user's custom exchange rates
     const rates = await getUserExchangeRates(user.id);
@@ -423,18 +414,8 @@ export async function handlePhotoMessage(bot: TelegramBot, msg: TelegramBot.Mess
       return;
     }
 
-    const userCategories = await db
-      .select()
-      .from(categories)
-      .where(
-        and(
-          eq(categories.userId, user.id),
-          eq(categories.name, parsed.category)
-        )
-      )
-      .limit(1);
-
-    const categoryId = userCategories[0]?.id || null;
+    // Resolve category using category resolution service
+    const categoryId = await resolveCategoryId(user.id, parsed.category);
 
     // Get user's custom exchange rates
     const rates = await getUserExchangeRates(user.id);
@@ -950,18 +931,8 @@ export async function handleIncomeCommand(bot: TelegramBot, msg: TelegramBot.Mes
 
     parsed.type = 'income';
 
-    const userCategories = await db
-      .select()
-      .from(categories)
-      .where(
-        and(
-          eq(categories.userId, user.id),
-          eq(categories.name, parsed.category)
-        )
-      )
-      .limit(1);
-
-    const categoryId = userCategories[0]?.id || null;
+    // Resolve category using category resolution service
+    const categoryId = await resolveCategoryId(user.id, parsed.category);
     
     // Get user's custom exchange rates
     const rates = await getUserExchangeRates(user.id);
