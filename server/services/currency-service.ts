@@ -23,6 +23,13 @@ const userRateCache = new Map<number, UserRateCache>();
 const CACHE_TTL = 3600000; // 1 hour in milliseconds
 
 /**
+ * Invalidate cache for a specific user (call when settings are updated)
+ */
+export function invalidateUserRateCache(userId: number): void {
+  userRateCache.delete(userId);
+}
+
+/**
  * Get exchange rates for a user (custom rates > static fallback)
  */
 export async function getUserExchangeRates(userId: number): Promise<Record<string, number>> {
@@ -71,8 +78,9 @@ export function convertToUSD(amount: number, currency: string, rates?: Record<st
   return amount / rate;
 }
 
-export function convertFromUSD(amount: number, currency: string): number {
-  const rate = EXCHANGE_RATES[currency] || 1;
+export function convertFromUSD(amount: number, currency: string, rates?: Record<string, number>): number {
+  const exchangeRates = rates || EXCHANGE_RATES;
+  const rate = exchangeRates[currency] || 1;
   return amount * rate;
 }
 
@@ -126,7 +134,7 @@ export function convertWithRate(
   
   // Convert to USD first, then to target currency
   const usdAmount = convertToUSD(amount, fromCurrency, rates);
-  const finalAmount = toCurrency === "USD" ? usdAmount : convertFromUSD(usdAmount, toCurrency);
+  const finalAmount = toCurrency === "USD" ? usdAmount : convertFromUSD(usdAmount, toCurrency, rates);
   
   // Calculate the actual rate used
   const rate = fromCurrency === "USD" 

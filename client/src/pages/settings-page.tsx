@@ -132,24 +132,41 @@ export default function SettingsPage() {
 
   const form = useForm<FormData>({
     resolver: zodResolver(insertSettingsSchema),
-    values: settings ? {
-      userId: settings.userId,
-      language: (settings.language || "en") as "en" | "ru",
-      currency: (settings.currency || "USD") as "USD" | "RUB" | "IDR",
-      telegramNotifications: settings.telegramNotifications,
-      anthropicApiKey: settings.anthropicApiKey || undefined,
-    } : {
+    defaultValues: {
       userId: user?.id || 0,
       language: "en",
       currency: "USD",
       telegramNotifications: true,
       anthropicApiKey: undefined,
+      exchangeRateRUB: undefined,
+      exchangeRateIDR: undefined,
     },
   });
 
+  // Reset form when settings are loaded
+  useEffect(() => {
+    if (settings) {
+      form.reset({
+        userId: settings.userId,
+        language: (settings.language || "en") as "en" | "ru",
+        currency: (settings.currency || "USD") as "USD" | "RUB" | "IDR",
+        telegramNotifications: settings.telegramNotifications,
+        anthropicApiKey: settings.anthropicApiKey || undefined,
+        exchangeRateRUB: settings.exchangeRateRUB || undefined,
+        exchangeRateIDR: settings.exchangeRateIDR || undefined,
+      });
+    }
+  }, [settings, form]);
+
   const updateMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const res = await apiRequest("PATCH", "/api/settings", data);
+      // Normalize empty strings to null for exchange rates
+      const normalizedData = {
+        ...data,
+        exchangeRateRUB: data.exchangeRateRUB === "" || data.exchangeRateRUB === undefined ? null : data.exchangeRateRUB,
+        exchangeRateIDR: data.exchangeRateIDR === "" || data.exchangeRateIDR === undefined ? null : data.exchangeRateIDR,
+      };
+      const res = await apiRequest("PATCH", "/api/settings", normalizedData);
       return res.json();
     },
     onSuccess: () => {
@@ -292,6 +309,70 @@ export default function SettingsPage() {
                   </FormItem>
                 )}
               />
+
+              <div className="border-t pt-6 mt-6">
+                <h3 className="text-lg font-semibold mb-2">Exchange Rates</h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Customize currency conversion rates for RUB and IDR. Leave empty to use default rates (1 USD = 92.5 RUB, 1 USD = 15,750 IDR). 
+                  Changes apply to all future transactions and Telegram bot conversions.
+                </p>
+
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="exchangeRateRUB"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>RUB to USD Rate</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="92.5"
+                            {...field}
+                            value={field.value || ""}
+                            data-testid="input-rate-rub"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          How many Russian Rubles equal 1 USD (e.g., 92.5 means 1 USD = 92.5 RUB)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="exchangeRateIDR"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>IDR to USD Rate</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="15750"
+                            {...field}
+                            value={field.value || ""}
+                            data-testid="input-rate-idr"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          How many Indonesian Rupiah equal 1 USD (e.g., 15750 means 1 USD = 15,750 IDR)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {settings?.exchangeRatesUpdatedAt && (
+                    <p className="text-sm text-muted-foreground">
+                      Last updated: {new Date(settings.exchangeRatesUpdatedAt).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              </div>
 
               <Button type="submit" disabled={updateMutation.isPending} data-testid="button-save-settings">
                 {updateMutation.isPending ? "Saving..." : "Save Settings"}

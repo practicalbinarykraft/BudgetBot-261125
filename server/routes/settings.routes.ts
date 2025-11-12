@@ -2,6 +2,7 @@ import { Router } from "express";
 import { storage } from "../storage";
 import { insertSettingsSchema } from "@shared/schema";
 import { withAuth } from "../middleware/auth-utils";
+import { invalidateUserRateCache } from "../services/currency-service";
 
 const router = Router();
 
@@ -31,6 +32,12 @@ router.patch("/", withAuth(async (req, res) => {
     const { userId, ...sanitizedBody } = req.body;
     
     const data = insertSettingsSchema.partial().parse(sanitizedBody);
+    
+    // Update exchangeRatesUpdatedAt if rates are being changed
+    if (data.exchangeRateRUB !== undefined || data.exchangeRateIDR !== undefined) {
+      (data as any).exchangeRatesUpdatedAt = new Date();
+    }
+    
     let settings = await storage.getSettingsByUserId(req.user.id);
     
     if (!settings) {
@@ -42,6 +49,11 @@ router.patch("/", withAuth(async (req, res) => {
       });
     } else {
       settings = await storage.updateSettings(req.user.id, data);
+    }
+    
+    // Invalidate exchange rate cache if rates were updated
+    if (data.exchangeRateRUB !== undefined || data.exchangeRateIDR !== undefined) {
+      invalidateUserRateCache(req.user.id);
     }
     
     res.json(settings);
