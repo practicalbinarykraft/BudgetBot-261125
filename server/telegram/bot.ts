@@ -10,6 +10,7 @@ import {
   handleCallbackQuery,
 } from './commands';
 import { TELEGRAM_BOT_TOKEN } from './config';
+import { getUserLanguageByTelegramId } from './language';
 
 let bot: TelegramBot | null = null;
 
@@ -58,35 +59,9 @@ export function initTelegramBot(): TelegramBot | null {
               break;
             default:
               // Get user's language for error message
-              const { t, getUserLanguage } = await import('./i18n');
-              const { db } = await import('../db');
-              const { users, settings } = await import('@shared/schema');
-              const { eq } = await import('drizzle-orm');
-              
-              let lang: 'en' | 'ru' = 'en';
+              const { t } = await import('./i18n');
               const telegramId = msg.from?.id.toString();
-              
-              if (telegramId) {
-                try {
-                  const [user] = await db
-                    .select()
-                    .from(users)
-                    .where(eq(users.telegramId, telegramId))
-                    .limit(1);
-                  
-                  if (user) {
-                    const [userSettings] = await db
-                      .select()
-                      .from(settings)
-                      .where(eq(settings.userId, user.id))
-                      .limit(1);
-                    
-                    lang = getUserLanguage(userSettings);
-                  }
-                } catch (err) {
-                  console.error('Error fetching user language:', err);
-                }
-              }
+              const lang = telegramId ? await getUserLanguageByTelegramId(telegramId) : 'en';
               
               await bot!.sendMessage(
                 msg.chat.id,
@@ -101,35 +76,9 @@ export function initTelegramBot(): TelegramBot | null {
       } catch (error) {
         console.error('Error handling message:', error);
         try {
-          const { t, getUserLanguage } = await import('./i18n');
-          const { db } = await import('../db');
-          const { users, settings } = await import('@shared/schema');
-          const { eq } = await import('drizzle-orm');
-          
-          let lang: 'en' | 'ru' = 'en';
+          const { t } = await import('./i18n');
           const telegramId = msg.from?.id.toString();
-          
-          if (telegramId) {
-            try {
-              const [user] = await db
-                .select()
-                .from(users)
-                .where(eq(users.telegramId, telegramId))
-                .limit(1);
-              
-              if (user) {
-                const [userSettings] = await db
-                  .select()
-                  .from(settings)
-                  .where(eq(settings.userId, user.id))
-                  .limit(1);
-                
-                lang = getUserLanguage(userSettings);
-              }
-            } catch (err) {
-              console.error('Error fetching user language:', err);
-            }
-          }
+          const lang = telegramId ? await getUserLanguageByTelegramId(telegramId) : 'en';
           
           await bot!.sendMessage(
             msg.chat.id,

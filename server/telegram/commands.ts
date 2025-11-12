@@ -4,42 +4,16 @@ import { users, telegramVerificationCodes, wallets, transactions, categories, se
 import { eq, and, sql } from 'drizzle-orm';
 import { parseTransactionText, formatCurrency } from './parser';
 import { processReceiptImage } from './ocr';
-import { t, getUserLanguage, getWelcomeMessage, getHelpMessage, type Language } from './i18n';
+import { t, getWelcomeMessage, getHelpMessage, type Language } from './i18n';
+import { getUserLanguageByTelegramId, getUserLanguageByUserId } from './language';
 import { convertToUSD } from '../services/currency-service';
 import { format } from 'date-fns';
-
-/**
- * Get user settings for language preference
- */
-async function getUserSettings(telegramId: string) {
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.telegramId, telegramId))
-    .limit(1);
-
-  if (!user) {
-    return null;
-  }
-
-  const [userSettings] = await db
-    .select()
-    .from(settings)
-    .where(eq(settings.userId, user.id))
-    .limit(1);
-
-  return userSettings;
-}
 
 export async function handleStartCommand(bot: TelegramBot, msg: TelegramBot.Message) {
   const chatId = msg.chat.id;
   const telegramId = msg.from?.id.toString();
   
-  let lang: Language = 'en';
-  if (telegramId) {
-    const userSettings = await getUserSettings(telegramId);
-    lang = getUserLanguage(userSettings);
-  }
+  const lang = telegramId ? await getUserLanguageByTelegramId(telegramId) : 'en';
   
   await bot.sendMessage(chatId, getWelcomeMessage(lang), { parse_mode: 'Markdown' });
 }
@@ -54,15 +28,7 @@ export async function handleVerifyCommand(
   const telegramUsername = msg.from?.username || null;
 
   // Try to get user's language (fallback to 'en' if not possible yet)
-  let lang: Language = 'en';
-  if (telegramId) {
-    try {
-      const userSettings = await getUserSettings(telegramId);
-      lang = getUserLanguage(userSettings);
-    } catch (err) {
-      // User probably doesn't exist yet, use default 'en'
-    }
-  }
+  let lang = telegramId ? await getUserLanguageByTelegramId(telegramId) : 'en';
 
   if (!telegramId) {
     await bot.sendMessage(chatId, t('verify.no_telegram_id', lang));
@@ -108,8 +74,7 @@ export async function handleVerifyCommand(
       .where(eq(telegramVerificationCodes.id, verificationRecord.id));
 
     // Re-fetch settings after connection to get user's preferred language
-    const userSettings = await getUserSettings(telegramId);
-    lang = getUserLanguage(userSettings);
+    lang = await getUserLanguageByTelegramId(telegramId);
 
     await bot.sendMessage(chatId, t('verify.success', lang), { parse_mode: 'Markdown' });
   } catch (error) {
@@ -122,11 +87,7 @@ export async function handleHelpCommand(bot: TelegramBot, msg: TelegramBot.Messa
   const chatId = msg.chat.id;
   const telegramId = msg.from?.id.toString();
   
-  let lang: Language = 'en';
-  if (telegramId) {
-    const userSettings = await getUserSettings(telegramId);
-    lang = getUserLanguage(userSettings);
-  }
+  const lang = telegramId ? await getUserLanguageByTelegramId(telegramId) : 'en';
   
   await bot.sendMessage(chatId, getHelpMessage(lang), { parse_mode: 'Markdown' });
 }
@@ -135,16 +96,7 @@ export async function handleBalanceCommand(bot: TelegramBot, msg: TelegramBot.Me
   const chatId = msg.chat.id;
   const telegramId = msg.from?.id.toString();
 
-  // Try to get user's language
-  let lang: Language = 'en';
-  if (telegramId) {
-    try {
-      const userSettings = await getUserSettings(telegramId);
-      lang = getUserLanguage(userSettings);
-    } catch (err) {
-      // Use default 'en'
-    }
-  }
+  let lang = telegramId ? await getUserLanguageByTelegramId(telegramId) : 'en';
 
   if (!telegramId) {
     await bot.sendMessage(chatId, t('verify.no_telegram_id', lang));
@@ -163,8 +115,7 @@ export async function handleBalanceCommand(bot: TelegramBot, msg: TelegramBot.Me
       return;
     }
 
-    const userSettings = await getUserSettings(telegramId);
-    lang = getUserLanguage(userSettings);
+    lang = await getUserLanguageByUserId(user.id);
 
     const userWallets = await db
       .select()
@@ -195,8 +146,7 @@ export async function handleBalanceCommand(bot: TelegramBot, msg: TelegramBot.Me
     await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
   } catch (error) {
     console.error('Balance command error:', error);
-    const userSettings = await getUserSettings(telegramId);
-    const lang = getUserLanguage(userSettings);
+    const lang = await getUserLanguageByTelegramId(telegramId);
     await bot.sendMessage(chatId, t('error.balance', lang));
   }
 }
@@ -210,16 +160,7 @@ export async function handleTextMessage(bot: TelegramBot, msg: TelegramBot.Messa
     return;
   }
 
-  // Try to get user's language
-  let lang: Language = 'en';
-  if (telegramId) {
-    try {
-      const tempSettings = await getUserSettings(telegramId);
-      lang = getUserLanguage(tempSettings);
-    } catch (err) {
-      // Use default 'en'
-    }
-  }
+  let lang = await getUserLanguageByTelegramId(telegramId);
 
   try {
     const [user] = await db
@@ -233,8 +174,7 @@ export async function handleTextMessage(bot: TelegramBot, msg: TelegramBot.Messa
       return;
     }
 
-    const userSettings = await getUserSettings(telegramId);
-    lang = getUserLanguage(userSettings);
+    lang = await getUserLanguageByUserId(user.id);
 
     const parsed = parseTransactionText(text);
 
@@ -292,14 +232,8 @@ export async function handleTextMessage(bot: TelegramBot, msg: TelegramBot.Messa
     );
   } catch (error) {
     console.error('Text message handling error:', error);
-    const telegramId = msg.from?.id.toString();
-    if (telegramId) {
-      const userSettings = await getUserSettings(telegramId);
-      const lang = getUserLanguage(userSettings);
-      await bot.sendMessage(chatId, t('error.transaction', lang));
-    } else {
-      await bot.sendMessage(chatId, t('error.transaction', 'en'));
-    }
+    const lang = await getUserLanguageByTelegramId(telegramId);
+    await bot.sendMessage(chatId, t('error.transaction', lang));
   }
 }
 
@@ -311,16 +245,7 @@ export async function handlePhotoMessage(bot: TelegramBot, msg: TelegramBot.Mess
     return;
   }
 
-  // Try to get user's language
-  let lang: Language = 'en';
-  if (telegramId) {
-    try {
-      const tempSettings = await getUserSettings(telegramId);
-      lang = getUserLanguage(tempSettings);
-    } catch (err) {
-      // Use default 'en'
-    }
-  }
+  let lang = await getUserLanguageByTelegramId(telegramId);
 
   try {
     const [user] = await db
@@ -334,8 +259,7 @@ export async function handlePhotoMessage(bot: TelegramBot, msg: TelegramBot.Mess
       return;
     }
 
-    const userSettings = await getUserSettings(telegramId);
-    lang = getUserLanguage(userSettings);
+    lang = await getUserLanguageByUserId(user.id);
 
     const photo = msg.photo[msg.photo.length - 1];
     
@@ -393,14 +317,8 @@ export async function handlePhotoMessage(bot: TelegramBot, msg: TelegramBot.Mess
 
   } catch (error) {
     console.error('Photo message handling error:', error);
-    const telegramId = msg.from?.id.toString();
-    if (telegramId) {
-      const userSettings = await getUserSettings(telegramId);
-      const lang = getUserLanguage(userSettings);
-      await bot.sendMessage(chatId, t('error.receipt', lang));
-    } else {
-      await bot.sendMessage(chatId, t('error.receipt', 'en'));
-    }
+    const lang = await getUserLanguageByTelegramId(telegramId);
+    await bot.sendMessage(chatId, t('error.receipt', lang));
   }
 }
 
@@ -408,16 +326,7 @@ export async function handleLanguageCommand(bot: TelegramBot, msg: TelegramBot.M
   const chatId = msg.chat.id;
   const telegramId = msg.from?.id.toString();
 
-  // Try to get user's language
-  let lang: Language = 'en';
-  if (telegramId) {
-    try {
-      const userSettings = await getUserSettings(telegramId);
-      lang = getUserLanguage(userSettings);
-    } catch (err) {
-      // Use default 'en'
-    }
-  }
+  let lang = telegramId ? await getUserLanguageByTelegramId(telegramId) : 'en';
 
   if (!telegramId) {
     await bot.sendMessage(chatId, t('verify.no_telegram_id', lang));
@@ -436,8 +345,7 @@ export async function handleLanguageCommand(bot: TelegramBot, msg: TelegramBot.M
       return;
     }
 
-    const userSettings = await getUserSettings(telegramId);
-    lang = getUserLanguage(userSettings);
+    lang = await getUserLanguageByUserId(user.id);
 
     await bot.sendMessage(chatId, `${t('language.current', lang)}: ${t(`language.${lang}`, lang)}\n\n${t('language.choose', lang)}`, {
       parse_mode: 'Markdown',
@@ -465,8 +373,7 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
   }
 
   try {
-    const userSettings = await getUserSettings(telegramId);
-    const lang = getUserLanguage(userSettings);
+    let lang = await getUserLanguageByTelegramId(telegramId);
 
     // Handle language change
     if (query.data?.startsWith('set_language:')) {
@@ -482,6 +389,8 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
         await bot.answerCallbackQuery(query.id, { text: t('error.user_not_found', lang) });
         return;
       }
+
+      lang = await getUserLanguageByUserId(user.id);
 
       // Check if settings exist, create if not
       const [existingSettings] = await db
@@ -533,6 +442,8 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
         return;
       }
 
+      lang = await getUserLanguageByUserId(user.id);
+
       const dataStr = query.data.substring('confirm_receipt:'.length);
       const { parsed, categoryId, amountUsd } = JSON.parse(dataStr);
 
@@ -570,8 +481,7 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
     }
   } catch (error) {
     console.error('Callback query handling error:', error);
-    const userSettings = await getUserSettings(telegramId);
-    const lang = getUserLanguage(userSettings);
+    const lang = await getUserLanguageByTelegramId(telegramId);
     await bot.answerCallbackQuery(query.id, { text: t('error.generic', lang) });
   }
 }
