@@ -41,8 +41,8 @@ const translations: Translations = {
     ru: '📖 *Доступные команды*',
   },
   'help.commands': {
-    en: '*/start* - Show welcome message\n*/verify <code>* - Connect your account\n*/balance* - Show wallet balances\n*/last* - Show last 5 transactions\n*/language* - Change language\n*/help* - Show this help',
-    ru: '*/start* - Показать приветствие\n*/verify <код>* - Подключить аккаунт\n*/balance* - Показать балансы кошельков\n*/last* - Показать последние 5 транзакций\n*/language* - Сменить язык\n*/help* - Показать эту справку',
+    en: '*/start* - Show welcome message\n*/verify <code>* - Connect your account\n*/balance* - Show wallet balances\n*/last* - Show last 5 transactions\n*/income <text>* - Add income\n*/language* - Change language\n*/help* - Show this help',
+    ru: '*/start* - Показать приветствие\n*/verify <код>* - Подключить аккаунт\n*/balance* - Показать балансы кошельков\n*/last* - Показать последние 5 транзакций\n*/income <текст>* - Добавить доход\n*/language* - Сменить язык\n*/help* - Показать эту справку',
   },
   'help.quick_add': {
     en: '*Quick Add:*\nJust send: `100 coffee` or `1500₽ taxi`',
@@ -143,6 +143,28 @@ const translations: Translations = {
   'last.expense': {
     en: '💸 Expense',
     ru: '💸 Расход',
+  },
+
+  // Income command
+  'income.usage': {
+    en: '❌ *Usage:* `/income <amount> <description>`\n\nExamples:\n• `/income 5000 RUB salary`\n• `/income 1000₽ freelance`\n• `/income 200 bonus`',
+    ru: '❌ *Использование:* `/income <сумма> <описание>`\n\nПримеры:\n• `/income 5000 RUB зарплата`\n• `/income 1000₽ фриланс`\n• `/income 200 бонус`',
+  },
+  'income.confirm_question': {
+    en: 'Add this income?',
+    ru: 'Добавить этот доход?',
+  },
+  'income.confirm_button': {
+    en: '✅ Confirm',
+    ru: '✅ Подтвердить',
+  },
+  'income.cancel_button': {
+    en: '❌ Cancel',
+    ru: '❌ Отмена',
+  },
+  'income.cancelled': {
+    en: '❌ Income cancelled.',
+    ru: '❌ Доход отменён.',
   },
 
   // Receipt OCR

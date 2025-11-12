@@ -500,6 +500,65 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
 
       await bot.answerCallbackQuery(query.id, { text: t('receipt.added', lang) });
     }
+
+    if (query.data === 'cancel_income') {
+      await bot.editMessageText(t('income.cancelled', lang), {
+        chat_id: chatId,
+        message_id: query.message?.message_id,
+      });
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+
+    if (query.data.startsWith('confirm_income:')) {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.telegramId, telegramId))
+        .limit(1);
+
+      if (!user) {
+        await bot.answerCallbackQuery(query.id, { text: t('error.user_not_found', lang) });
+        return;
+      }
+
+      lang = await getUserLanguageByUserId(user.id);
+
+      const dataStr = query.data.substring('confirm_income:'.length);
+      const { parsed, categoryId, amountUsd } = JSON.parse(dataStr);
+
+      await db
+        .insert(transactions)
+        .values({
+          userId: user.id,
+          date: format(new Date(), 'yyyy-MM-dd'),
+          type: 'income',
+          amount: parsed.amount.toString(),
+          description: parsed.description,
+          categoryId,
+          currency: parsed.currency,
+          amountUsd: amountUsd.toString(),
+          originalAmount: parsed.amount.toString(),
+          originalCurrency: parsed.currency,
+          exchangeRate: (parsed.amount / amountUsd).toFixed(4),
+          source: 'telegram',
+          walletId: null,
+        });
+
+      await bot.editMessageText(
+        `${t('transaction.income_added', lang)}\n\n` +
+        `${t('transaction.amount', lang)}: ${formatCurrency(parsed.amount, parsed.currency)}\n` +
+        `${t('transaction.description', lang)}: ${parsed.description}\n` +
+        `${t('transaction.category', lang)}: ${parsed.category}`,
+        {
+          chat_id: chatId,
+          message_id: query.message?.message_id,
+          parse_mode: 'Markdown'
+        }
+      );
+
+      await bot.answerCallbackQuery(query.id, { text: t('transaction.income_added', lang) });
+    }
   } catch (error) {
     console.error('Callback query handling error:', error);
     const lang = await getUserLanguageByTelegramId(telegramId);
@@ -561,6 +620,89 @@ export async function handleLastCommand(bot: TelegramBot, msg: TelegramBot.Messa
     await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
   } catch (error) {
     console.error('Last command error:', error);
+    const lang = await getUserLanguageByTelegramId(telegramId);
+    await bot.sendMessage(chatId, t('error.generic', lang));
+  }
+}
+
+export async function handleIncomeCommand(bot: TelegramBot, msg: TelegramBot.Message, text: string) {
+  const chatId = msg.chat.id;
+  const telegramId = msg.from?.id.toString();
+
+  if (!telegramId) {
+    await bot.sendMessage(chatId, t('verify.no_telegram_id', 'en'));
+    return;
+  }
+
+  let lang = await getUserLanguageByTelegramId(telegramId);
+
+  if (!text || text.trim().length === 0) {
+    await bot.sendMessage(chatId, t('income.usage', lang), { parse_mode: 'Markdown' });
+    return;
+  }
+
+  try {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.telegramId, telegramId))
+      .limit(1);
+
+    if (!user) {
+      await bot.sendMessage(chatId, t('verify.not_verified', lang), { parse_mode: 'Markdown' });
+      return;
+    }
+
+    lang = await getUserLanguageByUserId(user.id);
+
+    const parsed = parseTransactionText(text);
+
+    if (!parsed) {
+      await bot.sendMessage(chatId, t('income.usage', lang), { parse_mode: 'Markdown' });
+      return;
+    }
+
+    parsed.type = 'income';
+
+    const userCategories = await db
+      .select()
+      .from(categories)
+      .where(
+        and(
+          eq(categories.userId, user.id),
+          eq(categories.name, parsed.category)
+        )
+      )
+      .limit(1);
+
+    const categoryId = userCategories[0]?.id || null;
+    const amountUsd = convertToUSD(parsed.amount, parsed.currency);
+
+    const dataPayload = {
+      parsed,
+      categoryId,
+      amountUsd
+    };
+
+    await bot.sendMessage(
+      chatId,
+      `💰 *${t('transaction.income', lang)}*\n\n` +
+      `${t('transaction.amount', lang)}: ${formatCurrency(parsed.amount, parsed.currency)}\n` +
+      `${t('transaction.description', lang)}: ${parsed.description}\n` +
+      `${t('transaction.category', lang)}: ${parsed.category}\n\n` +
+      `${t('income.confirm_question', lang)}`,
+      {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [[
+            { text: t('income.confirm_button', lang), callback_data: `confirm_income:${JSON.stringify(dataPayload)}` },
+            { text: t('income.cancel_button', lang), callback_data: 'cancel_income' }
+          ]]
+        }
+      }
+    );
+  } catch (error) {
+    console.error('Income command error:', error);
     const lang = await getUserLanguageByTelegramId(telegramId);
     await bot.sendMessage(chatId, t('error.generic', lang));
   }
