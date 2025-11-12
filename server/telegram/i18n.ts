@@ -41,8 +41,8 @@ const translations: Translations = {
     ru: '📖 *Доступные команды*',
   },
   'help.commands': {
-    en: '*/start* - Show welcome message\n*/verify <code>* - Connect your account\n*/balance* - Show wallet balances\n*/last* - Show last 5 transactions\n*/income <text>* - Add income\n*/language* - Change language\n*/help* - Show this help',
-    ru: '*/start* - Показать приветствие\n*/verify <код>* - Подключить аккаунт\n*/balance* - Показать балансы кошельков\n*/last* - Показать последние 5 транзакций\n*/income <текст>* - Добавить доход\n*/language* - Сменить язык\n*/help* - Показать эту справку',
+    en: '*/start* - Show welcome message\n*/verify <code>* - Connect your account\n*/status* - Check connection status\n*/balance* - Show wallet balances\n*/last* - Show last 5 transactions\n*/income <text>* - Add income\n*/language* - Change language\n*/help* - Show this help',
+    ru: '*/start* - Показать приветствие\n*/verify <код>* - Подключить аккаунт\n*/status* - Проверить статус подключения\n*/balance* - Показать балансы кошельков\n*/last* - Показать последние 5 транзакций\n*/income <текст>* - Добавить доход\n*/language* - Сменить язык\n*/help* - Показать эту справку',
   },
   'help.quick_add': {
     en: '*Quick Add:*\nJust send: `100 coffee` or `1500₽ taxi`',
@@ -169,6 +169,16 @@ const translations: Translations = {
   'transaction.edit_coming_soon': {
     en: '⏳ Edit feature coming soon! For now, delete and create a new transaction.',
     ru: '⏳ Функция редактирования скоро появится! Пока что удалите и создайте новую транзакцию.',
+  },
+
+  // Status
+  'status.connected': {
+    en: '✅ *Connection Status*\n\nYou are connected to Budget Buddy!\n\n👤 Name: {name}\n📱 Telegram: @{username}\n🌐 Language: {language}',
+    ru: '✅ *Статус подключения*\n\nВы подключены к Budget Buddy!\n\n👤 Имя: {name}\n📱 Telegram: @{username}\n🌐 Язык: {language}',
+  },
+  'status.not_connected': {
+    en: '❌ *Not Connected*\n\nYou are not connected to Budget Buddy yet.\n\nTo connect:\n1. Open Budget Buddy web app\n2. Go to Settings\n3. Generate verification code\n4. Send `/verify <code>` here',
+    ru: '❌ *Не подключено*\n\nВы еще не подключены к Budget Buddy.\n\nЧтобы подключиться:\n1. Откройте веб-приложение Budget Buddy\n2. Перейдите в Настройки\n3. Сгенерируйте код верификации\n4. Отправьте `/verify <код>` сюда',
   },
 
   // Last transactions

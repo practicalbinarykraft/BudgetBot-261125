@@ -82,6 +82,7 @@ Preferred communication style: Simple, everyday language.
   - Commands:
     - `/start` - Welcome message with quick start guide
     - `/verify <code>` - Link Telegram account using verification code from web app
+    - `/status` - Check connection status (shows name, username, language)
     - `/language` or `/lang` - Toggle between English and Russian with inline keyboard
     - `/add <text>` - Parse expense from free-form text (e.g., "Coffee 50 RUB" → creates transaction)
     - `/income <text>` - Parse income from free-form text with inline confirmation dialog (e.g., "Salary 50000 RUB" → creates income)
@@ -91,6 +92,16 @@ Preferred communication style: Simple, everyday language.
     - Enhanced Feedback: Pre-parse validation distinguishes empty text, missing amounts, and invalid amounts with detailed bilingual error messages and helpful examples
   - Receipt OCR (ocr.ts): Photo messages processed via Anthropic Vision API to extract merchant, total amount, and currency; user confirms/edits before transaction creation
   - Transaction Creation: All bot-created transactions use primary wallet, convert to USD via centralized currency service, apply ML auto-categorization, and notify via toast on web app
+  - Enhanced Transaction Notifications: Rich message format via formatTransactionMessage() helper:
+    - Shows conversion rate (e.g., "1 USD = 92.50 RUB") for non-USD transactions
+    - Displays USD equivalent amount for all transactions
+    - Shows total capital (sum of all wallet balances in USD)
+    - Shows budget progress when category has a limit (e.g., "$540/$1000")
+    - Inline action buttons: [✏️ Edit] [🗑 Delete] under every transaction
+    - Delete flow: confirmation dialog with "Yes, delete" / "Cancel" options
+    - Edit flow: currently shows "coming soon" message (full implementation deferred)
+    - Security: All callbacks re-validate user ownership before allowing actions
+    - Fully bilingual (EN/RU) with emoji and formatting preserved
   - API Routes (/api/telegram):
     - POST /generate-code - Creates verification code, invalidates previous codes
     - POST /disconnect - Removes telegramId/telegramUsername, maintains historical data

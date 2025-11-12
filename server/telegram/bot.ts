@@ -7,6 +7,7 @@ import {
   handleLanguageCommand,
   handleLastCommand,
   handleIncomeCommand,
+  handleStatusCommand,
   handleTextMessage,
   handlePhotoMessage,
   handleCallbackQuery,
@@ -64,6 +65,9 @@ export function initTelegramBot(): TelegramBot | null {
               break;
             case '/income':
               await handleIncomeCommand(bot!, msg, args.join(' '));
+              break;
+            case '/status':
+              await handleStatusCommand(bot!, msg);
               break;
             default:
               // Get user's language for error message
