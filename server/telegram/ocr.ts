@@ -1,10 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { ParsedTransaction } from './parser';
 import { DEFAULT_CATEGORY_EXPENSE, CATEGORY_KEYWORDS } from './config';
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || '',
-});
+import { storage } from '../storage';
 
 export interface ReceiptData {
   amount: number;
@@ -15,17 +12,34 @@ export interface ReceiptData {
 }
 
 /**
- * Распознать чек через Claude Vision API
+ * Распознать чек через Claude Vision API (BYOK - использует API ключ пользователя)
  * 
+ * @param userId - ID пользователя (для загрузки API ключа из Settings)
  * @param imageBase64 - Изображение чека в base64
+ * @param mimeType - MIME тип изображения
  * @returns Распознанные данные или null
  */
 export async function processReceiptImage(
+  userId: number,
   imageBase64: string,
   mimeType: string = 'image/jpeg'
 ): Promise<ParsedTransaction | null> {
   try {
-    // 1. Отправить изображение в Claude
+    // 1. Загрузить настройки пользователя
+    const settings = await storage.getSettingsByUserId(userId);
+    const apiKey = settings?.anthropicApiKey;
+
+    if (!apiKey) {
+      console.error('OCR failed: User has no Anthropic API key in Settings');
+      return null;
+    }
+
+    // 2. Создать Anthropic client с пользовательским ключом
+    const anthropic = new Anthropic({
+      apiKey: apiKey,
+    });
+
+    // 3. Отправить изображение в Claude
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
@@ -50,22 +64,22 @@ export async function processReceiptImage(
       ],
     });
 
-    // 2. Получить текст ответа
+    // 4. Получить текст ответа
     const content = response.content[0];
     if (content.type !== 'text') {
       return null;
     }
 
-    // 3. Распарсить JSON
+    // 5. Распарсить JSON
     const receiptData = parseReceiptJSON(content.text);
     if (!receiptData) {
       return null;
     }
 
-    // 4. Определить категорию
+    // 6. Определить категорию
     const category = detectCategory(receiptData.merchantName || receiptData.description);
 
-    // 5. Вернуть результат
+    // 7. Вернуть результат
     return {
       amount: receiptData.amount,
       currency: receiptData.currency,

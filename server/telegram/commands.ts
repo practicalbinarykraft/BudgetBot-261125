@@ -8,6 +8,7 @@ import { t, getWelcomeMessage, getHelpMessage, type Language } from './i18n';
 import { getUserLanguageByTelegramId, getUserLanguageByUserId } from './language';
 import { convertToUSD, getUserExchangeRates } from '../services/currency-service';
 import { resolveCategoryId } from '../services/category-resolution.service';
+import { storage } from '../storage';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 
 async function formatTransactionMessage(
@@ -401,6 +402,16 @@ export async function handlePhotoMessage(bot: TelegramBot, msg: TelegramBot.Mess
 
     lang = await getUserLanguageByUserId(user.id);
 
+    // Check if user has Anthropic API key for OCR (using storage for consistency)
+    const userSettings = await storage.getSettingsByUserId(user.id);
+
+    if (!userSettings?.anthropicApiKey) {
+      await bot.sendMessage(chatId, t('receipt.no_api_key', lang), {
+        parse_mode: 'Markdown'
+      });
+      return;
+    }
+
     const photo = msg.photo[msg.photo.length - 1];
     
     await bot.sendMessage(chatId, t('receipt.processing', lang));
@@ -412,7 +423,7 @@ export async function handlePhotoMessage(bot: TelegramBot, msg: TelegramBot.Mess
     const buffer = await response.arrayBuffer();
     const base64 = Buffer.from(buffer).toString('base64');
 
-    const parsed = await processReceiptImage(base64);
+    const parsed = await processReceiptImage(user.id, base64);
 
     if (!parsed) {
       await bot.sendMessage(chatId, t('receipt.error', lang), {
