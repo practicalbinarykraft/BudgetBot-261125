@@ -3,6 +3,7 @@ import { storage } from "../storage";
 import { insertSettingsSchema } from "@shared/schema";
 import { withAuth } from "../middleware/auth-utils";
 import { invalidateUserRateCache } from "../services/currency-service";
+import { updateScheduleForUser } from "../services/notification-scheduler.service";
 
 const router = Router();
 
@@ -54,6 +55,11 @@ router.patch("/", withAuth(async (req, res) => {
     // Invalidate exchange rate cache if rates were updated
     if (data.exchangeRateRUB !== undefined || data.exchangeRateIDR !== undefined) {
       invalidateUserRateCache(req.user.id);
+    }
+    
+    // Update notification schedule if notification settings were changed
+    if (data.timezone !== undefined || data.notificationTime !== undefined || data.telegramNotifications !== undefined) {
+      await updateScheduleForUser(req.user.id);
     }
     
     res.json(settings);

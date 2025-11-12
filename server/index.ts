@@ -4,6 +4,7 @@ import { setupAuth } from "./auth";
 import { setupVite, serveStatic, log } from "./vite";
 import { createServer } from "http";
 import { initTelegramBot } from "./telegram/bot";
+import { initializeScheduledNotifications } from "./services/notification-scheduler.service";
 
 const app = express();
 const server = createServer(app);
@@ -81,9 +82,10 @@ app.use((req, res, next) => {
     port,
     host: "0.0.0.0",
     reusePort: true,
-  }, () => {
+  }, async () => {
     log(`serving on port ${port}`);
     
     initTelegramBot();
+    await initializeScheduledNotifications();
   });
 })();

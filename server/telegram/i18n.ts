@@ -306,6 +306,16 @@ const translations: Translations = {
     en: 'Unknown command. Type /help for available commands.',
     ru: 'Неизвестная команда. Введите /help для списка команд.',
   },
+
+  // Daily Summary
+  'daily_summary.title': {
+    en: '📊 *Daily Summary*',
+    ru: '📊 *Ежедневный отчёт*',
+  },
+  'daily_summary.date': {
+    en: '📅 {date}',
+    ru: '📅 {date}',
+  },
 };
 
 /**
