@@ -34,51 +34,67 @@ function getCronExpression(notificationTime: string, timezone: string): string {
 }
 
 export async function scheduleNotificationForUser(userId: number) {
-  const userSettings = await db
-    .select()
-    .from(settings)
-    .where(eq(settings.userId, userId))
-    .limit(1);
+  try {
+    const userSettings = await db
+      .select()
+      .from(settings)
+      .where(eq(settings.userId, userId))
+      .limit(1);
 
-  if (!userSettings.length || !userSettings[0].telegramNotifications) {
+    if (!userSettings.length || !userSettings[0].telegramNotifications) {
+      if (scheduledTasks.has(userId)) {
+        scheduledTasks.get(userId)?.stop();
+        scheduledTasks.delete(userId);
+      }
+      return;
+    }
+
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user.length || !user[0].telegramId) {
+      return;
+    }
+
+    const notificationTime = userSettings[0].notificationTime || '09:00';
+    const timezone = userSettings[0].timezone || 'UTC';
+    const language = (userSettings[0].language || 'en') as 'en' | 'ru';
+    const telegramId = user[0].telegramId;
+
+    // Validate notification time format
+    if (!/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/.test(notificationTime)) {
+      console.error(`Invalid notification time format for user ${userId}: ${notificationTime}`);
+      return;
+    }
+
     if (scheduledTasks.has(userId)) {
       scheduledTasks.get(userId)?.stop();
-      scheduledTasks.delete(userId);
     }
-    return;
-  }
 
-  const user = await db
-    .select()
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
+    const cronExpression = getCronExpression(notificationTime, timezone);
+    
+    // Validate cron expression
+    if (!cron.validate(cronExpression)) {
+      console.error(`Invalid cron expression for user ${userId}: ${cronExpression}`);
+      return;
+    }
 
-  if (!user.length || !user[0].telegramId) {
-    return;
-  }
-
-  const notificationTime = userSettings[0].notificationTime || '09:00';
-  const timezone = userSettings[0].timezone || 'UTC';
-  const language = (userSettings[0].language || 'en') as 'en' | 'ru';
-  const telegramId = user[0].telegramId;
-
-  if (scheduledTasks.has(userId)) {
-    scheduledTasks.get(userId)?.stop();
-  }
-
-  const cronExpression = getCronExpression(notificationTime, timezone);
-  
-  const task = cron.schedule(cronExpression, () => {
-    sendDailySummary(telegramId, language).catch(error => {
-      console.error(`Failed to send daily summary to user ${userId}:`, error);
+    const task = cron.schedule(cronExpression, () => {
+      sendDailySummary(telegramId, language).catch(error => {
+        console.error(`Failed to send daily summary to user ${userId}:`, error);
+      });
+    }, {
+      timezone: timezone
     });
-  }, {
-    timezone: timezone
-  });
 
-  scheduledTasks.set(userId, task);
-  console.log(`Scheduled daily notification for user ${userId} at ${notificationTime} ${timezone}`);
+    scheduledTasks.set(userId, task);
+    console.log(`Scheduled daily notification for user ${userId} at ${notificationTime} ${timezone}`);
+  } catch (error) {
+    console.error(`Failed to schedule notification for user ${userId}:`, error);
+  }
 }
 
 export async function initializeScheduledNotifications() {

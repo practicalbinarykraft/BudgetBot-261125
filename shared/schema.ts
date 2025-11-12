@@ -280,9 +280,25 @@ export const insertWishlistSchema = createInsertSchema(wishlist, {
   priority: z.enum(["low", "medium", "high"]),
 }).omit({ id: true, createdAt: true });
 
+const VALID_TIMEZONES = [
+  "UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
+  "America/Phoenix", "America/Toronto", "America/Mexico_City", "America/Sao_Paulo",
+  "Europe/London", "Europe/Paris", "Europe/Moscow", "Asia/Dubai", "Asia/Kolkata",
+  "Asia/Singapore", "Asia/Shanghai", "Asia/Tokyo", "Asia/Seoul", "Asia/Jakarta",
+  "Australia/Sydney", "Pacific/Auckland"
+] as const;
+
 export const insertSettingsSchema = createInsertSchema(settings, {
   language: z.enum(["en", "ru"]),
   currency: z.enum(["USD", "RUB", "IDR"]),
+  timezone: z.string().refine(
+    (tz) => !tz || VALID_TIMEZONES.includes(tz as any),
+    { message: "Invalid timezone" }
+  ).optional(),
+  notificationTime: z.string().regex(
+    /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/,
+    { message: "Invalid time format. Use HH:MM (24-hour)" }
+  ).optional(),
 }).omit({ id: true, createdAt: true });
 
 // 🔒 Security: userId must come from session, NOT from client
