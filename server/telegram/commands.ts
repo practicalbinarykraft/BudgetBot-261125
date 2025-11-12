@@ -176,10 +176,31 @@ export async function handleTextMessage(bot: TelegramBot, msg: TelegramBot.Messa
 
     lang = await getUserLanguageByUserId(user.id);
 
+    // Pre-parse validation for better error messages
+    const trimmedText = text.trim();
+    
+    // Check 1: Empty text
+    if (trimmedText.length === 0) {
+      await bot.sendMessage(chatId, t('transaction.parse_error_empty', lang), {
+        parse_mode: 'Markdown'
+      });
+      return;
+    }
+
+    // Check 2: No amount found
+    const amountRegex = /(\d+(?:[.,]\d+)?)/;
+    if (!amountRegex.test(trimmedText)) {
+      await bot.sendMessage(chatId, t('transaction.parse_error_no_amount', lang), {
+        parse_mode: 'Markdown'
+      });
+      return;
+    }
+
     const parsed = parseTransactionText(text);
 
+    // Check 3: Invalid amount (negative or zero)
     if (!parsed) {
-      await bot.sendMessage(chatId, t('transaction.parse_error', lang), {
+      await bot.sendMessage(chatId, t('transaction.parse_error_invalid_amount', lang), {
         parse_mode: 'Markdown'
       });
       return;

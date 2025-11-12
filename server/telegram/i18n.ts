@@ -114,6 +114,18 @@ const translations: Translations = {
     en: '❌ Could not parse transaction.\n\nExample: `100 coffee` or `1500₽ taxi`',
     ru: '❌ Не удалось распознать транзакцию.\n\nПример: `100 coffee` или `1500₽ такси`',
   },
+  'transaction.parse_error_empty': {
+    en: '❌ Message is empty.\n\nPlease send transaction text.\n\nExamples:\n• `50 RUB coffee`\n• `1500₽ taxi`\n• `20 lunch`',
+    ru: '❌ Сообщение пустое.\n\nПожалуйста, отправьте текст транзакции.\n\nПримеры:\n• `50 RUB coffee`\n• `1500₽ такси`\n• `20 обед`',
+  },
+  'transaction.parse_error_no_amount': {
+    en: '❌ Could not find an amount.\n\nPlease include a number in your message.\n\nExamples:\n• `50 RUB coffee`\n• `1500₽ taxi`\n• `20 lunch`',
+    ru: '❌ Не удалось найти сумму.\n\nПожалуйста, укажите число в сообщении.\n\nПримеры:\n• `50 RUB coffee`\n• `1500₽ такси`\n• `20 обед`',
+  },
+  'transaction.parse_error_invalid_amount': {
+    en: '❌ Amount must be a positive number.\n\nPlease check and try again.\n\nExamples:\n• `50 RUB coffee` ✅\n• `1500₽ taxi` ✅\n• `-20 lunch` ❌',
+    ru: '❌ Сумма должна быть положительным числом.\n\nПожалуйста, проверьте и попробуйте снова.\n\nПримеры:\n• `50 RUB coffee` ✅\n• `1500₽ такси` ✅\n• `-20 обед` ❌',
+  },
 
   // Receipt OCR
   'receipt.processing': {
