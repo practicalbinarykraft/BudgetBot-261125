@@ -72,9 +72,15 @@ Preferred communication style: Simple, everyday language.
   - Architecture: Single bot instance (polling mode) serves all users via unique verification codes with 10-minute TTL
   - Database: telegram_verification_codes table (userId FK, code, expiresAt, isUsed) enforces code expiry and one-time use; users table extended with telegramId (bigint) and telegramUsername (text) for account linking
   - Verification Flow: Users generate 6-digit code in Settings → send `/verify <code>` to bot → telegramId/username stored in users table → connection established
+  - Internationalization (i18n): Full bilingual support (English/Russian) with language preference stored in settings.language
+    - Language Resolution: getUserSettings(telegramId) → getUserLanguage(settings) → fallback to 'en' when user not authenticated
+    - All bot messages localized: welcome, verification, balance, transactions, receipts, errors, help text
+    - Language persistence: User's choice saved in database and honored across all bot interactions
+    - i18n System: server/telegram/i18n.ts contains translations object with 'en' and 'ru' keys, t() helper function
   - Commands:
     - `/start` - Welcome message with quick start guide
     - `/verify <code>` - Link Telegram account using verification code from web app
+    - `/language` or `/lang` - Toggle between English and Russian with inline keyboard
     - `/add <text>` - Parse expense from free-form text (e.g., "Coffee 50 RUB" → creates transaction)
     - `/balance` - Show current balances across all wallets with USD equivalents
   - Text Parsing (parser.ts): Extracts amount, currency, and merchant from natural language using regex patterns and category mapping (config.ts); supports formats like "50 RUB coffee", "taxi 300", "lunch $15"
@@ -86,7 +92,7 @@ Preferred communication style: Simple, everyday language.
     - GET /status - Returns connection status and linked username
   - Security: userId always derived from authenticated session (never from request body), ownership verification on all database operations, bot initialization in server/index.ts post-listen
   - Frontend: Settings page Telegram card with real-time verification code timer, copy-to-clipboard, connection status badge, and disconnect flow
-  - Integration: Bot modules in server/telegram/ (bot.ts, commands.ts, parser.ts, ocr.ts, config.ts), uses existing transaction/category/wallet systems
+  - Integration: Bot modules in server/telegram/ (bot.ts, commands.ts, parser.ts, ocr.ts, config.ts, i18n.ts), uses existing transaction/category/wallet systems
 **Financial Trend Chart with AI Forecasting:** Production-ready dashboard visualization showing cumulative income, expenses, and capital trends with AI-powered predictions:
   - Architecture: Backend services (forecast.service.ts, chart-formatters.ts) + frontend hook/component (use-financial-trend.ts, financial-trend-chart.tsx)
   - Chart Visualization: Three lines rendered via recharts - Income (green), Expense (red), Capital (blue solid for history, blue dashed for forecast)
