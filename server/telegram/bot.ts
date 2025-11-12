@@ -4,6 +4,7 @@ import {
   handleVerifyCommand,
   handleHelpCommand,
   handleBalanceCommand,
+  handleLanguageCommand,
   handleTextMessage,
   handlePhotoMessage,
   handleCallbackQuery,
@@ -51,10 +52,45 @@ export function initTelegramBot(): TelegramBot | null {
             case '/balance':
               await handleBalanceCommand(bot!, msg);
               break;
+            case '/language':
+            case '/lang':
+              await handleLanguageCommand(bot!, msg);
+              break;
             default:
+              // Get user's language for error message
+              const { t, getUserLanguage } = await import('./i18n');
+              const { db } = await import('../db');
+              const { users, settings } = await import('@shared/schema');
+              const { eq } = await import('drizzle-orm');
+              
+              let lang: 'en' | 'ru' = 'en';
+              const telegramId = msg.from?.id.toString();
+              
+              if (telegramId) {
+                try {
+                  const [user] = await db
+                    .select()
+                    .from(users)
+                    .where(eq(users.telegramId, telegramId))
+                    .limit(1);
+                  
+                  if (user) {
+                    const [userSettings] = await db
+                      .select()
+                      .from(settings)
+                      .where(eq(settings.userId, user.id))
+                      .limit(1);
+                    
+                    lang = getUserLanguage(userSettings);
+                  }
+                } catch (err) {
+                  console.error('Error fetching user language:', err);
+                }
+              }
+              
               await bot!.sendMessage(
                 msg.chat.id,
-                'Unknown command. Type /help for available commands.'
+                t('error.unknown_command', lang)
               );
           }
         } else if (msg.photo && msg.photo.length > 0) {
@@ -65,9 +101,39 @@ export function initTelegramBot(): TelegramBot | null {
       } catch (error) {
         console.error('Error handling message:', error);
         try {
+          const { t, getUserLanguage } = await import('./i18n');
+          const { db } = await import('../db');
+          const { users, settings } = await import('@shared/schema');
+          const { eq } = await import('drizzle-orm');
+          
+          let lang: 'en' | 'ru' = 'en';
+          const telegramId = msg.from?.id.toString();
+          
+          if (telegramId) {
+            try {
+              const [user] = await db
+                .select()
+                .from(users)
+                .where(eq(users.telegramId, telegramId))
+                .limit(1);
+              
+              if (user) {
+                const [userSettings] = await db
+                  .select()
+                  .from(settings)
+                  .where(eq(settings.userId, user.id))
+                  .limit(1);
+                
+                lang = getUserLanguage(userSettings);
+              }
+            } catch (err) {
+              console.error('Error fetching user language:', err);
+            }
+          }
+          
           await bot!.sendMessage(
             msg.chat.id,
-            '❌ An error occurred. Please try again later.'
+            t('error.generic', lang)
           );
         } catch (sendError) {
           console.error('Error sending error message:', sendError);

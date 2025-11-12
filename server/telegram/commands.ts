@@ -1,21 +1,47 @@
 import TelegramBot from 'node-telegram-bot-api';
 import { db } from '../db';
-import { users, telegramVerificationCodes, wallets, transactions, categories } from '@shared/schema';
+import { users, telegramVerificationCodes, wallets, transactions, categories, settings } from '@shared/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { parseTransactionText, formatCurrency } from './parser';
 import { processReceiptImage } from './ocr';
-import {
-  WELCOME_TEXT,
-  VERIFICATION_SUCCESS_TEXT,
-  NOT_VERIFIED_TEXT,
-  HELP_TEXT,
-} from './config';
+import { t, getUserLanguage, getWelcomeMessage, getHelpMessage, type Language } from './i18n';
 import { convertToUSD } from '../services/currency-service';
 import { format } from 'date-fns';
 
+/**
+ * Get user settings for language preference
+ */
+async function getUserSettings(telegramId: string) {
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.telegramId, telegramId))
+    .limit(1);
+
+  if (!user) {
+    return null;
+  }
+
+  const [userSettings] = await db
+    .select()
+    .from(settings)
+    .where(eq(settings.userId, user.id))
+    .limit(1);
+
+  return userSettings;
+}
+
 export async function handleStartCommand(bot: TelegramBot, msg: TelegramBot.Message) {
   const chatId = msg.chat.id;
-  await bot.sendMessage(chatId, WELCOME_TEXT, { parse_mode: 'Markdown' });
+  const telegramId = msg.from?.id.toString();
+  
+  let lang: Language = 'en';
+  if (telegramId) {
+    const userSettings = await getUserSettings(telegramId);
+    lang = getUserLanguage(userSettings);
+  }
+  
+  await bot.sendMessage(chatId, getWelcomeMessage(lang), { parse_mode: 'Markdown' });
 }
 
 export async function handleVerifyCommand(
@@ -27,13 +53,24 @@ export async function handleVerifyCommand(
   const telegramId = msg.from?.id.toString();
   const telegramUsername = msg.from?.username || null;
 
+  // Try to get user's language (fallback to 'en' if not possible yet)
+  let lang: Language = 'en';
+  if (telegramId) {
+    try {
+      const userSettings = await getUserSettings(telegramId);
+      lang = getUserLanguage(userSettings);
+    } catch (err) {
+      // User probably doesn't exist yet, use default 'en'
+    }
+  }
+
   if (!telegramId) {
-    await bot.sendMessage(chatId, '❌ Could not identify your Telegram account.');
+    await bot.sendMessage(chatId, t('verify.no_telegram_id', lang));
     return;
   }
 
   if (!code || code.length !== 6) {
-    await bot.sendMessage(chatId, '❌ Invalid code format. Please use a 6-digit code.\n\nExample: `/verify 123456`', {
+    await bot.sendMessage(chatId, t('verify.invalid_format', lang), {
       parse_mode: 'Markdown'
     });
     return;
@@ -53,7 +90,7 @@ export async function handleVerifyCommand(
       .limit(1);
 
     if (!verificationRecord) {
-      await bot.sendMessage(chatId, '❌ Invalid or expired verification code.\n\nPlease generate a new code in Budget Buddy Settings.');
+      await bot.sendMessage(chatId, t('verify.invalid_code', lang));
       return;
     }
 
@@ -70,24 +107,47 @@ export async function handleVerifyCommand(
       .set({ isUsed: true })
       .where(eq(telegramVerificationCodes.id, verificationRecord.id));
 
-    await bot.sendMessage(chatId, VERIFICATION_SUCCESS_TEXT, { parse_mode: 'Markdown' });
+    // Re-fetch settings after connection to get user's preferred language
+    const userSettings = await getUserSettings(telegramId);
+    lang = getUserLanguage(userSettings);
+
+    await bot.sendMessage(chatId, t('verify.success', lang), { parse_mode: 'Markdown' });
   } catch (error) {
     console.error('Verification error:', error);
-    await bot.sendMessage(chatId, '❌ An error occurred. Please try again later.');
+    await bot.sendMessage(chatId, t('error.generic', lang));
   }
 }
 
 export async function handleHelpCommand(bot: TelegramBot, msg: TelegramBot.Message) {
   const chatId = msg.chat.id;
-  await bot.sendMessage(chatId, HELP_TEXT, { parse_mode: 'Markdown' });
+  const telegramId = msg.from?.id.toString();
+  
+  let lang: Language = 'en';
+  if (telegramId) {
+    const userSettings = await getUserSettings(telegramId);
+    lang = getUserLanguage(userSettings);
+  }
+  
+  await bot.sendMessage(chatId, getHelpMessage(lang), { parse_mode: 'Markdown' });
 }
 
 export async function handleBalanceCommand(bot: TelegramBot, msg: TelegramBot.Message) {
   const chatId = msg.chat.id;
   const telegramId = msg.from?.id.toString();
 
+  // Try to get user's language
+  let lang: Language = 'en';
+  if (telegramId) {
+    try {
+      const userSettings = await getUserSettings(telegramId);
+      lang = getUserLanguage(userSettings);
+    } catch (err) {
+      // Use default 'en'
+    }
+  }
+
   if (!telegramId) {
-    await bot.sendMessage(chatId, '❌ Could not identify your Telegram account.');
+    await bot.sendMessage(chatId, t('verify.no_telegram_id', lang));
     return;
   }
 
@@ -99,9 +159,12 @@ export async function handleBalanceCommand(bot: TelegramBot, msg: TelegramBot.Me
       .limit(1);
 
     if (!user) {
-      await bot.sendMessage(chatId, NOT_VERIFIED_TEXT, { parse_mode: 'Markdown' });
+      await bot.sendMessage(chatId, t('verify.not_verified', lang), { parse_mode: 'Markdown' });
       return;
     }
+
+    const userSettings = await getUserSettings(telegramId);
+    lang = getUserLanguage(userSettings);
 
     const userWallets = await db
       .select()
@@ -109,13 +172,13 @@ export async function handleBalanceCommand(bot: TelegramBot, msg: TelegramBot.Me
       .where(eq(wallets.userId, user.id));
 
     if (userWallets.length === 0) {
-      await bot.sendMessage(chatId, '💰 *Your Wallets*\n\nNo wallets found. Create one in Budget Buddy!', {
+      await bot.sendMessage(chatId, `${t('balance.title', lang)}\n\n${t('balance.no_wallets', lang)}`, {
         parse_mode: 'Markdown'
       });
       return;
     }
 
-    let message = '💰 *Your Wallets*\n\n';
+    let message = `${t('balance.title', lang)}\n\n`;
     let totalUSD = 0;
 
     for (const wallet of userWallets) {
@@ -127,12 +190,14 @@ export async function handleBalanceCommand(bot: TelegramBot, msg: TelegramBot.Me
       totalUSD += parseFloat(wallet.balanceUsd || '0');
     }
 
-    message += `\n💵 *Total (USD):* $${totalUSD.toFixed(2)}`;
+    message += `\n${t('balance.total', lang)} $${totalUSD.toFixed(2)}`;
 
     await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
   } catch (error) {
     console.error('Balance command error:', error);
-    await bot.sendMessage(chatId, '❌ An error occurred while fetching your balance.');
+    const userSettings = await getUserSettings(telegramId);
+    const lang = getUserLanguage(userSettings);
+    await bot.sendMessage(chatId, t('error.balance', lang));
   }
 }
 
@@ -145,6 +210,17 @@ export async function handleTextMessage(bot: TelegramBot, msg: TelegramBot.Messa
     return;
   }
 
+  // Try to get user's language
+  let lang: Language = 'en';
+  if (telegramId) {
+    try {
+      const tempSettings = await getUserSettings(telegramId);
+      lang = getUserLanguage(tempSettings);
+    } catch (err) {
+      // Use default 'en'
+    }
+  }
+
   try {
     const [user] = await db
       .select()
@@ -153,14 +229,17 @@ export async function handleTextMessage(bot: TelegramBot, msg: TelegramBot.Messa
       .limit(1);
 
     if (!user) {
-      await bot.sendMessage(chatId, NOT_VERIFIED_TEXT, { parse_mode: 'Markdown' });
+      await bot.sendMessage(chatId, t('verify.not_verified', lang), { parse_mode: 'Markdown' });
       return;
     }
+
+    const userSettings = await getUserSettings(telegramId);
+    lang = getUserLanguage(userSettings);
 
     const parsed = parseTransactionText(text);
 
     if (!parsed) {
-      await bot.sendMessage(chatId, '❌ Could not parse transaction.\n\nExample: `100 coffee` or `1500₽ taxi`', {
+      await bot.sendMessage(chatId, t('transaction.parse_error', lang), {
         parse_mode: 'Markdown'
       });
       return;
@@ -201,19 +280,26 @@ export async function handleTextMessage(bot: TelegramBot, msg: TelegramBot.Messa
       .returning();
 
     const emoji = parsed.type === 'income' ? '💰' : '💸';
-    const typeText = parsed.type === 'income' ? 'Income' : 'Expense';
+    const messageKey = parsed.type === 'income' ? 'transaction.income_added' : 'transaction.expense_added';
     
     await bot.sendMessage(
       chatId,
-      `${emoji} *${typeText} added!*\n\n` +
-      `Amount: ${formatCurrency(parsed.amount, parsed.currency)}\n` +
-      `Description: ${parsed.description}\n` +
-      `Category: ${parsed.category}`,
+      `${t(messageKey, lang)}\n\n` +
+      `${t('transaction.amount', lang)}: ${formatCurrency(parsed.amount, parsed.currency)}\n` +
+      `${t('transaction.description', lang)}: ${parsed.description}\n` +
+      `${t('transaction.category', lang)}: ${parsed.category}`,
       { parse_mode: 'Markdown' }
     );
   } catch (error) {
     console.error('Text message handling error:', error);
-    await bot.sendMessage(chatId, '❌ An error occurred while processing your transaction.');
+    const telegramId = msg.from?.id.toString();
+    if (telegramId) {
+      const userSettings = await getUserSettings(telegramId);
+      const lang = getUserLanguage(userSettings);
+      await bot.sendMessage(chatId, t('error.transaction', lang));
+    } else {
+      await bot.sendMessage(chatId, t('error.transaction', 'en'));
+    }
   }
 }
 
@@ -225,6 +311,17 @@ export async function handlePhotoMessage(bot: TelegramBot, msg: TelegramBot.Mess
     return;
   }
 
+  // Try to get user's language
+  let lang: Language = 'en';
+  if (telegramId) {
+    try {
+      const tempSettings = await getUserSettings(telegramId);
+      lang = getUserLanguage(tempSettings);
+    } catch (err) {
+      // Use default 'en'
+    }
+  }
+
   try {
     const [user] = await db
       .select()
@@ -233,13 +330,16 @@ export async function handlePhotoMessage(bot: TelegramBot, msg: TelegramBot.Mess
       .limit(1);
 
     if (!user) {
-      await bot.sendMessage(chatId, NOT_VERIFIED_TEXT, { parse_mode: 'Markdown' });
+      await bot.sendMessage(chatId, t('verify.not_verified', lang), { parse_mode: 'Markdown' });
       return;
     }
 
+    const userSettings = await getUserSettings(telegramId);
+    lang = getUserLanguage(userSettings);
+
     const photo = msg.photo[msg.photo.length - 1];
     
-    await bot.sendMessage(chatId, '🔍 Processing receipt...');
+    await bot.sendMessage(chatId, t('receipt.processing', lang));
 
     const file = await bot.getFile(photo.file_id);
     const fileUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
@@ -251,7 +351,7 @@ export async function handlePhotoMessage(bot: TelegramBot, msg: TelegramBot.Mess
     const parsed = await processReceiptImage(base64);
 
     if (!parsed) {
-      await bot.sendMessage(chatId, '❌ Could not extract information from receipt.\n\nPlease try:\n• Better lighting\n• Clearer photo\n• Or enter manually: `100 coffee`', {
+      await bot.sendMessage(chatId, t('receipt.error', lang), {
         parse_mode: 'Markdown'
       });
       return;
@@ -273,19 +373,19 @@ export async function handlePhotoMessage(bot: TelegramBot, msg: TelegramBot.Mess
     const amountUsd = convertToUSD(parsed.amount, parsed.currency);
 
     const confirmMessage = 
-      `📝 *Receipt extracted:*\n\n` +
-      `Amount: ${formatCurrency(parsed.amount, parsed.currency)}\n` +
-      `Description: ${parsed.description}\n` +
-      `Category: ${parsed.category}\n\n` +
-      `Confirm to add this expense?`;
+      `${t('receipt.extracted', lang)}\n\n` +
+      `${t('transaction.amount', lang)}: ${formatCurrency(parsed.amount, parsed.currency)}\n` +
+      `${t('transaction.description', lang)}: ${parsed.description}\n` +
+      `${t('transaction.category', lang)}: ${parsed.category}\n\n` +
+      `${t('receipt.confirm_question', lang)}`;
 
     await bot.sendMessage(chatId, confirmMessage, {
       parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: [
           [
-            { text: '✅ Confirm', callback_data: `confirm_receipt:${JSON.stringify({ parsed, categoryId, amountUsd })}` },
-            { text: '❌ Cancel', callback_data: 'cancel_receipt' }
+            { text: t('receipt.confirm_button', lang), callback_data: `confirm_receipt:${JSON.stringify({ parsed, categoryId, amountUsd })}` },
+            { text: t('receipt.cancel_button', lang), callback_data: 'cancel_receipt' }
           ]
         ]
       }
@@ -293,7 +393,66 @@ export async function handlePhotoMessage(bot: TelegramBot, msg: TelegramBot.Mess
 
   } catch (error) {
     console.error('Photo message handling error:', error);
-    await bot.sendMessage(chatId, '❌ An error occurred while processing your receipt.');
+    const telegramId = msg.from?.id.toString();
+    if (telegramId) {
+      const userSettings = await getUserSettings(telegramId);
+      const lang = getUserLanguage(userSettings);
+      await bot.sendMessage(chatId, t('error.receipt', lang));
+    } else {
+      await bot.sendMessage(chatId, t('error.receipt', 'en'));
+    }
+  }
+}
+
+export async function handleLanguageCommand(bot: TelegramBot, msg: TelegramBot.Message) {
+  const chatId = msg.chat.id;
+  const telegramId = msg.from?.id.toString();
+
+  // Try to get user's language
+  let lang: Language = 'en';
+  if (telegramId) {
+    try {
+      const userSettings = await getUserSettings(telegramId);
+      lang = getUserLanguage(userSettings);
+    } catch (err) {
+      // Use default 'en'
+    }
+  }
+
+  if (!telegramId) {
+    await bot.sendMessage(chatId, t('verify.no_telegram_id', lang));
+    return;
+  }
+
+  try {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.telegramId, telegramId))
+      .limit(1);
+
+    if (!user) {
+      await bot.sendMessage(chatId, t('verify.not_verified', lang), { parse_mode: 'Markdown' });
+      return;
+    }
+
+    const userSettings = await getUserSettings(telegramId);
+    lang = getUserLanguage(userSettings);
+
+    await bot.sendMessage(chatId, `${t('language.current', lang)}: ${t(`language.${lang}`, lang)}\n\n${t('language.choose', lang)}`, {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: t('language.en', lang), callback_data: 'set_language:en' },
+            { text: t('language.ru', lang), callback_data: 'set_language:ru' }
+          ]
+        ]
+      }
+    });
+  } catch (error) {
+    console.error('Language command error:', error);
+    await bot.sendMessage(chatId, t('error.generic', lang));
   }
 }
 
@@ -306,8 +465,55 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
   }
 
   try {
+    const userSettings = await getUserSettings(telegramId);
+    const lang = getUserLanguage(userSettings);
+
+    // Handle language change
+    if (query.data?.startsWith('set_language:')) {
+      const newLang = query.data.substring('set_language:'.length) as Language;
+      
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.telegramId, telegramId))
+        .limit(1);
+
+      if (!user) {
+        await bot.answerCallbackQuery(query.id, { text: t('error.user_not_found', lang) });
+        return;
+      }
+
+      // Check if settings exist, create if not
+      const [existingSettings] = await db
+        .select()
+        .from(settings)
+        .where(eq(settings.userId, user.id))
+        .limit(1);
+
+      if (existingSettings) {
+        await db
+          .update(settings)
+          .set({ language: newLang })
+          .where(eq(settings.userId, user.id));
+      } else {
+        await db
+          .insert(settings)
+          .values({
+            userId: user.id,
+            language: newLang,
+          });
+      }
+
+      await bot.editMessageText(t('language.changed', newLang), {
+        chat_id: chatId,
+        message_id: query.message?.message_id,
+      });
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+
     if (query.data === 'cancel_receipt') {
-      await bot.editMessageText('❌ Receipt cancelled.', {
+      await bot.editMessageText(t('receipt.cancelled', lang), {
         chat_id: chatId,
         message_id: query.message?.message_id,
       });
@@ -323,7 +529,7 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
         .limit(1);
 
       if (!user) {
-        await bot.answerCallbackQuery(query.id, { text: 'User not found' });
+        await bot.answerCallbackQuery(query.id, { text: t('error.user_not_found', lang) });
         return;
       }
 
@@ -349,10 +555,10 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
         });
 
       await bot.editMessageText(
-        `💸 *Expense added!*\n\n` +
-        `Amount: ${formatCurrency(parsed.amount, parsed.currency)}\n` +
-        `Description: ${parsed.description}\n` +
-        `Category: ${parsed.category}`,
+        `${t('transaction.expense_added', lang)}\n\n` +
+        `${t('transaction.amount', lang)}: ${formatCurrency(parsed.amount, parsed.currency)}\n` +
+        `${t('transaction.description', lang)}: ${parsed.description}\n` +
+        `${t('transaction.category', lang)}: ${parsed.category}`,
         {
           chat_id: chatId,
           message_id: query.message?.message_id,
@@ -360,10 +566,12 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
         }
       );
 
-      await bot.answerCallbackQuery(query.id, { text: 'Transaction added!' });
+      await bot.answerCallbackQuery(query.id, { text: t('receipt.added', lang) });
     }
   } catch (error) {
     console.error('Callback query handling error:', error);
-    await bot.answerCallbackQuery(query.id, { text: 'An error occurred' });
+    const userSettings = await getUserSettings(telegramId);
+    const lang = getUserLanguage(userSettings);
+    await bot.answerCallbackQuery(query.id, { text: t('error.generic', lang) });
   }
 }
