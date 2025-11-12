@@ -137,6 +137,8 @@ export default function SettingsPage() {
       language: "en",
       currency: "USD",
       telegramNotifications: true,
+      timezone: "UTC",
+      notificationTime: "09:00",
       anthropicApiKey: undefined,
       exchangeRateRUB: undefined,
       exchangeRateIDR: undefined,
@@ -151,6 +153,8 @@ export default function SettingsPage() {
         language: (settings.language || "en") as "en" | "ru",
         currency: (settings.currency || "USD") as "USD" | "RUB" | "IDR",
         telegramNotifications: settings.telegramNotifications,
+        timezone: settings.timezone || "UTC",
+        notificationTime: settings.notificationTime || "09:00",
         anthropicApiKey: settings.anthropicApiKey || undefined,
         exchangeRateRUB: settings.exchangeRateRUB || undefined,
         exchangeRateIDR: settings.exchangeRateIDR || undefined,
@@ -278,6 +282,81 @@ export default function SettingsPage() {
                   </FormItem>
                 )}
               />
+
+              <div className="border-t pt-6 mt-6">
+                <h3 className="text-lg font-semibold mb-2">Notification Settings</h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Configure when you receive daily notifications from the Telegram bot
+                </p>
+
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="timezone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Your Timezone</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || "UTC"}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-timezone">
+                              <SelectValue placeholder="Select timezone" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="UTC">UTC (Coordinated Universal Time)</SelectItem>
+                            <SelectItem value="America/New_York">Eastern Time (US & Canada)</SelectItem>
+                            <SelectItem value="America/Chicago">Central Time (US & Canada)</SelectItem>
+                            <SelectItem value="America/Denver">Mountain Time (US)</SelectItem>
+                            <SelectItem value="America/Los_Angeles">Pacific Time (US & Canada)</SelectItem>
+                            <SelectItem value="America/Phoenix">Arizona (US)</SelectItem>
+                            <SelectItem value="America/Toronto">Toronto</SelectItem>
+                            <SelectItem value="America/Mexico_City">Mexico City</SelectItem>
+                            <SelectItem value="America/Sao_Paulo">São Paulo</SelectItem>
+                            <SelectItem value="Europe/London">London</SelectItem>
+                            <SelectItem value="Europe/Paris">Paris, Berlin, Rome</SelectItem>
+                            <SelectItem value="Europe/Moscow">Moscow</SelectItem>
+                            <SelectItem value="Asia/Dubai">Dubai</SelectItem>
+                            <SelectItem value="Asia/Kolkata">India Standard Time</SelectItem>
+                            <SelectItem value="Asia/Singapore">Singapore</SelectItem>
+                            <SelectItem value="Asia/Shanghai">Beijing, Shanghai</SelectItem>
+                            <SelectItem value="Asia/Tokyo">Tokyo</SelectItem>
+                            <SelectItem value="Asia/Seoul">Seoul</SelectItem>
+                            <SelectItem value="Asia/Jakarta">Jakarta</SelectItem>
+                            <SelectItem value="Australia/Sydney">Sydney</SelectItem>
+                            <SelectItem value="Pacific/Auckland">Auckland</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          Used to send daily notifications at the right time for your location
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="notificationTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Notification Time</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="time"
+                            {...field}
+                            value={field.value || "09:00"}
+                            data-testid="input-notification-time"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Time when you want to receive daily budget summary (in your timezone)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
 
               <FormField
                 control={form.control}
