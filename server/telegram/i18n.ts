@@ -262,6 +262,10 @@ const translations: Translations = {
     en: 'Transaction added!',
     ru: 'Транзакция добавлена!',
   },
+  'receipt.expired': {
+    en: '⏱ Receipt confirmation expired. Please scan again.',
+    ru: '⏱ Время подтверждения чека истекло. Отсканируйте снова.',
+  },
 
   // Language
   'language.current': {

@@ -9,6 +9,7 @@ import { getUserLanguageByTelegramId, getUserLanguageByUserId } from './language
 import { convertToUSD, getUserExchangeRates } from '../services/currency-service';
 import { resolveCategoryId } from '../services/category-resolution.service';
 import { storage } from '../storage';
+import { pendingReceipts } from './pending-receipts';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 
 async function formatTransactionMessage(
@@ -439,6 +440,13 @@ export async function handlePhotoMessage(bot: TelegramBot, msg: TelegramBot.Mess
     const rates = await getUserExchangeRates(user.id);
     const amountUsd = convertToUSD(parsed.amount, parsed.currency, rates);
 
+    // Store receipt data temporarily and get short ID
+    const receiptId = pendingReceipts.store({
+      parsed,
+      categoryId,
+      userId: user.id
+    });
+
     const confirmMessage = 
       `${t('receipt.extracted', lang)}\n\n` +
       `${t('transaction.amount', lang)}: ${formatCurrency(parsed.amount, parsed.currency)}\n` +
@@ -451,7 +459,7 @@ export async function handlePhotoMessage(bot: TelegramBot, msg: TelegramBot.Mess
       reply_markup: {
         inline_keyboard: [
           [
-            { text: t('receipt.confirm_button', lang), callback_data: `confirm_receipt:${JSON.stringify({ parsed, categoryId, userId: user.id })}` },
+            { text: t('receipt.confirm_button', lang), callback_data: `confirm_receipt:${receiptId}` },
             { text: t('receipt.cancel_button', lang), callback_data: 'cancel_receipt' }
           ]
         ]
@@ -587,8 +595,23 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
 
       lang = await getUserLanguageByUserId(user.id);
 
-      const dataStr = query.data.substring('confirm_receipt:'.length);
-      const { parsed, categoryId, userId } = JSON.parse(dataStr);
+      const receiptId = query.data.substring('confirm_receipt:'.length);
+      const receiptData = pendingReceipts.get(receiptId);
+
+      if (!receiptData) {
+        await bot.answerCallbackQuery(query.id, { text: t('receipt.expired', lang) });
+        return;
+      }
+
+      // Security: Verify receipt belongs to this user
+      if (receiptData.userId !== user.id) {
+        pendingReceipts.delete(receiptId);
+        await bot.answerCallbackQuery(query.id, { text: t('receipt.expired', lang) });
+        return;
+      }
+
+      const { parsed, categoryId } = receiptData;
+      pendingReceipts.delete(receiptId);
 
       // Recalculate with fresh user rates
       const rates = await getUserExchangeRates(user.id);
