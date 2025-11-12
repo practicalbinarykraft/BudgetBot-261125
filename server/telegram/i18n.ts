@@ -41,8 +41,8 @@ const translations: Translations = {
     ru: '📖 *Доступные команды*',
   },
   'help.commands': {
-    en: '*/start* - Show welcome message\n*/verify <code>* - Connect your account\n*/balance* - Show wallet balances\n*/language* - Change language\n*/help* - Show this help',
-    ru: '*/start* - Показать приветствие\n*/verify <код>* - Подключить аккаунт\n*/balance* - Показать балансы кошельков\n*/language* - Сменить язык\n*/help* - Показать эту справку',
+    en: '*/start* - Show welcome message\n*/verify <code>* - Connect your account\n*/balance* - Show wallet balances\n*/last* - Show last 5 transactions\n*/language* - Change language\n*/help* - Show this help',
+    ru: '*/start* - Показать приветствие\n*/verify <код>* - Подключить аккаунт\n*/balance* - Показать балансы кошельков\n*/last* - Показать последние 5 транзакций\n*/language* - Сменить язык\n*/help* - Показать эту справку',
   },
   'help.quick_add': {
     en: '*Quick Add:*\nJust send: `100 coffee` or `1500₽ taxi`',
@@ -125,6 +125,24 @@ const translations: Translations = {
   'transaction.parse_error_invalid_amount': {
     en: '❌ Amount must be a positive number.\n\nPlease check and try again.\n\nExamples:\n• `50 RUB coffee` ✅\n• `1500₽ taxi` ✅\n• `-20 lunch` ❌',
     ru: '❌ Сумма должна быть положительным числом.\n\nПожалуйста, проверьте и попробуйте снова.\n\nПримеры:\n• `50 RUB coffee` ✅\n• `1500₽ такси` ✅\n• `-20 обед` ❌',
+  },
+
+  // Last transactions
+  'last.title': {
+    en: '📋 *Last 5 Transactions*',
+    ru: '📋 *Последние 5 транзакций*',
+  },
+  'last.no_transactions': {
+    en: 'No transactions yet.\n\nStart tracking: `100 coffee` or `1500₽ taxi`',
+    ru: 'Транзакций пока нет.\n\nНачните учёт: `100 coffee` или `1500₽ такси`',
+  },
+  'last.income': {
+    en: '💰 Income',
+    ru: '💰 Доход',
+  },
+  'last.expense': {
+    en: '💸 Expense',
+    ru: '💸 Расход',
   },
 
   // Receipt OCR
