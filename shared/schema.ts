@@ -95,6 +95,8 @@ export const settings = pgTable("settings", {
   currency: text("currency").default("USD"),
   telegramNotifications: boolean("telegram_notifications").default(true).notNull(),
   anthropicApiKey: text("anthropic_api_key"), // User's BYOK for AI features (forecast, analysis)
+  exchangeRateRUB: decimal("exchange_rate_rub", { precision: 10, scale: 4 }), // Custom exchange rate: 1 USD = X RUB
+  exchangeRateIDR: decimal("exchange_rate_idr", { precision: 10, scale: 2 }), // Custom exchange rate: 1 USD = X IDR
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

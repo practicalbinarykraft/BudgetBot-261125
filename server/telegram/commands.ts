@@ -6,7 +6,7 @@ import { parseTransactionText, formatCurrency } from './parser';
 import { processReceiptImage } from './ocr';
 import { t, getWelcomeMessage, getHelpMessage, type Language } from './i18n';
 import { getUserLanguageByTelegramId, getUserLanguageByUserId } from './language';
-import { convertToUSD } from '../services/currency-service';
+import { convertToUSD, getUserExchangeRates } from '../services/currency-service';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 
 async function formatTransactionMessage(
@@ -332,7 +332,10 @@ export async function handleTextMessage(bot: TelegramBot, msg: TelegramBot.Messa
 
     const categoryId = userCategories[0]?.id || null;
 
-    const amountUsd = convertToUSD(parsed.amount, parsed.currency);
+    // Get user's custom exchange rates
+    const rates = await getUserExchangeRates(user.id);
+    const amountUsd = convertToUSD(parsed.amount, parsed.currency, rates);
+    const exchangeRate = parsed.currency === 'USD' ? 1 : rates[parsed.currency] || 1;
 
     const [transaction] = await db
       .insert(transactions)
@@ -344,10 +347,10 @@ export async function handleTextMessage(bot: TelegramBot, msg: TelegramBot.Messa
         description: parsed.description,
         categoryId,
         currency: parsed.currency,
-        amountUsd: amountUsd.toString(),
+        amountUsd: amountUsd.toFixed(2),
         originalAmount: parsed.amount.toString(),
         originalCurrency: parsed.currency,
-        exchangeRate: (parsed.amount / amountUsd).toFixed(4),
+        exchangeRate: exchangeRate.toFixed(4),
         source: 'telegram',
         walletId: null,
       })
@@ -947,12 +950,16 @@ export async function handleIncomeCommand(bot: TelegramBot, msg: TelegramBot.Mes
       .limit(1);
 
     const categoryId = userCategories[0]?.id || null;
-    const amountUsd = convertToUSD(parsed.amount, parsed.currency);
+    
+    // Get user's custom exchange rates
+    const rates = await getUserExchangeRates(user.id);
+    const amountUsd = convertToUSD(parsed.amount, parsed.currency, rates);
 
     const dataPayload = {
       parsed,
       categoryId,
-      amountUsd
+      amountUsd,
+      userId: user.id // Pass userId to recalculate in callback
     };
 
     await bot.sendMessage(
