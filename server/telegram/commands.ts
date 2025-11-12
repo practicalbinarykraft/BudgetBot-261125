@@ -436,7 +436,9 @@ export async function handlePhotoMessage(bot: TelegramBot, msg: TelegramBot.Mess
 
     const categoryId = userCategories[0]?.id || null;
 
-    const amountUsd = convertToUSD(parsed.amount, parsed.currency);
+    // Get user's custom exchange rates
+    const rates = await getUserExchangeRates(user.id);
+    const amountUsd = convertToUSD(parsed.amount, parsed.currency, rates);
 
     const confirmMessage = 
       `${t('receipt.extracted', lang)}\n\n` +
@@ -450,7 +452,7 @@ export async function handlePhotoMessage(bot: TelegramBot, msg: TelegramBot.Mess
       reply_markup: {
         inline_keyboard: [
           [
-            { text: t('receipt.confirm_button', lang), callback_data: `confirm_receipt:${JSON.stringify({ parsed, categoryId, amountUsd })}` },
+            { text: t('receipt.confirm_button', lang), callback_data: `confirm_receipt:${JSON.stringify({ parsed, categoryId, userId: user.id })}` },
             { text: t('receipt.cancel_button', lang), callback_data: 'cancel_receipt' }
           ]
         ]
@@ -587,7 +589,12 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
       lang = await getUserLanguageByUserId(user.id);
 
       const dataStr = query.data.substring('confirm_receipt:'.length);
-      const { parsed, categoryId, amountUsd } = JSON.parse(dataStr);
+      const { parsed, categoryId, userId } = JSON.parse(dataStr);
+
+      // Recalculate with fresh user rates
+      const rates = await getUserExchangeRates(user.id);
+      const amountUsd = convertToUSD(parsed.amount, parsed.currency, rates);
+      const exchangeRate = parsed.currency === 'USD' ? 1 : rates[parsed.currency] || 1;
 
       const [transaction] = await db
         .insert(transactions)
@@ -599,10 +606,10 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
           description: parsed.description,
           categoryId,
           currency: parsed.currency,
-          amountUsd: amountUsd.toString(),
+          amountUsd: amountUsd.toFixed(2),
           originalAmount: parsed.amount.toString(),
           originalCurrency: parsed.currency,
-          exchangeRate: (parsed.amount / amountUsd).toFixed(4),
+          exchangeRate: exchangeRate.toFixed(4),
           source: 'ocr',
           walletId: null,
         })
@@ -654,7 +661,12 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
       lang = await getUserLanguageByUserId(user.id);
 
       const dataStr = query.data.substring('confirm_income:'.length);
-      const { parsed, categoryId, amountUsd } = JSON.parse(dataStr);
+      const { parsed, categoryId, userId } = JSON.parse(dataStr);
+
+      // Recalculate with fresh user rates
+      const rates = await getUserExchangeRates(user.id);
+      const amountUsd = convertToUSD(parsed.amount, parsed.currency, rates);
+      const exchangeRate = parsed.currency === 'USD' ? 1 : rates[parsed.currency] || 1;
 
       const [transaction] = await db
         .insert(transactions)
@@ -666,10 +678,10 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
           description: parsed.description,
           categoryId,
           currency: parsed.currency,
-          amountUsd: amountUsd.toString(),
+          amountUsd: amountUsd.toFixed(2),
           originalAmount: parsed.amount.toString(),
           originalCurrency: parsed.currency,
-          exchangeRate: (parsed.amount / amountUsd).toFixed(4),
+          exchangeRate: exchangeRate.toFixed(4),
           source: 'telegram',
           walletId: null,
         })
