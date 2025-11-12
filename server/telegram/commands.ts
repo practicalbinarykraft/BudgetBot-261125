@@ -1,13 +1,126 @@
 import TelegramBot from 'node-telegram-bot-api';
 import { db } from '../db';
-import { users, telegramVerificationCodes, wallets, transactions, categories, settings } from '@shared/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { users, telegramVerificationCodes, wallets, transactions, categories, settings, budgets } from '@shared/schema';
+import { eq, and, sql, gte, lte } from 'drizzle-orm';
 import { parseTransactionText, formatCurrency } from './parser';
 import { processReceiptImage } from './ocr';
 import { t, getWelcomeMessage, getHelpMessage, type Language } from './i18n';
 import { getUserLanguageByTelegramId, getUserLanguageByUserId } from './language';
 import { convertToUSD } from '../services/currency-service';
-import { format } from 'date-fns';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
+
+async function formatTransactionMessage(
+  userId: number,
+  transactionId: number,
+  amount: number,
+  currency: string,
+  amountUsd: number,
+  description: string,
+  categoryName: string,
+  type: 'income' | 'expense',
+  lang: Language
+): Promise<{ message: string; reply_markup?: TelegramBot.InlineKeyboardMarkup }> {
+  const userWallets = await db
+    .select()
+    .from(wallets)
+    .where(eq(wallets.userId, userId));
+
+  const totalCapital = userWallets.reduce(
+    (sum, w) => sum + parseFloat(w.balanceUsd as unknown as string || "0"),
+    0
+  );
+
+  const exchangeRate = currency === 'USD' ? 1 : (amount / amountUsd);
+  
+  let budgetInfo = '';
+  const [category] = await db
+    .select()
+    .from(categories)
+    .where(and(
+      eq(categories.userId, userId),
+      eq(categories.name, categoryName)
+    ))
+    .limit(1);
+
+  if (category) {
+    const today = new Date();
+    const budgetList = await db
+      .select()
+      .from(budgets)
+      .where(and(
+        eq(budgets.userId, userId),
+        eq(budgets.categoryId, category.id)
+      ));
+
+    for (const budget of budgetList) {
+      let startDate: Date, endDate: Date;
+      
+      if (budget.period === 'week') {
+        startDate = startOfWeek(today, { weekStartsOn: 1 });
+        endDate = endOfWeek(today, { weekStartsOn: 1 });
+      } else if (budget.period === 'month') {
+        startDate = startOfMonth(today);
+        endDate = endOfMonth(today);
+      } else {
+        startDate = startOfYear(today);
+        endDate = endOfYear(today);
+      }
+
+      const startStr = format(startDate, 'yyyy-MM-dd');
+      const endStr = format(endDate, 'yyyy-MM-dd');
+
+      const [result] = await db
+        .select({
+          total: sql<string>`COALESCE(SUM(CAST(${transactions.amountUsd} AS DECIMAL)), 0)`
+        })
+        .from(transactions)
+        .where(and(
+          eq(transactions.userId, userId),
+          eq(transactions.categoryId, category.id),
+          eq(transactions.type, 'expense'),
+          gte(transactions.date, startStr),
+          lte(transactions.date, endStr)
+        ));
+
+      const spent = parseFloat(result?.total || '0');
+      const limit = parseFloat(budget.limitAmount);
+      
+      budgetInfo = `\n${t('transaction.budget_limit', lang)}: $${spent.toFixed(0)}/$${limit.toFixed(0)}`;
+      break;
+    }
+  }
+
+  const typeLabel = type === 'income' 
+    ? t('transaction.income_added', lang)
+    : t('transaction.expense_added', lang);
+
+  let message = `${typeLabel}\n\n`;
+  message += `${t('transaction.description', lang)}: ${description}\n`;
+  message += `${t('transaction.category', lang)}: ${categoryName}\n`;
+  message += `${t('transaction.amount', lang)}: ${formatCurrency(amount, currency as 'USD' | 'RUB' | 'IDR')}\n`;
+  
+  if (currency !== 'USD') {
+    message += `\n${t('transaction.conversion', lang)}: 1 USD = ${exchangeRate.toFixed(2)} ${currency}\n`;
+    message += `${t('transaction.usd_amount', lang)}: ~$${amountUsd.toFixed(0)}`;
+  }
+  
+  message += `\n\n${t('transaction.total_capital', lang)}: $${totalCapital.toFixed(0)}`;
+  
+  if (budgetInfo) {
+    message += budgetInfo;
+  }
+
+  const reply_markup: TelegramBot.InlineKeyboardMarkup = {
+    inline_keyboard: [
+      [
+        { text: t('transaction.edit_button', lang), callback_data: `edit_transaction:${transactionId}` },
+        { text: t('transaction.delete_button', lang), callback_data: `delete_transaction:${transactionId}` }
+      ]
+    ]
+  };
+
+  return { message, reply_markup };
+}
 
 export async function handleStartCommand(bot: TelegramBot, msg: TelegramBot.Message) {
   const chatId = msg.chat.id;
@@ -240,17 +353,22 @@ export async function handleTextMessage(bot: TelegramBot, msg: TelegramBot.Messa
       })
       .returning();
 
-    const emoji = parsed.type === 'income' ? '💰' : '💸';
-    const messageKey = parsed.type === 'income' ? 'transaction.income_added' : 'transaction.expense_added';
-    
-    await bot.sendMessage(
-      chatId,
-      `${t(messageKey, lang)}\n\n` +
-      `${t('transaction.amount', lang)}: ${formatCurrency(parsed.amount, parsed.currency)}\n` +
-      `${t('transaction.description', lang)}: ${parsed.description}\n` +
-      `${t('transaction.category', lang)}: ${parsed.category}`,
-      { parse_mode: 'Markdown' }
+    const { message, reply_markup } = await formatTransactionMessage(
+      user.id,
+      transaction.id,
+      parsed.amount,
+      parsed.currency,
+      amountUsd,
+      parsed.description,
+      parsed.category,
+      parsed.type,
+      lang
     );
+    
+    await bot.sendMessage(chatId, message, { 
+      parse_mode: 'Markdown',
+      reply_markup 
+    });
   } catch (error) {
     console.error('Text message handling error:', error);
     const lang = await getUserLanguageByTelegramId(telegramId);
@@ -468,7 +586,7 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
       const dataStr = query.data.substring('confirm_receipt:'.length);
       const { parsed, categoryId, amountUsd } = JSON.parse(dataStr);
 
-      await db
+      const [transaction] = await db
         .insert(transactions)
         .values({
           userId: user.id,
@@ -484,19 +602,27 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
           exchangeRate: (parsed.amount / amountUsd).toFixed(4),
           source: 'ocr',
           walletId: null,
-        });
+        })
+        .returning();
 
-      await bot.editMessageText(
-        `${t('transaction.expense_added', lang)}\n\n` +
-        `${t('transaction.amount', lang)}: ${formatCurrency(parsed.amount, parsed.currency)}\n` +
-        `${t('transaction.description', lang)}: ${parsed.description}\n` +
-        `${t('transaction.category', lang)}: ${parsed.category}`,
-        {
-          chat_id: chatId,
-          message_id: query.message?.message_id,
-          parse_mode: 'Markdown'
-        }
+      const { message, reply_markup } = await formatTransactionMessage(
+        user.id,
+        transaction.id,
+        parsed.amount,
+        parsed.currency,
+        amountUsd,
+        parsed.description,
+        parsed.category,
+        'expense',
+        lang
       );
+
+      await bot.editMessageText(message, {
+        chat_id: chatId,
+        message_id: query.message?.message_id,
+        parse_mode: 'Markdown',
+        reply_markup
+      });
 
       await bot.answerCallbackQuery(query.id, { text: t('receipt.added', lang) });
     }
@@ -527,7 +653,7 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
       const dataStr = query.data.substring('confirm_income:'.length);
       const { parsed, categoryId, amountUsd } = JSON.parse(dataStr);
 
-      await db
+      const [transaction] = await db
         .insert(transactions)
         .values({
           userId: user.id,
@@ -543,21 +669,125 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
           exchangeRate: (parsed.amount / amountUsd).toFixed(4),
           source: 'telegram',
           walletId: null,
-        });
+        })
+        .returning();
+
+      const { message, reply_markup } = await formatTransactionMessage(
+        user.id,
+        transaction.id,
+        parsed.amount,
+        parsed.currency,
+        amountUsd,
+        parsed.description,
+        parsed.category,
+        'income',
+        lang
+      );
+
+      await bot.editMessageText(message, {
+        chat_id: chatId,
+        message_id: query.message?.message_id,
+        parse_mode: 'Markdown',
+        reply_markup
+      });
+
+      await bot.answerCallbackQuery(query.id, { text: t('transaction.income_added', lang) });
+    }
+
+    if (query.data.startsWith('delete_transaction:')) {
+      const transactionId = parseInt(query.data.substring('delete_transaction:'.length));
+
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.telegramId, telegramId))
+        .limit(1);
+
+      if (!user) {
+        await bot.answerCallbackQuery(query.id, { text: t('error.user_not_found', lang) });
+        return;
+      }
+
+      lang = await getUserLanguageByUserId(user.id);
+
+      await bot.editMessageText(t('transaction.delete_confirm', lang), {
+        chat_id: chatId,
+        message_id: query.message?.message_id,
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: t('transaction.delete_yes', lang), callback_data: `confirm_delete:${transactionId}` },
+              { text: t('transaction.delete_no', lang), callback_data: `cancel_delete:${transactionId}` }
+            ]
+          ]
+        }
+      });
+
+      await bot.answerCallbackQuery(query.id);
+    }
+
+    if (query.data.startsWith('confirm_delete:')) {
+      const transactionId = parseInt(query.data.substring('confirm_delete:'.length));
+
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.telegramId, telegramId))
+        .limit(1);
+
+      if (!user) {
+        await bot.answerCallbackQuery(query.id, { text: t('error.user_not_found', lang) });
+        return;
+      }
+
+      lang = await getUserLanguageByUserId(user.id);
+
+      await db
+        .delete(transactions)
+        .where(and(
+          eq(transactions.id, transactionId),
+          eq(transactions.userId, user.id)
+        ));
+
+      await bot.editMessageText(t('transaction.deleted', lang), {
+        chat_id: chatId,
+        message_id: query.message?.message_id,
+      });
+
+      await bot.answerCallbackQuery(query.id, { text: t('transaction.deleted', lang) });
+    }
+
+    if (query.data.startsWith('cancel_delete:')) {
+      await bot.deleteMessage(chatId, query.message?.message_id || 0);
+      await bot.answerCallbackQuery(query.id);
+    }
+
+    if (query.data.startsWith('edit_transaction:')) {
+      const transactionId = parseInt(query.data.substring('edit_transaction:'.length));
+
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.telegramId, telegramId))
+        .limit(1);
+
+      if (!user) {
+        await bot.answerCallbackQuery(query.id, { text: t('error.user_not_found', lang) });
+        return;
+      }
+
+      lang = await getUserLanguageByUserId(user.id);
 
       await bot.editMessageText(
-        `${t('transaction.income_added', lang)}\n\n` +
-        `${t('transaction.amount', lang)}: ${formatCurrency(parsed.amount, parsed.currency)}\n` +
-        `${t('transaction.description', lang)}: ${parsed.description}\n` +
-        `${t('transaction.category', lang)}: ${parsed.category}`,
+        t('transaction.edit_coming_soon', lang),
         {
           chat_id: chatId,
           message_id: query.message?.message_id,
-          parse_mode: 'Markdown'
         }
       );
 
-      await bot.answerCallbackQuery(query.id, { text: t('transaction.income_added', lang) });
+      await bot.answerCallbackQuery(query.id, { text: t('transaction.edit_coming_soon', lang) });
     }
   } catch (error) {
     console.error('Callback query handling error:', error);

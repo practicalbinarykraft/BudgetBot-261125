@@ -126,6 +126,50 @@ const translations: Translations = {
     en: '❌ Amount must be a positive number.\n\nPlease check and try again.\n\nExamples:\n• `50 RUB coffee` ✅\n• `1500₽ taxi` ✅\n• `-20 lunch` ❌',
     ru: '❌ Сумма должна быть положительным числом.\n\nПожалуйста, проверьте и попробуйте снова.\n\nПримеры:\n• `50 RUB coffee` ✅\n• `1500₽ такси` ✅\n• `-20 обед` ❌',
   },
+  'transaction.conversion': {
+    en: 'Conversion',
+    ru: 'Конвертация',
+  },
+  'transaction.usd_amount': {
+    en: 'Amount in USD',
+    ru: 'Стоимость в USD',
+  },
+  'transaction.total_capital': {
+    en: 'Total Capital',
+    ru: 'Общий капитал',
+  },
+  'transaction.budget_limit': {
+    en: 'Budget Limit',
+    ru: 'Лимит категории',
+  },
+  'transaction.edit_button': {
+    en: '✏️ Edit',
+    ru: '✏️ Редактировать',
+  },
+  'transaction.delete_button': {
+    en: '🗑 Delete',
+    ru: '🗑 Удалить',
+  },
+  'transaction.deleted': {
+    en: '✅ Transaction deleted successfully.',
+    ru: '✅ Транзакция успешно удалена.',
+  },
+  'transaction.delete_confirm': {
+    en: '⚠️ Are you sure you want to delete this transaction?',
+    ru: '⚠️ Вы уверены, что хотите удалить эту транзакцию?',
+  },
+  'transaction.delete_yes': {
+    en: '✅ Yes, delete',
+    ru: '✅ Да, удалить',
+  },
+  'transaction.delete_no': {
+    en: '❌ Cancel',
+    ru: '❌ Отмена',
+  },
+  'transaction.edit_coming_soon': {
+    en: '⏳ Edit feature coming soon! For now, delete and create a new transaction.',
+    ru: '⏳ Функция редактирования скоро появится! Пока что удалите и создайте новую транзакцию.',
+  },
 
   // Last transactions
   'last.title': {
