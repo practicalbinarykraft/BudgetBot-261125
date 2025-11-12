@@ -1,0 +1,585 @@
+💡 МОЙ ПЛАН "ДОВЕСТИ ДО УМА"
+ФАЗЫ УЛУЧШЕНИЙ:
+ФАЗА 1: QUICK WINS (4 часа)
+  ├─ Рефакторинг дублирования
+  ├─ Inline подтверждения для /add
+  ├─ Feedback при ошибках
+  └─ /last (история)
+
+ФАЗА 2: КЛЮЧЕВОЙ ФУНКЦИОНАЛ (6 часов)
+  ├─ /income (добавление дохода)
+  ├─ Выбор кошелька
+  ├─ Редактирование транзакций
+  └─ Real-time курсы валют
+
+ФАЗА 3: POLISH (4 часа)
+  ├─ Webhook
+  ├─ Rate limiting
+  ├─ Audit logging
+  └─ Error boundaries
+
+🚀 ПРИОРИТИЗИРОВАННОЕ ТЗ ДЛЯ REPLIT
+markdown# 🤖 ТЗ: Улучшение Telegram бота (Фаза 1 + Фаза 2)
+
+## 🎯 ЦЕЛЬ
+
+Сделать бота **полнофункциональным** и **удобным**:
+- ✅ Доходы + Расходы
+- ✅ Выбор кошелька
+- ✅ Редактирование/удаление
+- ✅ История транзакций
+- ✅ Подтверждения + feedback
+
+---
+
+## 📋 ФАЗА 1: QUICK WINS (4 часа)
+
+### 1. Рефакторинг дублирования (30 минут)
+
+**Проблема:** В каждой команде:
+```typescript
+const settings = await getUserSettings(telegramId);
+const language = getUserLanguage(settings);
+```
+
+**Решение:** Создать helper в `bot.ts`:
+```typescript
+// server/telegram/bot.ts
+
+/**
+ * Получить язык пользователя (кэшируется)
+ */
+async function getUserLang(telegramId: string): Promise {
+  try {
+    const [user] = await db
+      .select({ language: userSettings.language })
+      .from(users)
+      .leftJoin(userSettings, eq(users.id, userSettings.userId))
+      .where(eq(users.telegramId, telegramId))
+      .limit(1);
+    
+    return user?.language || 'en';
+  } catch {
+    return 'en';
+  }
+}
+
+// Экспортировать для использования в commands.ts
+export { getUserLang };
+```
+
+**Использование везде:**
+```typescript
+// В commands.ts
+import { getUserLang } from './bot';
+
+const lang = await getUserLang(msg.from.id.toString());
+const t = translations[lang];
+```
+
+**Размер:** +20 строк, убираем ~100 строк дублирования ✅
+
+---
+
+### 2. Inline подтверждение для /add (45 минут)
+
+**Проблема:** `/add 100 coffee` создаёт транзакцию сразу без подтверждения.
+
+**Решение:** Показать inline кнопки:
+```typescript
+// В commands.ts, функция handleAdd()
+
+// После парсинга:
+const parsed = parseTransaction(text);
+
+// Показать подтверждение:
+await bot.sendMessage(chatId, `
+${parsed.amount} ${parsed.currency} - ${parsed.description}
+${parsed.category ? `📂 ${parsed.category}` : ''}
+
+Confirm?
+`, {
+  reply_markup: {
+    inline_keyboard: [[
+      { 
+        text: '✅ Confirm', 
+        callback_data: `confirm_add:${JSON.stringify(parsed)}` 
+      },
+      { 
+        text: '❌ Cancel', 
+        callback_data: 'cancel' 
+      }
+    ]]
+  }
+});
+
+// В bot.ts, обработка callback:
+bot.on('callback_query', async (query) => {
+  const data = query.data;
+  
+  if (data?.startsWith('confirm_add:')) {
+    const parsed = JSON.parse(data.replace('confirm_add:', ''));
+    
+    // Создать транзакцию
+    await createTransaction(userId, parsed);
+    
+    await bot.answerCallbackQuery(query.id, { text: '✅ Saved' });
+    await bot.editMessageText('✅ Transaction saved!', {
+      chat_id: query.message!.chat.id,
+      message_id: query.message!.message_id
+    });
+  } else if (data === 'cancel') {
+    await bot.deleteMessage(query.message!.chat.id, query.message!.message_id);
+    await bot.answerCallbackQuery(query.id, { text: 'Cancelled' });
+  }
+});
+```
+
+**Размер:** +40 строк ✅
+
+---
+
+### 3. Feedback при ошибке парсинга (15 минут)
+
+**Проблема:** Бот молча игнорирует "abc xyz" (не может распознать).
+
+**Решение:** В `parser.ts`:
+```typescript
+export function parseTransaction(text: string): ParseResult | null {
+  // ... parsing logic ...
+  
+  if (!amount) {
+    return null; // Вернуть null если не распознано
+  }
+  
+  return { amount, currency, description, category };
+}
+
+// В commands.ts:
+const parsed = parseTransaction(text);
+
+if (!parsed) {
+  const lang = await getUserLang(telegramId);
+  const t = translations[lang];
+  
+  await bot.sendMessage(chatId, `
+${t.parseError || '❌ Could not parse transaction'}
+
+${t.parseExample || 'Example: 100 coffee or 50 RUB coffee'}
+  `);
+  
+  return;
+}
+```
+
+**Размер:** +15 строк ✅
+
+---
+
+### 4. Команда /last - история (1.5 часа)
+
+**Новая команда:** `/last` - показать последние 5 транзакций с кнопками удаления.
+```typescript
+// В commands.ts
+
+/**
+ * /last - показать последние транзакции
+ */
+async function handleLast(msg: TelegramBot.Message) {
+  const chatId = msg.chat.id;
+  const telegramId = msg.from?.id.toString();
+  
+  if (!telegramId) return;
+  
+  // Получить user
+  const user = await getUserByTelegramId(telegramId);
+  if (!user) {
+    await bot.sendMessage(chatId, '❌ Account not linked. Use /verify CODE');
+    return;
+  }
+  
+  const lang = await getUserLang(telegramId);
+  const t = translations[lang];
+  
+  // Получить последние 5 транзакций
+  const transactions = await db
+    .select()
+    .from(dailyTransactions)
+    .where(eq(dailyTransactions.userId, user.id))
+    .orderBy(desc(dailyTransactions.date))
+    .limit(5);
+  
+  if (transactions.length === 0) {
+    await bot.sendMessage(chatId, t.noTransactions || 'No transactions yet');
+    return;
+  }
+  
+  // Показать каждую транзакцию с кнопкой удаления
+  for (const tx of transactions) {
+    const emoji = tx.type === 'income' ? '💰' : '💸';
+    const sign = tx.type === 'income' ? '+' : '-';
+    
+    await bot.sendMessage(chatId, `
+${emoji} ${sign}$${tx.amount}
+📝 ${tx.description}
+📂 ${tx.category || 'Uncategorized'}
+📅 ${tx.date}
+    `, {
+      reply_markup: {
+        inline_keyboard: [[
+          { text: '🗑️ Delete', callback_data: `delete_tx:${tx.id}` }
+        ]]
+      }
+    });
+  }
+}
+
+// В bot.ts, обработка удаления:
+bot.on('callback_query', async (query) => {
+  const data = query.data;
+  
+  if (data?.startsWith('delete_tx:')) {
+    const txId = parseInt(data.replace('delete_tx:', ''));
+    
+    // Удалить транзакцию
+    await db
+      .delete(dailyTransactions)
+      .where(eq(dailyTransactions.id, txId));
+    
+    await bot.deleteMessage(query.message!.chat.id, query.message!.message_id);
+    await bot.answerCallbackQuery(query.id, { text: '🗑️ Deleted' });
+  }
+});
+```
+
+**Размер:** +60 строк ✅
+
+---
+
+## 📋 ФАЗА 2: КЛЮЧЕВОЙ ФУНКЦИОНАЛ (6 часов)
+
+### 1. Команда /income - добавление дохода (1 час)
+
+**Новая команда:** `/income 5000 Salary`
+```typescript
+// В commands.ts
+
+/**
+ * /income - добавить доход
+ */
+async function handleIncome(msg: TelegramBot.Message, args: string) {
+  const chatId = msg.chat.id;
+  const telegramId = msg.from?.id.toString();
+  
+  if (!telegramId) return;
+  
+  const user = await getUserByTelegramId(telegramId);
+  if (!user) {
+    await bot.sendMessage(chatId, '❌ Account not linked');
+    return;
+  }
+  
+  const lang = await getUserLang(telegramId);
+  
+  if (!args) {
+    await bot.sendMessage(chatId, '❌ Usage: /income 5000 Salary');
+    return;
+  }
+  
+  // Парсить (та же логика что /add, но type=income)
+  const parsed = parseTransaction(args);
+  
+  if (!parsed) {
+    await bot.sendMessage(chatId, '❌ Could not parse. Example: /income 5000 Salary');
+    return;
+  }
+  
+  // Показать подтверждение
+  await bot.sendMessage(chatId, `
+💰 +${parsed.amount} ${parsed.currency}
+📝 ${parsed.description}
+
+Confirm income?
+  `, {
+    reply_markup: {
+      inline_keyboard: [[
+        { text: '✅ Confirm', callback_data: `confirm_income:${JSON.stringify(parsed)}` },
+        { text: '❌ Cancel', callback_data: 'cancel' }
+      ]]
+    }
+  });
+}
+
+// В bot.ts, callback:
+if (data?.startsWith('confirm_income:')) {
+  const parsed = JSON.parse(data.replace('confirm_income:', ''));
+  
+  await createTransaction(userId, {
+    ...parsed,
+    type: 'income' // ← Важно!
+  });
+  
+  await bot.answerCallbackQuery(query.id, { text: '✅ Income saved' });
+}
+
+// Регистрация команды в bot.ts:
+bot.onText(/^\/income(.*)/, (msg, match) => handleIncome(msg, match![1].trim()));
+```
+
+**Размер:** +50 строк ✅
+
+---
+
+### 2. Выбор кошелька (2 часа)
+
+**Проблема:** Всегда создаёт в primary wallet.
+
+**Решение:** Inline кнопки для выбора кошелька.
+```typescript
+// В commands.ts, функция handleAdd() изменить:
+
+// После парсинга, перед подтверждением:
+const wallets = await db
+  .select()
+  .from(wallets)
+  .where(eq(wallets.userId, user.id));
+
+if (wallets.length === 0) {
+  await bot.sendMessage(chatId, '❌ No wallets found');
+  return;
+}
+
+// Показать выбор кошелька
+const walletButtons = wallets.map(w => [{
+  text: `${w.name} (${w.balance} ${w.currency})`,
+  callback_data: `select_wallet:${w.id}:${JSON.stringify(parsed)}`
+}]);
+
+await bot.sendMessage(chatId, `
+${parsed.amount} ${parsed.currency} - ${parsed.description}
+
+Select wallet:
+`, {
+  reply_markup: {
+    inline_keyboard: walletButtons
+  }
+});
+
+// В bot.ts, callback:
+if (data?.startsWith('select_wallet:')) {
+  const [_, walletId, parsedJson] = data.split(':');
+  const parsed = JSON.parse(parsedJson);
+  
+  // Создать с указанным walletId
+  await createTransaction(userId, {
+    ...parsed,
+    walletId: parseInt(walletId)
+  });
+  
+  await bot.answerCallbackQuery(query.id, { text: '✅ Saved' });
+}
+```
+
+**Размер:** +40 строк ✅
+
+---
+
+### 3. Редактирование транзакций (2 часа)
+
+**Новая кнопка** в `/last`: `✏️ Edit`
+```typescript
+// В handleLast(), добавить кнопку Edit:
+{
+  reply_markup: {
+    inline_keyboard: [[
+      { text: '✏️ Edit', callback_data: `edit_tx:${tx.id}` },
+      { text: '🗑️ Delete', callback_data: `delete_tx:${tx.id}` }
+    ]]
+  }
+}
+
+// В bot.ts, callback:
+if (data?.startsWith('edit_tx:')) {
+  const txId = parseInt(data.replace('edit_tx:', ''));
+  
+  // Загрузить транзакцию
+  const [tx] = await db
+    .select()
+    .from(dailyTransactions)
+    .where(eq(dailyTransactions.id, txId))
+    .limit(1);
+  
+  if (!tx) {
+    await bot.answerCallbackQuery(query.id, { text: '❌ Not found' });
+    return;
+  }
+  
+  // Показать меню редактирования
+  await bot.sendMessage(query.message!.chat.id, `
+Edit transaction:
+
+Current: ${tx.amount} ${tx.originalCurrency || 'USD'} - ${tx.description}
+
+What to edit?
+  `, {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '💵 Amount', callback_data: `edit_amount:${txId}` }],
+        [{ text: '📝 Description', callback_data: `edit_desc:${txId}` }],
+        [{ text: '📂 Category', callback_data: `edit_cat:${txId}` }],
+        [{ text: '❌ Cancel', callback_data: 'cancel' }]
+      ]
+    }
+  });
+}
+
+// Обработка редактирования amount:
+if (data?.startsWith('edit_amount:')) {
+  const txId = parseInt(data.replace('edit_amount:', ''));
+  
+  await bot.sendMessage(query.message!.chat.id, 'Send new amount:');
+  
+  // Сохранить состояние (в памяти или Redis)
+  userStates.set(query.from.id, { action: 'editing_amount', txId });
+}
+
+// В bot.on('text'), проверить состояние:
+const state = userStates.get(msg.from!.id);
+
+if (state?.action === 'editing_amount') {
+  const newAmount = parseFloat(msg.text!);
+  
+  if (isNaN(newAmount)) {
+    await bot.sendMessage(chatId, '❌ Invalid amount');
+    return;
+  }
+  
+  // Обновить
+  await db
+    .update(dailyTransactions)
+    .set({ amount: newAmount.toString() })
+    .where(eq(dailyTransactions.id, state.txId));
+  
+  await bot.sendMessage(chatId, '✅ Updated!');
+  userStates.delete(msg.from!.id);
+}
+```
+
+**Размер:** +80 строк ✅
+
+---
+
+### 4. Real-time курсы валют (1 час)
+
+**Проблема:** Статичные RUB=92.5, IDR=15750.
+
+**Решение:** Использовать существующий `exchange-rate` service!
+```typescript
+// В commands.ts, импортировать:
+import { convertCurrency } from '../services/currency';
+
+// В handleAdd(), перед созданием транзакции:
+const { amount: amountUsd, rate } = await convertCurrency(
+  parsed.amount,
+  parsed.currency,
+  'USD'
+);
+
+// Создать с актуальным курсом:
+await createTransaction(userId, {
+  type: 'expense',
+  amount: amountUsd, // В USD
+  originalAmount: parsed.amount,
+  originalCurrency: parsed.currency,
+  exchangeRate: rate,
+  description: parsed.description,
+  category: parsed.category,
+  source: 'telegram'
+});
+```
+
+**Размер:** +10 строк (сервис уже есть!) ✅
+
+---
+
+## 📋 ИТОГОВЫЙ ЧЕКЛИСТ
+
+### Фаза 1 (Quick Wins):
+- [ ] Рефакторинг getUserLang() helper (+20 строк)
+- [ ] Inline подтверждения для /add (+40 строк)
+- [ ] Feedback при ошибке парсинга (+15 строк)
+- [ ] Команда /last с удалением (+60 строк)
+
+### Фаза 2 (Ключевой функционал):
+- [ ] Команда /income (+50 строк)
+- [ ] Выбор кошелька inline (+40 строк)
+- [ ] Редактирование транзакций (+80 строк)
+- [ ] Real-time курсы валют (+10 строк)
+
+### Тестирование:
+- [ ] /add → inline подтверждение
+- [ ] /income 5000 Salary → создаёт доход
+- [ ] /last → показывает 5 транзакций
+- [ ] Кнопка Delete → удаляет
+- [ ] Кнопка Edit → редактирует
+- [ ] Выбор кошелька → работает
+- [ ] Курсы валют актуальные
+
+---
+
+## 📂 ИЗМЕНЁННЫЕ ФАЙЛЫ
+```
+server/telegram/
+  ├─ bot.ts                (+100 строк - callbacks, getUserLang)
+  ├─ commands.ts           (+250 строк - income, last, edit, wallets)
+  └─ parser.ts             (+15 строк - error handling)
+```
+
+**ИТОГО:** +365 строк нового кода ✅  
+**Все файлы:** <300 строк каждый ✅
+
+---
+
+## 🎯 РЕЗУЛЬТАТ
+
+### БЫЛО:
+```
+✅ /add (только расходы)
+✅ /balance
+✅ OCR чеков
+❌ Нет доходов
+❌ Нельзя выбрать кошелёк
+❌ Нет истории/редактирования
+```
+
+### СТАНЕТ:
+```
+✅ /add (с подтверждением)
+✅ /income (добавление дохода)
+✅ /last (история с удалением)
+✅ Выбор кошелька
+✅ Редактирование транзакций
+✅ Real-time курсы
+✅ Feedback при ошибках
+✅ Consistent UX
+```
+
+---
+
+## 💪 КРИТЕРИЙ УСПЕХА
+
+**Пользователь может:**
+1. Добавить расход: `/add 100 coffee` → выбрать кошелёк → подтвердить ✅
+2. Добавить доход: `/income 5000 Salary` → подтвердить ✅
+3. Посмотреть историю: `/last` → видит 5 транзакций ✅
+4. Удалить: кнопка 🗑️ → удаляет ✅
+5. Редактировать: кнопка ✏️ → изменяет ✅
+6. Актуальные курсы валют автоматически ✅
+
+**БОТ СТАЛ KILLER ФИЧЕЙ!** 🚀
+
+---
+
+**ВРЕМЯ РЕАЛИЗАЦИИ: 8-10 часов**
+
+**ОТПРАВЛЯЙ REPLIT ЭТО ТЗ!** 🤖
