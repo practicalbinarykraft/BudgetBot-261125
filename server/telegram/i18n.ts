@@ -110,6 +110,10 @@ const translations: Translations = {
     en: 'Category',
     ru: 'Категория',
   },
+  'transaction.no_category': {
+    en: 'No category',
+    ru: 'Без категории',
+  },
   'transaction.parse_error': {
     en: '❌ Could not parse transaction.\n\nExample: `100 coffee` or `1500₽ taxi`',
     ru: '❌ Не удалось распознать транзакцию.\n\nПример: `100 coffee` или `1500₽ такси`',

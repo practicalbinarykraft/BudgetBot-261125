@@ -17,7 +17,7 @@ async function formatTransactionMessage(
   currency: string,
   amountUsd: number,
   description: string,
-  categoryName: string,
+  categoryId: number | null,
   type: 'income' | 'expense',
   lang: Language
 ): Promise<{ message: string; reply_markup?: TelegramBot.InlineKeyboardMarkup }> {
@@ -34,60 +34,67 @@ async function formatTransactionMessage(
   const exchangeRate = currency === 'USD' ? 1 : (amount / amountUsd);
   
   let budgetInfo = '';
-  const [category] = await db
-    .select()
-    .from(categories)
-    .where(and(
-      eq(categories.userId, userId),
-      eq(categories.name, categoryName)
-    ))
-    .limit(1);
-
-  if (category) {
-    const today = new Date();
-    const budgetList = await db
+  let categoryName = t('transaction.no_category', lang);
+  
+  // Load category by ID if provided
+  if (categoryId) {
+    const [category] = await db
       .select()
-      .from(budgets)
+      .from(categories)
       .where(and(
-        eq(budgets.userId, userId),
-        eq(budgets.categoryId, category.id)
-      ));
+        eq(categories.userId, userId),
+        eq(categories.id, categoryId)
+      ))
+      .limit(1);
 
-    for (const budget of budgetList) {
-      let startDate: Date, endDate: Date;
+    if (category) {
+      categoryName = category.name;
       
-      if (budget.period === 'week') {
-        startDate = startOfWeek(today, { weekStartsOn: 1 });
-        endDate = endOfWeek(today, { weekStartsOn: 1 });
-      } else if (budget.period === 'month') {
-        startDate = startOfMonth(today);
-        endDate = endOfMonth(today);
-      } else {
-        startDate = startOfYear(today);
-        endDate = endOfYear(today);
-      }
-
-      const startStr = format(startDate, 'yyyy-MM-dd');
-      const endStr = format(endDate, 'yyyy-MM-dd');
-
-      const [result] = await db
-        .select({
-          total: sql<string>`COALESCE(SUM(CAST(${transactions.amountUsd} AS DECIMAL)), 0)`
-        })
-        .from(transactions)
+      const today = new Date();
+      const budgetList = await db
+        .select()
+        .from(budgets)
         .where(and(
-          eq(transactions.userId, userId),
-          eq(transactions.categoryId, category.id),
-          eq(transactions.type, 'expense'),
-          gte(transactions.date, startStr),
-          lte(transactions.date, endStr)
+          eq(budgets.userId, userId),
+          eq(budgets.categoryId, category.id)
         ));
 
-      const spent = parseFloat(result?.total || '0');
-      const limit = parseFloat(budget.limitAmount);
-      
-      budgetInfo = `\n${t('transaction.budget_limit', lang)}: $${spent.toFixed(0)}/$${limit.toFixed(0)}`;
-      break;
+      for (const budget of budgetList) {
+        let startDate: Date, endDate: Date;
+        
+        if (budget.period === 'week') {
+          startDate = startOfWeek(today, { weekStartsOn: 1 });
+          endDate = endOfWeek(today, { weekStartsOn: 1 });
+        } else if (budget.period === 'month') {
+          startDate = startOfMonth(today);
+          endDate = endOfMonth(today);
+        } else {
+          startDate = startOfYear(today);
+          endDate = endOfYear(today);
+        }
+
+        const startStr = format(startDate, 'yyyy-MM-dd');
+        const endStr = format(endDate, 'yyyy-MM-dd');
+
+        const [result] = await db
+          .select({
+            total: sql<string>`COALESCE(SUM(CAST(${transactions.amountUsd} AS DECIMAL)), 0)`
+          })
+          .from(transactions)
+          .where(and(
+            eq(transactions.userId, userId),
+            eq(transactions.categoryId, category.id),
+            eq(transactions.type, 'expense'),
+            gte(transactions.date, startStr),
+            lte(transactions.date, endStr)
+          ));
+
+        const spent = parseFloat(result?.total || '0');
+        const limit = parseFloat(budget.limitAmount);
+        
+        budgetInfo = `\n${t('transaction.budget_limit', lang)}: $${spent.toFixed(0)}/$${limit.toFixed(0)}`;
+        break;
+      }
     }
   }
 
@@ -354,7 +361,7 @@ export async function handleTextMessage(bot: TelegramBot, msg: TelegramBot.Messa
       parsed.currency,
       amountUsd,
       parsed.description,
-      parsed.category,
+      categoryId,
       parsed.type,
       lang
     );
@@ -603,7 +610,7 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
         parsed.currency,
         amountUsd,
         parsed.description,
-        parsed.category,
+        categoryId,
         'expense',
         lang
       );
@@ -675,7 +682,7 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
         parsed.currency,
         amountUsd,
         parsed.description,
-        parsed.category,
+        categoryId,
         'income',
         lang
       );
