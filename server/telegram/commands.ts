@@ -8,6 +8,7 @@ import { t, getWelcomeMessage, getHelpMessage, type Language } from './i18n';
 import { getUserLanguageByTelegramId, getUserLanguageByUserId } from './language';
 import { convertToUSD, getUserExchangeRates } from '../services/currency-service';
 import { resolveCategoryId } from '../services/category-resolution.service';
+import { getPrimaryWallet, updateWalletBalance } from '../services/wallet.service';
 import { storage } from '../storage';
 import { pendingReceipts } from './pending-receipts';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
@@ -114,7 +115,10 @@ async function formatTransactionMessage(
     message += `${t('transaction.usd_amount', lang)}: ~$${amountUsd.toFixed(0)}`;
   }
   
-  message += `\n\n${t('transaction.total_capital', lang)}: $${totalCapital.toFixed(0)}`;
+  // Show capital change
+  const delta = type === 'expense' ? -amountUsd : amountUsd;
+  const deltaSign = delta > 0 ? '+' : '';
+  message += `\n\n${t('transaction.total_capital', lang)}: $${totalCapital.toFixed(0)} (${deltaSign}$${delta.toFixed(0)})`;
   
   if (budgetInfo) {
     message += budgetInfo;
@@ -332,6 +336,9 @@ export async function handleTextMessage(bot: TelegramBot, msg: TelegramBot.Messa
     // Resolve category using category resolution service
     const categoryId = await resolveCategoryId(user.id, parsed.category);
 
+    // Get primary wallet for transaction
+    const primaryWallet = await getPrimaryWallet(user.id);
+
     // Get user's custom exchange rates
     const rates = await getUserExchangeRates(user.id);
     const amountUsd = convertToUSD(parsed.amount, parsed.currency, rates);
@@ -352,9 +359,17 @@ export async function handleTextMessage(bot: TelegramBot, msg: TelegramBot.Messa
         originalCurrency: parsed.currency,
         exchangeRate: exchangeRate.toFixed(4),
         source: 'telegram',
-        walletId: null,
+        walletId: primaryWallet.id,
       })
       .returning();
+
+    // Update wallet balance
+    await updateWalletBalance(
+      primaryWallet.id,
+      user.id,
+      amountUsd,
+      parsed.type
+    );
 
     const { message, reply_markup } = await formatTransactionMessage(
       user.id,
@@ -613,6 +628,9 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
       const { parsed, categoryId } = receiptData;
       pendingReceipts.delete(receiptId);
 
+      // Get primary wallet for transaction
+      const primaryWallet = await getPrimaryWallet(user.id);
+
       // Recalculate with fresh user rates
       const rates = await getUserExchangeRates(user.id);
       const amountUsd = convertToUSD(parsed.amount, parsed.currency, rates);
@@ -633,9 +651,17 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
           originalCurrency: parsed.currency,
           exchangeRate: exchangeRate.toFixed(4),
           source: 'ocr',
-          walletId: null,
+          walletId: primaryWallet.id,
         })
         .returning();
+
+      // Update wallet balance
+      await updateWalletBalance(
+        primaryWallet.id,
+        user.id,
+        amountUsd,
+        'expense'
+      );
 
       const { message, reply_markup } = await formatTransactionMessage(
         user.id,
@@ -685,6 +711,9 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
       const dataStr = query.data.substring('confirm_income:'.length);
       const { parsed, categoryId, userId } = JSON.parse(dataStr);
 
+      // Get primary wallet for transaction
+      const primaryWallet = await getPrimaryWallet(user.id);
+
       // Recalculate with fresh user rates
       const rates = await getUserExchangeRates(user.id);
       const amountUsd = convertToUSD(parsed.amount, parsed.currency, rates);
@@ -705,9 +734,17 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
           originalCurrency: parsed.currency,
           exchangeRate: exchangeRate.toFixed(4),
           source: 'telegram',
-          walletId: null,
+          walletId: primaryWallet.id,
         })
         .returning();
+
+      // Update wallet balance
+      await updateWalletBalance(
+        primaryWallet.id,
+        user.id,
+        amountUsd,
+        'income'
+      );
 
       const { message, reply_markup } = await formatTransactionMessage(
         user.id,
