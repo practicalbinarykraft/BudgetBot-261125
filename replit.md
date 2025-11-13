@@ -10,6 +10,8 @@ Budget Buddy is a personal finance management application designed to help users
 - Added edit/delete transaction functionality to Dashboard page
 - Fixed TanStack Query cache invalidation using `exact: false` flag to ensure Dashboard refreshes after mutations
 - Dashboard now supports full transaction management (create, edit, delete) without navigating to Transactions page
+- Fixed transaction sorting: Added `ORDER BY date DESC, id DESC` to `getTransactionsByUserId` to ensure transactions always display in chronological order (newest first)
+- Resolved issue where edited transactions would disappear from Dashboard due to unsorted database results
 
 **Key Capabilities:**
 - Transaction, wallet, category, and budget management

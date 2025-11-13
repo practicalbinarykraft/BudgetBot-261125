@@ -84,7 +84,7 @@ import {
   settings,
   budgets
 } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 
 export class DatabaseStorage implements IStorage {
   // Users
@@ -105,7 +105,10 @@ export class DatabaseStorage implements IStorage {
 
   // Transactions
   async getTransactionsByUserId(userId: number): Promise<Transaction[]> {
-    return db.select().from(transactions).where(eq(transactions.userId, userId));
+    return db.select()
+      .from(transactions)
+      .where(eq(transactions.userId, userId))
+      .orderBy(desc(transactions.date), desc(transactions.id));
   }
 
   async getTransactionById(id: number): Promise<Transaction | null> {
