@@ -17,6 +17,7 @@ import WishlistPage from "@/pages/wishlist-page";
 import BudgetsPage from "@/pages/budgets-page";
 import AIAnalysisPage from "@/pages/ai-analysis-page";
 import SettingsPage from "@/pages/settings-page";
+import TagsSettingsPage from "@/pages/tags-settings-page";
 
 function Router() {
   return (
@@ -30,6 +31,7 @@ function Router() {
       <ProtectedRoute path="/wishlist" component={WishlistPage} />
       <ProtectedRoute path="/budgets" component={BudgetsPage} />
       <ProtectedRoute path="/ai-analysis" component={AIAnalysisPage} />
+      <ProtectedRoute path="/tags" component={TagsSettingsPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <Route>
         <Redirect to="/" />

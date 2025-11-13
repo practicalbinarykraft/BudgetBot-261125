@@ -1,7 +1,8 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Transaction, Category, insertTransactionSchema } from "@shared/schema";
+import { Transaction, Category, PersonalTag, insertTransactionSchema } from "@shared/schema";
+import { TagSelector } from "@/components/tags/tag-selector";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,11 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
     enabled: open,
   });
 
+  const { data: tags = [] } = useQuery<PersonalTag[]>({
+    queryKey: ["/api/tags"],
+    enabled: open,
+  });
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     values: transaction ? {
@@ -57,6 +63,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
       currency: transaction.currency || "USD",
       source: (transaction.source || "manual") as "manual" | "telegram" | "ocr",
       walletId: transaction.walletId || undefined,
+      personalTagId: transaction.personalTagId || null,
     } : undefined,
   });
 
@@ -205,6 +212,23 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="personalTagId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tag (Optional)</FormLabel>
+                  <FormControl>
+                    <TagSelector
+                      value={field.value ?? null}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

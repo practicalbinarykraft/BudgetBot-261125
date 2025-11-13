@@ -7,6 +7,7 @@ import session from "express-session";
 import createMemoryStore from "memorystore";
 import bcrypt from "bcryptjs";
 import { db } from "./db";
+import { createDefaultTags } from "./services/tag.service";
 
 const MemoryStore = createMemoryStore(session);
 
@@ -123,6 +124,7 @@ export function setupAuth(app: Express) {
       });
 
       await createDefaultCategories(user.id);
+      await createDefaultTags(user.id);
 
       req.login(user, (err) => {
         if (err) {

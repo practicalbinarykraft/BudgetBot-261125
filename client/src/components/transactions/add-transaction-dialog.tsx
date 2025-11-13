@@ -13,9 +13,10 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Category } from "@shared/schema";
+import { Category, PersonalTag } from "@shared/schema";
 import { Plus } from "lucide-react";
 import { CategoryCreateDialog } from "@/components/categories/category-create-dialog";
+import { TagSelector } from "@/components/tags/tag-selector";
 
 interface AddTransactionDialogProps {
   open: boolean;
@@ -54,6 +55,11 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
     enabled: open,
   });
 
+  const { data: tags = [] } = useQuery<PersonalTag[]>({
+    queryKey: ["/api/tags"],
+    enabled: open,
+  });
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -67,6 +73,7 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
       currency: "USD",
       source: "manual",
       walletId: undefined,
+      personalTagId: null,
     },
   });
 
@@ -235,6 +242,23 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
                       </button>
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="personalTagId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tag (Optional)</FormLabel>
+                  <FormControl>
+                    <TagSelector
+                      value={field.value ?? null}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

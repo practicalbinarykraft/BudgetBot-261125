@@ -7,6 +7,15 @@ Budget Buddy is a personal finance management application designed to help users
 ## Recent Changes
 
 **November 13, 2025:**
+- **Personal Tags Feature:** Implemented third classification axis for transactions (WHO spent/received money) alongside category (WHAT) and type (income/expense)
+  - Backend: `personal_tags` table with lucide icon names, 3 types (personal/shared/person), ownership checks in routes
+  - Service: `tag.service.ts` with 7 functions (CRUD + stats + default tag creation)
+  - Frontend: 5 components (TagBadge, TagSelector, TagCard, CreateTagDialog, TagsSettingsPage at /tags)
+  - Transaction integration: personalTagId field added to add/edit transaction dialogs
+  - Registration: Automatically creates 2 default tags ("Personal (Me)" with User icon, "Shared" with Home icon)
+  - Icons: Lucide-react icons (no emojis) with 10 options, customizable colors
+  - Security: Route-level ownership verification prevents unauthorized tag access/modification
+  - Known optimizations deferred: TagSelector double-fetch, N+1 stats queries (non-critical)
 - **Cumulative Financial Charts:** Refactored analytics to display cumulative (running total) charts instead of daily impulse charts for smoother visualization
   - Created modular architecture: `server/lib/charts/cumulative.ts` (utility), `server/services/trend-calculator.service.ts` (service layer)
   - Income/Expense lines show accumulated totals over time (smooth curves vs. spiky daily bars)
@@ -61,6 +70,7 @@ Preferred communication style: Simple, everyday language.
 **Telegram Bot Integration:** A centralized bot for expense tracking. Users link accounts via verification codes. Supports i18n (English/Russian), commands (`/start`, `/verify`, `/add`, `/income`, `/balance`, `/last`), natural language parsing, and receipt OCR. Bot-created transactions automatically link to the user's primary wallet (first wallet or auto-created USD default "My Wallet"), update balances atomically, convert currencies using user exchange rates, and apply ML auto-categorization. Enhanced notifications include conversion rates, USD equivalents, capital totals with delta display (e.g., "$9800 (-$18)"), budget progress, and inline action buttons. Implements in-memory receipt storage with 16-character IDs to comply with Telegram's 64-byte callback_data limit, including 5-minute TTL, cross-user security validation, and automatic cleanup. Features full transaction editing via "Edit" button: validates old USD amount BEFORE database update using 3-tier fallback strategy (originalAmount/exchangeRate → amountUsd → amount), aborts cleanly on validation failure to prevent balance corruption, updates transaction and wallet atomically on success. Edit flow maintains primary wallet association and cannot change wallets (parser limitation).
 **Scheduled Notification System:** Uses node-cron for timezone-aware daily notifications. Users configure notification time and timezone in Settings (supports 22 popular IANA timezones). Scheduler automatically updates when settings change, initializes on server startup, and sends daily summaries to Telegram users based on their preferences.
 **Financial Trend Chart with AI Forecasting:** Dashboard visualization showing cumulative income, expenses, and capital trends. Uses user-provided Anthropic API keys for Claude to analyze historical data and recurring payments for future capital trajectory predictions. Includes configurable history and forecast periods, with a linear projection fallback.
+**Personal Tags System:** Third classification axis for transactions answering "WHO spent/received this money?" (complementing category="WHAT" and type="income/expense"). Tags have types: 'personal' (me), 'shared' (household), 'person' (others like "Маша", "Дима"). Features lucide-react icons (10 options: User, Heart, Home, Users, Baby, UserPlus, Briefcase, Gift, Dog, Cat) with customizable colors. Default tags auto-created on registration. Full CRUD at /tags settings page. Transaction forms include optional tag selector. Route-level ownership verification ensures users can only access/modify their own tags. Backend service layer provides stats (transaction count, total spent per tag). Frontend components: TagBadge (display), TagSelector (dropdown), TagCard (management), CreateTagDialog (create/edit with form sync), TagsSettingsPage (list view).
 **Security Hardening:** Implemented measures include stripping `userId` from request bodies, foreign key ownership verification, and comprehensive ownership checks on all data manipulation routes.
 **Budget Management:** Supports category-based budgeting with period tracking (week, month, year) and progress calculation, featuring UI alerts for exceeded budgets.
 

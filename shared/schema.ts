@@ -34,6 +34,8 @@ export const transactions = pgTable("transactions", {
   exchangeRate: decimal("exchange_rate", { precision: 10, scale: 4 }),
   source: text("source").default("manual"), // 'manual', 'telegram', 'ocr'
   walletId: integer("wallet_id").references(() => wallets.id, { onDelete: "set null" }),
+  // 👥 Personal Tags: WHO is this transaction for?
+  personalTagId: integer("personal_tag_id").references(() => personalTags.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -148,6 +150,20 @@ export const telegramVerificationCodes = pgTable("telegram_verification_codes", 
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Personal Tags table (WHO classification)
+export const personalTags = pgTable("personal_tags", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),         // "Маша", "Дима", "Personal", "Shared"
+  icon: text("icon").default("User"),   // Lucide icon name
+  color: text("color").default("#3b82f6"),
+  // Type: 'personal' = me, 'shared' = shared, 'person' = other person
+  type: text("type").notNull().default("person"),
+  isDefault: boolean("is_default").default(false).notNull(), // Cannot delete default tags
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   transactions: many(transactions),
@@ -159,6 +175,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   merchantCategories: many(merchantCategories),
   calibrations: many(calibrations),
   telegramVerificationCodes: many(telegramVerificationCodes),
+  personalTags: many(personalTags),
   settings: one(settings),
 }));
 
@@ -170,6 +187,10 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
   wallet: one(wallets, {
     fields: [transactions.walletId],
     references: [wallets.id],
+  }),
+  personalTag: one(personalTags, {
+    fields: [transactions.personalTagId],
+    references: [personalTags.id],
   }),
 }));
 
@@ -240,6 +261,14 @@ export const calibrationsRelations = relations(calibrations, ({ one }) => ({
     fields: [calibrations.transactionId],
     references: [transactions.id],
   }),
+}));
+
+export const personalTagsRelations = relations(personalTags, ({ one, many }) => ({
+  user: one(users, {
+    fields: [personalTags.userId],
+    references: [users.id],
+  }),
+  transactions: many(transactions),
 }));
 
 // Zod Schemas
@@ -338,6 +367,17 @@ export const insertTelegramVerificationCodeSchema = createInsertSchema(telegramV
   createdAt: true,
 });
 
+export const insertPersonalTagSchema = createInsertSchema(personalTags, {
+  type: z.enum(["personal", "shared", "person"]).optional(),
+  name: z.string().min(1, "Name is required"),
+  icon: z.string().optional(),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format").optional(),
+}).omit({
+  id: true,
+  userId: true,  // Server-side only
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -371,6 +411,9 @@ export type Calibration = typeof calibrations.$inferSelect;
 
 export type InsertTelegramVerificationCode = z.infer<typeof insertTelegramVerificationCodeSchema>;
 export type TelegramVerificationCode = typeof telegramVerificationCodes.$inferSelect;
+
+export type InsertPersonalTag = z.infer<typeof insertPersonalTagSchema>;
+export type PersonalTag = typeof personalTags.$inferSelect;
 
 // 🔐 Helper type for storage layer: public insert schemas omit userId for security,
 // but storage needs userId from authenticated session
