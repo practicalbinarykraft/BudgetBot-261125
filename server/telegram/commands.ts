@@ -1037,18 +1037,72 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
         .where(eq(users.telegramId, telegramId))
         .limit(1);
 
-      if (user) {
-        lang = await getUserLanguageByUserId(user.id);
+      if (!user) {
+        await bot.answerCallbackQuery(query.id, { text: t('error.user_not_found', lang) });
+        return;
       }
 
+      lang = await getUserLanguageByUserId(user.id);
+
+      // Get pending edit before deleting it
+      const pendingEdit = pendingEdits.get(telegramId);
+      
+      if (!pendingEdit) {
+        await bot.editMessageText(t('transaction.edit_cancelled', lang), {
+          chat_id: chatId,
+          message_id: query.message?.message_id,
+        });
+        await bot.answerCallbackQuery(query.id);
+        return;
+      }
+
+      const transactionId = pendingEdit.transactionId;
       pendingEdits.delete(telegramId);
 
-      await bot.editMessageText(t('transaction.edit_cancelled', lang), {
+      // Get transaction to restore original message with buttons
+      const [transaction] = await db
+        .select()
+        .from(transactions)
+        .where(and(
+          eq(transactions.id, transactionId),
+          eq(transactions.userId, user.id)
+        ))
+        .limit(1);
+
+      if (!transaction) {
+        await bot.editMessageText(t('transaction.edit_cancelled', lang), {
+          chat_id: chatId,
+          message_id: query.message?.message_id,
+        });
+        await bot.answerCallbackQuery(query.id);
+        return;
+      }
+
+      // Restore original transaction message with buttons
+      const amount = parseFloat(transaction.originalAmount || transaction.amount);
+      const currency = (transaction.originalCurrency || transaction.currency || 'USD') as 'USD' | 'RUB' | 'IDR';
+      const amountUsd = parseFloat(transaction.amountUsd || '0');
+
+      const { message, reply_markup } = await formatTransactionMessage(
+        user.id,
+        transaction.id,
+        amount,
+        currency,
+        amountUsd,
+        transaction.description || '',
+        transaction.categoryId,
+        transaction.type as 'income' | 'expense',
+        lang
+      );
+
+      await bot.editMessageText(message, {
         chat_id: chatId,
         message_id: query.message?.message_id,
+        parse_mode: 'Markdown',
+        reply_markup
       });
 
-      await bot.answerCallbackQuery(query.id);
+      await bot.answerCallbackQuery(query.id, { text: t('transaction.edit_cancelled', lang) });
     }
   } catch (error) {
     console.error('Callback query handling error:', error);
