@@ -12,6 +12,8 @@ Budget Buddy is a personal finance management application designed to help users
 - Dashboard now supports full transaction management (create, edit, delete) without navigating to Transactions page
 - Fixed transaction sorting: Added `ORDER BY date DESC, id DESC` to `getTransactionsByUserId` to ensure transactions always display in chronological order (newest first)
 - Resolved issue where edited transactions would disappear from Dashboard due to unsorted database results
+- Implemented date-grouped transaction display on Dashboard with localized headers (Russian: "Сегодня", "Вчера", specific dates)
+- Fixed date grouping to normalize by calendar date (yyyy-MM-dd) so same-day transactions with different timestamps group together
 
 **Key Capabilities:**
 - Transaction, wallet, category, and budget management
