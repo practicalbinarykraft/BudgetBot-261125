@@ -7,6 +7,12 @@ Budget Buddy is a personal finance management application designed to help users
 ## Recent Changes
 
 **November 13, 2025:**
+- **Cumulative Financial Charts:** Refactored analytics to display cumulative (running total) charts instead of daily impulse charts for smoother visualization
+  - Created modular architecture: `server/lib/charts/cumulative.ts` (utility), `server/services/trend-calculator.service.ts` (service layer)
+  - Income/Expense lines show accumulated totals over time (smooth curves vs. spiky daily bars)
+  - Capital calculated as `cumulativeIncome - cumulativeExpense` (simplified formula)
+  - Forecast continues smoothly from last historical point using `makeCumulativeFromBase`
+  - Capital baseline alignment (matching current wallet balance) deferred to future iteration per Architect recommendation
 - Added edit/delete transaction functionality to Dashboard page
 - Fixed TanStack Query cache invalidation using `exact: false` flag to ensure Dashboard refreshes after mutations
 - Dashboard now supports full transaction management (create, edit, delete) without navigating to Transactions page
