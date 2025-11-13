@@ -11,6 +11,7 @@ import { resolveCategoryId } from '../services/category-resolution.service';
 import { getPrimaryWallet, updateWalletBalance } from '../services/wallet.service';
 import { storage } from '../storage';
 import { pendingReceipts } from './pending-receipts';
+import { pendingEdits } from './pending-edits';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 
 async function formatTransactionMessage(
@@ -302,6 +303,128 @@ export async function handleTextMessage(bot: TelegramBot, msg: TelegramBot.Messa
     }
 
     lang = await getUserLanguageByUserId(user.id);
+
+    // Check if user is editing a transaction
+    const pendingEdit = pendingEdits.get(telegramId);
+    if (pendingEdit) {
+      const parsed = parseTransactionText(text);
+
+      if (!parsed) {
+        await bot.sendMessage(chatId, t('transaction.parse_error', lang), {
+          parse_mode: 'Markdown'
+        });
+        return;
+      }
+
+      // Get user's exchange rates
+      const rates = await getUserExchangeRates(user.id);
+      const newAmountUsd = convertToUSD(parsed.amount, parsed.currency, rates);
+      const newExchangeRate = parsed.currency === 'USD' ? 1 : rates[parsed.currency] || 1;
+
+      // Resolve category
+      const categoryId = await resolveCategoryId(user.id, parsed.category);
+
+      // CRITICAL: Validate old USD amount BEFORE updating transaction
+      // This prevents data corruption if validation fails after DB update
+      let oldAmountUsd: number | null = null;
+
+      if (pendingEdit.oldTransaction.walletId) {
+        // Strategy 1: Recalculate from originalAmount and exchangeRate (most accurate)
+        if (pendingEdit.oldTransaction.originalAmount && pendingEdit.oldTransaction.exchangeRate) {
+          const oldOriginalAmount = parseFloat(pendingEdit.oldTransaction.originalAmount);
+          const oldExchangeRate = parseFloat(pendingEdit.oldTransaction.exchangeRate);
+          
+          if (!isNaN(oldOriginalAmount) && !isNaN(oldExchangeRate) && oldExchangeRate > 0) {
+            oldAmountUsd = pendingEdit.oldTransaction.currency === 'USD' 
+              ? oldOriginalAmount 
+              : oldOriginalAmount / oldExchangeRate;
+          }
+        }
+        
+        // Strategy 2: Use stored amountUsd (legacy transactions)
+        if (oldAmountUsd === null && pendingEdit.oldTransaction.amountUsd) {
+          const parsedUsd = parseFloat(pendingEdit.oldTransaction.amountUsd);
+          if (!isNaN(parsedUsd) && parsedUsd > 0) {
+            oldAmountUsd = parsedUsd;
+          }
+        }
+        
+        // Strategy 3: Fallback to amount (assume USD if no conversion data)
+        if (oldAmountUsd === null && pendingEdit.oldTransaction.amount) {
+          const parsedAmount = parseFloat(pendingEdit.oldTransaction.amount);
+          if (!isNaN(parsedAmount) && parsedAmount > 0) {
+            oldAmountUsd = parsedAmount;
+          }
+        }
+
+        // Abort edit if we cannot safely calculate old USD amount
+        if (oldAmountUsd === null || isNaN(oldAmountUsd) || !isFinite(oldAmountUsd)) {
+          console.error('Cannot calculate old USD amount for transaction:', pendingEdit.transactionId);
+          pendingEdits.delete(telegramId);
+          await bot.sendMessage(chatId, t('error.transaction', lang));
+          return;
+        }
+      }
+
+      // Update transaction in database (only after validation passes)
+      await db
+        .update(transactions)
+        .set({
+          type: parsed.type,
+          amount: parsed.amount.toString(),
+          description: parsed.description,
+          categoryId,
+          currency: parsed.currency,
+          amountUsd: newAmountUsd.toFixed(2),
+          originalAmount: parsed.amount.toString(),
+          originalCurrency: parsed.currency,
+          exchangeRate: newExchangeRate.toFixed(4),
+        })
+        .where(and(
+          eq(transactions.id, pendingEdit.transactionId),
+          eq(transactions.userId, user.id)
+        ));
+
+      // Update wallet balance: reverse old transaction, apply new one
+      // Note: walletId is not changed during Telegram edit - transaction stays in same wallet
+      // This is intentional as Telegram parser doesn't support wallet selection
+      if (pendingEdit.oldTransaction.walletId && oldAmountUsd !== null) {
+        const walletId = pendingEdit.oldTransaction.walletId;
+
+        // Reverse old transaction effect (use old type and validated old amount)
+        const reverseType = pendingEdit.oldTransaction.type === 'income' ? 'expense' : 'income';
+        await updateWalletBalance(walletId, user.id, oldAmountUsd, reverseType);
+
+        // Apply new transaction effect (use new type and new amount from parsed input)
+        await updateWalletBalance(walletId, user.id, newAmountUsd, parsed.type);
+      }
+
+      // Clear pending edit
+      pendingEdits.delete(telegramId);
+
+      // Send success message with transaction details
+      const { message, reply_markup } = await formatTransactionMessage(
+        user.id,
+        pendingEdit.transactionId,
+        parsed.amount,
+        parsed.currency,
+        newAmountUsd,
+        parsed.description,
+        categoryId,
+        parsed.type,
+        lang
+      );
+
+      await bot.editMessageText(message, {
+        chat_id: pendingEdit.chatId,
+        message_id: pendingEdit.messageId,
+        parse_mode: 'Markdown',
+        reply_markup
+      });
+
+      await bot.sendMessage(chatId, t('transaction.edit_success', lang));
+      return;
+    }
 
     // Pre-parse validation for better error messages
     const trimmedText = text.trim();
@@ -853,15 +976,79 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
 
       lang = await getUserLanguageByUserId(user.id);
 
-      await bot.editMessageText(
-        t('transaction.edit_coming_soon', lang),
-        {
-          chat_id: chatId,
-          message_id: query.message?.message_id,
-        }
-      );
+      // Get transaction
+      const [transaction] = await db
+        .select()
+        .from(transactions)
+        .where(and(
+          eq(transactions.id, transactionId),
+          eq(transactions.userId, user.id)
+        ))
+        .limit(1);
 
-      await bot.answerCallbackQuery(query.id, { text: t('transaction.edit_coming_soon', lang) });
+      if (!transaction) {
+        await bot.answerCallbackQuery(query.id, { text: t('error.generic', lang) });
+        return;
+      }
+
+      // Store pending edit
+      pendingEdits.store(telegramId, {
+        transactionId,
+        userId: user.id,
+        oldTransaction: {
+          amount: transaction.amount,
+          amountUsd: transaction.amountUsd || '0',
+          currency: transaction.currency || 'USD',
+          type: transaction.type as 'income' | 'expense',
+          walletId: transaction.walletId,
+          originalAmount: transaction.originalAmount || transaction.amount,
+          exchangeRate: transaction.exchangeRate || '1',
+        },
+        chatId,
+        messageId: query.message?.message_id || 0,
+      });
+
+      // Send edit prompt
+      const promptMessage = t('transaction.edit_prompt', lang)
+        .replace('{amount}', transaction.amount)
+        .replace('{currency}', transaction.currency || 'USD')
+        .replace('{description}', transaction.description || 'N/A');
+
+      await bot.editMessageText(promptMessage, {
+        chat_id: chatId,
+        message_id: query.message?.message_id,
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: t('transaction.delete_no', lang), callback_data: 'cancel_edit' }
+            ]
+          ]
+        }
+      });
+
+      await bot.answerCallbackQuery(query.id);
+    }
+
+    if (query.data === 'cancel_edit') {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.telegramId, telegramId))
+        .limit(1);
+
+      if (user) {
+        lang = await getUserLanguageByUserId(user.id);
+      }
+
+      pendingEdits.delete(telegramId);
+
+      await bot.editMessageText(t('transaction.edit_cancelled', lang), {
+        chat_id: chatId,
+        message_id: query.message?.message_id,
+      });
+
+      await bot.answerCallbackQuery(query.id);
     }
   } catch (error) {
     console.error('Callback query handling error:', error);

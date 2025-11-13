@@ -174,6 +174,22 @@ const translations: Translations = {
     en: '⏳ Edit feature coming soon! For now, delete and create a new transaction.',
     ru: '⏳ Функция редактирования скоро появится! Пока что удалите и создайте новую транзакцию.',
   },
+  'transaction.edit_prompt': {
+    en: '✏️ *Edit Transaction*\n\nCurrent:\n💵 Amount: {amount} {currency}\n📝 Description: {description}\n\nSend new transaction data:\nExample: `150 coffee` or `2000₽ taxi`',
+    ru: '✏️ *Редактирование транзакции*\n\nТекущее:\n💵 Сумма: {amount} {currency}\n📝 Описание: {description}\n\nОтправьте новые данные:\nПример: `150 coffee` или `2000₽ такси`',
+  },
+  'transaction.edit_cancelled': {
+    en: '❌ Edit cancelled.',
+    ru: '❌ Редактирование отменено.',
+  },
+  'transaction.edit_success': {
+    en: '✅ Transaction updated!',
+    ru: '✅ Транзакция обновлена!',
+  },
+  'transaction.edit_timeout': {
+    en: '⏱ Edit timeout. Transaction was not changed.',
+    ru: '⏱ Время редактирования истекло. Транзакция не изменена.',
+  },
 
   // Status
   'status.connected': {
