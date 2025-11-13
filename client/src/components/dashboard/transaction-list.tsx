@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Trash2, Pencil } from "lucide-react";
 // ⏰ parseISO prevents timezone bugs when parsing date strings from DB
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isToday, isYesterday } from "date-fns";
+import { ru } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 interface TransactionListProps {
@@ -13,6 +14,38 @@ interface TransactionListProps {
   onEdit?: (transaction: Transaction) => void;
   showDelete?: boolean;
   showEdit?: boolean;
+}
+
+// Helper function to format date headers
+function getDateHeader(dateStr: string): string {
+  const date = parseISO(dateStr);
+  
+  if (isToday(date)) {
+    return "Сегодня";
+  }
+  
+  if (isYesterday(date)) {
+    return "Вчера";
+  }
+  
+  // Format: "14 ноября"
+  return format(date, "d MMMM", { locale: ru });
+}
+
+// Helper function to group transactions by date
+function groupTransactionsByDate(transactions: Transaction[]): Map<string, Transaction[]> {
+  const groups = new Map<string, Transaction[]>();
+  
+  transactions.forEach(transaction => {
+    // Normalize to calendar date (YYYY-MM-DD) to group same-day transactions
+    const dateKey = format(parseISO(transaction.date), 'yyyy-MM-dd');
+    if (!groups.has(dateKey)) {
+      groups.set(dateKey, []);
+    }
+    groups.get(dateKey)!.push(transaction);
+  });
+  
+  return groups;
 }
 
 export function TransactionList({ transactions, onDelete, onEdit, showDelete = false, showEdit = false }: TransactionListProps) {
@@ -32,13 +65,21 @@ export function TransactionList({ transactions, onDelete, onEdit, showDelete = f
     );
   }
 
+  const groupedTransactions = groupTransactionsByDate(transactions);
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Recent Transactions</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2">
-        {transactions.map((transaction) => (
+      <CardContent className="space-y-4">
+        {Array.from(groupedTransactions.entries()).map(([date, dateTransactions]) => (
+          <div key={date} className="space-y-2">
+            <h3 className="text-sm font-semibold text-muted-foreground px-2" data-testid={`date-header-${date}`}>
+              {getDateHeader(date)}
+            </h3>
+            <div className="space-y-2">
+              {dateTransactions.map((transaction) => (
           <div
             key={transaction.id}
             className="flex items-center justify-between py-3 px-4 rounded-md border hover-elevate"
@@ -107,6 +148,9 @@ export function TransactionList({ transactions, onDelete, onEdit, showDelete = f
                   <Trash2 className="h-4 w-4" />
                 </Button>
               )}
+            </div>
+          </div>
+              ))}
             </div>
           </div>
         ))}
