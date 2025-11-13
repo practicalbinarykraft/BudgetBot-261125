@@ -1008,10 +1008,10 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
         messageId: query.message?.message_id || 0,
       });
 
-      // Send edit prompt
+      // Send edit prompt - use original amount/currency that user entered
       const promptMessage = t('transaction.edit_prompt', lang)
-        .replace('{amount}', transaction.amount)
-        .replace('{currency}', transaction.currency || 'USD')
+        .replace('{amount}', transaction.originalAmount || transaction.amount)
+        .replace('{currency}', transaction.originalCurrency || transaction.currency || 'USD')
         .replace('{description}', transaction.description || 'N/A');
 
       await bot.editMessageText(promptMessage, {
