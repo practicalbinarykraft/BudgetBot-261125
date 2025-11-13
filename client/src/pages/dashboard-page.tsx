@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Transaction } from "@shared/schema";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { TransactionList } from "@/components/dashboard/transaction-list";
@@ -10,13 +10,19 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { AddTransactionDialog } from "@/components/transactions/add-transaction-dialog";
+import { EditTransactionDialog } from "@/components/transactions/edit-transaction-dialog";
 import { CalibrationDialog } from "@/components/wallets/calibration-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DashboardPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showCalibrateDialog, setShowCalibrateDialog] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [dateFilter, setDateFilter] = useState<DateFilterValue>("month");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const dateRange = getDateRange(dateFilter);
   const queryParams = dateRange 
@@ -42,6 +48,28 @@ export default function DashboardPage() {
       const res = await fetch(`/api/stats${queryParams}`);
       if (!res.ok) throw new Error("Failed to fetch stats");
       return res.json();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/transactions/${id}`);
+    },
+    onSuccess: () => {
+      // Invalidate all transaction queries (including date-filtered ones)
+      queryClient.invalidateQueries({ queryKey: ["/api/transactions"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"], exact: false });
+      toast({
+        title: "Success",
+        description: "Transaction deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -116,11 +144,23 @@ export default function DashboardPage() {
 
       <FinancialTrendChart />
 
-      <TransactionList transactions={recentTransactions} />
+      <TransactionList 
+        transactions={recentTransactions}
+        onEdit={(transaction) => setEditingTransaction(transaction)}
+        onDelete={(id) => deleteMutation.mutate(id)}
+        showEdit={true}
+        showDelete={true}
+      />
 
       <AddTransactionDialog
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
+      />
+
+      <EditTransactionDialog
+        transaction={editingTransaction}
+        open={!!editingTransaction}
+        onOpenChange={(open) => !open && setEditingTransaction(null)}
       />
       
       <CalibrationDialog
