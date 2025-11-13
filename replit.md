@@ -4,6 +4,13 @@
 
 Budget Buddy is a personal finance management application designed to help users track income, expenses, wallets, and financial goals. It offers AI-powered spending analysis, receipt OCR, and multi-currency support within an intuitive interface. The project aims to provide a comprehensive and simplified tool for managing personal finances.
 
+## Recent Changes
+
+**November 13, 2025:**
+- Added edit/delete transaction functionality to Dashboard page
+- Fixed TanStack Query cache invalidation using `exact: false` flag to ensure Dashboard refreshes after mutations
+- Dashboard now supports full transaction management (create, edit, delete) without navigating to Transactions page
+
 **Key Capabilities:**
 - Transaction, wallet, category, and budget management
 - Recurring payments and wishlist tracking
