@@ -6,7 +6,7 @@ export async function backfillTransactionClassifications(userId: number): Promis
   updated: number;
   message: string;
 }> {
-  const unknownTag = await db.query.personalTags.findFirst({
+  let unknownTag = await db.query.personalTags.findFirst({
     where: and(
       eq(personalTags.userId, userId),
       eq(personalTags.name, 'Неопределена')
@@ -14,7 +14,19 @@ export async function backfillTransactionClassifications(userId: number): Promis
   });
 
   if (!unknownTag) {
-    throw new Error('Unknown tag not found for user. Please ensure default tags are created.');
+    const [created] = await db
+      .insert(personalTags)
+      .values({
+        userId,
+        name: 'Неопределена',
+        icon: 'HelpCircle',
+        color: '#9ca3af',
+        type: 'person',
+        isDefault: true,
+        sortOrder: 999
+      })
+      .returning();
+    unknownTag = created;
   }
 
   const tagUpdates = await db
