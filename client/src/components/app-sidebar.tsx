@@ -12,6 +12,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import {
   Sidebar,
   SidebarContent,
@@ -25,6 +26,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 const menuItems = [
   {
@@ -83,12 +85,19 @@ export function AppSidebar() {
   const [location] = useLocation();
   const { user, logoutMutation } = useAuth();
 
+  const { data: sortingStats } = useQuery<{ unsortedCount: number }>({
+    queryKey: ['/api/sorting/stats'],
+    enabled: !!user,
+  });
+
+  const unsortedCount = sortingStats?.unsortedCount ?? 0;
+
   return (
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="text-lg font-bold mb-2">
-            💰 Budget Buddy
+            Budget Buddy
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -98,6 +107,15 @@ export function AppSidebar() {
                     <Link href={item.url} data-testid={`nav-${item.title.toLowerCase()}`}>
                       <item.icon className="w-4 h-4" />
                       <span>{item.title}</span>
+                      {item.title === 'Transactions' && unsortedCount > 0 && (
+                        <Badge 
+                          variant="outline" 
+                          className="ml-auto bg-muted" 
+                          data-testid="badge-unsorted-count"
+                        >
+                          {unsortedCount}
+                        </Badge>
+                      )}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
