@@ -20,12 +20,14 @@ import SettingsPage from "@/pages/settings-page";
 import TagsSettingsPage from "@/pages/tags-settings-page";
 import TagDetailPage from "@/pages/tag-detail-page";
 import ExpensesAnalyticsPage from "@/pages/expenses-analytics-page";
+import SwipeSortPage from "@/pages/swipe-sort-page";
 
 function Router() {
   return (
     <Switch>
       <Route path="/auth" component={AuthPage} />
       <ProtectedRoute path="/" component={DashboardPage} />
+      <ProtectedRoute path="/transactions/sort" component={SwipeSortPage} />
       <ProtectedRoute path="/transactions" component={TransactionsPage} />
       <ProtectedRoute path="/wallets" component={WalletsPage} />
       <ProtectedRoute path="/categories" component={CategoriesPage} />
