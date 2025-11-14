@@ -6,15 +6,19 @@ export async function backfillTransactionClassifications(userId: number): Promis
   updated: number;
   message: string;
 }> {
-  let unknownTag = await db.query.personalTags.findFirst({
-    where: and(
-      eq(personalTags.userId, userId),
-      eq(personalTags.name, 'Неопределена')
-    )
-  });
+  let unknownTag = await db.transaction(async (tx) => {
+    const existing = await tx.query.personalTags.findFirst({
+      where: and(
+        eq(personalTags.userId, userId),
+        eq(personalTags.name, 'Неопределена')
+      )
+    });
 
-  if (!unknownTag) {
-    const [created] = await db
+    if (existing) {
+      return existing;
+    }
+
+    const [created] = await tx
       .insert(personalTags)
       .values({
         userId,
@@ -26,8 +30,9 @@ export async function backfillTransactionClassifications(userId: number): Promis
         sortOrder: 999
       })
       .returning();
-    unknownTag = created;
-  }
+    
+    return created;
+  });
 
   const tagUpdates = await db
     .update(transactions)
