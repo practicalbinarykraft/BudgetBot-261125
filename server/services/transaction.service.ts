@@ -14,6 +14,7 @@ export interface CreateTransactionInput {
   source?: string;
   walletId?: number;
   personalTagId?: number | null;
+  financialType?: 'essential' | 'discretionary' | 'asset' | 'liability';
 }
 
 export interface TransactionWithML {
@@ -88,6 +89,7 @@ export async function createTransaction(
       walletId: input.walletId || null,
       categoryId,
       personalTagId: input.personalTagId || null,
+      financialType: input.financialType || 'discretionary',
     })
     .returning();
   

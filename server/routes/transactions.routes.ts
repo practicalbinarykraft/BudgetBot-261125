@@ -85,6 +85,7 @@ router.post("/", withAuth(async (req, res) => {
       source: 'manual',
       walletId: validated.walletId || undefined,
       personalTagId: validated.personalTagId !== undefined ? validated.personalTagId : null,
+      financialType: validated.financialType || undefined,
     });
     
     res.json(transaction);

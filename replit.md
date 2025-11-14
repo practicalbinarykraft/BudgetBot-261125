@@ -7,6 +7,16 @@ Budget Buddy is a personal finance management application designed to help users
 ## Recent Changes
 
 **November 14, 2025:**
+- **Financial Classification Analytics:** Implemented 3D transaction analysis framework (Category + Personal Tag + Financial Type) with dedicated /expenses/analytics page
+  - Database schema: Added `financialType` enum field to transactions table (essential/discretionary/asset/liability) with discretionary as default
+  - Backend architecture: Modular analytics API with 4 endpoints (/api/analytics/by-category, by-person, by-type, unsorted) in analytics.routes.ts
+  - Service layer: 4 separate service modules (60-70 lines each) for SQL-based breakdown calculations with GROUP BY aggregations and percentage computations
+  - Frontend page: ExpensesAnalyticsPage at /expenses/analytics with 4-tab interface (Category, Person, Type, Unsorted), period filter (week/month/year), and total summary
+  - Reusable components: BreakdownCard (90 lines) for consistent visualization, individual tab components for each analytics dimension
+  - Unsorted tab: Shows transactions missing person tag OR financial type classification, enabling bulk sorting workflow
+  - Dashboard integration: Extended StatCard component with optional action prop (backward compatible), added "View Details →" link on Total Expense card
+  - Default tag creation: Auto-creates "Неопределена" (Unknown) tag on user registration for unsorted transaction classification
+  - Code quality: All files under 200 lines, junior programmer friendly modular architecture
 - **Tag Detail Pages:** Implemented clickable tag cards that navigate to dedicated tag detail pages (/tags/:id)
   - Frontend: TagDetailPage component with tag info header, stats cards (Total Transactions, Total Spent, Total Income), and filtered transaction list
   - Backend: SQL-level transaction filtering via storage.getTransactionsByUserId(userId, filters) with optional personalTagId/from/to parameters
