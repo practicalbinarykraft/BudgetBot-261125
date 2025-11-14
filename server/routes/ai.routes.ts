@@ -2,6 +2,9 @@ import { Router } from "express";
 import { storage } from "../storage";
 import { analyzeSpending, scanReceipt } from "../services/ai-service";
 import { withAuth } from "../middleware/auth-utils";
+import { predictForTransaction, enrichPrediction } from "../services/ai/prediction.service";
+import { getTrainingStats, saveTrainingExample } from "../services/ai/training.service";
+import { insertAiTrainingExampleSchema } from "@shared/schema";
 
 const router = Router();
 
@@ -28,6 +31,60 @@ router.post("/scan-receipt", withAuth(async (req, res) => {
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
+  }
+}));
+
+// GET /api/ai/predict/:transactionId
+router.get("/predict/:transactionId", withAuth(async (req, res) => {
+  try {
+    const transactionId = parseInt(req.params.transactionId);
+    if (isNaN(transactionId)) {
+      return res.status(400).json({ error: "Invalid transaction ID" });
+    }
+
+    const prediction = await predictForTransaction(transactionId, req.user.id);
+    const enriched = await enrichPrediction(prediction, req.user.id);
+    
+    res.json(enriched);
+  } catch (error: any) {
+    console.error("AI prediction error:", error);
+    res.status(500).json({ error: error.message });
+  }
+}));
+
+// GET /api/ai/training-stats
+router.get("/training-stats", withAuth(async (req, res) => {
+  try {
+    const stats = await getTrainingStats(req.user.id);
+    res.json(stats);
+  } catch (error: any) {
+    console.error("Training stats error:", error);
+    res.status(500).json({ error: error.message });
+  }
+}));
+
+// POST /api/ai/training
+router.post("/training", withAuth(async (req, res) => {
+  try {
+    const validated = insertAiTrainingExampleSchema.parse(req.body);
+
+    await saveTrainingExample({
+      userId: req.user.id,
+      transactionDescription: validated.transactionDescription,
+      transactionAmount: validated.transactionAmount ? parseFloat(validated.transactionAmount) : undefined,
+      merchantName: validated.merchantName || undefined,
+      aiSuggestedCategoryId: validated.aiSuggestedCategoryId || undefined,
+      aiSuggestedTagId: validated.aiSuggestedTagId || undefined,
+      aiConfidence: validated.aiConfidence || undefined,
+      userChosenCategoryId: validated.userChosenCategoryId || undefined,
+      userChosenTagId: validated.userChosenTagId || undefined,
+      userChosenType: validated.userChosenType || "discretionary",
+    });
+
+    res.status(201).json({ success: true });
+  } catch (error: any) {
+    console.error("Save training example error:", error);
+    res.status(400).json({ error: error.message });
   }
 }));
 
