@@ -79,9 +79,10 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
       return res.json();
     },
     onSuccess: () => {
-      // Invalidate all transaction queries (including date-filtered ones)
+      // Invalidate all transaction queries (including date-filtered and tag-filtered ones)
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["/api/tags"], exact: false });
       toast({
         title: "Success",
         description: "Transaction updated successfully",

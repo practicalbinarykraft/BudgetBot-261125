@@ -13,6 +13,7 @@ export interface CreateTransactionInput {
   currency?: string;
   source?: string;
   walletId?: number;
+  personalTagId?: number | null;
 }
 
 export interface TransactionWithML {
@@ -86,6 +87,7 @@ export async function createTransaction(
       source: input.source || 'manual',
       walletId: input.walletId || null,
       categoryId,
+      personalTagId: input.personalTagId || null,
     })
     .returning();
   

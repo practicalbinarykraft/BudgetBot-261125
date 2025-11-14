@@ -18,6 +18,7 @@ import BudgetsPage from "@/pages/budgets-page";
 import AIAnalysisPage from "@/pages/ai-analysis-page";
 import SettingsPage from "@/pages/settings-page";
 import TagsSettingsPage from "@/pages/tags-settings-page";
+import TagDetailPage from "@/pages/tag-detail-page";
 
 function Router() {
   return (
@@ -31,6 +32,7 @@ function Router() {
       <ProtectedRoute path="/wishlist" component={WishlistPage} />
       <ProtectedRoute path="/budgets" component={BudgetsPage} />
       <ProtectedRoute path="/ai-analysis" component={AIAnalysisPage} />
+      <ProtectedRoute path="/tags/:id" component={TagDetailPage} />
       <ProtectedRoute path="/tags" component={TagsSettingsPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <Route>

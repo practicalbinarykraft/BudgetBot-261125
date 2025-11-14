@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { TagCard } from '@/components/tags/tag-card';
 import { CreateTagDialog } from '@/components/tags/create-tag-dialog';
@@ -21,6 +22,7 @@ import {
 export default function TagsSettingsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTag, setEditingTag] = useState<PersonalTag | null>(null);
   const [deletingTag, setDeletingTag] = useState<PersonalTag | null>(null);
@@ -73,6 +75,10 @@ export default function TagsSettingsPage() {
   
   const handleDelete = (tag: PersonalTag) => {
     setDeletingTag(tag);
+  };
+  
+  const handleViewDetails = (tagId: number) => {
+    navigate(`/tags/${tagId}`);
   };
   
   const handleCloseDialog = () => {
@@ -132,6 +138,7 @@ export default function TagsSettingsPage() {
               stats={tagStats[tag.id] || { transactionCount: 0, totalSpent: 0 }}
               onEdit={() => handleEdit(tag)}
               onDelete={() => handleDelete(tag)}
+              onViewDetails={() => handleViewDetails(tag.id)}
               disabled={deleteMutation.isPending}
             />
           ))}

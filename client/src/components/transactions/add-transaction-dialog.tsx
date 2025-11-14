@@ -21,6 +21,7 @@ import { TagSelector } from "@/components/tags/tag-selector";
 interface AddTransactionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultPersonalTagId?: number | null;
 }
 
 interface TransactionResponse {
@@ -44,7 +45,7 @@ const formSchema = insertTransactionSchema.extend({
 
 type FormData = z.infer<typeof formSchema>;
 
-export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialogProps) {
+export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId }: AddTransactionDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -73,7 +74,7 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
       currency: "USD",
       source: "manual",
       walletId: undefined,
-      personalTagId: null,
+      personalTagId: defaultPersonalTagId ?? null,
     },
   });
 
@@ -89,8 +90,9 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
       return res.json() as Promise<TransactionResponse>;
     },
     onSuccess: (transaction: TransactionResponse) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transactions"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tags"], exact: false });
       
       if (transaction.mlSuggested && transaction.category) {
         toast({

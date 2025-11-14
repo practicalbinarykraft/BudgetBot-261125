@@ -12,14 +12,19 @@ interface TagCardProps {
   };
   onEdit: () => void;
   onDelete: () => void;
+  onViewDetails?: () => void;
   disabled?: boolean;
 }
 
-export function TagCard({ tag, stats, onEdit, onDelete, disabled = false }: TagCardProps) {
+export function TagCard({ tag, stats, onEdit, onDelete, onViewDetails, disabled = false }: TagCardProps) {
   return (
     <Card className="p-4 hover-elevate" data-testid={`tag-card-${tag.id}`}>
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4 flex-1 min-w-0">
+        <div 
+          className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer" 
+          onClick={onViewDetails}
+          data-testid={`tag-card-clickable-${tag.id}`}
+        >
           <TagBadge tag={tag} className="flex-shrink-0" />
           
           <div className="text-sm text-muted-foreground flex-shrink-0">

@@ -4,22 +4,56 @@ import { insertTransactionSchema } from "@shared/schema";
 import { convertToUSD, getExchangeRate } from "../services/currency-service";
 import { withAuth } from "../middleware/auth-utils";
 import { createTransaction } from "../services/transaction.service";
+import { z } from "zod";
+import { parse, isValid, format } from "date-fns";
 
 const router = Router();
 
 // GET /api/transactions
 router.get("/", withAuth(async (req, res) => {
   try {
-    const { from, to } = req.query;
-    let transactions = await storage.getTransactionsByUserId(req.user.id);
+    const { from, to, personalTagId } = req.query;
     
-    // Apply date filters if provided
+    const filters: { personalTagId?: number; from?: string; to?: string } = {};
+    
+    const dateSchema = z.string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
+      .refine(
+        (val) => {
+          const parsed = parse(val, 'yyyy-MM-dd', new Date());
+          if (!isValid(parsed)) return false;
+          return format(parsed, 'yyyy-MM-dd') === val;
+        },
+        { message: "Invalid calendar date" }
+      );
+    
     if (from) {
-      transactions = transactions.filter(t => t.date >= String(from));
+      const result = dateSchema.safeParse(String(from));
+      if (!result.success) {
+        return res.status(400).json({ error: "Invalid 'from' date. Use valid YYYY-MM-DD format" });
+      }
+      filters.from = result.data;
     }
     if (to) {
-      transactions = transactions.filter(t => t.date <= String(to));
+      const result = dateSchema.safeParse(String(to));
+      if (!result.success) {
+        return res.status(400).json({ error: "Invalid 'to' date. Use valid YYYY-MM-DD format" });
+      }
+      filters.to = result.data;
     }
+    if (personalTagId) {
+      const tagIdStr = String(personalTagId);
+      if (!/^\d+$/.test(tagIdStr)) {
+        return res.status(400).json({ error: "Invalid personalTagId. Must be a positive integer" });
+      }
+      const parsedId = parseInt(tagIdStr);
+      if (parsedId <= 0) {
+        return res.status(400).json({ error: "Invalid personalTagId. Must be a positive integer" });
+      }
+      filters.personalTagId = parsedId;
+    }
+    
+    const transactions = await storage.getTransactionsByUserId(req.user.id, filters);
     
     res.json(transactions);
   } catch (error: any) {
@@ -49,7 +83,8 @@ router.post("/", withAuth(async (req, res) => {
       date: validated.date,
       currency: validated.currency || undefined,
       source: 'manual',
-      walletId: validated.walletId || undefined
+      walletId: validated.walletId || undefined,
+      personalTagId: validated.personalTagId !== undefined ? validated.personalTagId : null,
     });
     
     res.json(transaction);

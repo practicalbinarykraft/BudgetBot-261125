@@ -25,7 +25,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   
   // Transactions
-  getTransactionsByUserId(userId: number): Promise<Transaction[]>;
+  getTransactionsByUserId(userId: number, filters?: { personalTagId?: number; from?: string; to?: string }): Promise<Transaction[]>;
   getTransactionById(id: number): Promise<Transaction | null>;
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
   updateTransaction(id: number, transaction: Partial<InsertTransaction>): Promise<Transaction>;
@@ -84,7 +84,7 @@ import {
   settings,
   budgets
 } from "@shared/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, gte, lte } from "drizzle-orm";
 
 export class DatabaseStorage implements IStorage {
   // Users
@@ -104,10 +104,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Transactions
-  async getTransactionsByUserId(userId: number): Promise<Transaction[]> {
+  async getTransactionsByUserId(userId: number, filters?: { personalTagId?: number; from?: string; to?: string }): Promise<Transaction[]> {
+    const conditions = [eq(transactions.userId, userId)];
+    
+    if (filters?.personalTagId !== undefined) {
+      conditions.push(eq(transactions.personalTagId, filters.personalTagId));
+    }
+    
+    if (filters?.from) {
+      conditions.push(gte(transactions.date, filters.from));
+    }
+    
+    if (filters?.to) {
+      conditions.push(lte(transactions.date, filters.to));
+    }
+    
     return db.select()
       .from(transactions)
-      .where(eq(transactions.userId, userId))
+      .where(and(...conditions))
       .orderBy(desc(transactions.date), desc(transactions.id));
   }
 
