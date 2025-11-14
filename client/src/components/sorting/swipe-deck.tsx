@@ -117,7 +117,7 @@ export function SwipeDeck({
     setPendingSwipe(null);
   }, [pendingSwipe, updateTransactionMutation, onSwipeComplete]);
 
-  if (currentIndex >= transactions.length) {
+  if (currentIndex >= transactions.length || !transactions[currentIndex]) {
     return (
       <div className="h-96 flex items-center justify-center text-muted-foreground">
         No more transactions to sort!
@@ -126,8 +126,8 @@ export function SwipeDeck({
   }
 
   const currentTransaction = transactions[currentIndex];
-  const currentCategory = categories.find(c => c.id === currentTransaction.categoryId);
-  const currentTag = tags.find(t => t.id === currentTransaction.personalTagId);
+  const currentCategory = categories.find(c => c.id === currentTransaction?.categoryId);
+  const currentTag = tags.find(t => t.id === currentTransaction?.personalTagId);
 
   return (
     <>

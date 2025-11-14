@@ -6,7 +6,7 @@ import { getCategoryBreakdown } from "../services/analytics/category-breakdown.s
 import { getPersonBreakdown } from "../services/analytics/person-breakdown.service";
 import { getTypeBreakdown } from "../services/analytics/type-breakdown.service";
 import { getUnsortedTransactions } from "../services/analytics/unsorted-filter.service";
-import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, format } from "date-fns";
+import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, format, addYears } from "date-fns";
 
 const router = Router();
 
@@ -120,8 +120,19 @@ router.get("/by-type", withAuth(async (req, res) => {
 
 router.get("/unsorted", withAuth(async (req, res) => {
   try {
-    const period = req.query.period as string;
-    const { startDate, endDate } = getPeriodDates(period);
+    const period = req.query.period as string || 'all';
+    
+    let startDate: string;
+    let endDate: string;
+    
+    if (period === 'all') {
+      startDate = '1970-01-01';
+      endDate = format(addYears(new Date(), 10), 'yyyy-MM-dd');
+    } else {
+      const dates = getPeriodDates(period);
+      startDate = dates.startDate;
+      endDate = dates.endDate;
+    }
 
     const transactions = await getUnsortedTransactions(req.user.id, startDate, endDate);
 

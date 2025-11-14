@@ -2,6 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useState, useCallback } from "react";
 import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -19,23 +20,28 @@ interface SortingStats {
 
 export default function SwipeSortPage() {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
   const [sessionTransactionsSorted, setSessionTransactionsSorted] = useState(0);
   const [sessionPoints, setSessionPoints] = useState(0);
 
   const { data: stats, isLoading: statsLoading } = useQuery<SortingStats>({
     queryKey: ['/api/sorting/stats'],
+    enabled: !!user,
   });
 
   const { data: unsortedTransactions, isLoading: transactionsLoading } = useQuery<Transaction[]>({
     queryKey: ['/api/analytics/unsorted'],
+    enabled: !!user,
   });
 
   const { data: categories } = useQuery<Category[]>({
     queryKey: ['/api/categories'],
+    enabled: !!user,
   });
 
   const { data: tags } = useQuery<PersonalTag[]>({
     queryKey: ['/api/tags'],
+    enabled: !!user,
   });
 
   const saveSortingSessionMutation = useMutation({
