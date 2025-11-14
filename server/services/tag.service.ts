@@ -123,5 +123,14 @@ export async function createDefaultTags(userId: number) {
       isDefault: true,
       sortOrder: 2,
     },
+    {
+      userId,
+      name: 'Неопределена',
+      icon: 'HelpCircle',
+      color: '#9ca3af',
+      type: 'person',
+      isDefault: true,
+      sortOrder: 3,
+    },
   ]);
 }

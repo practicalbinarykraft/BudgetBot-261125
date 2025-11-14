@@ -1,8 +1,15 @@
 import { sql } from "drizzle-orm";
-import { pgTable, serial, text, varchar, decimal, date, boolean, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, varchar, decimal, date, boolean, timestamp, integer, pgEnum } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+
+export const financialTypeEnum = pgEnum('financial_type', [
+  'essential',      // Обязательные расходы (rent, groceries, utilities)
+  'discretionary',  // Необязательные расходы (entertainment, restaurants)
+  'asset',          // Активы (courses, investments, income-generating)
+  'liability'       // Пассивы (loans, depreciating purchases)
+]);
 
 // Users table
 export const users = pgTable("users", {
@@ -36,6 +43,8 @@ export const transactions = pgTable("transactions", {
   walletId: integer("wallet_id").references(() => wallets.id, { onDelete: "set null" }),
   // 👥 Personal Tags: WHO is this transaction for?
   personalTagId: integer("personal_tag_id").references(() => personalTags.id, { onDelete: "set null" }),
+  // 🎯 Financial Classification: WHY was this spent? (Essential/Discretionary/Asset/Liability)
+  financialType: financialTypeEnum("financial_type").default("discretionary"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

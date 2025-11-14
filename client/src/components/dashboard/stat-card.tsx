@@ -11,9 +11,10 @@ interface StatCardProps {
     isPositive: boolean;
   };
   className?: string;
+  action?: React.ReactNode;
 }
 
-export function StatCard({ title, value, icon: Icon, trend, className }: StatCardProps) {
+export function StatCard({ title, value, icon: Icon, trend, className, action }: StatCardProps) {
   return (
     <Card className={cn("hover-elevate", className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -33,6 +34,11 @@ export function StatCard({ title, value, icon: Icon, trend, className }: StatCar
           )}>
             {trend.isPositive ? "+" : ""}{trend.value}% from last month
           </p>
+        )}
+        {action && (
+          <div className="mt-3">
+            {action}
+          </div>
         )}
       </CardContent>
     </Card>

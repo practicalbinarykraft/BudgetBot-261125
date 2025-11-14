@@ -5,7 +5,7 @@ import { TransactionList } from "@/components/dashboard/transaction-list";
 import { FinancialTrendChart } from "@/components/charts/financial-trend-chart";
 import { BudgetAlerts } from "@/components/dashboard/budget-alerts";
 import { DateFilter, DateFilterValue, getDateRange } from "@/components/dashboard/date-filter";
-import { TrendingUp, TrendingDown, Wallet, Settings2 } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Settings2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useState } from "react";
@@ -15,6 +15,7 @@ import { CalibrationDialog } from "@/components/wallets/calibration-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "wouter";
 
 export default function DashboardPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -133,6 +134,13 @@ export default function DashboardPage() {
           value={`$${stats?.totalExpense?.toFixed(2) ?? "0.00"}`}
           icon={TrendingDown}
           className="border-l-4 border-l-red-500"
+          action={
+            <Link href="/expenses/analytics">
+              <a className="text-sm text-primary hover:underline flex items-center gap-1" data-testid="link-view-analytics">
+                View Details <ArrowRight className="h-3 w-3" />
+              </a>
+            </Link>
+          }
         />
         <StatCard
           title="Balance"

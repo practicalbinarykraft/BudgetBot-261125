@@ -2,8 +2,40 @@ import { Router } from "express";
 import { storage } from "../storage";
 import { withAuth } from "../middleware/auth-utils";
 import { calculateTrend } from "../services/trend-calculator.service";
+import { getCategoryBreakdown } from "../services/analytics/category-breakdown.service";
+import { getPersonBreakdown } from "../services/analytics/person-breakdown.service";
+import { getTypeBreakdown } from "../services/analytics/type-breakdown.service";
+import { getUnsortedTransactions } from "../services/analytics/unsorted-filter.service";
+import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, format } from "date-fns";
 
 const router = Router();
+
+function getPeriodDates(period: string = 'month'): { startDate: string; endDate: string } {
+  const now = new Date();
+  let start: Date;
+  let end: Date;
+
+  switch (period) {
+    case 'week':
+      start = startOfWeek(now);
+      end = endOfWeek(now);
+      break;
+    case 'year':
+      start = startOfYear(now);
+      end = endOfYear(now);
+      break;
+    case 'month':
+    default:
+      start = startOfMonth(now);
+      end = endOfMonth(now);
+      break;
+  }
+
+  return {
+    startDate: format(start, 'yyyy-MM-dd'),
+    endDate: format(end, 'yyyy-MM-dd'),
+  };
+}
 
 /**
  * GET /api/analytics/trend
@@ -41,6 +73,65 @@ router.get("/trend", withAuth(async (req, res) => {
   } catch (error: any) {
     console.error("Trend data error:", error);
     res.status(500).json({ error: error.message });
+  }
+}));
+
+router.get("/by-category", withAuth(async (req, res) => {
+  try {
+    const period = req.query.period as string;
+    const { startDate, endDate } = getPeriodDates(period);
+
+    const breakdown = await getCategoryBreakdown(req.user.id, startDate, endDate);
+
+    return res.json(breakdown);
+  } catch (error: any) {
+    console.error('Error in /api/analytics/by-category:', error);
+    return res.status(500).json({ error: error.message || 'Failed to get category breakdown' });
+  }
+}));
+
+router.get("/by-person", withAuth(async (req, res) => {
+  try {
+    const period = req.query.period as string;
+    const { startDate, endDate } = getPeriodDates(period);
+
+    const breakdown = await getPersonBreakdown(req.user.id, startDate, endDate);
+
+    return res.json(breakdown);
+  } catch (error: any) {
+    console.error('Error in /api/analytics/by-person:', error);
+    return res.status(500).json({ error: error.message || 'Failed to get person breakdown' });
+  }
+}));
+
+router.get("/by-type", withAuth(async (req, res) => {
+  try {
+    const period = req.query.period as string;
+    const { startDate, endDate } = getPeriodDates(period);
+
+    const breakdown = await getTypeBreakdown(req.user.id, startDate, endDate);
+
+    return res.json(breakdown);
+  } catch (error: any) {
+    console.error('Error in /api/analytics/by-type:', error);
+    return res.status(500).json({ error: error.message || 'Failed to get type breakdown' });
+  }
+}));
+
+router.get("/unsorted", withAuth(async (req, res) => {
+  try {
+    const period = req.query.period as string;
+    const { startDate, endDate } = getPeriodDates(period);
+
+    const transactions = await getUnsortedTransactions(req.user.id, startDate, endDate);
+
+    return res.json({
+      count: transactions.length,
+      transactions,
+    });
+  } catch (error: any) {
+    console.error('Error in /api/analytics/unsorted:', error);
+    return res.status(500).json({ error: error.message || 'Failed to get unsorted transactions' });
   }
 }));
 
