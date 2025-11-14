@@ -26,8 +26,6 @@ interface SwipeCardProps {
   transaction: Transaction;
   categories: Category[];
   tags: PersonalTag[];
-  style?: React.CSSProperties;
-  dragConstraints?: any;
   onDragEnd?: (event: any, info: any) => void;
   onClassificationChange?: (categoryId: number | null, tagId: number | null) => void;
 }
@@ -36,8 +34,6 @@ export function SwipeCard({
   transaction,
   categories,
   tags,
-  style,
-  dragConstraints,
   onDragEnd,
   onClassificationChange,
 }: SwipeCardProps) {
@@ -72,9 +68,7 @@ export function SwipeCard({
 
   return (
     <motion.div
-      style={style}
       drag
-      dragConstraints={dragConstraints}
       dragElastic={0.7}
       onDragEnd={onDragEnd}
       whileTap={{ cursor: 'grabbing' }}

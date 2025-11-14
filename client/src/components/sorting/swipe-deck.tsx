@@ -140,30 +140,18 @@ export function SwipeDeck({
     );
   }
 
+  const currentTransaction = transactions[currentIndex];
+
   return (
     <div className="relative h-96 w-full max-w-lg mx-auto" data-testid="swipe-deck">
-      {transactions.slice(currentIndex, currentIndex + 3).map((transaction, index) => {
-        const scale = 1 - index * 0.05;
-        const yOffset = index * 10;
-
-        return (
-          <SwipeCard
-            key={transaction.id}
-            transaction={transaction}
-            categories={categories}
-            tags={tags}
-            style={{
-              zIndex: transactions.length - index,
-              scale,
-              transform: `translateY(${yOffset}px)`,
-              pointerEvents: index === 0 ? 'auto' : 'none',
-            }}
-            dragConstraints={index === 0 ? undefined : { left: 0, right: 0, top: 0, bottom: 0 }}
-            onDragEnd={index === 0 ? handleDragEnd : undefined}
-            onClassificationChange={index === 0 ? handleClassificationChange : undefined}
-          />
-        );
-      })}
+      <SwipeCard
+        key={currentTransaction.id}
+        transaction={currentTransaction}
+        categories={categories}
+        tags={tags}
+        onDragEnd={handleDragEnd}
+        onClassificationChange={handleClassificationChange}
+      />
     </div>
   );
 }
