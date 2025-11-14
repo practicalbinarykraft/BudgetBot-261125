@@ -52,7 +52,7 @@ export function SwipeDeck({
       userChosenCategoryId?: number;
       userChosenTagId?: number;
       userChosenType?: string;
-    }) => apiRequest('/api/ai/training', 'POST', data),
+    }) => apiRequest('POST', '/api/ai/training', data),
   });
 
   const updateTransactionMutation = useMutation({
