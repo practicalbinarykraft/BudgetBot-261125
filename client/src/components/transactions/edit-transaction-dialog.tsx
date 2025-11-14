@@ -20,6 +20,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
@@ -64,6 +66,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
       source: (transaction.source || "manual") as "manual" | "telegram" | "ocr",
       walletId: transaction.walletId || undefined,
       personalTagId: transaction.personalTagId || null,
+      financialType: (transaction.financialType || "discretionary") as "essential" | "discretionary" | "asset" | "liability",
     } : undefined,
   });
 
@@ -79,10 +82,10 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
       return res.json();
     },
     onSuccess: () => {
-      // Invalidate all transaction queries (including date-filtered and tag-filtered ones)
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["/api/tags"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics"], exact: false });
       toast({
         title: "Success",
         description: "Transaction updated successfully",
@@ -229,6 +232,41 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
                       value={field.value ?? null}
                       onChange={field.onChange}
                     />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="financialType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Financial Type</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      value={field.value || undefined}
+                      className="grid grid-cols-2 gap-3"
+                    >
+                      <div className="flex items-center space-x-2 border rounded-md p-3 hover-elevate cursor-pointer">
+                        <RadioGroupItem value="essential" id="edit-essential" data-testid="radio-essential-edit" />
+                        <Label htmlFor="edit-essential" className="cursor-pointer flex-1">Essential</Label>
+                      </div>
+                      <div className="flex items-center space-x-2 border rounded-md p-3 hover-elevate cursor-pointer">
+                        <RadioGroupItem value="discretionary" id="edit-discretionary" data-testid="radio-discretionary-edit" />
+                        <Label htmlFor="edit-discretionary" className="cursor-pointer flex-1">Discretionary</Label>
+                      </div>
+                      <div className="flex items-center space-x-2 border rounded-md p-3 hover-elevate cursor-pointer">
+                        <RadioGroupItem value="asset" id="edit-asset" data-testid="radio-asset-edit" />
+                        <Label htmlFor="edit-asset" className="cursor-pointer flex-1">Asset</Label>
+                      </div>
+                      <div className="flex items-center space-x-2 border rounded-md p-3 hover-elevate cursor-pointer">
+                        <RadioGroupItem value="liability" id="edit-liability" data-testid="radio-liability-edit" />
+                        <Label htmlFor="edit-liability" className="cursor-pointer flex-1">Liability</Label>
+                      </div>
+                    </RadioGroup>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

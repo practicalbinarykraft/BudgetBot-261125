@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { Link } from 'wouter';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,10 +10,36 @@ import { CategoryTab } from '@/components/analytics/tabs/category-tab';
 import { PersonTab } from '@/components/analytics/tabs/person-tab';
 import { TypeTab } from '@/components/analytics/tabs/type-tab';
 import { UnsortedTab } from '@/components/analytics/tabs/unsorted-tab';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ExpensesAnalyticsPage() {
   const [period, setPeriod] = useState('month');
   const [activeTab, setActiveTab] = useState('category');
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const migrateMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/admin/migrate-transaction-classifications', {});
+      return res.json();
+    },
+    onSuccess: (data: { updated: number; message: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/analytics'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions'], exact: false });
+      toast({
+        title: 'Migration Complete',
+        description: data.message,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Migration Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -34,16 +61,28 @@ export default function ExpensesAnalyticsPage() {
             </div>
           </div>
 
-          <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="w-[150px]" data-testid="select-period">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="week">This Week</SelectItem>
-              <SelectItem value="month">This Month</SelectItem>
-              <SelectItem value="year">This Year</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex gap-3 items-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => migrateMutation.mutate()}
+              disabled={migrateMutation.isPending}
+              data-testid="button-migrate"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${migrateMutation.isPending ? 'animate-spin' : ''}`} />
+              {migrateMutation.isPending ? 'Migrating...' : 'Fix Unsorted'}
+            </Button>
+            <Select value={period} onValueChange={setPeriod}>
+              <SelectTrigger className="w-[150px]" data-testid="select-period">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="week">This Week</SelectItem>
+                <SelectItem value="month">This Month</SelectItem>
+                <SelectItem value="year">This Year</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">

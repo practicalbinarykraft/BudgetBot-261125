@@ -28,6 +28,7 @@ import calibrationsRouter from "./calibrations.routes";
 import telegramRouter from "./telegram.routes";
 import analyticsRouter from "./analytics.routes";
 import personalTagsRouter from "./personal-tags.routes";
+import migrationRouter from "./admin/migration.routes";
 
 export function registerRoutes(app: Express) {
   // Domain-specific routes
@@ -51,4 +52,7 @@ export function registerRoutes(app: Express) {
   
   // AI routes
   app.use("/api/ai", aiRouter);
+  
+  // Admin/migration routes (dev-only)
+  app.use("/api/admin", migrationRouter);
 }
