@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { SwipeCard } from "./swipe-card";
-import { ClassificationDialog } from "./classification-dialog";
 import type { Transaction, Category, PersonalTag } from "@shared/schema";
 
 interface SwipeDeckProps {
@@ -23,11 +22,8 @@ export function SwipeDeck({
   onSwipeComplete 
 }: SwipeDeckProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [showClassificationDialog, setShowClassificationDialog] = useState(false);
-  const [pendingSwipe, setPendingSwipe] = useState<{
-    transaction: Transaction;
-    financialType: SwipeDirection;
-  } | null>(null);
+  const [currentCategoryId, setCurrentCategoryId] = useState<number | null>(null);
+  const [currentTagId, setCurrentTagId] = useState<number | null>(null);
   
   const prevLengthRef = useRef(transactions.length);
   
@@ -44,6 +40,20 @@ export function SwipeDeck({
     
     prevLengthRef.current = newLength;
   }, [transactions.length]);
+
+  const saveTrainingMutation = useMutation({
+    mutationFn: async (data: {
+      transactionDescription: string;
+      transactionAmount?: string;
+      merchantName?: string;
+      aiSuggestedCategoryId?: number;
+      aiSuggestedTagId?: number;
+      aiConfidence?: number;
+      userChosenCategoryId?: number;
+      userChosenTagId?: number;
+      userChosenType?: string;
+    }) => apiRequest('/api/ai/training', 'POST', data),
+  });
 
   const updateTransactionMutation = useMutation({
     mutationFn: async (data: {
@@ -65,10 +75,11 @@ export function SwipeDeck({
       queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/analytics/unsorted'] });
       queryClient.invalidateQueries({ queryKey: ['/api/sorting/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/ai/training-stats'] });
     },
   });
 
-  const handleDragEnd = useCallback((event: any, info: any) => {
+  const handleDragEnd = useCallback(async (event: any, info: any) => {
     const { offset, velocity } = info;
     const swipeX = offset.x;
     const swipeY = offset.y;
@@ -92,46 +103,34 @@ export function SwipeDeck({
     }
 
     if (direction && transactions[currentIndex]) {
-      setPendingSwipe({
-        transaction: transactions[currentIndex],
+      const transaction = transactions[currentIndex];
+      
+      await updateTransactionMutation.mutateAsync({
+        id: transaction.id,
         financialType: direction,
+        personalTagId: currentTagId || undefined,
+        categoryId: currentCategoryId || undefined,
       });
-      setShowClassificationDialog(true);
+
+      await saveTrainingMutation.mutateAsync({
+        transactionDescription: transaction.description,
+        transactionAmount: transaction.amount,
+        userChosenCategoryId: currentCategoryId || undefined,
+        userChosenTagId: currentTagId || undefined,
+        userChosenType: direction,
+      });
+
+      onSwipeComplete(transaction.id);
+      setCurrentIndex((prev) => prev + 1);
+      setCurrentCategoryId(null);
+      setCurrentTagId(null);
     }
-  }, [currentIndex, transactions]);
+  }, [currentIndex, transactions, currentCategoryId, currentTagId, updateTransactionMutation, saveTrainingMutation, onSwipeComplete]);
 
-  const handleClassificationComplete = useCallback(async (
-    personalTagId?: number,
-    categoryId?: number
-  ) => {
-    if (!pendingSwipe) return;
-
-    await updateTransactionMutation.mutateAsync({
-      id: pendingSwipe.transaction.id,
-      financialType: pendingSwipe.financialType,
-      personalTagId,
-      categoryId,
-    });
-
-    onSwipeComplete(pendingSwipe.transaction.id);
-    setCurrentIndex((prev) => prev + 1);
-    setShowClassificationDialog(false);
-    setPendingSwipe(null);
-  }, [pendingSwipe, updateTransactionMutation, onSwipeComplete]);
-
-  const handleSkipClassification = useCallback(async () => {
-    if (!pendingSwipe) return;
-
-    await updateTransactionMutation.mutateAsync({
-      id: pendingSwipe.transaction.id,
-      financialType: pendingSwipe.financialType,
-    });
-
-    onSwipeComplete(pendingSwipe.transaction.id);
-    setCurrentIndex((prev) => prev + 1);
-    setShowClassificationDialog(false);
-    setPendingSwipe(null);
-  }, [pendingSwipe, updateTransactionMutation, onSwipeComplete]);
+  const handleClassificationChange = useCallback((categoryId: number | null, tagId: number | null) => {
+    setCurrentCategoryId(categoryId);
+    setCurrentTagId(tagId);
+  }, []);
 
   if (currentIndex >= transactions.length || !transactions[currentIndex]) {
     return (
@@ -141,49 +140,30 @@ export function SwipeDeck({
     );
   }
 
-  const currentTransaction = transactions[currentIndex];
-  const currentCategory = categories.find(c => c.id === currentTransaction?.categoryId);
-  const currentTag = tags.find(t => t.id === currentTransaction?.personalTagId);
-
   return (
-    <>
-      <div className="relative h-96 w-full max-w-lg mx-auto" data-testid="swipe-deck">
-        {transactions.slice(currentIndex, currentIndex + 3).map((transaction, index) => {
-          const category = categories.find(c => c.id === transaction.categoryId);
-          const tag = tags.find(t => t.id === transaction.personalTagId);
-          const scale = 1 - index * 0.05;
-          const yOffset = index * 10;
+    <div className="relative h-96 w-full max-w-lg mx-auto" data-testid="swipe-deck">
+      {transactions.slice(currentIndex, currentIndex + 3).map((transaction, index) => {
+        const scale = 1 - index * 0.05;
+        const yOffset = index * 10;
 
-          return (
-            <SwipeCard
-              key={transaction.id}
-              transaction={transaction}
-              category={category}
-              tag={tag}
-              style={{
-                zIndex: transactions.length - index,
-                scale,
-                transform: `translateY(${yOffset}px)`,
-                pointerEvents: index === 0 ? 'auto' : 'none',
-              }}
-              dragConstraints={index === 0 ? undefined : { left: 0, right: 0, top: 0, bottom: 0 }}
-              onDragEnd={index === 0 ? handleDragEnd : undefined}
-            />
-          );
-        })}
-      </div>
-
-      <ClassificationDialog
-        open={showClassificationDialog}
-        onOpenChange={setShowClassificationDialog}
-        transaction={pendingSwipe?.transaction}
-        financialType={pendingSwipe?.financialType}
-        categories={categories}
-        tags={tags}
-        onComplete={handleClassificationComplete}
-        onSkip={handleSkipClassification}
-        isLoading={updateTransactionMutation.isPending}
-      />
-    </>
+        return (
+          <SwipeCard
+            key={transaction.id}
+            transaction={transaction}
+            categories={categories}
+            tags={tags}
+            style={{
+              zIndex: transactions.length - index,
+              scale,
+              transform: `translateY(${yOffset}px)`,
+              pointerEvents: index === 0 ? 'auto' : 'none',
+            }}
+            dragConstraints={index === 0 ? undefined : { left: 0, right: 0, top: 0, bottom: 0 }}
+            onDragEnd={index === 0 ? handleDragEnd : undefined}
+            onClassificationChange={index === 0 ? handleClassificationChange : undefined}
+          />
+        );
+      })}
+    </div>
   );
 }

@@ -1,3 +1,5 @@
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO } from "date-fns";
@@ -8,32 +10,65 @@ import {
   ArrowUp, 
   ArrowDown,
   Calendar,
-  DollarSign,
-  Tag,
-  User
+  DollarSign
 } from "lucide-react";
+import { AISuggestionBox } from "./ai-suggestion-box";
+import { useAuth } from "@/hooks/use-auth";
 import type { Transaction, Category, PersonalTag } from "@shared/schema";
+
+interface AIPrediction {
+  categoryId: number | null;
+  tagId: number | null;
+  confidence: number;
+}
 
 interface SwipeCardProps {
   transaction: Transaction;
-  category?: Category;
-  tag?: PersonalTag;
+  categories: Category[];
+  tags: PersonalTag[];
   style?: React.CSSProperties;
   dragConstraints?: any;
   onDragEnd?: (event: any, info: any) => void;
+  onClassificationChange?: (categoryId: number | null, tagId: number | null) => void;
 }
 
 export function SwipeCard({
   transaction,
-  category,
-  tag,
+  categories,
+  tags,
   style,
   dragConstraints,
   onDragEnd,
+  onClassificationChange,
 }: SwipeCardProps) {
+  const { user } = useAuth();
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(transaction.categoryId || null);
+  const [selectedTagId, setSelectedTagId] = useState<number | null>(transaction.personalTagId || null);
+
+  const { data: prediction } = useQuery<AIPrediction>({
+    queryKey: ['/api/ai/predict', transaction.id],
+    enabled: !!user,
+  });
+
+  useEffect(() => {
+    if (prediction && !transaction.categoryId) {
+      setSelectedCategoryId(prediction.categoryId);
+    }
+    if (prediction && !transaction.personalTagId) {
+      setSelectedTagId(prediction.tagId);
+    }
+  }, [prediction, transaction.categoryId, transaction.personalTagId]);
+
+  useEffect(() => {
+    onClassificationChange?.(selectedCategoryId, selectedTagId);
+  }, [selectedCategoryId, selectedTagId, onClassificationChange]);
+
   const isExpense = transaction.type === 'expense';
   const amountColor = isExpense ? 'text-red-600' : 'text-green-600';
   const amountSign = isExpense ? '-' : '+';
+  const amount = parseFloat(transaction.amount);
+  const category = categories.find(c => c.id === selectedCategoryId);
+  const tag = tags.find(t => t.id === selectedTagId);
 
   return (
     <motion.div
@@ -51,7 +86,7 @@ export function SwipeCard({
           <div className="text-center space-y-2">
             <h3 className="text-2xl font-bold">{transaction.description}</h3>
             <div className={`text-4xl font-mono font-bold ${amountColor}`}>
-              {amountSign}${Math.abs(transaction.amount).toFixed(2)}
+              {amountSign}${Math.abs(amount).toFixed(2)}
             </div>
           </div>
 
@@ -61,24 +96,22 @@ export function SwipeCard({
               <span>{format(parseISO(transaction.date), 'MMM dd, yyyy')}</span>
             </div>
 
-            {category && (
-              <div className="flex items-center gap-3">
-                <Tag className="w-5 h-5 text-muted-foreground" />
-                <Badge variant="secondary">{category.name}</Badge>
-              </div>
-            )}
-
-            {tag && (
-              <div className="flex items-center gap-3">
-                <User className="w-5 h-5 text-muted-foreground" />
-                <Badge variant="outline">{tag.name}</Badge>
-              </div>
-            )}
-
             <div className="flex items-center gap-3 text-muted-foreground">
               <DollarSign className="w-5 h-5" />
               <span className="text-sm">{transaction.currency}</span>
             </div>
+
+            {prediction && (
+              <AISuggestionBox
+                categoryId={selectedCategoryId}
+                tagId={selectedTagId}
+                confidence={prediction.confidence}
+                categories={categories}
+                tags={tags}
+                onCategoryChange={setSelectedCategoryId}
+                onTagChange={setSelectedTagId}
+              />
+            )}
           </div>
         </div>
 

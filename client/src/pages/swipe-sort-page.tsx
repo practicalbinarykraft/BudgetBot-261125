@@ -6,8 +6,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Trophy, Zap, Flame } from "lucide-react";
+import { ArrowLeft, Trophy, Zap, Flame, Sparkles } from "lucide-react";
 import { SwipeDeck } from "@/components/sorting/swipe-deck";
+import { TrainingHeader } from "@/components/sorting/training-header";
 import type { Transaction, Category, PersonalTag } from "@shared/schema";
 
 interface SortingStats {
@@ -43,6 +44,11 @@ export default function SwipeSortPage() {
 
   const { data: tags } = useQuery<PersonalTag[]>({
     queryKey: ['/api/tags'],
+    enabled: !!user,
+  });
+
+  const { data: trainingStats } = useQuery<{ totalExamples: number }>({
+    queryKey: ['/api/ai/training-stats'],
     enabled: !!user,
   });
 
@@ -155,6 +161,23 @@ export default function SwipeSortPage() {
         </div>
         <Progress value={progressPercent} className="h-2" data-testid="progress-sorting" />
       </Card>
+
+      {trainingStats && trainingStats.totalExamples < 10 && (
+        <Card className="p-4 mb-6 bg-primary/10 border-primary/20" data-testid="onboarding-hint">
+          <div className="flex items-start gap-3">
+            <Sparkles className="w-5 h-5 text-primary mt-0.5" />
+            <div>
+              <h3 className="font-semibold mb-1">Train Your AI Assistant</h3>
+              <p className="text-sm text-muted-foreground">
+                Classify transactions to teach your AI. After {10 - trainingStats.totalExamples} more examples, 
+                it will start predicting categories and tags automatically!
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      <TrainingHeader />
 
       <SwipeDeck
         transactions={unsortedTransactions}
