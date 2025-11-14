@@ -25,12 +25,12 @@ export function TagBadge({ tag, className = '' }: TagBadgeProps) {
   
   return (
     <span 
-      className={`inline-flex items-center gap-1 ${className}`}
+      className={`inline-flex items-center gap-1 max-w-full ${className}`}
       style={{ color: tag.color || '#3b82f6' }}
       data-testid={`tag-badge-${tag.name}`}
     >
-      <IconComponent className="h-4 w-4" data-testid={`tag-icon-${tag.name}`} />
-      <span className="text-sm font-medium" data-testid={`tag-name-${tag.name}`}>
+      <IconComponent className="h-4 w-4 flex-shrink-0" data-testid={`tag-icon-${tag.name}`} />
+      <span className="text-sm font-medium truncate" data-testid={`tag-name-${tag.name}`}>
         {tag.name}
       </span>
     </span>

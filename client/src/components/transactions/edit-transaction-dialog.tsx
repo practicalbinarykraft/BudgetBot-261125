@@ -20,8 +20,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
@@ -109,12 +107,12 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Edit Transaction</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-4 overflow-y-auto flex-1 pr-2">
             <FormField
               control={form.control}
               name="type"
@@ -244,30 +242,19 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Financial Type</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      value={field.value || undefined}
-                      className="grid grid-cols-2 gap-3"
-                    >
-                      <div className="flex items-center space-x-2 border rounded-md p-3 hover-elevate cursor-pointer">
-                        <RadioGroupItem value="essential" id="edit-essential" data-testid="radio-essential-edit" />
-                        <Label htmlFor="edit-essential" className="cursor-pointer flex-1">Essential</Label>
-                      </div>
-                      <div className="flex items-center space-x-2 border rounded-md p-3 hover-elevate cursor-pointer">
-                        <RadioGroupItem value="discretionary" id="edit-discretionary" data-testid="radio-discretionary-edit" />
-                        <Label htmlFor="edit-discretionary" className="cursor-pointer flex-1">Discretionary</Label>
-                      </div>
-                      <div className="flex items-center space-x-2 border rounded-md p-3 hover-elevate cursor-pointer">
-                        <RadioGroupItem value="asset" id="edit-asset" data-testid="radio-asset-edit" />
-                        <Label htmlFor="edit-asset" className="cursor-pointer flex-1">Asset</Label>
-                      </div>
-                      <div className="flex items-center space-x-2 border rounded-md p-3 hover-elevate cursor-pointer">
-                        <RadioGroupItem value="liability" id="edit-liability" data-testid="radio-liability-edit" />
-                        <Label htmlFor="edit-liability" className="cursor-pointer flex-1">Liability</Label>
-                      </div>
-                    </RadioGroup>
-                  </FormControl>
+                  <Select onValueChange={field.onChange} value={field.value || undefined}>
+                    <FormControl>
+                      <SelectTrigger data-testid="select-financial-type-edit">
+                        <SelectValue placeholder="Select financial type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="essential">Essential</SelectItem>
+                      <SelectItem value="discretionary">Discretionary</SelectItem>
+                      <SelectItem value="asset">Asset</SelectItem>
+                      <SelectItem value="liability">Liability</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
