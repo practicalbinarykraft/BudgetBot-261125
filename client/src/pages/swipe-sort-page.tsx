@@ -29,10 +29,12 @@ export default function SwipeSortPage() {
     enabled: !!user,
   });
 
-  const { data: unsortedTransactions, isLoading: transactionsLoading } = useQuery<Transaction[]>({
+  const { data: unsortedData, isLoading: transactionsLoading } = useQuery<{ count: number; transactions: Transaction[] }>({
     queryKey: ['/api/analytics/unsorted'],
     enabled: !!user,
   });
+  
+  const unsortedTransactions = unsortedData?.transactions ?? [];
 
   const { data: categories } = useQuery<Category[]>({
     queryKey: ['/api/categories'],

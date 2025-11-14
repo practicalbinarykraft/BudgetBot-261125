@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, serial, text, varchar, decimal, date, boolean, timestamp, integer, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, varchar, decimal, date, boolean, timestamp, integer, pgEnum, unique } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -196,7 +196,7 @@ export const sortingSessions = pgTable("sorting_sessions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({
   // Prevent duplicate sessions per user per day
-  uniqueUserDate: sql`UNIQUE (user_id, session_date)`,
+  uniqueUserDate: unique().on(table.userId, table.sessionDate),
 }));
 
 // Relations
