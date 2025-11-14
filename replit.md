@@ -6,7 +6,16 @@ Budget Buddy is a personal finance management application designed to help users
 
 ## Recent Changes
 
-**November 14, 2025:**
+**November 14, 2025 (Evening):**
+- **Transaction Classification Migration & Editing:** Implemented complete solution for backfilling and editing existing transactions
+  - Migration service: Two separate SQL UPDATE queries to safely backfill NULL personalTagId (to "Неопределена" tag) and NULL financialType (to "discretionary") without overwriting valid data
+  - Migration endpoint: POST /api/admin/migrate-transaction-classifications (dev-only, 403 in production)
+  - Edit transaction dialog: Added Financial Type radio group with 4 options (Essential, Discretionary, Asset, Liability) alongside existing personal tag selector
+  - Analytics page: Added "Fix Unsorted" button with loading state to trigger migration from UI
+  - Cache invalidation: Edit dialog and migration both invalidate /api/analytics queries for real-time refresh
+  - Data safety: Separate UPDATE queries prevent valid data corruption (initially had bug where single query with OR condition overwrote valid fields)
+
+**November 14, 2025 (Morning):**
 - **Financial Classification Analytics:** Implemented 3D transaction analysis framework (Category + Personal Tag + Financial Type) with dedicated /expenses/analytics page
   - Database schema: Added `financialType` enum field to transactions table (essential/discretionary/asset/liability) with discretionary as default
   - Backend architecture: Modular analytics API with 4 endpoints (/api/analytics/by-category, by-person, by-type, unsorted) in analytics.routes.ts
