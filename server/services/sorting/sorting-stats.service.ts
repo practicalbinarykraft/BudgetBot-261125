@@ -25,6 +25,15 @@ export async function getUnsortedCount(userId: number): Promise<number> {
 
   const undefinedTagId = undefinedTag[0]?.id;
 
+  const orConditions = [
+    isNull(transactions.personalTagId),
+    isNull(transactions.financialType)
+  ];
+  
+  if (undefinedTagId !== undefined) {
+    orConditions.push(eq(transactions.personalTagId, undefinedTagId));
+  }
+
   // Подсчитать несортированные транзакции
   const results = await db
     .select()
@@ -33,11 +42,7 @@ export async function getUnsortedCount(userId: number): Promise<number> {
       and(
         eq(transactions.userId, userId),
         eq(transactions.type, 'expense'),
-        or(
-          isNull(transactions.personalTagId),
-          undefinedTagId ? eq(transactions.personalTagId, undefinedTagId) : undefined,
-          isNull(transactions.financialType)
-        )
+        or(...orConditions)
       )
     );
 

@@ -63,13 +63,18 @@ export default function SwipeSortPage() {
   });
 
   const handleSwipeComplete = useCallback((transactionId: number) => {
-    setSessionTransactionsSorted((prev) => prev + 1);
+    setSessionTransactionsSorted((prev) => {
+      const nextCount = prev + 1;
+      
+      if (nextCount % 5 === 0) {
+        saveSortingSessionMutation.mutate(nextCount);
+      }
+      
+      return nextCount;
+    });
+    
     setSessionPoints((prev) => prev + 10);
-
-    if ((sessionTransactionsSorted + 1) % 5 === 0) {
-      saveSortingSessionMutation.mutate(sessionTransactionsSorted + 1);
-    }
-  }, [sessionTransactionsSorted, saveSortingSessionMutation]);
+  }, [saveSortingSessionMutation]);
 
   const handleFinishSession = useCallback(async () => {
     if (sessionTransactionsSorted > 0) {

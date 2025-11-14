@@ -21,6 +21,15 @@ export async function getUnsortedTransactions(
 
   const undefinedTagId = undefinedTag[0]?.id;
 
+  const orConditions = [
+    isNull(transactions.personalTagId),
+    isNull(transactions.financialType)
+  ];
+  
+  if (undefinedTagId !== undefined) {
+    orConditions.push(eq(transactions.personalTagId, undefinedTagId));
+  }
+
   const results = await db
     .select()
     .from(transactions)
@@ -30,11 +39,7 @@ export async function getUnsortedTransactions(
         eq(transactions.type, 'expense'),
         gte(transactions.date, startDate),
         lte(transactions.date, endDate),
-        or(
-          isNull(transactions.personalTagId),
-          undefinedTagId ? eq(transactions.personalTagId, undefinedTagId) : undefined,
-          isNull(transactions.financialType)
-        )
+        or(...orConditions)
       )
     )
     .orderBy(transactions.date);

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { SwipeCard } from "./swipe-card";
@@ -28,6 +28,22 @@ export function SwipeDeck({
     transaction: Transaction;
     financialType: SwipeDirection;
   } | null>(null);
+  
+  const prevLengthRef = useRef(transactions.length);
+  
+  useEffect(() => {
+    const prevLength = prevLengthRef.current;
+    const newLength = transactions.length;
+    
+    if (newLength < prevLength) {
+      const delta = prevLength - newLength;
+      setCurrentIndex((prev) => Math.max(0, prev - delta));
+    } else if (newLength === 0) {
+      setCurrentIndex(0);
+    }
+    
+    prevLengthRef.current = newLength;
+  }, [transactions.length]);
 
   const updateTransactionMutation = useMutation({
     mutationFn: async (data: {
