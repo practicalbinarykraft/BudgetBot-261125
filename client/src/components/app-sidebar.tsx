@@ -3,6 +3,7 @@ import {
   CreditCard,
   Wallet,
   Tag,
+  Users,
   Repeat,
   Heart,
   TrendingDown,
@@ -45,6 +46,11 @@ const menuItems = [
     title: "Categories",
     url: "/categories",
     icon: Tag,
+  },
+  {
+    title: "Personal Tags",
+    url: "/tags",
+    icon: Users,
   },
   {
     title: "Recurring",
