@@ -199,6 +199,32 @@ export const sortingSessions = pgTable("sorting_sessions", {
   uniqueUserDate: unique().on(table.userId, table.sessionDate),
 }));
 
+// AI Training Examples table (ML for category/tag prediction)
+export const aiTrainingExamples = pgTable("ai_training_examples", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Input data (transaction details)
+  transactionDescription: text("transaction_description").notNull(),
+  transactionAmount: decimal("transaction_amount", { precision: 10, scale: 2 }),
+  merchantName: text("merchant_name"),
+  
+  // AI predictions (what AI suggested)
+  aiSuggestedCategoryId: integer("ai_suggested_category_id"),
+  aiSuggestedTagId: integer("ai_suggested_tag_id"),
+  aiConfidence: integer("ai_confidence").default(0),
+  
+  // User choices (what user actually selected)
+  userChosenCategoryId: integer("user_chosen_category_id"),
+  userChosenTagId: integer("user_chosen_tag_id"),
+  userChosenType: text("user_chosen_type"),
+  
+  // Feedback (was AI correct?)
+  aiWasCorrect: boolean("ai_was_correct").notNull().default(false),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   transactions: many(transactions),
@@ -214,6 +240,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   sortingSessions: many(sortingSessions),
   sortingProgress: one(sortingProgress),
   settings: one(settings),
+  aiTrainingExamples: many(aiTrainingExamples),
 }));
 
 export const transactionsRelations = relations(transactions, ({ one }) => ({
@@ -318,6 +345,13 @@ export const sortingProgressRelations = relations(sortingProgress, ({ one }) => 
 export const sortingSessionsRelations = relations(sortingSessions, ({ one }) => ({
   user: one(users, {
     fields: [sortingSessions.userId],
+    references: [users.id],
+  }),
+}));
+
+export const aiTrainingExamplesRelations = relations(aiTrainingExamples, ({ one }) => ({
+  user: one(users, {
+    fields: [aiTrainingExamples.userId],
     references: [users.id],
   }),
 }));
@@ -439,6 +473,16 @@ export const insertSortingSessionSchema = createInsertSchema(sortingSessions, {
   createdAt: true,
 });
 
+export const insertAiTrainingExampleSchema = createInsertSchema(aiTrainingExamples, {
+  transactionDescription: z.string().min(1),
+  transactionAmount: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
+  aiConfidence: z.number().int().min(0).max(100).optional(),
+}).omit({
+  id: true,
+  userId: true,  // Server-side only
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -480,6 +524,9 @@ export type InsertSortingSession = z.infer<typeof insertSortingSessionSchema>;
 export type SortingSession = typeof sortingSessions.$inferSelect;
 
 export type SortingProgress = typeof sortingProgress.$inferSelect;
+
+export type InsertAiTrainingExample = z.infer<typeof insertAiTrainingExampleSchema>;
+export type AiTrainingExample = typeof aiTrainingExamples.$inferSelect;
 
 // 🔐 Helper type for storage layer: public insert schemas omit userId for security,
 // but storage needs userId from authenticated session
