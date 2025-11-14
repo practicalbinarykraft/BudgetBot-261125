@@ -2,73 +2,7 @@
 
 ## Overview
 
-Budget Buddy is a personal finance management application designed to help users track income, expenses, wallets, and financial goals. It offers AI-powered spending analysis, receipt OCR, and multi-currency support within an intuitive interface. The project aims to provide a comprehensive and simplified tool for managing personal finances.
-
-## Recent Changes
-
-**November 14, 2025 (Evening):**
-- **Transaction Classification Migration & Editing:** Implemented complete solution for backfilling and editing existing transactions
-  - Migration service: Two separate SQL UPDATE queries to safely backfill NULL personalTagId (to "Неопределена" tag) and NULL financialType (to "discretionary") without overwriting valid data
-  - Migration endpoint: POST /api/admin/migrate-transaction-classifications (dev-only, 403 in production)
-  - Edit transaction dialog: Added Financial Type radio group with 4 options (Essential, Discretionary, Asset, Liability) alongside existing personal tag selector
-  - Analytics page: Added "Fix Unsorted" button with loading state to trigger migration from UI
-  - Cache invalidation: Edit dialog and migration both invalidate /api/analytics queries for real-time refresh
-  - Data safety: Separate UPDATE queries prevent valid data corruption (initially had bug where single query with OR condition overwrote valid fields)
-
-**November 14, 2025 (Morning):**
-- **Financial Classification Analytics:** Implemented 3D transaction analysis framework (Category + Personal Tag + Financial Type) with dedicated /expenses/analytics page
-  - Database schema: Added `financialType` enum field to transactions table (essential/discretionary/asset/liability) with discretionary as default
-  - Backend architecture: Modular analytics API with 4 endpoints (/api/analytics/by-category, by-person, by-type, unsorted) in analytics.routes.ts
-  - Service layer: 4 separate service modules (60-70 lines each) for SQL-based breakdown calculations with GROUP BY aggregations and percentage computations
-  - Frontend page: ExpensesAnalyticsPage at /expenses/analytics with 4-tab interface (Category, Person, Type, Unsorted), period filter (week/month/year), and total summary
-  - Reusable components: BreakdownCard (90 lines) for consistent visualization, individual tab components for each analytics dimension
-  - Unsorted tab: Shows transactions missing person tag OR financial type classification, enabling bulk sorting workflow
-  - Dashboard integration: Extended StatCard component with optional action prop (backward compatible), added "View Details →" link on Total Expense card
-  - Default tag creation: Auto-creates "Неопределена" (Unknown) tag on user registration for unsorted transaction classification
-  - Code quality: All files under 200 lines, junior programmer friendly modular architecture
-- **Tag Detail Pages:** Implemented clickable tag cards that navigate to dedicated tag detail pages (/tags/:id)
-  - Frontend: TagDetailPage component with tag info header, stats cards (Total Transactions, Total Spent, Total Income), and filtered transaction list
-  - Backend: SQL-level transaction filtering via storage.getTransactionsByUserId(userId, filters) with optional personalTagId/from/to parameters
-  - Query optimization: Moved filtering from in-memory JavaScript to database WHERE clauses for scalability
-  - Input validation: Comprehensive validation using date-fns + Zod to prevent SQL errors (validates date calendar correctness, personalTagId > 0)
-  - Route structure: /tags/:id placed before /tags in App.tsx to avoid path conflicts
-  - Navigation: TagCard component supports onViewDetails callback for clickable navigation
-  - Transaction management: Create/edit/delete transactions directly from tag detail page with automatic tag pre-selection
-  - Stats update: Real-time statistics refresh after transaction mutations
-  - Database verification: E2E tests confirmed personalTagId persists correctly to database
-
-**November 13, 2025:**
-- **Personal Tags Feature:** Implemented third classification axis for transactions (WHO spent/received money) alongside category (WHAT) and type (income/expense)
-  - Backend: `personal_tags` table with lucide icon names, 3 types (personal/shared/person), ownership checks in routes
-  - Service: `tag.service.ts` with 7 functions (CRUD + stats + default tag creation)
-  - Frontend: 5 components (TagBadge, TagSelector, TagCard, CreateTagDialog, TagsSettingsPage at /tags)
-  - Transaction integration: personalTagId field added to add/edit transaction dialogs
-  - Registration: Automatically creates 2 default tags ("Personal (Me)" with User icon, "Shared" with Home icon)
-  - Icons: Lucide-react icons (no emojis) with 10 options, customizable colors
-  - Security: Route-level ownership verification prevents unauthorized tag access/modification
-  - Known optimizations deferred: TagSelector double-fetch, N+1 stats queries (non-critical)
-- **Cumulative Financial Charts:** Refactored analytics to display cumulative (running total) charts instead of daily impulse charts for smoother visualization
-  - Created modular architecture: `server/lib/charts/cumulative.ts` (utility), `server/services/trend-calculator.service.ts` (service layer)
-  - Income/Expense lines show accumulated totals over time (smooth curves vs. spiky daily bars)
-  - Capital calculated as `cumulativeIncome - cumulativeExpense` (simplified formula)
-  - Forecast continues smoothly from last historical point using `makeCumulativeFromBase`
-  - Capital baseline alignment (matching current wallet balance) deferred to future iteration per Architect recommendation
-- Added edit/delete transaction functionality to Dashboard page
-- Fixed TanStack Query cache invalidation using `exact: false` flag to ensure Dashboard refreshes after mutations
-- Dashboard now supports full transaction management (create, edit, delete) without navigating to Transactions page
-- Fixed transaction sorting: Added `ORDER BY date DESC, id DESC` to `getTransactionsByUserId` to ensure transactions always display in chronological order (newest first)
-- Resolved issue where edited transactions would disappear from Dashboard due to unsorted database results
-- Implemented date-grouped transaction display on Dashboard with localized headers (Russian: "Сегодня", "Вчера", specific dates)
-- Fixed date grouping to normalize by calendar date (yyyy-MM-dd) so same-day transactions with different timestamps group together
-
-**Key Capabilities:**
-- Transaction, wallet, category, and budget management
-- Recurring payments and wishlist tracking
-- AI-powered spending analysis and receipt OCR
-- Multi-currency support with historical exchange rates (USD, RUB, IDR)
-- Financial Health Score based on user's spending habits
-- Telegram Bot integration for on-the-go expense tracking
-- AI-powered financial trend forecasting
+Budget Buddy is a personal finance management application designed to help users track income, expenses, wallets, and financial goals. It offers AI-powered spending analysis, receipt OCR, and multi-currency support within an intuitive interface. The project aims to provide a comprehensive and simplified tool for managing personal finances, offering features like transaction classification, financial analytics, and AI-powered forecasting to enhance financial literacy and control.
 
 ## User Preferences
 
@@ -76,53 +10,57 @@ Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend
+### UI/UX Decisions
 
-**Technology Stack:** React 18 (TypeScript, Vite), Wouter, TanStack Query, React Hook Form with Zod, Context API.
-**UI/UX:** Shadcn/ui (Radix UI primitives), Tailwind CSS with a custom design system adhering to Material Design principles. Features a neutral color scheme, responsive grid layouts, and consistent spacing.
-**Design Principles:** Emphasizes data clarity, trust, and intuitive user interaction.
+The application uses Shadcn/ui (Radix UI primitives) and Tailwind CSS with a custom design system adhering to Material Design principles. It features a neutral color scheme, responsive grid layouts, and consistent spacing, emphasizing data clarity, trust, and intuitive user interaction.
 
-### Backend
+### Technical Implementations
 
-**Technology Stack:** Express.js (TypeScript), Drizzle ORM for PostgreSQL (Neon serverless).
-**Authentication:** Passport.js with Local Strategy, session-based using `express-session`, BCrypt for password hashing.
-**API Structure:** RESTful API with modular routes and middleware for authentication and ownership checks.
-**Data Model:** Core entities include Users, Transactions (with multi-currency history), Wallets, Categories, Budgets, Recurring Payments, Wishlist, and Settings.
-**Database Schema Design:** User-centric, with cascade deletions, decimal precision for financial amounts, timestamp tracking, and robust currency handling.
+*   **Frontend:** Built with React 18 (TypeScript, Vite), Wouter for routing, TanStack Query for data fetching, React Hook Form with Zod for form management, and Context API for state.
+*   **Backend:** Developed using Express.js (TypeScript) and Drizzle ORM for PostgreSQL (Neon serverless).
+*   **Authentication:** Session-based authentication using Passport.js (Local Strategy) and `express-session`, with BCrypt for password hashing.
+*   **API Structure:** RESTful API with modular routes and middleware for authentication and ownership checks.
+
+### Feature Specifications
+
+*   **Multi-Currency System:** Transactions store original amount, currency, and exchange rate. Wallets track native and USD equivalent balances.
+*   **Financial Health Score:** A real-time score (0-100) based on Budget Adherence, Cashflow Balance, and Expense Stability.
+*   **Category Management:** Full-featured category system with default categories, "Unaccounted" for calibration, and quick creation in transaction forms.
+*   **ML Auto-Categorization:** Automatically suggests transaction categories based on merchant name patterns.
+*   **Category Resolution Service:** Bridges English parser output with localized user categories for Telegram bot integration.
+*   **Wallet Calibration System:** Allows users to sync app balances with real-world balances, tracking differences and creating "Unaccounted" adjustment expenses.
+*   **Telegram Bot Integration:** A centralized bot for expense tracking supporting i18n, commands, natural language parsing, and receipt OCR. It links bot-created transactions to the user's primary wallet, updates balances atomically, and applies ML auto-categorization. Enhanced notifications include conversion rates, USD equivalents, capital totals, budget progress, and inline action buttons.
+*   **Scheduled Notification System:** Uses node-cron for timezone-aware daily notifications, sending summaries to Telegram users.
+*   **Financial Trend Chart with AI Forecasting:** Dashboard visualization showing cumulative income, expenses, and capital trends. Uses Anthropic API for Claude to analyze historical data and recurring payments for future capital trajectory predictions.
+*   **Personal Tags System:** Implements a third classification axis for transactions (WHO spent/received money) alongside category (WHAT) and type (income/expense). Tags have types ('personal', 'shared', 'person') and use Lucide-react icons with customizable colors.
+*   **Budget Management:** Supports category-based budgeting with period tracking and progress calculation.
+*   **Transaction Classification & Editing:** Comprehensive system for backfilling and editing transaction classifications (personal tags and financial types).
+*   **Financial Classification Analytics:** Provides a 3D transaction analysis framework (Category + Personal Tag + Financial Type) with dedicated analytics pages.
+*   **Swipe-Sort Game:** A gamified mini-game for classifying unsorted transactions using a Tinder-style swipe interface, integrating with backend services for session management and statistics.
 
 ### System Design Choices
 
-**Multi-Currency System:** Transactions store original amount, currency, and exchange rate. Wallets track native and USD equivalent balances. Users can set custom exchange rates with an hourly cache.
-**Financial Health Score:** A real-time score (0-100) based on Budget Adherence (40%), Cashflow Balance (35%), and Expense Stability (25%), categorized into status bands.
-**Category Management:** Full-featured category system with default categories, "Unaccounted" for calibration, quick creation in transaction forms, and type synchronization.
-**ML Auto-Categorization:** Automatically suggests transaction categories based on merchant name patterns and usage counts, applying categories when confidence thresholds are met.
-**Category Resolution Service:** Bridges English parser output with localized user categories for Telegram bot integration, using exact match, synonym match, type-based fallback, and default categories.
-**Wallet Calibration System:** Allows users to sync app balances with real-world balances, tracking differences and creating "Unaccounted" adjustment expenses when necessary. Features a compact UI with real-time previews, visual indicators, and net worth impact summaries.
-**Telegram Bot Integration:** A centralized bot for expense tracking. Users link accounts via verification codes. Supports i18n (English/Russian), commands (`/start`, `/verify`, `/add`, `/income`, `/balance`, `/last`), natural language parsing, and receipt OCR. Bot-created transactions automatically link to the user's primary wallet (first wallet or auto-created USD default "My Wallet"), update balances atomically, convert currencies using user exchange rates, and apply ML auto-categorization. Enhanced notifications include conversion rates, USD equivalents, capital totals with delta display (e.g., "$9800 (-$18)"), budget progress, and inline action buttons. Implements in-memory receipt storage with 16-character IDs to comply with Telegram's 64-byte callback_data limit, including 5-minute TTL, cross-user security validation, and automatic cleanup. Features full transaction editing via "Edit" button: validates old USD amount BEFORE database update using 3-tier fallback strategy (originalAmount/exchangeRate → amountUsd → amount), aborts cleanly on validation failure to prevent balance corruption, updates transaction and wallet atomically on success. Edit flow maintains primary wallet association and cannot change wallets (parser limitation).
-**Scheduled Notification System:** Uses node-cron for timezone-aware daily notifications. Users configure notification time and timezone in Settings (supports 22 popular IANA timezones). Scheduler automatically updates when settings change, initializes on server startup, and sends daily summaries to Telegram users based on their preferences.
-**Financial Trend Chart with AI Forecasting:** Dashboard visualization showing cumulative income, expenses, and capital trends. Uses user-provided Anthropic API keys for Claude to analyze historical data and recurring payments for future capital trajectory predictions. Includes configurable history and forecast periods, with a linear projection fallback.
-**Personal Tags System:** Third classification axis for transactions answering "WHO spent/received this money?" (complementing category="WHAT" and type="income/expense"). Tags have types: 'personal' (me), 'shared' (household), 'person' (others like "Маша", "Дима"). Features lucide-react icons (10 options: User, Heart, Home, Users, Baby, UserPlus, Briefcase, Gift, Dog, Cat) with customizable colors. Default tags auto-created on registration. Full CRUD at /tags settings page. Transaction forms include optional tag selector. Route-level ownership verification ensures users can only access/modify their own tags. Backend service layer provides stats (transaction count, total spent per tag). Frontend components: TagBadge (display), TagSelector (dropdown), TagCard (management), CreateTagDialog (create/edit with form sync), TagsSettingsPage (list view).
-**Security Hardening:** Implemented measures include stripping `userId` from request bodies, foreign key ownership verification, and comprehensive ownership checks on all data manipulation routes.
-**Budget Management:** Supports category-based budgeting with period tracking (week, month, year) and progress calculation, featuring UI alerts for exceeded budgets.
+*   **Data Model:** User-centric, with cascade deletions, decimal precision for financial amounts, timestamp tracking, and robust currency handling.
+*   **Security Hardening:** Implemented measures include stripping `userId` from request bodies, foreign key ownership verification, and comprehensive ownership checks on all data manipulation routes.
 
 ## External Dependencies
 
 ### Third-Party Services
 
--   **Anthropic Claude API:** Used for AI-powered spending analysis and receipt OCR.
--   **Neon Serverless PostgreSQL:** Primary database.
+*   **Anthropic Claude API:** Used for AI-powered spending analysis and receipt OCR.
+*   **Neon Serverless PostgreSQL:** The primary database.
 
 ### UI Component Libraries
 
--   **Radix UI Primitives:** Accessible, unstyled UI components.
--   **Shadcn/ui:** Components styled with Tailwind CSS, built on Radix UI.
--   **class-variance-authority, clsx, tailwind-merge:** Utilities for styling.
--   **date-fns:** Date manipulation.
--   **zod:** Schema validation.
+*   **Radix UI Primitives:** Accessible, unstyled UI components.
+*   **Shadcn/ui:** Components styled with Tailwind CSS, built on Radix UI.
+*   **class-variance-authority, clsx, tailwind-merge:** Utilities for styling.
+*   **date-fns:** Date manipulation.
+*   **zod:** Schema validation.
 
 ### Development Tools
 
--   **Vite:** Frontend bundling and HMR.
--   **esbuild:** Backend bundling.
--   **TypeScript:** Language compiler.
--   **Drizzle Kit:** Database migrations.
+*   **Vite:** Frontend bundling and HMR.
+*   **esbuild:** Backend bundling.
+*   **TypeScript:** Language compiler.
+*   **Drizzle Kit:** Database migrations.
