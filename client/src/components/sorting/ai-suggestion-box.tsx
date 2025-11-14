@@ -108,14 +108,13 @@ export function AISuggestionBox({
         <div className="flex items-center gap-2">
           <User className="w-4 h-4 text-muted-foreground" />
           <Select
-            value={tagId?.toString() || ""}
+            value={tagId?.toString() || undefined}
             onValueChange={(value) => onTagChange(value ? parseInt(value) : null)}
           >
             <SelectTrigger className="h-8 w-full" data-testid="select-tag">
-              <SelectValue placeholder="Select tag" />
+              <SelectValue placeholder="Select tag (optional)" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">None</SelectItem>
               {tags.map((tag) => (
                 <SelectItem key={tag.id} value={tag.id.toString()}>
                   {tag.name}
