@@ -6,6 +6,18 @@ Budget Buddy is a personal finance management application designed to help users
 
 ## Recent Changes
 
+**November 14, 2025:**
+- **Tag Detail Pages:** Implemented clickable tag cards that navigate to dedicated tag detail pages (/tags/:id)
+  - Frontend: TagDetailPage component with tag info header, stats cards (Total Transactions, Total Spent, Total Income), and filtered transaction list
+  - Backend: SQL-level transaction filtering via storage.getTransactionsByUserId(userId, filters) with optional personalTagId/from/to parameters
+  - Query optimization: Moved filtering from in-memory JavaScript to database WHERE clauses for scalability
+  - Input validation: Comprehensive validation using date-fns + Zod to prevent SQL errors (validates date calendar correctness, personalTagId > 0)
+  - Route structure: /tags/:id placed before /tags in App.tsx to avoid path conflicts
+  - Navigation: TagCard component supports onViewDetails callback for clickable navigation
+  - Transaction management: Create/edit/delete transactions directly from tag detail page with automatic tag pre-selection
+  - Stats update: Real-time statistics refresh after transaction mutations
+  - Database verification: E2E tests confirmed personalTagId persists correctly to database
+
 **November 13, 2025:**
 - **Personal Tags Feature:** Implemented third classification axis for transactions (WHO spent/received money) alongside category (WHAT) and type (income/expense)
   - Backend: `personal_tags` table with lucide icon names, 3 types (personal/shared/person), ownership checks in routes
