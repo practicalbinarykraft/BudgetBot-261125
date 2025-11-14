@@ -1,0 +1,868 @@
+📁 МОДУЛЬНАЯ СТРУКТУРА
+client/src/
+  components/
+    sorting/
+      ├─ swipe-deck.tsx                (180 строк - главный)
+      ├─ ai-suggestion-box.tsx         (60 строк - AI блок)
+      ├─ clickable-field-dropdown.tsx  (80 строк - dropdown)
+      ├─ training-header.tsx           (50 строк - прогресс AI)
+      ├─ completion-screen.tsx         (70 строк - финиш)
+      └─ financial-insight-toast.tsx   (40 строк - инсайт)
+
+server/
+  routes/
+    └─ ai-prediction.routes.ts         (100 строк - API)
+  
+  services/
+    ai/
+      ├─ prediction.service.ts         (150 строк - ML движок)
+      ├─ training.service.ts           (120 строк - обучение)
+      ├─ similarity.service.ts         (80 строк - поиск похожих)
+      └─ confidence.service.ts         (60 строк - расчёт уверенности)
+
+shared/
+  └─ schema.ts                         (добавить 1 таблицу)
+ВСЕ ФАЙЛЫ < 200 СТРОК! ✅
+
+ФАЗА 1: BACKEND (2 часа)
+Задача 1: Добавить таблицу ai_training_examples (10 минут)
+Файл: shared/schema.ts
+Добавить:
+typescript/**
+ * История обучения AI
+ * Сохраняет что предсказал AI и что выбрал пользователь
+ */
+export const aiTrainingExamples = pgTable("ai_training_examples", {
+  id: serial("id").primaryKey(),
+  
+  userId: integer("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  
+  // Input (что было)
+  transactionDescription: text("transaction_description").notNull(),
+  transactionAmount: decimal("transaction_amount", { precision: 10, scale: 2 }),
+  merchantName: text("merchant_name"),
+  
+  // AI Prediction (что AI предсказал)
+  aiSuggestedCategory: text("ai_suggested_category"),
+  aiSuggestedTag: integer("ai_suggested_tag"),
+  aiConfidence: decimal("ai_confidence", { precision: 3, scale: 2 }),
+  
+  // User Choice (что выбрал пользователь)
+  userChosenCategory: text("user_chosen_category"),
+  userChosenTag: integer("user_chosen_tag"),
+  userChosenType: text("user_chosen_type"),
+  
+  // Feedback
+  aiWasCorrect: boolean("ai_was_correct").notNull(),
+  // true если юзер НЕ менял предсказания AI
+  
+  createdAt: timestamp("created_at").defaultNow()
+});
+Размер: +20 строк
+
+Задача 2: AI Prediction Service (150 строк)
+Создать файл: server/services/ai/prediction.service.ts
+typescriptimport { db } from '../../db';
+import { 
+  transactions, 
+  aiTrainingExamples, 
+  categories, 
+  personalTags 
+} from '@shared/schema';
+import { findSimilarTransactions } from './similarity.service';
+import { calculateConfidence } from './confidence.service';
+
+/**
+ * Предсказывает Category + Tag для транзакции
+ * Основано на прошлых решениях пользователя
+ */
+export async function predictTransaction(
+  transactionDescription: string,
+  userId: number
+) {
+  // 1. Найти похожие транзакции из истории
+  const similar = await findSimilarTransactions(
+    transactionDescription,
+    userId,
+    limit: 10
+  );
+  
+  if (similar.length === 0) {
+    // Нет истории - возвращаем null
+    return {
+      category: null,
+      tag: null,
+      confidence: 0,
+      reasoning: 'No training data yet'
+    };
+  }
+  
+  // 2. Подсчитать частоту каждой категории/тега
+  const categoryCounts: Record<string, number> = {};
+  const tagCounts: Record<number, number> = {};
+  
+  similar.forEach(tx => {
+    if (tx.category) {
+      categoryCounts[tx.category] = (categoryCounts[tx.category] || 0) + 1;
+    }
+    if (tx.personalTagId) {
+      tagCounts[tx.personalTagId] = (tagCounts[tx.personalTagId] || 0) + 1;
+    }
+  });
+  
+  // 3. Найти самые частые
+  const mostFrequentCategory = Object.entries(categoryCounts)
+    .sort(([, a], [, b]) => b - a)[0]?.[0];
+  
+  const mostFrequentTag = Object.entries(tagCounts)
+    .sort(([, a], [, b]) => b - a)[0]?.[0];
+  
+  // 4. Рассчитать confidence (0-1)
+  const confidence = calculateConfidence(similar, {
+    category: mostFrequentCategory,
+    tag: parseInt(mostFrequentTag)
+  });
+  
+  // 5. Вернуть предсказание
+  return {
+    category: mostFrequentCategory || null,
+    tag: mostFrequentTag ? parseInt(mostFrequentTag) : null,
+    confidence: Math.round(confidence * 100), // 0-100%
+    reasoning: `Based on ${similar.length} similar transactions`
+  };
+}
+
+/**
+ * Загрузить информацию о категории/теге
+ */
+export async function enrichPrediction(prediction: any, userId: number) {
+  if (!prediction.category && !prediction.tag) {
+    return prediction;
+  }
+  
+  // Загрузить category details
+  let categoryDetails = null;
+  if (prediction.category) {
+    const [cat] = await db
+      .select()
+      .from(categories)
+      .where(eq(categories.name, prediction.category))
+      .limit(1);
+    categoryDetails = cat;
+  }
+  
+  // Загрузить tag details
+  let tagDetails = null;
+  if (prediction.tag) {
+    const [tag] = await db
+      .select()
+      .from(personalTags)
+      .where(eq(personalTags.id, prediction.tag))
+      .limit(1);
+    tagDetails = tag;
+  }
+  
+  return {
+    ...prediction,
+    categoryDetails,
+    tagDetails
+  };
+}
+Размер: 150 строк ✅
+
+Задача 3: Similarity Service (80 строк)
+Создать файл: server/services/ai/similarity.service.ts
+typescriptimport { db } from '../../db';
+import { aiTrainingExamples } from '@shared/schema';
+import { eq, sql } from 'drizzle-orm';
+
+/**
+ * Найти похожие транзакции по description
+ * Использует PostgreSQL similarity (trigram)
+ */
+export async function findSimilarTransactions(
+  description: string,
+  userId: number,
+  limit: number = 10
+) {
+  // Нормализовать description (lowercase, убрать цифры)
+  const normalized = normalizeDescription(description);
+  
+  // Поиск по похожести (PostgreSQL trigram)
+  const results = await db
+    .select()
+    .from(aiTrainingExamples)
+    .where(eq(aiTrainingExamples.userId, userId))
+    .orderBy(
+      sql`similarity(${aiTrainingExamples.transactionDescription}, ${normalized}) DESC`
+    )
+    .limit(limit);
+  
+  return results.map(r => ({
+    category: r.userChosenCategory,
+    personalTagId: r.userChosenTag,
+    financialType: r.userChosenType,
+    similarity: 0.8 // TODO: calculate real similarity
+  }));
+}
+
+/**
+ * Нормализация description для поиска
+ */
+function normalizeDescription(desc: string): string {
+  return desc
+    .toLowerCase()
+    .replace(/\d+/g, '') // убрать цифры
+    .replace(/[^\w\s]/g, '') // убрать спецсимволы
+    .trim();
+}
+
+/**
+ * Извлечь keywords из description
+ */
+export function extractKeywords(description: string): string[] {
+  const normalized = normalizeDescription(description);
+  
+  // Разбить на слова
+  const words = normalized.split(/\s+/);
+  
+  // Убрать стоп-слова (в, на, с, для, etc)
+  const stopWords = ['в', 'на', 'с', 'для', 'от', 'до', 'по', 'из'];
+  
+  return words.filter(w => !stopWords.includes(w) && w.length > 2);
+}
+Размер: 80 строк ✅
+
+Задача 4: Confidence Service (60 строк)
+Создать файл: server/services/ai/confidence.service.ts
+typescript/**
+ * Рассчитать confidence score для предсказания
+ * Основано на:
+ * - Количество похожих транзакций
+ * - Частота встречаемости предсказанного значения
+ * - Similarity score
+ */
+export function calculateConfidence(
+  similarTransactions: any[],
+  prediction: { category: string | null; tag: number | null }
+): number {
+  if (similarTransactions.length === 0) {
+    return 0;
+  }
+  
+  // 1. Базовый score от количества примеров
+  const countScore = Math.min(similarTransactions.length / 10, 1);
+  
+  // 2. Frequency score (как часто встречается предсказание)
+  const categoryMatches = similarTransactions.filter(
+    tx => tx.category === prediction.category
+  ).length;
+  
+  const tagMatches = similarTransactions.filter(
+    tx => tx.personalTagId === prediction.tag
+  ).length;
+  
+  const frequencyScore = 
+    (categoryMatches + tagMatches) / (similarTransactions.length * 2);
+  
+  // 3. Average similarity score
+  const avgSimilarity = 
+    similarTransactions.reduce((sum, tx) => sum + (tx.similarity || 0), 0) 
+    / similarTransactions.length;
+  
+  // 4. Комбинированный score (weighted average)
+  const finalScore = 
+    countScore * 0.3 + 
+    frequencyScore * 0.4 + 
+    avgSimilarity * 0.3;
+  
+  return Math.min(finalScore, 0.99); // Max 99%
+}
+Размер: 60 строк ✅
+
+Задача 5: Training Service (120 строк)
+Создать файл: server/services/ai/training.service.ts
+typescriptimport { db } from '../../db';
+import { aiTrainingExamples } from '@shared/schema';
+
+/**
+ * Сохранить пример для обучения AI
+ * Вызывается после каждого свайпа
+ */
+export async function saveTrainingExample(data: {
+  userId: number;
+  transactionDescription: string;
+  transactionAmount: number;
+  merchantName?: string;
+  
+  // AI prediction
+  aiSuggestedCategory?: string;
+  aiSuggestedTag?: number;
+  aiConfidence?: number;
+  
+  // User choice
+  userChosenCategory?: string;
+  userChosenTag?: number;
+  userChosenType: string; // from swipe direction
+}) {
+  // Проверить правильность AI
+  const aiWasCorrect = 
+    data.aiSuggestedCategory === data.userChosenCategory &&
+    data.aiSuggestedTag === data.userChosenTag;
+  
+  // Сохранить
+  await db.insert(aiTrainingExamples).values({
+    userId: data.userId,
+    transactionDescription: data.transactionDescription,
+    transactionAmount: data.transactionAmount.toString(),
+    merchantName: data.merchantName,
+    
+    aiSuggestedCategory: data.aiSuggestedCategory,
+    aiSuggestedTag: data.aiSuggestedTag,
+    aiConfidence: data.aiConfidence?.toString(),
+    
+    userChosenCategory: data.userChosenCategory,
+    userChosenTag: data.userChosenTag,
+    userChosenType: data.userChosenType,
+    
+    aiWasCorrect
+  });
+}
+
+/**
+ * Получить статистику обучения AI для пользователя
+ */
+export async function getTrainingStats(userId: number) {
+  const examples = await db
+    .select()
+    .from(aiTrainingExamples)
+    .where(eq(aiTrainingExamples.userId, userId));
+  
+  const totalExamples = examples.length;
+  const correctPredictions = examples.filter(e => e.aiWasCorrect).length;
+  const accuracy = totalExamples > 0 
+    ? Math.round((correctPredictions / totalExamples) * 100) 
+    : 0;
+  
+  // Определить уровень AI
+  let level: string;
+  if (totalExamples < 10) level = '🥉 Beginner';
+  else if (totalExamples < 50) level = '🥈 Intermediate';
+  else if (totalExamples < 100) level = '🥇 Advanced';
+  else level = '💎 Master';
+  
+  return {
+    totalExamples,
+    correctPredictions,
+    accuracy,
+    level,
+    canEnableAutoMode: accuracy >= 80 && totalExamples >= 50
+  };
+}
+Размер: 120 строк ✅
+
+Задача 6: API Routes (100 строк)
+Создать файл: server/routes/ai-prediction.routes.ts
+typescriptimport { Router } from 'express';
+import { requireAuth } from '../middleware/auth';
+import { predictTransaction, enrichPrediction } from '../services/ai/prediction.service';
+import { getTrainingStats, saveTrainingExample } from '../services/ai/training.service';
+
+const router = Router();
+
+/**
+ * GET /api/ai/predict/:transactionId
+ * Предсказать category + tag для транзакции
+ */
+router.get('/predict/:transactionId', requireAuth, async (req, res) => {
+  const userId = req.user!.id;
+  const { transactionId } = req.params;
+  
+  try {
+    // Загрузить транзакцию
+    const transaction = await db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.id, parseInt(transactionId)))
+      .limit(1);
+    
+    if (!transaction[0]) {
+      return res.status(404).json({ error: 'Transaction not found' });
+    }
+    
+    // Предсказать
+    const prediction = await predictTransaction(
+      transaction[0].description,
+      userId
+    );
+    
+    // Добавить детали (name, icon)
+    const enriched = await enrichPrediction(prediction, userId);
+    
+    res.json(enriched);
+  } catch (error) {
+    res.status(500).json({ error: 'Prediction failed' });
+  }
+});
+
+/**
+ * POST /api/ai/train
+ * Сохранить training example после свайпа
+ */
+router.post('/train', requireAuth, async (req, res) => {
+  const userId = req.user!.id;
+  const { transactionId, userChoice, aiPrediction } = req.body;
+  
+  try {
+    // Загрузить транзакцию
+    const [tx] = await db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.id, transactionId))
+      .limit(1);
+    
+    // Сохранить training example
+    await saveTrainingExample({
+      userId,
+      transactionDescription: tx.description,
+      transactionAmount: parseFloat(tx.amountUsd),
+      
+      aiSuggestedCategory: aiPrediction?.category,
+      aiSuggestedTag: aiPrediction?.tag,
+      aiConfidence: aiPrediction?.confidence,
+      
+      userChosenCategory: userChoice.category,
+      userChosenTag: userChoice.tag,
+      userChosenType: userChoice.financialType
+    });
+    
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Training save failed' });
+  }
+});
+
+/**
+ * GET /api/ai/stats
+ * Получить статистику обучения AI
+ */
+router.get('/stats', requireAuth, async (req, res) => {
+  const userId = req.user!.id;
+  
+  try {
+    const stats = await getTrainingStats(userId);
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load stats' });
+  }
+});
+
+export default router;
+Размер: 100 строк ✅
+Подключить в server/index.ts:
+typescriptimport aiPredictionRoutes from './routes/ai-prediction.routes';
+app.use('/api/ai', aiPredictionRoutes);
+
+ФАЗА 2: FRONTEND (2.5 часа)
+Задача 7: Clickable Field Dropdown (80 строк)
+Создать файл: client/src/components/sorting/clickable-field-dropdown.tsx
+typescriptimport { useState } from 'react';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { useQuery } from '@tanstack/react-query';
+
+/**
+ * Кликабельное поле с dropdown
+ * При клике показывает список для выбора
+ */
+interface ClickableFieldDropdownProps {
+  type: 'category' | 'tag';
+  value: { name: string; icon?: string } | null;
+  onChange: (value: any) => void;
+}
+
+export function ClickableFieldDropdown({ 
+  type, 
+  value, 
+  onChange 
+}: ClickableFieldDropdownProps) {
+  const [open, setOpen] = useState(false);
+  
+  // Загрузить опции
+  const { data: options = [] } = useQuery({
+    queryKey: type === 'category' 
+      ? ['/api/categories'] 
+      : ['/api/tags'],
+  });
+  
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button 
+          className="flex items-center gap-2 px-3 py-2 rounded-lg 
+                     border-2 border-dashed border-gray-300 
+                     hover:border-blue-500 hover:bg-blue-50
+                     transition-all cursor-pointer"
+        >
+          {value ? (
+            <>
+              <span>{value.icon}</span>
+              <span>{value.name}</span>
+            </>
+          ) : (
+            <span className="text-gray-400">
+              {type === 'category' ? 'Select category...' : 'Select tag...'}
+            </span>
+          )}
+          <span className="ml-auto text-gray-400">▼</span>
+        </button>
+      </PopoverTrigger>
+      
+      <PopoverContent className="w-64 max-h-64 overflow-auto">
+        <div className="space-y-1">
+          {options.map(option => (
+            <button
+              key={option.id}
+              onClick={() => {
+                onChange(option);
+                setOpen(false);
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 
+                         rounded hover:bg-gray-100 text-left"
+            >
+              {option.icon && <span>{option.icon}</span>}
+              <span>{option.name}</span>
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+Размер: 80 строк ✅
+
+Задача 8: AI Suggestion Box (60 строк)
+Создать файл: client/src/components/sorting/ai-suggestion-box.tsx
+typescriptimport { ClickableFieldDropdown } from './clickable-field-dropdown';
+
+/**
+ * Блок с AI предсказаниями
+ * Показывает Category + Tag с возможностью изменить
+ */
+interface AISuggestionBoxProps {
+  prediction: {
+    category: { name: string; icon: string } | null;
+    tag: { name: string; icon: string } | null;
+    confidence: number;
+  } | null;
+  onCategoryChange: (category: any) => void;
+  onTagChange: (tag: any) => void;
+}
+
+export function AISuggestionBox({
+  prediction,
+  onCategoryChange,
+  onTagChange
+}: AISuggestionBoxProps) {
+  if (!prediction) {
+    return (
+      <div className="p-4 bg-gray-50 rounded-lg">
+        <p className="text-sm text-gray-500">
+          🤖 AI is learning... No suggestions yet.
+        </p>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="p-4 bg-blue-50 rounded-lg space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-blue-900">
+          🤖 AI suggests:
+        </span>
+        <span className="text-xs text-blue-600">
+          {prediction.confidence}% confident
+        </span>
+      </div>
+      
+      {/* Category field (clickable) */}
+      <ClickableFieldDropdown
+        type="category"
+        value={prediction.category}
+        onChange={onCategoryChange}
+      />
+      
+      {/* Tag field (clickable) */}
+      <ClickableFieldDropdown
+        type="tag"
+        value={prediction.tag}
+        onChange={onTagChange}
+      />
+      
+      <p className="text-xs text-blue-600">
+        💡 Click fields above to change if AI is wrong
+      </p>
+    </div>
+  );
+}
+Размер: 60 строк ✅
+
+Задача 9: Training Header (50 строк)
+Создать файл: client/src/components/sorting/training-header.tsx
+typescriptimport { useQuery } from '@tanstack/react-query';
+
+/**
+ * Header с прогрессом обучения AI
+ */
+export function TrainingHeader() {
+  const { data: stats } = useQuery({
+    queryKey: ['/api/ai/stats'],
+  });
+  
+  if (!stats) return null;
+  
+  return (
+    <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
+      <h2 className="text-lg font-bold mb-2">
+        🤖 Train Your Personal AI Assistant
+      </h2>
+      
+      <p className="text-sm text-gray-600 mb-3">
+        Each swipe teaches AI to recognize your spending patterns!
+      </p>
+      
+      <div className="flex items-center gap-4 text-sm">
+        <div>
+          <span className="font-medium">Level:</span> {stats.level}
+        </div>
+        <div>
+          <span className="font-medium">Sessions:</span> {stats.totalExamples}
+        </div>
+        <div>
+          <span className="font-medium">Accuracy:</span> {stats.accuracy}%
+        </div>
+      </div>
+      
+      {/* Progress bar */}
+      <div className="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div 
+          className="h-full bg-blue-500 transition-all"
+          style={{ width: `${stats.accuracy}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+Размер: 50 строк ✅
+
+Задача 10: Обновить Swipe Deck (180 строк)
+Файл: client/src/components/sorting/swipe-deck.tsx
+Что изменить:
+typescriptimport { TrainingHeader } from './training-header';
+import { AISuggestionBox } from './ai-suggestion-box';
+import { useQuery, useMutation } from '@tanstack/react-query';
+
+export function SwipeDeck() {
+  // ... существующий код ...
+  
+  // ✅ ДОБАВИТЬ: Загрузка AI prediction
+  const { data: prediction } = useQuery({
+    queryKey: ['/api/ai/predict', currentCard?.id],
+    enabled: !!currentCard,
+  });
+  
+  // ✅ ДОБАВИТЬ: State для user overrides
+  const [userCategory, setUserCategory] = useState(null);
+  const [userTag, setUserTag] = useState(null);
+  
+  // ✅ ДОБАВИТЬ: Mutation для сохранения training example
+  const trainMutation = useMutation({
+    mutationFn: async (data: any) => {
+      await fetch('/api/ai/train', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    }
+  });
+  
+  // ✅ ИЗМЕНИТЬ: handleSwipe
+  const handleSwipe = async (direction: Direction) => {
+    const financialType = directionToType(direction);
+    
+    // Final values (AI or user override)
+    const finalCategory = userCategory || prediction?.category?.name;
+    const finalTag = userTag || prediction?.tag?.id;
+    
+    // 1. Update transaction
+    await updateTransaction(currentCard.id, {
+      financialType,
+      category: finalCategory,
+      personalTagId: finalTag
+    });
+    
+    // 2. Save training example (обучить AI)
+    await trainMutation.mutateAsync({
+      transactionId: currentCard.id,
+      aiPrediction: prediction,
+      userChoice: {
+        financialType,
+        category: finalCategory,
+        tag: finalTag
+      }
+    });
+    
+    // 3. Next card
+    setCurrentIndex(prev => prev + 1);
+    setUserCategory(null);
+    setUserTag(null);
+  };
+  
+  return (
+    <div>
+      {/* ✅ ДОБАВИТЬ: Training Header */}
+      <TrainingHeader />
+      
+      {/* Existing progress */}
+      <Progress ... />
+      
+      {/* Card */}
+      <Card>
+        {/* Transaction details */}
+        <TransactionDetails {...currentCard} />
+        
+        {/* ✅ ДОБАВИТЬ: AI Suggestions */}
+        <AISuggestionBox
+          prediction={prediction}
+          onCategoryChange={setUserCategory}
+          onTagChange={setUserTag}
+        />
+        
+        {/* Swipe directions */}
+        <SwipeDirections />
+      </Card>
+    </div>
+  );
+}
+Размер итоговый: ~180 строк ✅
+
+Задача 11: Financial Insight Toast (40 строк)
+Создать файл: client/src/components/sorting/financial-insight-toast.tsx
+typescriptimport { useToast } from '@/hooks/use-toast';
+
+/**
+ * Показать инсайт после свайпа
+ * "💡 You're spending 60% on Discretionary!"
+ */
+export function useFinancialInsightToast() {
+  const { toast } = useToast();
+  
+  const showInsight = (stats: {
+    discretionaryPercent: number;
+    essentialPercent: number;
+    assetPercent: number;
+  }) => {
+    let message = '';
+    let variant: 'default' | 'destructive' = 'default';
+    
+    if (stats.discretionaryPercent > 50) {
+      message = `⚠️ You're spending ${stats.discretionaryPercent}% on wants! Consider reducing.`;
+      variant = 'destructive';
+    } else if (stats.assetPercent < 10) {
+      message = `🎯 Only ${stats.assetPercent}% goes to investments. Try to increase!`;
+    } else {
+      message = `✅ Good balance! ${stats.essentialPercent}% essential, ${stats.assetPercent}% assets.`;
+    }
+    
+    toast({
+      title: '💡 Financial Insight',
+      description: message,
+      variant
+    });
+  };
+  
+  return { showInsight };
+}
+Размер: 40 строк ✅
+
+ФАЗА 3: ИНТЕГРАЦИЯ (30 минут)
+Задача 12: Показать insights после свайпа
+В swipe-deck.tsx:
+typescriptimport { useFinancialInsightToast } from './financial-insight-toast';
+
+// В компоненте:
+const { showInsight } = useFinancialInsightToast();
+
+// После handleSwipe:
+const handleSwipe = async (direction) => {
+  // ... save transaction ...
+  
+  // ✅ ДОБАВИТЬ: Show insight каждые 5 свайпов
+  if ((currentIndex + 1) % 5 === 0) {
+    const stats = await fetchMonthlyStats();
+    showInsight(stats);
+  }
+  
+  // Next card
+  setCurrentIndex(prev => prev + 1);
+};
+```
+
+---
+
+## ✅ КРИТЕРИИ УСПЕХА
+
+### Тестирование:
+```
+1. Открыть /sorting
+2. Видеть Training Header с прогрессом AI
+3. Видеть карточку транзакции
+4. Видеть AI Suggestion Box:
+   - Category (clickable)
+   - Tag (clickable)
+   - Confidence %
+5. Клик на Category → dropdown → выбрать другую
+6. Свайпнуть вправо (Discretionary)
+7. Транзакция сохранена с:
+   - financialType: discretionary
+   - category: выбранная (или AI)
+   - tag: выбранный (или AI)
+8. Training example сохранён в БД
+9. Следующая карточка показывает улучшенное предсказание
+```
+
+---
+
+## 💡 ПОЧЕМУ ЭТО ХОРОШО ДЛЯ ДЖУНА
+```
+✅ 11 файлов, все < 200 строк
+✅ Каждый файл = одна задача:
+   - prediction.service.ts = ML движок
+   - similarity.service.ts = поиск похожих
+   - confidence.service.ts = расчёт уверенности
+   - training.service.ts = сохранение примеров
+   - clickable-field-dropdown.tsx = dropdown компонент
+   - ai-suggestion-box.tsx = блок с AI
+   - training-header.tsx = прогресс бар
+
+✅ Понятные названия
+✅ Комментарии где нужно
+✅ Легко найти что править
+```
+
+---
+
+## 🚀 РАЗМЕР ИЗМЕНЕНИЙ
+```
+Backend:
+- Новых файлов: 5
+- Новая таблица: 1
+- Строк: ~500
+
+Frontend:
+- Новых файлов: 5
+- Изменённых файлов: 1
+- Строк: ~300
+
+ИТОГО: ~800 строк, 4.5 часа
