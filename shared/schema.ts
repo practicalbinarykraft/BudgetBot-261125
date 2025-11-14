@@ -173,6 +173,32 @@ export const personalTags = pgTable("personal_tags", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Sorting Progress table (Gamification state - 1 row per user)
+export const sortingProgress = pgTable("sorting_progress", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  currentStreak: integer("current_streak").default(0).notNull(), // Days in a row
+  longestStreak: integer("longest_streak").default(0).notNull(), // Best streak record
+  totalPoints: integer("total_points").default(0).notNull(), // Lifetime points
+  totalSorted: integer("total_sorted").default(0).notNull(), // Total transactions sorted
+  lastSessionDate: date("last_session_date"), // Last time user played
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Sorting Sessions table (History of sorting game sessions)
+export const sortingSessions = pgTable("sorting_sessions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  sessionDate: date("session_date").notNull(), // Normalized date (timezone-aware)
+  transactionsSorted: integer("transactions_sorted").default(0).notNull(),
+  pointsEarned: integer("points_earned").default(0).notNull(), // 10 points per transaction
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  // Prevent duplicate sessions per user per day
+  uniqueUserDate: sql`UNIQUE (user_id, session_date)`,
+}));
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   transactions: many(transactions),
@@ -185,6 +211,8 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   calibrations: many(calibrations),
   telegramVerificationCodes: many(telegramVerificationCodes),
   personalTags: many(personalTags),
+  sortingSessions: many(sortingSessions),
+  sortingProgress: one(sortingProgress),
   settings: one(settings),
 }));
 
@@ -278,6 +306,20 @@ export const personalTagsRelations = relations(personalTags, ({ one, many }) => 
     references: [users.id],
   }),
   transactions: many(transactions),
+}));
+
+export const sortingProgressRelations = relations(sortingProgress, ({ one }) => ({
+  user: one(users, {
+    fields: [sortingProgress.userId],
+    references: [users.id],
+  }),
+}));
+
+export const sortingSessionsRelations = relations(sortingSessions, ({ one }) => ({
+  user: one(users, {
+    fields: [sortingSessions.userId],
+    references: [users.id],
+  }),
 }));
 
 // Zod Schemas
@@ -387,6 +429,16 @@ export const insertPersonalTagSchema = createInsertSchema(personalTags, {
   createdAt: true,
 });
 
+export const insertSortingSessionSchema = createInsertSchema(sortingSessions, {
+  sessionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
+  transactionsSorted: z.number().int().min(0),
+  pointsEarned: z.number().int().min(0),
+}).omit({
+  id: true,
+  userId: true,  // Server-side only
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -423,6 +475,11 @@ export type TelegramVerificationCode = typeof telegramVerificationCodes.$inferSe
 
 export type InsertPersonalTag = z.infer<typeof insertPersonalTagSchema>;
 export type PersonalTag = typeof personalTags.$inferSelect;
+
+export type InsertSortingSession = z.infer<typeof insertSortingSessionSchema>;
+export type SortingSession = typeof sortingSessions.$inferSelect;
+
+export type SortingProgress = typeof sortingProgress.$inferSelect;
 
 // 🔐 Helper type for storage layer: public insert schemas omit userId for security,
 // but storage needs userId from authenticated session
