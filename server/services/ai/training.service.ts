@@ -1,5 +1,5 @@
 import { db } from '../../db';
-import { aiTrainingExamples } from '@shared/schema';
+import { aiTrainingExamples, type TrainingStats } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 
 interface TrainingExampleData {
@@ -40,7 +40,7 @@ export async function saveTrainingExample(data: TrainingExampleData) {
   });
 }
 
-export async function getTrainingStats(userId: number) {
+export async function getTrainingStats(userId: number): Promise<TrainingStats> {
   const examples = await db
     .select()
     .from(aiTrainingExamples)

@@ -4,7 +4,7 @@ import { analyzeSpending, scanReceipt } from "../services/ai-service";
 import { withAuth } from "../middleware/auth-utils";
 import { predictForTransaction, enrichPrediction } from "../services/ai/prediction.service";
 import { getTrainingStats, saveTrainingExample } from "../services/ai/training.service";
-import { insertAiTrainingExampleSchema } from "@shared/schema";
+import { insertAiTrainingExampleSchema, type TrainingStats } from "@shared/schema";
 
 const router = Router();
 
@@ -55,7 +55,7 @@ router.get("/predict/:transactionId", withAuth(async (req, res) => {
 // GET /api/ai/training-stats
 router.get("/training-stats", withAuth(async (req, res) => {
   try {
-    const stats = await getTrainingStats(req.user.id);
+    const stats: TrainingStats = await getTrainingStats(req.user.id);
     res.json(stats);
   } catch (error: any) {
     console.error("Training stats error:", error);

@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, Trophy, Zap, Flame, Sparkles } from "lucide-react";
 import { SwipeDeck } from "@/components/sorting/swipe-deck";
 import { TrainingHeader } from "@/components/sorting/training-header";
-import type { Transaction, Category, PersonalTag } from "@shared/schema";
+import type { Transaction, Category, PersonalTag, TrainingStats } from "@shared/schema";
 
 interface SortingStats {
   unsortedCount: number;
@@ -47,7 +47,7 @@ export default function SwipeSortPage() {
     enabled: !!user,
   });
 
-  const { data: trainingStats } = useQuery<{ totalExamples: number }>({
+  const { data: trainingStats } = useQuery<TrainingStats>({
     queryKey: ['/api/ai/training-stats'],
     enabled: !!user,
   });

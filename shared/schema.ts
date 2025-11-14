@@ -528,6 +528,16 @@ export type SortingProgress = typeof sortingProgress.$inferSelect;
 export type InsertAiTrainingExample = z.infer<typeof insertAiTrainingExampleSchema>;
 export type AiTrainingExample = typeof aiTrainingExamples.$inferSelect;
 
+export interface TrainingStats {
+  totalExamples: number;
+  correctPredictions: number;
+  accuracy: number;
+  level: string;
+  levelIcon: string;
+  nextMilestone: number | null;
+  canEnableAutoMode: boolean;
+}
+
 // 🔐 Helper type for storage layer: public insert schemas omit userId for security,
 // but storage needs userId from authenticated session
 export type OwnedInsert<T> = T & { userId: number };
