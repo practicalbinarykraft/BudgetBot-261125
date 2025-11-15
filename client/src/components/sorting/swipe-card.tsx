@@ -32,6 +32,13 @@ export function SwipeCard({
   const { user } = useAuth();
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(transaction.categoryId || null);
   const [selectedTagId, setSelectedTagId] = useState<number | null>(transaction.personalTagId || null);
+  const [exitX, setExitX] = useState(0);
+  const [exitY, setExitY] = useState(0);
+
+  useEffect(() => {
+    setExitX(0);
+    setExitY(0);
+  }, [transaction.id]);
 
   const { data: prediction } = useQuery<AIPrediction>({
     queryKey: ['/api/ai/predict', transaction.id],
@@ -58,11 +65,29 @@ export function SwipeCard({
   const category = categories.find(c => c.id === selectedCategoryId);
   const tag = tags.find(t => t.id === selectedTagId);
 
+  const handleDragEnd = (event: any, info: any) => {
+    const { offset } = info;
+    const swipeX = Math.abs(offset.x);
+    const swipeY = Math.abs(offset.y);
+    
+    if (swipeX > 150 || swipeY > 150) {
+      setExitX(offset.x * 2);
+      setExitY(offset.y * 2);
+    } else {
+      setExitX(0);
+      setExitY(0);
+    }
+    
+    onDragEnd?.(event, info);
+  };
+
   return (
     <motion.div
       drag
       dragElastic={0.7}
-      onDragEnd={onDragEnd}
+      animate={{ x: exitX, y: exitY }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      onDragEnd={handleDragEnd}
       whileTap={{ cursor: 'grabbing' }}
       className="absolute inset-0"
       data-testid={`swipe-card-${transaction.id}`}

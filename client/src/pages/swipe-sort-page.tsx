@@ -178,16 +178,17 @@ export default function SwipeSortPage() {
         </Card>
       )}
 
-      <SwipeInstructions />
-
       <TrainingHeader />
 
-      <SwipeDeck
-        transactions={unsortedTransactions}
-        categories={categories ?? []}
-        tags={tags ?? []}
-        onSwipeComplete={handleSwipeComplete}
-      />
+      <div className="relative">
+        <SwipeDeck
+          transactions={unsortedTransactions}
+          categories={categories ?? []}
+          tags={tags ?? []}
+          onSwipeComplete={handleSwipeComplete}
+        />
+        <SwipeInstructions />
+      </div>
     </div>
   );
 }
