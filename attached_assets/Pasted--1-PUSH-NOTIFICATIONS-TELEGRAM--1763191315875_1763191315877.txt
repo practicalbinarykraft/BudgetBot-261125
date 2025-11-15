@@ -1,0 +1,1329 @@
+🎯 МОИ РЕКОМЕНДАЦИИ (ДЕТАЛЬНО)
+
+1️⃣ PUSH NOTIFICATIONS → TELEGRAM?
+МОЯ РЕКОМЕНДАЦИЯ: ГИБРИДНЫЙ ПОДХОД ✅
+ФАЗА 1 (MVP, 1 неделя):
+└─ ✅ Telegram только
+   └─ Быстро, работает, у нас уже есть bot
+
+ФАЗА 2 (v1.1, 2 недели):
+└─ ✅ Telegram + Web Push
+   └─ Больше охват, PWA setup
+
+ПОЧЕМУ TELEGRAM ПЕРВЫМ:
+✅ PROS:
+1. Уже есть bot (@TogetherBudgetBot или как у тебя)
+2. Не нужны permissions (юзер сам подписался)
+3. Выше open rate (~90% vs ~10% web push)
+4. Rich formatting (emoji, bold, кнопки)
+5. Двусторонняя коммуникация (/budget команда)
+6. Работает всегда (даже если сайт закрыт)
+7. Меньше кода (50 строк vs 200)
+
+❌ CONS:
+1. Нужен Telegram (не все пользуются)
+2. Нет нативной интеграции с UI
+ПРИМЕР УВЕДОМЛЕНИЯ:
+⚠️ *Budget Alert*
+
+Coffee: 95% used
+Remaining: $5 / $100
+
+If you exceed, your *iPhone 16 Pro* 
+goal will be delayed by +14 days.
+
+What's more important? ☕️ vs 📱
+
+/budget - Check full status
+
+ПОЧЕМУ WEB PUSH ПОТОМ:
+✅ PROS:
+1. Нативная интеграция (клик → открыть app)
+2. Работает в браузере
+3. Не нужен Telegram
+4. PWA стандарт
+
+❌ CONS:
+1. Нужен Service Worker (~100 строк)
+2. Нужен VAPID setup (ключи, конфиг)
+3. Permissions (юзер может отклонить)
+4. Низкий open rate (~10%)
+5. Не работает в Safari iOS (!!!)
+6. Больше кода (200+ строк)
+НО! Safari на iOS не поддерживает Web Push (до iOS 16.4).
+
+ГИБРИДНЫЙ ПОДХОД (ИДЕАЛ):
+typescript// Приоритет уведомлений:
+
+async function sendBudgetAlert(userId: number, alert: Alert) {
+  // 1. Попробовать Web Push (если subscribed)
+  const webPushSent = await tryWebPush(userId, alert);
+  
+  if (webPushSent) {
+    console.log('✅ Web Push sent');
+    return;
+  }
+  
+  // 2. Fallback на Telegram (если connected)
+  const telegramSent = await tryTelegram(userId, alert);
+  
+  if (telegramSent) {
+    console.log('✅ Telegram sent');
+    return;
+  }
+  
+  // 3. Fallback на Email (всегда есть)
+  await sendEmail(userId, alert);
+  console.log('✅ Email sent');
+}
+```
+
+**СТАТИСТИКА:**
+```
+Web Push:    ~30% delivery (permissions + browser)
+Telegram:    ~90% delivery (если подключен)
+Email:       ~100% delivery (всегда есть)
+
+Итого:       ~99% охват
+```
+
+---
+
+### **МОЁ ФИНАЛЬНОЕ РЕШЕНИЕ:**
+
+**ШАГ 1 (СЕЙЧАС):** Только Telegram ✅
+**ШАГ 2 (ЧЕРЕЗ 2 НЕДЕЛИ):** + Web Push ✅
+**ШАГ 3 (ОПЦИОНАЛЬНО):** + Email ✅
+
+---
+
+## 2️⃣ КОГДА ПРОВЕРЯТЬ ЛИМИТЫ?
+
+### **МОЯ РЕКОМЕНДАЦИЯ: ТРИ ТРИГГЕРА** ✅
+```
+1. ⚡ Real-time (при добавлении транзакции)
+   ├─ Только для критичных (90%+)
+   └─ Instant feedback
+
+2. 🕐 Daily Cron (каждый вечер в 20:00)
+   ├─ Полная сводка
+   └─ AI insights + советы
+
+3. 👆 On-demand (кнопка "Check Budget")
+   ├─ Когда юзер хочет
+   └─ После изменения лимитов
+
+1. REAL-TIME (ПРИ КАЖДОЙ ТРАНЗАКЦИИ)
+typescript// server/routes/transactions.routes.ts
+
+router.post('/transactions', requireAuth, async (req, res) => {
+  const userId = req.user!.id;
+  
+  // 1. Создать транзакцию
+  const transaction = await repositories.transactions.create({
+    userId,
+    ...req.body
+  });
+  
+  // 2. Проверить ТОЛЬКО эту категорию (не все!)
+  const limitCheck = await checkCategoryLimit(
+    userId,
+    transaction.category
+  );
+  
+  // 3. Отправить alert ТОЛЬКО если критично
+  if (limitCheck.percentage >= 90) {
+    await sendBudgetAlert(userId, {
+      category: limitCheck.category,
+      percentage: limitCheck.percentage,
+      remaining: limitCheck.remaining
+    });
+  }
+  
+  // 4. Если превышен → обновить прогнозы целей
+  if (limitCheck.status === 'exceeded') {
+    await updateGoalTimelines(userId);
+  }
+  
+  res.json(transaction);
+});
+```
+
+**ЛОГИКА:**
+```
+Добавили транзакцию → проверить ЭТУ категорию
+
+Если 90%+:
+  → Telegram: "⚠️ Coffee на 95%!"
+  
+Если 100%+:
+  → Telegram: "🚨 Превышен лимит!"
+  → Пересчитать goals (iPhone +14 дней)
+```
+
+**PERFORMANCE:**
+```
+✅ Быстро (1 SQL query для 1 категории)
+✅ Не блокирует response
+✅ Async (sendBudgetAlert в фоне)
+
+Overhead: ~50ms на транзакцию
+
+2. DAILY CRON (КАЖДЫЙ ВЕЧЕР В 20:00)
+typescript// server/cron/daily-budget-check.ts
+
+import cron from 'node-cron';
+
+// Каждый день в 20:00 (МСК, настрой timezone)
+cron.schedule('0 20 * * *', async () => {
+  console.log('🕐 Running daily budget check...');
+  
+  // 1. Получить всех активных юзеров
+  const users = await repositories.users.findActive();
+  
+  for (const user of users) {
+    // 2. Проверить ВСЕ лимиты
+    const compliance = await checkLimitsCompliance(user.id);
+    
+    // 3. Если есть warnings → отправить сводку
+    const hasWarnings = compliance.results.some(
+      r => r.status !== 'ok'
+    );
+    
+    if (hasWarnings) {
+      await sendDailyBudgetSummary(user.id, compliance);
+    }
+    
+    // 4. Обновить прогнозы целей
+    await updateGoalTimelines(user.id);
+  }
+  
+  console.log('✅ Daily check complete');
+});
+```
+
+**СООБЩЕНИЕ В TELEGRAM:**
+```
+🌙 *Daily Budget Summary*
+
+📊 Your spending today:
+
+🟢 Transport: 65% ($130/$200)
+🟡 Food: 78% ($390/$500)
+🔴 Coffee: 95% ($95/$100) ⚠️
+
+💡 *AI Insight:*
+You're $200 over budget this month.
+Your iPhone goal is delayed by +14 days.
+
+🎯 *Suggestion:*
+Cut coffee spending by 50% to 
+get back on track!
+
+/budget - Full details
+```
+
+**КОГДА ОТПРАВЛЯТЬ:**
+```
+Есть warnings (70%+):
+  → Отправить сводку
+
+Всё ОК (<70%):
+  → НЕ отправлять (не спамить)
+
+Есть exceeded (100%+):
+  → Отправить + обновить goals
+
+3. ON-DEMAND (КНОПКА В UI)
+typescript// client/src/pages/budgets-page.tsx
+
+<Button onClick={async () => {
+  await fetch('/api/limits/check', { method: 'POST' });
+  toast.success('Budget check complete!');
+}}>
+  🔄 Check Budget Now
+</Button>
+```
+
+**КОГДА ИСПОЛЬЗОВАТЬ:**
+```
+✅ После изменения лимитов
+✅ Перед большой покупкой
+✅ Когда юзер хочет проверить статус
+```
+
+---
+
+### **МОЁ ФИНАЛЬНОЕ РЕШЕНИЕ:**
+```
+✅ Real-time: ПРИ КАЖДОЙ ТРАНЗАКЦИИ
+   └─ Только для 90%+ категорий
+
+✅ Daily Cron: 20:00 КАЖДЫЙ ДЕНЬ
+   └─ Полная сводка + AI советы
+
+✅ On-demand: КНОПКА В UI
+   └─ Когда юзер хочет
+```
+
+---
+
+## 3️⃣ THRESHOLDS: 70%/90%/100%?
+
+### **МОЯ РЕКОМЕНДАЦИЯ: 4 ЗОНЫ** ✅
+```
+🟢 0-70%:   SAFE (зелёный)
+🟡 71-90%:  CAUTION (жёлтый)
+🔴 91-99%:  WARNING (красный)
+🟥 100%+:   EXCEEDED (тёмно-красный)
+
+ДЕТАЛЬНАЯ ЛОГИКА:
+typescriptfunction getLimitStatus(spent: number, limit: number) {
+  const percentage = (spent / limit) * 100;
+  
+  if (percentage < 70) {
+    return {
+      status: 'safe',
+      color: 'green',
+      action: 'none',
+      message: 'You\'re doing great! 🎯'
+    };
+  }
+  
+  if (percentage < 90) {
+    return {
+      status: 'caution',
+      color: 'yellow',
+      action: 'monitor',
+      message: 'Watch your spending carefully.'
+    };
+  }
+  
+  if (percentage < 100) {
+    return {
+      status: 'warning',
+      color: 'red',
+      action: 'alert',
+      message: '⚠️ Close to limit! Slow down.'
+    };
+  }
+  
+  return {
+    status: 'exceeded',
+    color: 'dark-red',
+    action: 'urgent',
+    message: '🚨 Limit exceeded! Your goals are delayed.'
+  };
+}
+```
+
+---
+
+### **УВЕДОМЛЕНИЯ ПО ЗОНАМ:**
+```
+🟢 0-70% (SAFE):
+  → НЕТ уведомлений
+  → Только показать в UI
+
+🟡 71-90% (CAUTION):
+  → Daily summary (в 20:00)
+  → "Coffee на 78%, будь осторожен"
+
+🔴 91-99% (WARNING):
+  → Real-time alert (instant)
+  → "⚠️ Coffee на 95%! Осталось $5"
+  → Daily summary
+
+🟥 100%+ (EXCEEDED):
+  → Real-time alert (instant)
+  → "🚨 Превышен лимит на $200!"
+  → Обновить прогнозы целей
+  → Daily summary
+```
+
+---
+
+### **ДОПОЛНИТЕЛЬНЫЕ THRESHOLDS:**
+```
+📊 85% - "Goal Impact Warning"
+  → "Если превысишь, iPhone +7 дней"
+
+📊 95% - "Last Chance Warning"
+  → "Осталось $5 до лимита!"
+
+📊 110% - "Severe Overspend"
+  → "Превышение на $100! Срочно скорректируй."
+```
+
+---
+
+### **ВИЗУАЛИЗАЦИЯ В UI:**
+```
+Progress Bar:
+
+🟢 [████████░░░░░░░░░░] 40%  Safe
+🟡 [████████████░░░░░░] 80%  Caution
+🔴 [████████████████░░] 95%  Warning
+🟥 [████████████████████] 105% Exceeded
+```
+
+---
+
+## 📋 ФИНАЛЬНАЯ ТАБЛИЦА РЕШЕНИЙ
+
+| **Вопрос** | **Решение** | **Фаза** |
+|------------|-------------|----------|
+| **1. Notifications** | Telegram | MVP (сейчас) |
+| | + Web Push | v1.1 (через 2 недели) |
+| | + Email | v1.2 (опционально) |
+| **2. Когда проверять** | Real-time (90%+) | MVP |
+| | Daily Cron (20:00) | MVP |
+| | On-demand (кнопка) | MVP |
+| **3. Thresholds** | 0-70% (safe) | MVP |
+| | 71-90% (caution) | MVP |
+| | 91-99% (warning) | MVP |
+| | 100%+ (exceeded) | MVP |
+
+---
+
+## 🚀 ГОТОВ ДЕЛАТЬ ШАГ 6?
+
+**С ТАКИМИ ПАРАМЕТРАМИ:**
+```
+✅ Notifications: Telegram only (MVP)
+✅ Triggers:
+   - Real-time (при транзакции, 90%+)
+   - Daily Cron (20:00, все юзеры)
+   - On-demand (кнопка)
+✅ Thresholds: 70%/90%/100%
+✅ Модульный код (<200 строк/файл)
+✅ Junior-friendly
+ОТПРАВЛЯТЬ ТЗ В REPLIT? 💪
+ИЛИ ХОЧЕШЬ ЧТО-ТО ИЗМЕНИТЬ? 🤔RetryАПерепиши Daily crone. Пусть пользователь сам в настройках укажет часовой пояс и время во сколько ему присылать уведомления и сводки. У нас есть план на неделю "Список предстоящих расходов" а так же "Расходы на день". Этого нет в UI сейчас. Нужно и это учесть и новый Daily crone. Перепиши ТЗ так чтобы Ии писал код понятный джуну!Нужно следовать принципу "Junior-Friendly Code":
+✅ Модульная архитектура - каждый файл <200 строк
+✅ Один файл = одна ответственность
+✅ Понятные имена функций и переменных
+✅ Никаких монстр-файлов🔧 ТЗ: ПЕРСОНАЛЬНЫЕ DAILY NOTIFICATIONS (ДЛЯ ДЖУНА)
+
+🎯 КОНЦЕПЦИЯ
+БЫЛО (жёстко):
+└─ Всем в 20:00 МСК
+
+СТАЛО (гибко):
+└─ Каждому в СВОЁ время
+   ├─ User выбирает timezone
+   ├─ User выбирает время (например, 09:00)
+   └─ Cron проверяет КАЖДЫЙ ЧАС
+
+📊 ЧТО ОТПРАВЛЯТЬ В DAILY SUMMARY
+📧 Daily Budget Summary (Telegram):
+
+🌅 Good morning, Alex!
+
+━━━━━━━━━━━━━━━━━━━━━
+📅 TODAY'S PLAN (Nov 15)
+━━━━━━━━━━━━━━━━━━━━━
+
+💸 Planned Expenses Today:
+  • Rent payment: $1,200
+  • Groceries: $50
+  • Total: $1,250
+
+💰 Available: $3,450
+✅ You can afford it!
+
+━━━━━━━━━━━━━━━━━━━━━
+📆 THIS WEEK (Nov 15-21)
+━━━━━━━━━━━━━━━━━━━━━
+
+Upcoming Expenses:
+  Mon 15: $1,250 (Rent + groceries)
+  Wed 17: $200 (Insurance)
+  Fri 19: $100 (Date night)
+  Total: $1,550
+
+━━━━━━━━━━━━━━━━━━━━━
+📊 BUDGET STATUS
+━━━━━━━━━━━━━━━━━━━━━
+
+🟢 Transport: 65% ($130/$200)
+🟡 Food: 78% ($390/$500)
+🔴 Coffee: 95% ($95/$100) ⚠️
+
+━━━━━━━━━━━━━━━━━━━━━
+🎯 YOUR GOALS
+━━━━━━━━━━━━━━━━━━━━━
+
+📱 iPhone 16 Pro: 2.5 months
+   (On track! 🎉)
+
+🎮 PS5: 6 months
+   (Will be delayed if you exceed Coffee)
+
+━━━━━━━━━━━━━━━━━━━━━
+💡 AI INSIGHT
+━━━━━━━━━━━━━━━━━━━━━
+
+You're $200 over budget this month.
+Cut coffee spending by 50% to 
+get back on track for iPhone!
+
+/budget - Full details
+
+📁 МОДУЛЬНАЯ СТРУКТУРА (8 ФАЙЛОВ)
+shared/
+└─ schema.ts (добавить таблицу)
+
+server/
+├─ services/
+│  ├─ notifications/
+│  │  ├─ daily-summary.service.ts       (180 строк)
+│  │  └─ telegram-formatter.service.ts  (150 строк)
+│  └─ budget/
+│     └─ planned-expenses.service.ts    (120 строк)
+│
+├─ cron/
+│  └─ hourly-notification-check.ts      (100 строк)
+│
+└─ routes/
+   └─ settings.routes.ts (обновить)     (+30 строк)
+
+client/src/
+├─ pages/
+│  └─ settings.tsx (обновить)           (+80 строк)
+└─ components/
+   └─ notification-settings-form.tsx    (120 строк)
+ВСЕГО: 8 файлов, ~800 строк
+
+ФАЗА 1: BACKEND (4 шага)
+
+Шаг 1: Добавить таблицу notification_settings (10 минут)
+Файл: shared/schema.ts
+Добавить:
+typescript/**
+ * Настройки уведомлений пользователя
+ * Когда и в какое время отправлять Daily Summary
+ */
+export const notificationSettings = pgTable("notification_settings", {
+  id: serial("id").primaryKey(),
+  
+  userId: integer("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull()
+    .unique(), // Один юзер = одна настройка
+  
+  // Timezone (например: "Europe/Moscow", "America/New_York")
+  timezone: text("timezone").notNull().default("UTC"),
+  
+  // Время отправки (формат: "HH:MM", например: "09:00")
+  dailySummaryTime: text("daily_summary_time").notNull().default("09:00"),
+  
+  // Включены ли уведомления
+  enabled: boolean("enabled").notNull().default(true),
+  
+  // Какие уведомления отправлять
+  includeBudgetStatus: boolean("include_budget_status").notNull().default(true),
+  includePlannedExpenses: boolean("include_planned_expenses").notNull().default(true),
+  includeGoalProgress: boolean("include_goal_progress").notNull().default(true),
+  includeAIInsights: boolean("include_ai_insights").notNull().default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+Размер: +25 строк
+Миграция:
+bashnpm run db:push
+
+Шаг 2: Planned Expenses Service (120 строк)
+Создать файл: server/services/budget/planned-expenses.service.ts
+typescriptimport { db } from '../../db';
+import { futurePurchases } from '@shared/schema';
+import { and, eq, gte, lte, isNull } from 'drizzle-orm';
+
+/**
+ * Получить расходы на сегодня
+ * Это items из futurePurchases с targetDate = сегодня
+ */
+export async function getTodayPlannedExpenses(userId: number) {
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0]; // "2025-11-15"
+  
+  const expenses = await db
+    .select()
+    .from(futurePurchases)
+    .where(
+      and(
+        eq(futurePurchases.userId, userId),
+        eq(futurePurchases.targetDate, todayStr),
+        eq(futurePurchases.isPurchased, false) // Не куплено
+      )
+    );
+  
+  const total = expenses.reduce((sum, e) => sum + parseFloat(e.amount), 0);
+  
+  return {
+    expenses,
+    total,
+    count: expenses.length
+  };
+}
+
+/**
+ * Получить расходы на неделю
+ * targetDate между сегодня и +7 дней
+ */
+export async function getWeekPlannedExpenses(userId: number) {
+  const today = new Date();
+  const nextWeek = new Date(today);
+  nextWeek.setDate(nextWeek.getDate() + 7);
+  
+  const todayStr = today.toISOString().split('T')[0];
+  const nextWeekStr = nextWeek.toISOString().split('T')[0];
+  
+  const expenses = await db
+    .select()
+    .from(futurePurchases)
+    .where(
+      and(
+        eq(futurePurchases.userId, userId),
+        gte(futurePurchases.targetDate, todayStr),
+        lte(futurePurchases.targetDate, nextWeekStr),
+        eq(futurePurchases.isPurchased, false)
+      )
+    )
+    .orderBy(futurePurchases.targetDate);
+  
+  // Группировать по дням
+  const byDay = expenses.reduce((acc, expense) => {
+    const date = expense.targetDate!;
+    if (!acc[date]) {
+      acc[date] = [];
+    }
+    acc[date].push(expense);
+    return acc;
+  }, {} as Record<string, typeof expenses>);
+  
+  const total = expenses.reduce((sum, e) => sum + parseFloat(e.amount), 0);
+  
+  return {
+    expenses,
+    byDay,
+    total,
+    count: expenses.length
+  };
+}
+
+/**
+ * Проверить может ли юзер позволить сегодняшние расходы
+ */
+export async function canAffordTodayExpenses(userId: number) {
+  const { total } = await getTodayPlannedExpenses(userId);
+  
+  // Получить свободный капитал
+  const stats = await getMonthlyStats(userId);
+  const freeCapital = stats.avgIncome - stats.avgExpenses;
+  
+  return {
+    canAfford: freeCapital >= total,
+    total,
+    freeCapital,
+    deficit: Math.max(0, total - freeCapital)
+  };
+}
+Размер: 120 строк ✅
+
+Шаг 3: Daily Summary Service (180 строк)
+Создать файл: server/services/notifications/daily-summary.service.ts
+typescriptimport { checkLimitsCompliance } from '../budget/limits-checker.service';
+import { getTodayPlannedExpenses, getWeekPlannedExpenses, canAffordTodayExpenses } from '../budget/planned-expenses.service';
+import { repositories } from '../../repositories';
+
+/**
+ * Собрать данные для Daily Summary
+ * Возвращает структурированный объект со всей инфой
+ */
+export async function generateDailySummaryData(userId: number) {
+  // 1. Загрузить настройки уведомлений
+  const settings = await repositories.settings.findByUser(userId);
+  
+  if (!settings) {
+    throw new Error('User settings not found');
+  }
+  
+  const data: any = {
+    user: await repositories.users.findById(userId)
+  };
+  
+  // 2. Planned Expenses (если включено)
+  if (settings.includePlannedExpenses) {
+    const today = await getTodayPlannedExpenses(userId);
+    const week = await getWeekPlannedExpenses(userId);
+    const affordability = await canAffordTodayExpenses(userId);
+    
+    data.plannedExpenses = {
+      today,
+      week,
+      affordability
+    };
+  }
+  
+  // 3. Budget Status (если включено)
+  if (settings.includeBudgetStatus) {
+    const compliance = await checkLimitsCompliance(userId);
+    
+    data.budgetStatus = {
+      limits: compliance.results,
+      overSpendTotal: compliance.overSpendTotal,
+      isOnTrack: compliance.isOnTrack
+    };
+  }
+  
+  // 4. Goal Progress (если включено)
+  if (settings.includeGoalProgress) {
+    const goals = await repositories.wishlist.findByUser(userId);
+    
+    // Загрузить прогнозы для каждой цели
+    const goalsWithPredictions = await Promise.all(
+      goals.map(async (goal) => {
+        const prediction = await calculateGoalTimeline(userId, parseFloat(goal.amount));
+        return { ...goal, prediction };
+      })
+    );
+    
+    data.goalProgress = goalsWithPredictions;
+  }
+  
+  // 5. AI Insights (если включено)
+  if (settings.includeAIInsights) {
+    const insights = await generateAIInsights(userId, data);
+    data.aiInsights = insights;
+  }
+  
+  return data;
+}
+
+/**
+ * Генерация AI инсайтов на основе данных
+ */
+async function generateAIInsights(userId: number, summaryData: any) {
+  const insights: string[] = [];
+  
+  // Инсайт 1: Превышение бюджета
+  if (summaryData.budgetStatus?.overSpendTotal > 0) {
+    insights.push(
+      `You're $${summaryData.budgetStatus.overSpendTotal} over budget this month.`
+    );
+  }
+  
+  // Инсайт 2: Цели под угрозой
+  if (summaryData.goalProgress) {
+    const delayedGoals = summaryData.goalProgress.filter(
+      g => g.prediction?.monthsToAfford > 3
+    );
+    
+    if (delayedGoals.length > 0) {
+      insights.push(
+        `${delayedGoals[0].name} will be delayed if you continue overspending.`
+      );
+    }
+  }
+  
+  // Инсайт 3: Рекомендации
+  if (summaryData.budgetStatus?.limits) {
+    const highestOverspend = summaryData.budgetStatus.limits
+      .filter(l => l.status === 'exceeded')
+      .sort((a, b) => b.spent - b.limit - (a.spent - a.limit))[0];
+    
+    if (highestOverspend) {
+      insights.push(
+        `Cut ${highestOverspend.category} spending by 50% to get back on track!`
+      );
+    }
+  }
+  
+  return insights;
+}
+
+/**
+ * Отправить Daily Summary конкретному юзеру
+ */
+export async function sendDailySummary(userId: number) {
+  try {
+    // 1. Собрать данные
+    const data = await generateDailySummaryData(userId);
+    
+    // 2. Форматировать в Telegram message
+    const message = await formatDailySummaryMessage(data);
+    
+    // 3. Отправить в Telegram
+    const user = await repositories.users.findById(userId);
+    
+    if (!user.telegramId) {
+      console.log(`User ${userId} has no Telegram. Skipping.`);
+      return;
+    }
+    
+    await sendTelegramMessage(user.telegramId, message);
+    
+    console.log(`✅ Daily summary sent to user ${userId}`);
+  } catch (error) {
+    console.error(`❌ Failed to send daily summary to user ${userId}:`, error);
+  }
+}
+Размер: 180 строк ✅
+
+Шаг 4: Telegram Formatter Service (150 строк)
+Создать файл: server/services/notifications/telegram-formatter.service.ts
+typescript/**
+ * Форматирование Daily Summary в красивое Telegram сообщение
+ */
+export async function formatDailySummaryMessage(data: any): Promise<string> {
+  const { user, plannedExpenses, budgetStatus, goalProgress, aiInsights } = data;
+  
+  let message = `🌅 Good morning, ${user.name}!\n\n`;
+  
+  // ━━━━━━━━━━━━━━━━━━━━━
+  // TODAY'S PLAN
+  // ━━━━━━━━━━━━━━━━━━━━━
+  if (plannedExpenses) {
+    message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+    message += `📅 TODAY'S PLAN\n`;
+    message += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    
+    if (plannedExpenses.today.count > 0) {
+      message += `💸 Planned Expenses Today:\n`;
+      
+      for (const expense of plannedExpenses.today.expenses) {
+        message += `  • ${expense.name}: $${expense.amount}\n`;
+      }
+      
+      message += `  Total: $${plannedExpenses.today.total.toFixed(2)}\n\n`;
+      
+      // Может ли позволить?
+      if (plannedExpenses.affordability.canAfford) {
+        message += `💰 Available: $${plannedExpenses.affordability.freeCapital.toFixed(2)}\n`;
+        message += `✅ You can afford it!\n\n`;
+      } else {
+        message += `⚠️ Short by $${plannedExpenses.affordability.deficit.toFixed(2)}\n`;
+        message += `💡 Consider postponing some expenses.\n\n`;
+      }
+    } else {
+      message += `No expenses planned for today! 🎉\n\n`;
+    }
+  }
+  
+  // ━━━━━━━━━━━━━━━━━━━━━
+  // THIS WEEK
+  // ━━━━━━━━━━━━━━━━━━━━━
+  if (plannedExpenses?.week.count > 0) {
+    message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+    message += `📆 THIS WEEK\n`;
+    message += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    
+    message += `Upcoming Expenses:\n`;
+    
+    for (const [date, expenses] of Object.entries(plannedExpenses.week.byDay)) {
+      const dayTotal = (expenses as any[]).reduce((sum, e) => sum + parseFloat(e.amount), 0);
+      const dayName = formatDayName(date);
+      
+      message += `  ${dayName}: $${dayTotal.toFixed(2)}\n`;
+      
+      for (const expense of expenses as any[]) {
+        message += `    • ${expense.name}\n`;
+      }
+    }
+    
+    message += `  Total: $${plannedExpenses.week.total.toFixed(2)}\n\n`;
+  }
+  
+  // ━━━━━━━━━━━━━━━━━━━━━
+  // BUDGET STATUS
+  // ━━━━━━━━━━━━━━━━━━━━━
+  if (budgetStatus) {
+    message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+    message += `📊 BUDGET STATUS\n`;
+    message += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    
+    for (const limit of budgetStatus.limits) {
+      const emoji = getStatusEmoji(limit.status);
+      message += `${emoji} ${limit.category}: ${limit.percentage.toFixed(0)}% `;
+      message += `($${limit.spent}/$${limit.limit})`;
+      
+      if (limit.status === 'warning' || limit.status === 'exceeded') {
+        message += ` ⚠️`;
+      }
+      
+      message += `\n`;
+    }
+    
+    message += `\n`;
+  }
+  
+  // ━━━━━━━━━━━━━━━━━━━━━
+  // YOUR GOALS
+  // ━━━━━━━━━━━━━━━━━━━━━
+  if (goalProgress && goalProgress.length > 0) {
+    message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+    message += `🎯 YOUR GOALS\n`;
+    message += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    
+    for (const goal of goalProgress.slice(0, 3)) { // Топ-3
+      const months = goal.prediction?.monthsToAfford;
+      
+      message += `${goal.icon || '📦'} ${goal.name}: `;
+      
+      if (months) {
+        message += `${months} months\n`;
+        
+        if (budgetStatus?.isOnTrack) {
+          message += `   (On track! 🎉)\n`;
+        } else {
+          message += `   (Will be delayed if you exceed budget)\n`;
+        }
+      } else {
+        message += `Not affordable yet\n`;
+      }
+      
+      message += `\n`;
+    }
+  }
+  
+  // ━━━━━━━━━━━━━━━━━━━━━
+  // AI INSIGHT
+  // ━━━━━━━━━━━━━━━━━━━━━
+  if (aiInsights && aiInsights.length > 0) {
+    message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+    message += `💡 AI INSIGHT\n`;
+    message += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    
+    for (const insight of aiInsights) {
+      message += `${insight}\n`;
+    }
+    
+    message += `\n`;
+  }
+  
+  // Footer
+  message += `/budget - Full details`;
+  
+  return message;
+}
+
+/**
+ * Форматировать дату в "Mon 15", "Tue 16", etc
+ */
+function formatDayName(dateStr: string): string {
+  const date = new Date(dateStr);
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const day = days[date.getDay()];
+  const dayNum = date.getDate();
+  return `${day} ${dayNum}`;
+}
+
+/**
+ * Получить emoji для статуса лимита
+ */
+function getStatusEmoji(status: string): string {
+  switch (status) {
+    case 'safe': return '🟢';
+    case 'caution': return '🟡';
+    case 'warning': return '🔴';
+    case 'exceeded': return '🟥';
+    default: return '⚪';
+  }
+}
+Размер: 150 строк ✅
+
+Шаг 5: Hourly Cron Job (100 строк)
+Создать файл: server/cron/hourly-notification-check.ts
+typescriptimport cron from 'node-cron';
+import { db } from '../db';
+import { notificationSettings, users } from '@shared/schema';
+import { eq } from 'drizzle-orm';
+import { sendDailySummary } from '../services/notifications/daily-summary.service';
+
+/**
+ * Cron Job: проверять КАЖДЫЙ ЧАС
+ * Отправлять Daily Summary юзерам, у которых сейчас их время
+ */
+export function startHourlyNotificationCheck() {
+  // Каждый час в :00 минут
+  cron.schedule('0 * * * *', async () => {
+    console.log('🕐 Running hourly notification check...');
+    
+    try {
+      await checkAndSendNotifications();
+    } catch (error) {
+      console.error('❌ Hourly check failed:', error);
+    }
+  });
+  
+  console.log('✅ Hourly notification check started');
+}
+
+/**
+ * Найти юзеров, которым сейчас пора отправить уведомление
+ */
+async function checkAndSendNotifications() {
+  // 1. Загрузить все настройки уведомлений
+  const allSettings = await db
+    .select({
+      userId: notificationSettings.userId,
+      timezone: notificationSettings.timezone,
+      dailySummaryTime: notificationSettings.dailySummaryTime,
+      enabled: notificationSettings.enabled
+    })
+    .from(notificationSettings)
+    .where(eq(notificationSettings.enabled, true));
+  
+  console.log(`📊 Checking ${allSettings.length} users...`);
+  
+  let sentCount = 0;
+  
+  // 2. Для каждого юзера проверить его локальное время
+  for (const settings of allSettings) {
+    const shouldSend = isTimeToSend(
+      settings.timezone,
+      settings.dailySummaryTime
+    );
+    
+    if (shouldSend) {
+      console.log(`✅ Sending to user ${settings.userId} (${settings.timezone})`);
+      
+      await sendDailySummary(settings.userId);
+      sentCount++;
+    }
+  }
+  
+  console.log(`📤 Sent ${sentCount} notifications`);
+}
+
+/**
+ * Проверить пора ли отправлять уведомление
+ * Сравнивает текущее время в timezone юзера с его настройками
+ */
+function isTimeToSend(timezone: string, targetTime: string): boolean {
+  try {
+    // Получить текущее время в timezone юзера
+    const now = new Date();
+    const userTime = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).format(now);
+    
+    // Сравнить с целевым временем
+    // userTime = "09:00", targetTime = "09:00"
+    return userTime === targetTime;
+  } catch (error) {
+    console.error(`Invalid timezone: ${timezone}`, error);
+    return false;
+  }
+}
+Размер: 100 строк ✅
+Запуск в server/index.ts:
+typescriptimport { startHourlyNotificationCheck } from './cron/hourly-notification-check';
+
+// После настройки Express
+startHourlyNotificationCheck();
+
+ФАЗА 2: FRONTEND (2 шага)
+
+Шаг 6: Notification Settings Form (120 строк)
+Создать файл: client/src/components/settings/notification-settings-form.tsx
+typescriptimport { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
+import { Form, FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+
+const notificationSchema = z.object({
+  timezone: z.string(),
+  dailySummaryTime: z.string(), // "HH:MM"
+  enabled: z.boolean(),
+  includeBudgetStatus: z.boolean(),
+  includePlannedExpenses: z.boolean(),
+  includeGoalProgress: z.boolean(),
+  includeAIInsights: z.boolean()
+});
+
+type NotificationSettings = z.infer<typeof notificationSchema>;
+
+export function NotificationSettingsForm({ 
+  initialData 
+}: { 
+  initialData: NotificationSettings 
+}) {
+  const queryClient = useQueryClient();
+  
+  const form = useForm<NotificationSettings>({
+    resolver: zodResolver(notificationSchema),
+    defaultValues: initialData
+  });
+  
+  const updateMutation = useMutation({
+    mutationFn: async (data: NotificationSettings) => {
+      const res = await fetch('/api/settings/notifications', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/notifications'] });
+      toast.success('Notification settings updated!');
+    }
+  });
+  
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(data => updateMutation.mutate(data))} className="space-y-6">
+        
+        {/* Enable/Disable */}
+        <FormField
+          control={form.control}
+          name="enabled"
+          render={({ field }) => (
+            <FormItem className="flex items-center justify-between">
+              <FormLabel>Enable Daily Summary</FormLabel>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        
+        {/* Timezone */}
+        <FormField
+          control={form.control}
+          name="timezone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Timezone</FormLabel>
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="UTC">UTC</SelectItem>
+                  <SelectItem value="Europe/Moscow">Moscow (MSK)</SelectItem>
+                  <SelectItem value="America/New_York">New York (EST)</SelectItem>
+                  <SelectItem value="Asia/Jakarta">Jakarta (WIB)</SelectItem>
+                  <SelectItem value="Europe/London">London (GMT)</SelectItem>
+                  {/* Add more timezones */}
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )}
+        />
+        
+        {/* Time */}
+        <FormField
+          control={form.control}
+          name="dailySummaryTime"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Send Daily Summary at</FormLabel>
+              <FormControl>
+                <input
+                  type="time"
+                  {...field}
+                  className="w-full px-3 py-2 border rounded-md"
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        
+        {/* What to include */}
+        <div className="space-y-3">
+          <h3 className="font-medium">Include in summary:</h3>
+          
+          <FormField
+            control={form.control}
+            name="includeBudgetStatus"
+            render={({ field }) => (
+              <FormItem className="flex items-center justify-between">
+                <FormLabel>Budget Status</FormLabel>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="includePlannedExpenses"
+            render={({ field }) => (
+              <FormItem className="flex items-center justify-between">
+                <FormLabel>Planned Expenses</FormLabel>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="includeGoalProgress"
+            render={({ field }) => (
+              <FormItem className="flex items-center justify-between">
+                <FormLabel>Goal Progress</FormLabel>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="includeAIInsights"
+            render={({ field }) => (
+              <FormItem className="flex items-center justify-between">
+                <FormLabel>AI Insights</FormLabel>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </FormItem>
+            )}
+          />
+        </div>
+        
+        <Button type="submit" disabled={updateMutation.isPending}>
+          {updateMutation.isPending ? 'Saving...' : 'Save Settings'}
+        </Button>
+      </form>
+    </Form>
+  );
+}
+Размер: 120 строк ✅
+
+Шаг 7: Добавить в Settings Page (80 строк)
+Файл: client/src/pages/settings.tsx
+Добавить секцию:
+typescriptimport { NotificationSettingsForm } from '@/components/settings/notification-settings-form';
+import { useQuery } from '@tanstack/react-query';
+
+export function SettingsPage() {
+  const { data: notificationSettings } = useQuery({
+    queryKey: ['/api/settings/notifications'],
+  });
+  
+  return (
+    <div className="container max-w-4xl mx-auto p-6 space-y-8">
+      {/* Existing settings ... */}
+      
+      {/* Notification Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>📧 Notification Settings</CardTitle>
+          <CardDescription>
+            Choose when and what to receive in your Daily Summary
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {notificationSettings && (
+            <NotificationSettingsForm initialData={notificationSettings} />
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+Размер: +80 строк
+
+Шаг 8: API Routes (30 строк)
+Файл: server/routes/settings.routes.ts
+Добавить:
+typescript// GET notification settings
+router.get('/notifications', requireAuth, async (req, res) => {
+  const userId = req.user!.id;
+  
+  let settings = await db
+    .select()
+    .from(notificationSettings)
+    .where(eq(notificationSettings.userId, userId))
+    .limit(1);
+  
+  // Создать дефолтные если нет
+  if (settings.length === 0) {
+    const [created] = await db
+      .insert(notificationSettings)
+      .values({ userId })
+      .returning();
+    
+    return res.json(created);
+  }
+  
+  res.json(settings[0]);
+});
+
+// PUT update notification settings
+router.put('/notifications', requireAuth, async (req, res) => {
+  const userId = req.user!.id;
+  
+  const [updated] = await db
+    .update(notificationSettings)
+    .set({
+      ...req.body,
+      updatedAt: new Date()
+    })
+    .where(eq(notificationSettings.userId, userId))
+    .returning();
+  
+  res.json(updated);
+});
+```
+
+**Размер:** +30 строк
+
+---
+
+## 📊 ИТОГО
+```
+BACKEND (5 файлов):
+1. schema.ts                          (+25 строк)
+2. planned-expenses.service.ts        (120 строк) ✅
+3. daily-summary.service.ts           (180 строк) ✅
+4. telegram-formatter.service.ts      (150 строк) ✅
+5. hourly-notification-check.ts       (100 строк) ✅
+
+FRONTEND (2 файла):
+6. notification-settings-form.tsx     (120 строк) ✅
+7. settings.tsx                       (+80 строк)
+
+API (1 файл):
+8. settings.routes.ts                 (+30 строк)
+
+ВСЕГО: 8 файлов, ~805 строк
+ВСЕ ФАЙЛЫ < 200 СТРОК ✅
+```
+
+---
+
+## ✅ КРИТЕРИИ УСПЕХА
+
+**После реализации:**
+```
+1. Юзер заходит в Settings
+2. Видит "Notification Settings"
+3. Выбирает timezone (например, "Europe/Moscow")
+4. Выбирает время (например, "09:00")
+5. Включает/выключает разделы summary
+6. Сохраняет
+
+7. Каждый час cron проверяет:
+   - Если сейчас 09:00 в Moscow → отправить юзеру
+   
+8. Юзер получает в Telegram:
+   ✅ Today's planned expenses
+   ✅ Week's upcoming expenses
+   ✅ Budget status (лимиты)
+   ✅ Goal progress
+   ✅ AI insights
+
+9. Сообщение красиво отформатировано
+10. Кнопки /budget для деталей

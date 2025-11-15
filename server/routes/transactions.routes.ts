@@ -4,6 +4,7 @@ import { insertTransactionSchema } from "@shared/schema";
 import { convertToUSD, getExchangeRate } from "../services/currency-service";
 import { withAuth } from "../middleware/auth-utils";
 import { createTransaction } from "../services/transaction.service";
+import { checkCategoryLimit, sendBudgetAlert } from "../services/budget/limits-checker.service";
 import { z } from "zod";
 import { parse, isValid, format } from "date-fns";
 
@@ -87,6 +88,20 @@ router.post("/", withAuth(async (req, res) => {
       personalTagId: validated.personalTagId !== undefined ? validated.personalTagId : null,
       financialType: validated.financialType || undefined,
     });
+    
+    // 🚨 Real-time budget check (only for expenses with category)
+    if (transaction.type === 'expense' && transaction.categoryId) {
+      // Run asynchronously to not block response
+      checkCategoryLimit(req.user.id, transaction.categoryId)
+        .then(async (limitCheck) => {
+          if (limitCheck && (limitCheck.status === 'warning' || limitCheck.status === 'exceeded')) {
+            await sendBudgetAlert(req.user.id, limitCheck);
+          }
+        })
+        .catch(error => {
+          console.error('Error checking budget limit:', error);
+        });
+    }
     
     res.json(transaction);
   } catch (error: any) {

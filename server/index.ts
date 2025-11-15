@@ -5,6 +5,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { createServer } from "http";
 import { initTelegramBot } from "./telegram/bot";
 import { initializeScheduledNotifications } from "./services/notification-scheduler.service";
+import { initHourlyBudgetNotifications } from "./cron/hourly-budget-notifications";
 
 const app = express();
 const server = createServer(app);
@@ -87,5 +88,6 @@ app.use((req, res, next) => {
     
     initTelegramBot();
     await initializeScheduledNotifications();
+    initHourlyBudgetNotifications();
   });
 })();
