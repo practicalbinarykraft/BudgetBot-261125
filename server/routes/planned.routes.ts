@@ -75,10 +75,6 @@ router.post("/:id/purchase", withAuth(async (req, res) => {
     const wallets = await storage.getWalletsByUserId(req.user.id);
     const primaryWallet = wallets.find(w => w.type === "card") || wallets[0];
     
-    if (!primaryWallet) {
-      return res.status(400).json({ error: "No wallet found" });
-    }
-    
     const transactionData = insertTransactionSchema.parse({
       userId: req.user.id,
       date: new Date().toISOString().split('T')[0],
@@ -86,19 +82,21 @@ router.post("/:id/purchase", withAuth(async (req, res) => {
       amount: plannedItem.amount,
       description: plannedItem.name,
       category: plannedItem.category,
-      currency: primaryWallet.currency || "USD",
+      currency: primaryWallet?.currency || "USD",
       amountUsd: plannedItem.amount,
-      walletId: primaryWallet.id,
-      source: "planned",
+      walletId: primaryWallet?.id || null,
+      source: "manual",
     });
     
     const transaction = await storage.createTransaction(transactionData);
     
-    const newBalance = parseFloat(primaryWallet.balance) - parseFloat(plannedItem.amount);
-    await storage.updateWallet(primaryWallet.id, {
-      balance: newBalance.toFixed(2),
-      balanceUsd: newBalance.toFixed(2),
-    });
+    if (primaryWallet) {
+      const newBalance = parseFloat(primaryWallet.balance) - parseFloat(plannedItem.amount);
+      await storage.updateWallet(primaryWallet.id, {
+        balance: newBalance.toFixed(2),
+        balanceUsd: newBalance.toFixed(2),
+      });
+    }
     
     await storage.updatePlanned(id, {
       status: "purchased",

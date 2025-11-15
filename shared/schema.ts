@@ -417,8 +417,7 @@ export const insertPlannedTransactionSchema = createInsertSchema(plannedTransact
   source: z.enum(["manual", "wishlist"]).optional(),
   status: z.enum(["planned", "purchased", "cancelled"]).optional(),
 }).omit({ 
-  id: true, 
-  userId: true,
+  id: true,
   createdAt: true,
   updatedAt: true 
 });

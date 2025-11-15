@@ -32,7 +32,11 @@ export default function WishlistPage() {
 
   const createMutation = useMutation({
     mutationFn: async (data: WishlistFormData) => {
-      const res = await apiRequest("POST", "/api/wishlist", data);
+      const sanitized = {
+        ...data,
+        targetDate: data.targetDate || undefined,
+      };
+      const res = await apiRequest("POST", "/api/wishlist", sanitized);
       return res.json();
     },
     onSuccess: () => {
