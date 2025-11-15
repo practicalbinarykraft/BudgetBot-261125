@@ -1,0 +1,152 @@
+💡 МОЯ РЕКОМЕНДАЦИЯ: ВАРИАНТ 2 🔥FINISH TIMELINE EVENTS (1 день)
+
+Почему:
+✅ Killer UX фича (визуально WOW!)
+✅ Легко добавить (~300 строк)
+✅ Логика уже есть (wishlist + predictions)
+✅ Нужно только визуализацию
+
+Результат:
+График показывает:
+├─ Линия капитала (зелёная)
+├─ AI прогноз (пунктир)
+├─ 📱 iPhone через 2.5 месяца (marker)
+├─ 🎮 PS5 через 8 месяцев (marker)
+└─ Hover → детали цели
+
+Это ПРЯМ ТО ЧТО ТЫ ХОТЕЛ!
+"Вот на ней есть кругляшки, на них наводишь 
+там описание 'экономической новости'"📋 ТЗ: TIMELINE EVENTS (ДЛЯ ДЖУНА)ЧТО ДОБАВЛЯЕМ:График FinancialTrendChart:
+
+[Было]
+- Линия капитала ✅
+- AI прогноз (пунктир) ✅
+
+[Добавляем]
+- Markers на timeline для wishlist items 🔥
+- Tooltips с деталями цели
+- Click → переход на Wishlist
+- Priority визуализация (цвет маркера)МОДУЛЬНАЯ СТРУКТУРА (3 файла):client/src/
+├─ components/
+│  └─ budget/
+│     ├─ goal-timeline-marker.tsx      (80 строк)
+│     └─ goal-timeline-tooltip.tsx     (60 строк)
+└─ pages/
+   └─ dashboard.tsx                     (обновить +40 строк)
+
+server/
+└─ routes/
+   └─ analytics.routes.ts               (обновить +20 строк)ВСЕГО: 3 файла, ~200 строкШАГ 1: Goal Timeline Marker Component (80 строк)Создать файл: client/src/components/budget/goal-timeline-marker.tsxtypescriptimport { Circle } from 'lucide-react';
+
+/**
+ * Маркер цели на timeline
+ * Показывает когда юзер сможет купить цель
+ */
+interface GoalTimelineMarkerProps {
+  goal: {
+    id: number;
+    name: string;
+    amount: number;
+    icon?: string;
+    priority: number;
+    prediction?: {
+      monthsToAfford: number | null;
+    };
+  };
+  currentMonth: number; // Текущий месяц (0 = today)
+  onHover?: (goal: any) => void;
+  onClick?: (goalId: number) => void;
+}
+
+export function GoalTimelineMarker({
+  goal,
+  currentMonth,
+  onHover,
+  onClick
+}: GoalTimelineMarkerProps) {
+  if (!goal.prediction?.monthsToAfford) {
+    return null; // Не показывать если не можем предсказать
+  }
+  
+  // Рассчитать позицию на timeline
+  const targetMonth = currentMonth + goal.prediction.monthsToAfford;
+  
+  // Цвет по приоритету
+  const color = goal.priority === 1 ? 'red' 
+              : goal.priority === 2 ? 'orange'
+              : 'blue';
+  
+  // Размер по приоритету
+  const size = goal.priority === 1 ? 'large' 
+             : goal.priority === 2 ? 'medium'
+             : 'small';
+  
+  return (
+    <div
+      className="goal-marker"
+      style={{
+        position: 'absolute',
+        left: `${(targetMonth / 12) * 100}%`, // Позиция на оси X
+        top: '50%',
+        transform: 'translate(-50%, -50%)',
+        cursor: 'pointer',
+        zIndex: 10
+      }}
+      onMouseEnter={() => onHover?.(goal)}
+      onClick={() => onClick?.(goal.id)}
+    >
+      <div className={`marker-circle ${color} ${size}`}>
+        <span className="marker-icon">{goal.icon || '📦'}</span>
+      </div>
+    </div>
+  );
+}CSS (в globals.css):css.goal-marker {
+  position: relative;
+}
+
+.marker-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid;
+  background: white;
+  transition: all 0.2s;
+}
+
+.marker-circle.large {
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+}
+
+.marker-circle.medium {
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+}
+
+.marker-circle.small {
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+}
+
+.marker-circle.red {
+  border-color: #ef4444;
+}
+
+.marker-circle.orange {
+  border-color: #f97316;
+}
+
+.marker-circle.blue {
+  border-color: #3b82f6;
+}
+
+.marker-circle:hover {
+  transform: scale(1.2);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}Размер: 80 строк ✅
