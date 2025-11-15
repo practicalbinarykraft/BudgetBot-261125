@@ -1,0 +1,215 @@
+ШАГ 2: Goal Timeline Tooltip Component (60 строк)
+Создать файл: client/src/components/budget/goal-timeline-tooltip.tsx
+typescript/**
+ * Tooltip для маркера цели
+ * Показывается при hover
+ */
+interface GoalTimelineTooltipProps {
+  goal: {
+    name: string;
+    amount: number;
+    priority: number;
+    prediction?: {
+      monthsToAfford: number | null;
+      canAfford: boolean;
+    };
+  };
+  position: { x: number; y: number };
+  visible: boolean;
+}
+
+export function GoalTimelineTooltip({
+  goal,
+  position,
+  visible
+}: GoalTimelineTooltipProps) {
+  if (!visible) return null;
+  
+  return (
+    <div
+      className="goal-tooltip"
+      style={{
+        position: 'fixed',
+        left: position.x,
+        top: position.y,
+        transform: 'translate(-50%, -100%)',
+        marginTop: -10,
+        zIndex: 1000
+      }}
+    >
+      <div className="tooltip-content">
+        <h4 className="font-semibold">{goal.name}</h4>
+        <p className="text-sm text-gray-600">
+          ${goal.amount.toFixed(2)}
+        </p>
+        
+        {goal.prediction && (
+          <div className="mt-2 text-sm">
+            {goal.prediction.canAfford ? (
+              <p className="text-green-600">
+                ✅ Can afford now!
+              </p>
+            ) : goal.prediction.monthsToAfford ? (
+              <p className="text-blue-600">
+                📅 In {goal.prediction.monthsToAfford} months
+              </p>
+            ) : (
+              <p className="text-red-600">
+                ⚠️ Not affordable yet
+              </p>
+            )}
+          </div>
+        )}
+        
+        <p className="mt-1 text-xs text-gray-500">
+          Priority: {goal.priority === 1 ? '🔴 High' 
+                   : goal.priority === 2 ? '🟠 Medium' 
+                   : '🔵 Low'}
+        </p>
+      </div>
+    </div>
+  );
+}
+CSS (в globals.css):
+css.goal-tooltip {
+  pointer-events: none;
+}
+
+.tooltip-content {
+  background: white;
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  border: 1px solid #e5e7eb;
+  min-width: 200px;
+}
+Размер: 60 строк ✅
+
+ШАГ 3: Обновить Dashboard (40 строк)
+Файл: client/src/pages/dashboard.tsx
+Добавить:
+typescriptimport { GoalTimelineMarker } from '@/components/budget/goal-timeline-marker';
+import { GoalTimelineTooltip } from '@/components/budget/goal-timeline-tooltip';
+import { useState } from 'react';
+import { useNavigate } from 'wouter';
+
+export function Dashboard() {
+  const [hoveredGoal, setHoveredGoal] = useState<any>(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const navigate = useNavigate();
+  
+  // Загрузить wishlist с predictions
+  const { data: goalsWithPredictions } = useQuery({
+    queryKey: ['/api/wishlist'],
+  });
+  
+  return (
+    <div>
+      {/* Existing dashboard content ... */}
+      
+      {/* Financial Trend Chart с маркерами */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Capital Growth Forecast</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="relative">
+            {/* Existing chart */}
+            <FinancialTrendChart data={trendData} />
+            
+            {/* Goal markers overlay */}
+            <div className="absolute inset-0 pointer-events-none">
+              {goalsWithPredictions?.map((goal) => (
+                <GoalTimelineMarker
+                  key={goal.id}
+                  goal={goal}
+                  currentMonth={0}
+                  onHover={(g) => {
+                    setHoveredGoal(g);
+                    setTooltipPos({ x: event.clientX, y: event.clientY });
+                  }}
+                  onClick={(id) => navigate('/wishlist')}
+                />
+              ))}
+            </div>
+            
+            {/* Tooltip */}
+            {hoveredGoal && (
+              <GoalTimelineTooltip
+                goal={hoveredGoal}
+                position={tooltipPos}
+                visible={true}
+              />
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+Размер: +40 строк
+
+ШАГ 4: API Endpoint (20 строк)
+Файл: server/routes/analytics.routes.ts
+Обновить:
+typescript// GET wishlist with predictions для dashboard
+router.get('/wishlist-with-predictions', requireAuth, async (req, res) => {
+  const userId = req.user!.id;
+  
+  const goals = await repositories.wishlist.findByUser(userId);
+  
+  const goalsWithPredictions = await Promise.all(
+    goals.map(async (goal) => {
+      const prediction = await calculateGoalTimeline(
+        userId,
+        parseFloat(goal.amount)
+      );
+      
+      return {
+        ...goal,
+        prediction
+      };
+    })
+  );
+  
+  res.json(goalsWithPredictions);
+});
+```
+
+**Размер:** +20 строк
+
+---
+
+## ✅ КРИТЕРИИ УСПЕХА
+```
+После реализации:
+
+1. Открыть Dashboard
+2. Увидеть график Capital Growth
+3. На графике видны маркеры:
+   📱 iPhone (через 2.5 месяца)
+   🎮 PS5 (через 8 месяцев)
+4. Навести на маркер → tooltip:
+   "iPhone 16 Pro
+    $1,200
+    📅 In 2.5 months
+    Priority: 🔴 High"
+5. Клик на маркер → переход на Wishlist
+6. Маркеры цветные по priority (red/orange/blue)
+7. Размер по priority (large/medium/small)
+```
+
+---
+
+## 🚀 ДЕЛАЕМ ШАГ 5 (TIMELINE EVENTS)?
+
+**ЭТО:**
+- ✅ 1 день работы
+- ✅ 3 файла, ~200 строк
+- ✅ Junior-friendly
+- ✅ KILLER UX фича 🔥
+
+**ПОСЛЕ ЭТОГО:**
+```
+WOW-ФИЧИ: 75% → почти готово!
+Остаётся только Goal Insights Dashboard
