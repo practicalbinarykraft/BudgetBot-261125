@@ -1,17 +1,9 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { format, parseISO } from "date-fns";
 import { motion } from "framer-motion";
-import { 
-  ArrowLeft, 
-  ArrowRight, 
-  ArrowUp, 
-  ArrowDown,
-  Calendar,
-  DollarSign
-} from "lucide-react";
+import { Calendar, DollarSign } from "lucide-react";
 import { AISuggestionBox } from "./ai-suggestion-box";
 import { useAuth } from "@/hooks/use-auth";
 import type { Transaction, Category, PersonalTag } from "@shared/schema";
@@ -106,33 +98,6 @@ export function SwipeCard({
                 onTagChange={setSelectedTagId}
               />
             )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 pt-6 border-t">
-          <div className="flex items-center gap-3 justify-center">
-            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-              <ArrowLeft className="w-6 h-6 text-blue-600" />
-            </div>
-            <span className="text-sm font-medium">Essential</span>
-          </div>
-          <div className="flex items-center gap-3 justify-center">
-            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-              <ArrowRight className="w-6 h-6 text-green-600" />
-            </div>
-            <span className="text-sm font-medium">Discretionary</span>
-          </div>
-          <div className="flex items-center gap-3 justify-center">
-            <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
-              <ArrowUp className="w-6 h-6 text-purple-600" />
-            </div>
-            <span className="text-sm font-medium">Asset</span>
-          </div>
-          <div className="flex items-center gap-3 justify-center">
-            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-              <ArrowDown className="w-6 h-6 text-red-600" />
-            </div>
-            <span className="text-sm font-medium">Liability</span>
           </div>
         </div>
       </Card>

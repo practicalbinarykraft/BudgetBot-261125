@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, Trophy, Zap, Flame, Sparkles } from "lucide-react";
 import { SwipeDeck } from "@/components/sorting/swipe-deck";
 import { TrainingHeader } from "@/components/sorting/training-header";
+import { SwipeInstructions } from "@/components/sorting/swipe-instructions";
 import type { Transaction, Category, PersonalTag, TrainingStats } from "@shared/schema";
 
 interface SortingStats {
@@ -177,6 +178,8 @@ export default function SwipeSortPage() {
         </Card>
       )}
 
+      <SwipeInstructions />
+
       <TrainingHeader />
 
       <SwipeDeck
@@ -185,36 +188,6 @@ export default function SwipeSortPage() {
         tags={tags ?? []}
         onSwipeComplete={handleSwipeComplete}
       />
-
-      <div className="mt-8 text-center text-sm text-muted-foreground">
-        <p className="mb-2">Swipe in any direction to classify:</p>
-        <div className="grid grid-cols-2 gap-3 max-w-sm mx-auto">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs">
-              ←
-            </div>
-            <span>Essential</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-xs">
-              →
-            </div>
-            <span>Discretionary</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-xs">
-              ↑
-            </div>
-            <span>Asset</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-xs">
-              ↓
-            </div>
-            <span>Liability</span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
