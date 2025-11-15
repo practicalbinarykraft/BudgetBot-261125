@@ -6,6 +6,7 @@ import {
   Users,
   Repeat,
   Heart,
+  Calendar,
   TrendingDown,
   Sparkles,
   Settings,
@@ -63,6 +64,11 @@ const menuItems = [
     title: "Wishlist",
     url: "/wishlist",
     icon: Heart,
+  },
+  {
+    title: "Planned",
+    url: "/planned",
+    icon: Calendar,
   },
   {
     title: "Budgets",
