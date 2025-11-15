@@ -9,6 +9,7 @@ import { getUnsortedTransactions } from "../services/analytics/unsorted-filter.s
 import { getMonthlyStats, getTotalBudgetLimits } from "../services/budget-stats.service";
 import { predictGoalWithStats } from "../services/goal-predictor.service";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, format, addYears } from "date-fns";
+import type { PlannedTransaction } from "@shared/schema";
 
 const router = Router();
 
@@ -41,11 +42,11 @@ function getPeriodDates(period: string = 'month'): { startDate: string; endDate:
 
 /**
  * GET /api/analytics/trend
- * Returns financial trend data (historical + forecast) + wishlist goals
+ * Returns financial trend data (historical + forecast) + planned transaction goals
  * 
  * Response includes:
  * - trendData: array of data points (income, expense, capital over time)
- * - goals: wishlist items with affordability predictions for timeline markers
+ * - goals: planned transactions with affordability predictions for timeline markers
  * 
  * Query params:
  * - historyDays: number of historical days (default: 30)
@@ -71,31 +72,47 @@ router.get("/trend", withAuth(async (req, res) => {
       anthropicApiKey,
     });
 
-    // ШАГ 4: Получить wishlist goals с предсказаниями для timeline markers
-    const wishlist = await storage.getWishlistByUserId(userId);
+    // ШАГ 4: Получить planned transaction goals с предсказаниями для timeline markers
+    const allPlanned = await storage.getPlannedByUserId(userId);
+    const planned = allPlanned.filter((item: PlannedTransaction) => item.status === 'planned');
     const stats = await getMonthlyStats(userId);
     const budgetLimits = await getTotalBudgetLimits(userId);
+    const today = new Date();
     
-    // Добавить AI predictions к каждой цели
-    const goals = wishlist
-      .filter(item => !item.isPurchased) // Только непокупленные
-      .map((item) => {
+    // Добавить AI predictions и derived priority к каждой цели
+    const goals = planned
+      .map((item: PlannedTransaction) => {
         const amount = parseFloat(item.amount);
         
         if (isNaN(amount) || amount <= 0) {
           return {
             ...item,
             prediction: null,
+            priority: 'low',
           };
+        }
+        
+        // Derive priority from targetDate proximity
+        const targetDate = new Date(item.targetDate);
+        const daysUntil = Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        
+        let priority: string;
+        if (daysUntil < 0 || daysUntil <= 30) {
+          priority = 'high'; // Overdue or within 30 days
+        } else if (daysUntil <= 90) {
+          priority = 'medium'; // 31-90 days
+        } else {
+          priority = 'low'; // >90 days
         }
         
         const prediction = predictGoalWithStats(amount, stats, budgetLimits);
         return {
           ...item,
           prediction,
+          priority,
         };
       })
-      .filter(item => item.prediction?.monthsToAfford !== null); // Только доступные цели
+      .filter((item: any) => item.prediction?.monthsToAfford !== null); // Только доступные цели
 
     // ШАГ 5: Вернуть тренд + цели
     res.json({

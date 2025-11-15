@@ -23,3 +23,21 @@ export interface WishlistItemWithPrediction {
   isPurchased: boolean;
   prediction: GoalPrediction | null;
 }
+
+/**
+ * Planned Transaction with AI Prediction
+ * Extended type for GET /api/analytics/trend response goals
+ */
+export interface PlannedTransactionWithPrediction {
+  id: number;
+  userId: number;
+  name: string;
+  amount: string;
+  targetDate: string;
+  status: string;
+  source: string;
+  wishlistId: number | null;
+  transactionId: number | null;
+  createdAt: Date;
+  prediction: GoalPrediction | null;
+}

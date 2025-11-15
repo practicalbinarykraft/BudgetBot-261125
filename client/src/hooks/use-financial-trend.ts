@@ -13,6 +13,8 @@ export interface GoalMarker {
   id: number;
   name: string;
   amount: string;
+  targetDate: string;
+  status: string;
   priority: string;
   prediction: {
     monthsToAfford: number | null;

@@ -13,6 +13,8 @@ interface GoalTimelineTooltipProps {
   goal: {
     name: string;
     amount: string;
+    targetDate: string;
+    status: string;
     priority: string;
     prediction: {
       monthsToAfford: number | null;
@@ -29,8 +31,9 @@ export function GoalTimelineTooltip({ goal, position }: GoalTimelineTooltipProps
 
   const amount = parseFloat(goal.amount);
   const affordableDate = parseISO(goal.prediction.affordableDate);
+  const targetDate = parseISO(goal.targetDate);
   
-  // Priority badge variant
+  // Priority badge variant (derived from targetDate proximity)
   const priorityVariant = goal.priority === "high" ? "destructive"
                         : goal.priority === "medium" ? "default"
                         : "secondary";
@@ -65,7 +68,7 @@ export function GoalTimelineTooltip({ goal, position }: GoalTimelineTooltipProps
         
         <div className="flex items-center gap-2 text-sm">
           <DollarSign className="h-3 w-3 text-muted-foreground" />
-          <span className="text-muted-foreground">Target:</span>
+          <span className="text-muted-foreground">Amount:</span>
           <span className="font-mono font-medium" data-testid="tooltip-amount">
             ${amount.toFixed(2)}
           </span>
@@ -73,8 +76,16 @@ export function GoalTimelineTooltip({ goal, position }: GoalTimelineTooltipProps
         
         <div className="flex items-center gap-2 text-sm">
           <Calendar className="h-3 w-3 text-muted-foreground" />
+          <span className="text-muted-foreground">Target:</span>
+          <span className="font-medium" data-testid="tooltip-target-date">
+            {format(targetDate, 'MMM d, yyyy')}
+          </span>
+        </div>
+        
+        <div className="flex items-center gap-2 text-sm">
+          <Calendar className="h-3 w-3 text-success" />
           <span className="text-muted-foreground">Affordable:</span>
-          <span className="font-medium" data-testid="tooltip-date">
+          <span className="font-medium text-success" data-testid="tooltip-affordable-date">
             {format(affordableDate, 'MMM d, yyyy')}
           </span>
         </div>

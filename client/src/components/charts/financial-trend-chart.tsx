@@ -78,7 +78,7 @@ export function FinancialTrendChart() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>💰 Financial Trend</CardTitle>
+          <CardTitle>Financial Trend</CardTitle>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-[400px]" />
@@ -91,7 +91,7 @@ export function FinancialTrendChart() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>💰 Financial Trend</CardTitle>
+          <CardTitle>Financial Trend</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-destructive">
@@ -107,7 +107,7 @@ export function FinancialTrendChart() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>💰 Financial Trend</CardTitle>
+          <CardTitle>Financial Trend</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-muted-foreground">
@@ -271,7 +271,7 @@ export function FinancialTrendChart() {
                 />
               )}
 
-              {/* 🎯 Goal Markers on Timeline */}
+              {/* Goal Markers on Timeline */}
               {goals.map((goal) => {
                 if (!goal.prediction?.affordableDate) return null;
                 
@@ -326,7 +326,7 @@ export function FinancialTrendChart() {
                         <GoalTimelineMarker
                           {...props}
                           priority={goal.priority}
-                          onClick={() => setLocation("/wishlist")}
+                          onClick={() => setLocation("/planned")}
                         />
                       </g>
                     )}
@@ -373,7 +373,7 @@ export function FinancialTrendChart() {
           {goals.length > 0 && (
             <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-primary" />
-              <span>Goal Markers (click to view wishlist)</span>
+              <span>Goal Markers (click to view planned)</span>
             </div>
           )}
         </div>
