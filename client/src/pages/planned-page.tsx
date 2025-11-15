@@ -4,7 +4,7 @@ import { PlannedTransaction } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Plus, Calendar } from "lucide-react";
 import { PlannedItemCard } from "@/components/planned/planned-item-card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AddPlannedDialog } from "@/components/planned/add-planned-dialog";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -111,6 +111,26 @@ export default function PlannedPage() {
     },
   });
 
+  const createMutation = useMutation({
+    mutationFn: async (data: { name: string; amount: string; targetDate: string; category?: string }) => {
+      const res = await apiRequest("POST", "/api/planned", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/planned"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/predictions"] });
+      toast({ title: "Success", description: "Planned purchase added" });
+      setShowAddDialog(false);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleAddPlanned = (data: { name: string; amount: string; targetDate: string; category?: string }) => {
+    createMutation.mutate(data);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -193,16 +213,12 @@ export default function PlannedPage() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Planned Purchase</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Coming soon: Add planned purchases directly or schedule from wishlist
-          </p>
-        </DialogContent>
-      </Dialog>
+      <AddPlannedDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        onAdd={handleAddPlanned}
+        isSubmitting={createMutation.isPending}
+      />
     </div>
   );
 }
