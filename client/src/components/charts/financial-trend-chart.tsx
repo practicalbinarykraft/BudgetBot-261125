@@ -339,13 +339,15 @@ export function FinancialTrendChart() {
 
         {/* HTML Tooltip Overlay (Safari compatible) */}
         {hoveredGoal !== null && (
-          <div className="fixed z-50" style={{ pointerEvents: "none" }}>
+          <>
             {goals.filter(g => g.id === hoveredGoal).map((goal) => (
-              <div key={goal.id} className="mt-2">
-                <GoalTimelineTooltip goal={goal} />
-              </div>
+              <GoalTimelineTooltip 
+                key={goal.id}
+                goal={goal} 
+                position={tooltipPosition}
+              />
             ))}
-          </div>
+          </>
         )}
 
         {/* Legend */}

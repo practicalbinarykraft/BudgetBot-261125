@@ -19,9 +19,10 @@ interface GoalTimelineTooltipProps {
       affordableDate: string | null;
     } | null;
   };
+  position: { x: number; y: number };
 }
 
-export function GoalTimelineTooltip({ goal }: GoalTimelineTooltipProps) {
+export function GoalTimelineTooltip({ goal, position }: GoalTimelineTooltipProps) {
   if (!goal.prediction?.affordableDate) {
     return null;
   }
@@ -33,9 +34,22 @@ export function GoalTimelineTooltip({ goal }: GoalTimelineTooltipProps) {
   const priorityVariant = goal.priority === "high" ? "destructive"
                         : goal.priority === "medium" ? "default"
                         : "secondary";
+  
+  // Offset tooltip from cursor (15px right, 15px down)
+  const OFFSET_X = 15;
+  const OFFSET_Y = 15;
 
   return (
-    <Card className="w-64 border-2">
+    <Card 
+      className="w-64 border-2" 
+      style={{
+        position: 'fixed',
+        left: position.x + OFFSET_X,
+        top: position.y + OFFSET_Y,
+        zIndex: 1000,
+        pointerEvents: 'none'
+      }}
+    >
       <CardContent className="p-3 space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
