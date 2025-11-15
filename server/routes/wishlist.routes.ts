@@ -2,13 +2,8 @@ import { Router } from "express";
 import { storage } from "../storage";
 import { insertWishlistSchema } from "@shared/schema";
 import { withAuth } from "../middleware/auth-utils";
-import { 
-  predictGoal,
-  predictGoalWithStats, 
-  getMonthlyStats, 
-  getTotalBudgetLimits,
-  getBudgetAlerts 
-} from "../services/goal-predictor.service";
+import { predictGoal, predictGoalWithStats } from "../services/goal-predictor.service";
+import { getMonthlyStats, getTotalBudgetLimits } from "../services/budget-stats.service";
 
 const router = Router();
 
@@ -113,17 +108,6 @@ router.delete("/:id", withAuth(async (req, res) => {
     res.json({ success: true });
   } catch (error: any) {
     res.status(400).json({ error: error.message });
-  }
-}));
-
-// GET /api/wishlist/alerts/budget
-// Get budget alerts (categories close to limit >80%)
-router.get("/alerts/budget", withAuth(async (req, res) => {
-  try {
-    const alerts = await getBudgetAlerts(req.user.id);
-    res.json(alerts);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
   }
 }));
 

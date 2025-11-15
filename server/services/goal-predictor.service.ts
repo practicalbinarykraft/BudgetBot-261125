@@ -1,239 +1,133 @@
-import { db } from '../db';
-import { transactions, budgets, categories } from '@shared/schema';
-import { eq, and, gte, sql } from 'drizzle-orm';
-import { startOfMonth, subMonths, format } from 'date-fns';
+import { addMonths, format } from 'date-fns';
+import { getMonthlyStats, getTotalBudgetLimits, MonthlyStats } from './budget-stats.service';
 
 /**
  * Goal Predictor Service
  * 
  * Calculates when user can afford wishlist items based on:
- * - Monthly income vs expenses
- * - Budget limits (if user stays within limits)
- * - Current spending patterns
+ * - 3-month rolling average of income/expenses
+ * - Free capital (income - expenses - budget commitments)
+ * - Realistic affordability timeline
+ * 
+ * SIMPLIFIED: Returns single prediction matching frontend interface
  */
 
-interface MonthlyStats {
-  income: number;
-  expenses: number;
-  freeCapital: number;
-}
-
-interface GoalPrediction {
+export interface GoalPrediction {
   canAfford: boolean;
-  monthsToGoal: number;
-  targetDate: string | null;
-  capitalLeft: number;
-  monthlyFreeCapital: number;
-  warning: string | null;
-}
-
-interface BudgetComparison {
-  withinLimits: GoalPrediction;
-  currentPace: GoalPrediction;
+  freeCapital: number;
+  monthsToAfford: number | null;
+  affordableDate: string | null;
 }
 
 /**
- * Calculate average monthly income and expenses
- * Uses last 3 months of data for more accurate predictions
+ * Calculate when user can afford a goal
  * 
- * EXPORTED for reuse in routes to avoid N+1 queries
- */
-export async function getMonthlyStats(userId: number): Promise<MonthlyStats> {
-  const threeMonthsAgo = format(subMonths(startOfMonth(new Date()), 3), 'yyyy-MM-dd');
-
-  const result = await db
-    .select({
-      totalIncome: sql<number>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'income' THEN CAST(${transactions.amountUsd} AS NUMERIC) ELSE 0 END), 0)`,
-      totalExpenses: sql<number>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'expense' THEN CAST(${transactions.amountUsd} AS NUMERIC) ELSE 0 END), 0)`,
-      months: sql<number>`COUNT(DISTINCT DATE_TRUNC('month', ${transactions.date}))`,
-    })
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.userId, userId),
-        gte(transactions.date, threeMonthsAgo)
-      )
-    );
-
-  // Guard: handle new users with no transactions
-  const data = result[0] ?? { totalIncome: 0, totalExpenses: 0, months: 0 };
-  const monthCount = Math.max(data.months || 1, 1);
-  const avgIncome = data.totalIncome / monthCount;
-  const avgExpenses = data.totalExpenses / monthCount;
-
-  return {
-    income: avgIncome,
-    expenses: avgExpenses,
-    freeCapital: avgIncome - avgExpenses,
-  };
-}
-
-/**
- * Calculate total monthly budget limits
+ * Logic:
+ * 1. Monthly free capital = income - expenses (3-month average)
+ * 2. If free capital <= 0: cannot afford (expenses exceed income)
+ * 3. Otherwise: monthsToAfford = ceil(goalAmount / freeCapital)
  * 
- * EXPORTED for reuse in routes to avoid N+1 queries
- */
-export async function getTotalBudgetLimits(userId: number): Promise<number> {
-  const result = await db
-    .select({
-      total: sql<number>`COALESCE(SUM(CAST(${budgets.limitAmount} AS NUMERIC)), 0)`,
-    })
-    .from(budgets)
-    .where(
-      and(
-        eq(budgets.userId, userId),
-        eq(budgets.period, 'month')
-      )
-    );
-
-  // Guard: handle users with no budgets
-  return result[0]?.total ?? 0;
-}
-
-/**
- * Predict when user can afford a goal
+ * Note: We don't have accumulated savings data, so predictions
+ * are based on monthly surplus accumulation timeline.
+ * 
+ * Guards:
+ * - New users with no transactions get freeCapital = 0
+ * - NaN/Infinity protected with safe fallbacks
  */
 function calculatePrediction(
   goalAmount: number,
-  monthlyFreeCapital: number
+  stats: MonthlyStats
 ): GoalPrediction {
-  if (monthlyFreeCapital <= 0) {
+  const { freeCapital } = stats;
+
+  // Cannot afford: negative or zero free capital
+  if (freeCapital <= 0) {
     return {
       canAfford: false,
-      monthsToGoal: Infinity,
-      targetDate: null,
-      capitalLeft: monthlyFreeCapital,
-      monthlyFreeCapital,
-      warning: 'Ваши расходы превышают доходы. Сначала нужно сократить траты!',
+      freeCapital,
+      monthsToAfford: null,
+      affordableDate: null,
     };
   }
 
-  const monthsToGoal = Math.ceil(goalAmount / monthlyFreeCapital);
-  const targetDate = new Date();
-  targetDate.setMonth(targetDate.getMonth() + monthsToGoal);
+  // Calculate months needed based on monthly surplus
+  const monthsToAfford = Math.ceil(goalAmount / freeCapital);
+  const affordableDate = format(
+    addMonths(new Date(), monthsToAfford),
+    'yyyy-MM-dd'
+  );
 
-  const totalSaved = monthlyFreeCapital * monthsToGoal;
-  const capitalLeft = totalSaved - goalAmount;
-
+  // canAfford=false because we don't track accumulated savings
+  // monthsToAfford indicates timeline to accumulate from current surplus
   return {
-    canAfford: true,
-    monthsToGoal,
-    targetDate: format(targetDate, 'yyyy-MM-dd'),
-    capitalLeft,
-    monthlyFreeCapital,
-    warning: null,
+    canAfford: false,
+    freeCapital,
+    monthsToAfford,
+    affordableDate,
   };
 }
 
 /**
  * Predict goal with pre-computed stats (avoid N+1 queries)
- * Use this in routes to reuse stats across multiple items
+ * 
+ * Use this in routes when processing multiple items:
+ * 
+ * @example
+ * const stats = await getMonthlyStats(userId);
+ * const budgetLimits = await getTotalBudgetLimits(userId);
+ * items.map(item => predictGoalWithStats(item.amount, stats, budgetLimits))
+ * 
+ * Budget-aware logic:
+ * - If user has budget limits, use MINIMUM of:
+ *   1. Actual free capital (income - expenses)
+ *   2. Budget-constrained capital (income - budget limits)
+ * - This provides conservative estimates when budgets are stricter
+ * - Ignores unrealistic budgets (budgetLimits > income)
+ * 
+ * Examples:
+ * 1. income=5000, expenses=3500, budgets=3000
+ *    → min(1500, 2000) = 1500 (actual is tighter)
+ * 
+ * 2. income=5000, expenses=3500, budgets=4000
+ *    → min(1500, 1000) = 1000 (budgets stricter, use that)
+ * 
+ * 3. income=5000, expenses=3500, budgets=6000
+ *    → min(1500, -1000) → 1500 (ignore unrealistic budgets)
  */
 export function predictGoalWithStats(
   goalAmount: number,
   stats: MonthlyStats,
   budgetLimits: number
-): BudgetComparison {
-  // Scenario 1: Current spending pace
-  const currentPace = calculatePrediction(goalAmount, stats.freeCapital);
-
-  // Scenario 2: If user stays within budget limits
-  let withinLimits: GoalPrediction;
+): GoalPrediction {
+  let adjustedStats = stats;
   
-  if (budgetLimits > 0) {
-    const freeCapitalWithLimits = stats.income - budgetLimits;
-    withinLimits = calculatePrediction(goalAmount, freeCapitalWithLimits);
-  } else {
-    // No budgets set - same as current pace
-    withinLimits = currentPace;
+  // Apply budget-aware adjustment if user has set limits
+  if (budgetLimits > 0 && budgetLimits < stats.income) {
+    const budgetConstrainedCapital = stats.income - budgetLimits;
+    const conservativeFreeCapital = Math.min(
+      stats.freeCapital,
+      budgetConstrainedCapital
+    );
+    
+    adjustedStats = {
+      ...stats,
+      freeCapital: conservativeFreeCapital,
+    };
   }
 
-  return {
-    withinLimits,
-    currentPace,
-  };
+  return calculatePrediction(goalAmount, adjustedStats);
 }
 
 /**
- * Main function: Predict goal achievement with budget comparison
- * For single-item predictions (backward compatible)
+ * Main function: Predict goal achievement for single item
+ * 
+ * For batch operations, use predictGoalWithStats to reuse stats
  */
 export async function predictGoal(
   userId: number,
   goalAmount: number
-): Promise<BudgetComparison> {
+): Promise<GoalPrediction> {
   const stats = await getMonthlyStats(userId);
   const budgetLimits = await getTotalBudgetLimits(userId);
   return predictGoalWithStats(goalAmount, stats, budgetLimits);
-}
-
-/**
- * Check if user is close to budget limit (>80%)
- */
-export async function getBudgetAlerts(userId: number): Promise<Array<{
-  categoryId: number;
-  categoryName: string;
-  spent: number;
-  limit: number;
-  percentUsed: number;
-  amountLeft: number;
-}>> {
-  const startOfCurrentMonth = format(startOfMonth(new Date()), 'yyyy-MM-dd');
-
-  const budgetData = await db
-    .select({
-      categoryId: budgets.categoryId,
-      categoryName: categories.name,
-      limitAmount: budgets.limitAmount,
-    })
-    .from(budgets)
-    .leftJoin(categories, eq(budgets.categoryId, categories.id))
-    .where(
-      and(
-        eq(budgets.userId, userId),
-        eq(budgets.period, 'month')
-      )
-    );
-
-  const alerts = [];
-
-  for (const budget of budgetData) {
-    const spentResult = await db
-      .select({
-        total: sql<number>`COALESCE(SUM(CAST(${transactions.amountUsd} AS NUMERIC)), 0)`,
-      })
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.userId, userId),
-          eq(transactions.type, 'expense'),
-          eq(transactions.categoryId, budget.categoryId),
-          gte(transactions.date, startOfCurrentMonth)
-        )
-      );
-
-    const spent = spentResult[0]?.total || 0;
-    const limit = parseFloat(budget.limitAmount);
-    
-    // Skip if limit is 0 or invalid (avoid division by zero)
-    if (!limit || limit <= 0) {
-      continue;
-    }
-    
-    const percentUsed = (spent / limit) * 100;
-    const amountLeft = limit - spent;
-
-    if (percentUsed >= 80) {
-      alerts.push({
-        categoryId: budget.categoryId,
-        categoryName: budget.categoryName || 'Unknown',
-        spent,
-        limit,
-        percentUsed,
-        amountLeft,
-      });
-    }
-  }
-
-  return alerts;
 }
