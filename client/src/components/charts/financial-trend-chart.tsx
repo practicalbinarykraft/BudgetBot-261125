@@ -62,6 +62,7 @@ export function FinancialTrendChart() {
   const [historyDays, setHistoryDays] = useState(30);
   const [forecastDays, setForecastDays] = useState(365);
   const [hoveredGoal, setHoveredGoal] = useState<number | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [, setLocation] = useLocation();
 
   const { data, isLoading, error } = useFinancialTrend({
@@ -307,7 +308,19 @@ export function FinancialTrendChart() {
                     y={yValue}
                     shape={(props) => (
                       <g
-                        onMouseEnter={() => setHoveredGoal(goal.id)}
+                        onMouseEnter={(e: React.MouseEvent) => {
+                          setHoveredGoal(goal.id);
+                          setTooltipPosition({ 
+                            x: e.clientX, 
+                            y: e.clientY 
+                          });
+                        }}
+                        onMouseMove={(e: React.MouseEvent) => {
+                          setTooltipPosition({ 
+                            x: e.clientX, 
+                            y: e.clientY 
+                          });
+                        }}
                         onMouseLeave={() => setHoveredGoal(null)}
                       >
                         <GoalTimelineMarker
