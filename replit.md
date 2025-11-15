@@ -39,6 +39,7 @@ The application uses Shadcn/ui (Radix UI primitives) and Tailwind CSS with a cus
 *   **Financial Classification Analytics:** Provides a 3D transaction analysis framework (Category + Personal Tag + Financial Type) with dedicated analytics pages.
 *   **Swipe-Sort Game:** A gamified mini-game for classifying unsorted transactions using a Tinder-style swipe interface, integrating with backend services for session management and statistics.
 *   **AI Goal Predictor:** Calculates affordability timeline for wishlist items based on 3-month rolling averages of income and expenses. Provides realistic "when can I afford this" predictions using free capital calculations (income - expenses - budget commitments). Optimized to avoid N+1 queries with batch stats computation and robust guards for new users without transaction history.
+*   **Timeline Events (Goal Markers):** Visual markers on FinancialTrendChart showing when wishlist items become affordable. Features include: (1) GoalTimelineMarker component (98 lines) with pure SVG animations and priority-based symbols (★ ◆ ●), (2) GoalTimelineTooltip component (66 lines) with Card-based goal details, (3) Flexible date matching (monthly predictions → daily trend data), (4) Capital fallback logic using last known value for forecast markers, (5) Safari/iOS compatibility via SVG animate elements (no foreignObject), (6) Click navigation to wishlist, (7) Hover feedback with radius/opacity animations, (8) HTML overlay tooltip outside SVG for cross-browser support.
 
 ### System Design Choices
 
