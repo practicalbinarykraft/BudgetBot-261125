@@ -2,7 +2,7 @@ import { WishlistItemWithPrediction } from "@/types/goal-prediction";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Check } from "lucide-react";
+import { Trash2, Check, Calendar } from "lucide-react";
 import { GoalPredictionCard } from "@/components/wishlist/goal-prediction-card";
 import { format, parseISO } from "date-fns";
 
@@ -10,6 +10,7 @@ interface WishlistItemProps {
   item: WishlistItemWithPrediction;
   onDelete: (id: number) => void;
   onTogglePurchased: (id: number) => void;
+  onSchedule: (id: number) => void;
 }
 
 const priorityColors = {
@@ -18,7 +19,7 @@ const priorityColors = {
   high: "bg-red-500",
 };
 
-export function WishlistItem({ item, onDelete, onTogglePurchased }: WishlistItemProps) {
+export function WishlistItem({ item, onDelete, onTogglePurchased, onSchedule }: WishlistItemProps) {
   return (
     <Card className="hover-elevate" data-testid={`wishlist-${item.id}`}>
       <CardContent className="p-4">
@@ -51,16 +52,28 @@ export function WishlistItem({ item, onDelete, onTogglePurchased }: WishlistItem
 
         <GoalPredictionCard prediction={item.prediction} amount={item.amount} />
 
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full mt-3"
-          onClick={() => onDelete(item.id)}
-          data-testid={`button-delete-wishlist-${item.id}`}
-        >
-          <Trash2 className="h-4 w-4 mr-2" />
-          Remove
-        </Button>
+        <div className="flex gap-2 mt-3">
+          <Button
+            variant="default"
+            size="sm"
+            className="flex-1"
+            onClick={() => onSchedule(item.id)}
+            data-testid={`button-schedule-${item.id}`}
+          >
+            <Calendar className="h-4 w-4 mr-2" />
+            Schedule
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={() => onDelete(item.id)}
+            data-testid={`button-delete-wishlist-${item.id}`}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Remove
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

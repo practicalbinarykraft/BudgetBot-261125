@@ -1,12 +1,14 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { WishlistItemWithPrediction } from "@/types/goal-prediction";
+import { WishlistItem as WishlistItemType } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { WishlistEmptyState } from "@/components/wishlist/WishlistEmptyState";
 import { WishlistFilters, SortOption } from "@/components/wishlist/wishlist-filters";
 import { WishlistItem } from "@/components/wishlist/wishlist-item";
 import { WishlistForm, WishlistFormData } from "@/components/wishlist/wishlist-form";
+import { SchedulePurchaseDialog } from "@/components/wishlist/schedule-purchase-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -16,6 +18,7 @@ import { sortWishlist } from "@/lib/wishlist-utils";
 
 export default function WishlistPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [scheduleItem, setScheduleItem] = useState<WishlistItemWithPrediction | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>("priority");
   const { user } = useAuth();
   const { toast } = useToast();
@@ -86,6 +89,38 @@ export default function WishlistPage() {
     },
   });
 
+  const scheduleMutation = useMutation({
+    mutationFn: async ({ wishlistId, targetDate }: { wishlistId: number; targetDate: string }) => {
+      const item = wishlist.find((w) => w.id === wishlistId);
+      if (!item) throw new Error("Item not found");
+
+      const res = await apiRequest("POST", "/api/planned", {
+        name: item.name,
+        amount: item.amount,
+        targetDate,
+        source: "wishlist",
+        wishlistId,
+        userId: user?.id,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/planned"] });
+      toast({
+        title: "Success",
+        description: "Purchase scheduled successfully",
+      });
+      setScheduleItem(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleDelete = (id: number) => {
     deleteMutation.mutate(id);
   };
@@ -95,6 +130,17 @@ export default function WishlistPage() {
     if (item) {
       togglePurchasedMutation.mutate({ id, isPurchased: !item.isPurchased });
     }
+  };
+
+  const handleSchedule = (id: number) => {
+    const item = wishlist.find((w) => w.id === id);
+    if (item) {
+      setScheduleItem(item);
+    }
+  };
+
+  const handleScheduleConfirm = (wishlistId: number, targetDate: string) => {
+    scheduleMutation.mutate({ wishlistId, targetDate });
   };
 
   const handleSubmit = (data: WishlistFormData) => {
@@ -139,6 +185,7 @@ export default function WishlistPage() {
                 item={item}
                 onDelete={handleDelete}
                 onTogglePurchased={handleTogglePurchased}
+                onSchedule={handleSchedule}
               />
             ))}
           </div>
@@ -158,6 +205,13 @@ export default function WishlistPage() {
           />
         </DialogContent>
       </Dialog>
+
+      <SchedulePurchaseDialog
+        item={scheduleItem}
+        open={!!scheduleItem}
+        onOpenChange={(open) => !open && setScheduleItem(null)}
+        onSchedule={handleScheduleConfirm}
+      />
     </div>
   );
 }
