@@ -11,6 +11,8 @@ import {
   InsertRecurring,
   WishlistItem,
   InsertWishlist,
+  PlannedTransaction,
+  InsertPlannedTransaction,
   Settings,
   InsertSettings,
   Budget,
@@ -60,6 +62,13 @@ export interface IStorage {
   updateWishlist(id: number, wishlist: Partial<InsertWishlist>): Promise<WishlistItem>;
   deleteWishlist(id: number): Promise<void>;
   
+  // Planned Transactions
+  getPlannedByUserId(userId: number): Promise<PlannedTransaction[]>;
+  getPlannedById(id: number): Promise<PlannedTransaction | null>;
+  createPlanned(planned: InsertPlannedTransaction): Promise<PlannedTransaction>;
+  updatePlanned(id: number, planned: Partial<InsertPlannedTransaction>): Promise<PlannedTransaction>;
+  deletePlanned(id: number): Promise<void>;
+  
   // Settings
   getSettingsByUserId(userId: number): Promise<Settings | null>;
   createSettings(settings: InsertSettings): Promise<Settings>;
@@ -81,6 +90,7 @@ import {
   categories, 
   recurring, 
   wishlist, 
+  plannedTransactions,
   settings,
   budgets
 } from "@shared/schema";
@@ -247,6 +257,33 @@ export class DatabaseStorage implements IStorage {
 
   async deleteWishlist(id: number): Promise<void> {
     await db.delete(wishlist).where(eq(wishlist.id, id));
+  }
+
+  // Planned Transactions
+  async getPlannedByUserId(userId: number): Promise<PlannedTransaction[]> {
+    return db.select().from(plannedTransactions).where(eq(plannedTransactions.userId, userId));
+  }
+
+  async getPlannedById(id: number): Promise<PlannedTransaction | null> {
+    const result = await db.select().from(plannedTransactions).where(eq(plannedTransactions.id, id)).limit(1);
+    return result[0] || null;
+  }
+
+  async createPlanned(plannedData: InsertPlannedTransaction): Promise<PlannedTransaction> {
+    const result = await db.insert(plannedTransactions).values(plannedData).returning();
+    return result[0];
+  }
+
+  async updatePlanned(id: number, plannedData: Partial<InsertPlannedTransaction>): Promise<PlannedTransaction> {
+    const result = await db.update(plannedTransactions).set({ 
+      ...plannedData, 
+      updatedAt: new Date() 
+    }).where(eq(plannedTransactions.id, id)).returning();
+    return result[0];
+  }
+
+  async deletePlanned(id: number): Promise<void> {
+    await db.delete(plannedTransactions).where(eq(plannedTransactions.id, id));
   }
 
   // Settings
