@@ -37,6 +37,7 @@ The application uses Shadcn/ui (Radix UI primitives) and Tailwind CSS with a cus
 *   **Transaction Classification & Editing:** Comprehensive system for backfilling and editing transaction classifications (personal tags and financial types).
 *   **Financial Classification Analytics:** Provides a 3D transaction analysis framework (Category + Personal Tag + Financial Type) with dedicated analytics pages.
 *   **Swipe-Sort Game:** A gamified mini-game for classifying unsorted transactions using a Tinder-style swipe interface, integrating with backend services for session management and statistics.
+*   **AI Goal Predictor:** Calculates affordability timeline for wishlist items based on 3-month rolling averages of income and expenses. Provides realistic "when can I afford this" predictions using free capital calculations (income - expenses - budget commitments). Optimized to avoid N+1 queries with batch stats computation and robust guards for new users without transaction history.
 
 ### System Design Choices
 

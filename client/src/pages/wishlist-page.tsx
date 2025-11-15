@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { WishlistItem } from "@shared/schema";
+import { WishlistItemWithPrediction } from "@/types/goal-prediction";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Check } from "lucide-react";
 import { WishlistEmptyState } from "@/components/wishlist/WishlistEmptyState";
+import { GoalPredictionCard } from "@/components/wishlist/goal-prediction-card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -33,7 +34,7 @@ export default function WishlistPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: wishlist = [], isLoading } = useQuery<WishlistItem[]>({
+  const { data: wishlist = [], isLoading } = useQuery<WishlistItemWithPrediction[]>({
     queryKey: ["/api/wishlist"],
   });
 
@@ -177,10 +178,14 @@ export default function WishlistPage() {
                     </p>
                   )}
                 </div>
+
+                {/* AI Goal Prediction */}
+                <GoalPredictionCard prediction={item.prediction} amount={item.amount} />
+
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full"
+                  className="w-full mt-3"
                   onClick={() => deleteMutation.mutate(item.id)}
                   data-testid={`button-delete-wishlist-${item.id}`}
                 >
