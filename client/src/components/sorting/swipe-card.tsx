@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { format, parseISO } from "date-fns";
-import { motion } from "framer-motion";
+import { motion, useAnimation } from "framer-motion";
 import { Calendar, DollarSign } from "lucide-react";
 import { AISuggestionBox } from "./ai-suggestion-box";
 import { useAuth } from "@/hooks/use-auth";
@@ -30,15 +30,13 @@ export function SwipeCard({
   onClassificationChange,
 }: SwipeCardProps) {
   const { user } = useAuth();
+  const controls = useAnimation();
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(transaction.categoryId || null);
   const [selectedTagId, setSelectedTagId] = useState<number | null>(transaction.personalTagId || null);
-  const [exitX, setExitX] = useState(0);
-  const [exitY, setExitY] = useState(0);
 
   useEffect(() => {
-    setExitX(0);
-    setExitY(0);
-  }, [transaction.id]);
+    controls.set({ x: 0, y: 0 });
+  }, [transaction.id, controls]);
 
   const { data: prediction } = useQuery<AIPrediction>({
     queryKey: ['/api/ai/predict', transaction.id],
@@ -65,28 +63,33 @@ export function SwipeCard({
   const category = categories.find(c => c.id === selectedCategoryId);
   const tag = tags.find(t => t.id === selectedTagId);
 
-  const handleDragEnd = (event: any, info: any) => {
+  const handleDragEnd = async (event: any, info: any) => {
     const { offset } = info;
     const swipeX = Math.abs(offset.x);
     const swipeY = Math.abs(offset.y);
     
     if (swipeX > 150 || swipeY > 150) {
-      setExitX(offset.x * 2);
-      setExitY(offset.y * 2);
+      await controls.start({ 
+        x: offset.x * 2, 
+        y: offset.y * 2,
+        transition: { type: "spring", stiffness: 300, damping: 30 }
+      });
+      onDragEnd?.(event, info);
     } else {
-      setExitX(0);
-      setExitY(0);
+      await controls.start({ 
+        x: 0, 
+        y: 0,
+        transition: { type: "spring", stiffness: 300, damping: 30 }
+      });
     }
-    
-    onDragEnd?.(event, info);
   };
 
   return (
     <motion.div
       drag
       dragElastic={0.7}
-      animate={{ x: exitX, y: exitY }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      dragMomentum={false}
+      animate={controls}
       onDragEnd={handleDragEnd}
       whileTap={{ cursor: 'grabbing' }}
       className="absolute inset-0"
