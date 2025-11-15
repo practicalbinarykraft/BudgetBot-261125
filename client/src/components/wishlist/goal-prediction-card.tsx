@@ -22,6 +22,8 @@ export function GoalPredictionCard({ prediction, amount }: GoalPredictionCardPro
   const { canAfford, freeCapital, monthsToAfford, affordableDate } = prediction;
 
   if (canAfford) {
+    const isValidCapital = !isNaN(freeCapital) && isFinite(freeCapital);
+    
     return (
       <div className="mt-3 p-3 bg-[hsl(var(--accent)/0.5)] border border-[color:var(--accent-border)] rounded-md">
         <div className="flex items-center gap-2 mb-2">
@@ -30,13 +32,15 @@ export function GoalPredictionCard({ prediction, amount }: GoalPredictionCardPro
             Can Afford Now
           </Badge>
         </div>
-        <div className="flex items-center gap-2 text-sm">
-          <DollarSign className="h-3 w-3 text-muted-foreground" />
-          <span className="text-muted-foreground">Free capital:</span>
-          <span className="font-mono font-medium" data-testid="text-free-capital">
-            ${freeCapital.toFixed(2)}
-          </span>
-        </div>
+        {isValidCapital && (
+          <div className="flex items-center gap-2 text-sm">
+            <DollarSign className="h-3 w-3 text-muted-foreground" />
+            <span className="text-muted-foreground">Free capital:</span>
+            <span className="font-mono font-medium" data-testid="text-free-capital">
+              ${freeCapital.toFixed(2)}
+            </span>
+          </div>
+        )}
       </div>
     );
   }
@@ -44,6 +48,8 @@ export function GoalPredictionCard({ prediction, amount }: GoalPredictionCardPro
   if (monthsToAfford === null || !affordableDate) {
     const amountNum = typeof amount === 'string' ? parseFloat(amount) : amount;
     const deficit = amountNum - freeCapital;
+    const isValidDeficit = !isNaN(deficit) && isFinite(deficit);
+    
     return (
       <div className="mt-3 p-3 bg-[hsl(var(--destructive)/0.1)] border border-[color:hsl(var(--destructive)/0.2)] rounded-md">
         <div className="flex items-center gap-2 mb-2">
@@ -55,17 +61,21 @@ export function GoalPredictionCard({ prediction, amount }: GoalPredictionCardPro
         <p className="text-sm text-muted-foreground">
           Current income doesn't cover expenses + this goal
         </p>
-        <div className="flex items-center gap-2 text-sm mt-2">
-          <DollarSign className="h-3 w-3 text-muted-foreground" />
-          <span className="text-muted-foreground">Shortage:</span>
-          <span className="font-mono font-medium text-[color:hsl(var(--destructive))]" data-testid="text-shortage">
-            ${deficit.toFixed(2)}
-          </span>
-        </div>
+        {isValidDeficit && (
+          <div className="flex items-center gap-2 text-sm mt-2">
+            <DollarSign className="h-3 w-3 text-muted-foreground" />
+            <span className="text-muted-foreground">Shortage:</span>
+            <span className="font-mono font-medium text-[color:hsl(var(--destructive))]" data-testid="text-shortage">
+              ${deficit.toFixed(2)}
+            </span>
+          </div>
+        )}
       </div>
     );
   }
 
+  const isValidCapital = !isNaN(freeCapital) && isFinite(freeCapital);
+  
   return (
     <div className="mt-3 p-3 bg-[hsl(var(--primary)/0.1)] border border-[color:hsl(var(--primary)/0.2)] rounded-md">
       <div className="flex items-center gap-2 mb-2">
@@ -87,13 +97,15 @@ export function GoalPredictionCard({ prediction, amount }: GoalPredictionCardPro
             {format(parseISO(affordableDate), 'MMM dd, yyyy')}
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <DollarSign className="h-3 w-3 text-muted-foreground" />
-          <span className="text-muted-foreground">Free capital:</span>
-          <span className="font-mono font-medium" data-testid="text-free-capital">
-            ${freeCapital.toFixed(2)}
-          </span>
-        </div>
+        {isValidCapital && (
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-3 w-3 text-muted-foreground" />
+            <span className="text-muted-foreground">Free capital:</span>
+            <span className="font-mono font-medium" data-testid="text-free-capital">
+              ${freeCapital.toFixed(2)}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
