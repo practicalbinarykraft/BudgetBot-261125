@@ -17,6 +17,7 @@ import { BudgetMissingCategoryCard } from "@/components/budgets/BudgetMissingCat
 import { BudgetCard } from "@/components/budgets/BudgetCard";
 import { BudgetFormDialog } from "@/components/budgets/BudgetFormDialog";
 import { BudgetEmptyState } from "@/components/budgets/BudgetEmptyState";
+import { LimitsProgress } from "@/components/budget/limits-progress";
 
 type FormData = z.infer<typeof insertBudgetSchema>;
 
@@ -196,6 +197,14 @@ export default function BudgetsPage() {
             {exceededBudgets.length} {exceededBudgets.length === 1 ? "budget has" : "budgets have"} exceeded their limit
           </AlertDescription>
         </Alert>
+      )}
+
+      {/* Limits Progress Section */}
+      {budgets.length > 0 && (
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold">Budget Progress</h2>
+          <LimitsProgress />
+        </div>
       )}
 
       {budgets.length === 0 ? (
