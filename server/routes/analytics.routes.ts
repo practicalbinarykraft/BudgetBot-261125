@@ -6,6 +6,8 @@ import { getCategoryBreakdown } from "../services/analytics/category-breakdown.s
 import { getPersonBreakdown } from "../services/analytics/person-breakdown.service";
 import { getTypeBreakdown } from "../services/analytics/type-breakdown.service";
 import { getUnsortedTransactions } from "../services/analytics/unsorted-filter.service";
+import { getMonthlyStats, getTotalBudgetLimits } from "../services/budget-stats.service";
+import { predictGoalWithStats } from "../services/goal-predictor.service";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, format, addYears } from "date-fns";
 
 const router = Router();
@@ -39,10 +41,11 @@ function getPeriodDates(period: string = 'month'): { startDate: string; endDate:
 
 /**
  * GET /api/analytics/trend
- * Returns financial trend data (historical + forecast)
+ * Returns financial trend data (historical + forecast) + wishlist goals
  * 
- * Для джуна: Это роут - тонкий слой между клиентом и сервисом
- * Только валидация параметров и вызов сервиса
+ * Response includes:
+ * - trendData: array of data points (income, expense, capital over time)
+ * - goals: wishlist items with affordability predictions for timeline markers
  * 
  * Query params:
  * - historyDays: number of historical days (default: 30)
@@ -60,7 +63,7 @@ router.get("/trend", withAuth(async (req, res) => {
     const settings = await storage.getSettingsByUserId(userId);
     const anthropicApiKey = settings?.anthropicApiKey || undefined;
 
-    // ШАГ 3: Вызвать сервис для расчёта (ВСЯ логика там!)
+    // ШАГ 3: Вызвать сервис для расчёта тренда
     const trendData = await calculateTrend({
       userId,
       historyDays,
@@ -68,8 +71,37 @@ router.get("/trend", withAuth(async (req, res) => {
       anthropicApiKey,
     });
 
-    // ШАГ 4: Вернуть результат
-    res.json(trendData);
+    // ШАГ 4: Получить wishlist goals с предсказаниями для timeline markers
+    const wishlist = await storage.getWishlistByUserId(userId);
+    const stats = await getMonthlyStats(userId);
+    const budgetLimits = await getTotalBudgetLimits(userId);
+    
+    // Добавить AI predictions к каждой цели
+    const goals = wishlist
+      .filter(item => !item.isPurchased) // Только непокупленные
+      .map((item) => {
+        const amount = parseFloat(item.amount);
+        
+        if (isNaN(amount) || amount <= 0) {
+          return {
+            ...item,
+            prediction: null,
+          };
+        }
+        
+        const prediction = predictGoalWithStats(amount, stats, budgetLimits);
+        return {
+          ...item,
+          prediction,
+        };
+      })
+      .filter(item => item.prediction?.monthsToAfford !== null); // Только доступные цели
+
+    // ШАГ 5: Вернуть тренд + цели
+    res.json({
+      trendData,
+      goals,
+    });
   } catch (error: any) {
     console.error("Trend data error:", error);
     res.status(500).json({ error: error.message });

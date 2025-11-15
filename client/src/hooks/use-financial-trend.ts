@@ -9,13 +9,29 @@ export interface TrendDataPoint {
   isForecast: boolean;
 }
 
+export interface GoalMarker {
+  id: number;
+  name: string;
+  amount: string;
+  priority: string;
+  prediction: {
+    monthsToAfford: number | null;
+    affordableDate: string | null;
+  } | null;
+}
+
+export interface TrendWithGoals {
+  trendData: TrendDataPoint[];
+  goals: GoalMarker[];
+}
+
 interface UseFinancialTrendOptions {
   historyDays?: number;
   forecastDays?: number;
 }
 
 /**
- * Hook to fetch financial trend data (historical + forecast)
+ * Hook to fetch financial trend data (historical + forecast) + goal markers
  * 
  * @param historyDays Number of historical days to fetch (default: 30)
  * @param forecastDays Number of forecast days to generate (default: 365)
@@ -24,7 +40,7 @@ export function useFinancialTrend({
   historyDays = 30,
   forecastDays = 365,
 }: UseFinancialTrendOptions = {}) {
-  return useQuery<TrendDataPoint[]>({
+  return useQuery<TrendWithGoals>({
     queryKey: ["/api/analytics/trend", historyDays, forecastDays],
     queryFn: async () => {
       const params = new URLSearchParams({

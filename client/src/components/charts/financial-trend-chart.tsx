@@ -1,11 +1,14 @@
 import { useState } from "react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceDot } from "recharts";
 import { useFinancialTrend } from "@/hooks/use-financial-trend";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { GoalTimelineMarker } from "@/components/budget/goal-timeline-marker";
+import { GoalTimelineTooltip } from "@/components/budget/goal-timeline-tooltip";
+import { useLocation } from "wouter";
 
 const COLORS = {
   income: "hsl(142, 76%, 36%)", // Green
@@ -53,16 +56,22 @@ function formatChartDate(dateStr: string): string {
 
 /**
  * Financial Trend Chart
- * Shows income, expenses, and capital over time with AI forecast
+ * Shows income, expenses, and capital over time with AI forecast + goal markers
  */
 export function FinancialTrendChart() {
   const [historyDays, setHistoryDays] = useState(30);
   const [forecastDays, setForecastDays] = useState(365);
+  const [hoveredGoal, setHoveredGoal] = useState<number | null>(null);
+  const [, setLocation] = useLocation();
 
-  const { data = [], isLoading, error } = useFinancialTrend({
+  const { data, isLoading, error } = useFinancialTrend({
     historyDays,
     forecastDays,
   });
+
+  // Destructure trend data and goals
+  const trendData = data?.trendData || [];
+  const goals = data?.goals || [];
 
   if (isLoading) {
     return (
@@ -93,7 +102,7 @@ export function FinancialTrendChart() {
     );
   }
 
-  if (data.length === 0) {
+  if (trendData.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -110,12 +119,12 @@ export function FinancialTrendChart() {
   }
 
   // Find "today" index for vertical line
-  const todayIndex = data.findIndex(d => d.isToday);
-  const todayDate = todayIndex !== -1 ? data[todayIndex].date : null;
+  const todayIndex = trendData.findIndex(d => d.isToday);
+  const todayDate = todayIndex !== -1 ? trendData[todayIndex].date : null;
 
   // Split data into historical and forecast
-  const historicalData = data.filter(d => !d.isForecast);
-  const forecastData = data.filter(d => d.isForecast);
+  const historicalData = trendData.filter(d => !d.isForecast);
+  const forecastData = trendData.filter(d => d.isForecast);
 
   // For seamless connection, add last historical point to forecast
   const lastHistorical = historicalData[historicalData.length - 1];
@@ -216,7 +225,7 @@ export function FinancialTrendChart() {
 
               {/* 🟢 Income Line */}
               <Line
-                data={data}
+                data={trendData}
                 dataKey="income"
                 stroke={COLORS.income}
                 strokeWidth={2}
@@ -227,7 +236,7 @@ export function FinancialTrendChart() {
 
               {/* 🔴 Expense Line */}
               <Line
-                data={data}
+                data={trendData}
                 dataKey="expense"
                 stroke={COLORS.expense}
                 strokeWidth={2}
@@ -260,9 +269,71 @@ export function FinancialTrendChart() {
                   connectNulls
                 />
               )}
+
+              {/* 🎯 Goal Markers on Timeline */}
+              {goals.map((goal) => {
+                if (!goal.prediction?.affordableDate) return null;
+                
+                // Flexible date matching (affordableDate may be YYYY-MM-DD or YYYY-MM)
+                const targetDate = goal.prediction.affordableDate;
+                const datePoint = trendData.find(d => 
+                  d.date === targetDate || d.date.startsWith(targetDate)
+                );
+                
+                if (!datePoint) {
+                  console.warn(`Goal "${goal.name}" affordableDate ${targetDate} not found in trend data`);
+                  return null;
+                }
+                
+                // Handle null/undefined capital - use last known capital value
+                let yValue = datePoint.capital;
+                if (yValue == null || yValue === 0) {
+                  // Find last non-null capital value from earlier dates
+                  const index = trendData.findIndex(d => d.date === datePoint.date);
+                  for (let i = index - 1; i >= 0; i--) {
+                    if (trendData[i].capital != null && trendData[i].capital !== 0) {
+                      yValue = trendData[i].capital;
+                      break;
+                    }
+                  }
+                  // If still no value, use 0 as minimum baseline
+                  if (yValue == null) yValue = 0;
+                }
+                
+                return (
+                  <ReferenceDot
+                    key={goal.id}
+                    x={datePoint.date}
+                    y={yValue}
+                    shape={(props) => (
+                      <g
+                        onMouseEnter={() => setHoveredGoal(goal.id)}
+                        onMouseLeave={() => setHoveredGoal(null)}
+                      >
+                        <GoalTimelineMarker
+                          {...props}
+                          priority={goal.priority}
+                          onClick={() => setLocation("/wishlist")}
+                        />
+                      </g>
+                    )}
+                  />
+                );
+              })}
             </LineChart>
           </ResponsiveContainer>
         </div>
+
+        {/* HTML Tooltip Overlay (Safari compatible) */}
+        {hoveredGoal !== null && (
+          <div className="fixed z-50" style={{ pointerEvents: "none" }}>
+            {goals.filter(g => g.id === hoveredGoal).map((goal) => (
+              <div key={goal.id} className="mt-2">
+                <GoalTimelineTooltip goal={goal} />
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Legend */}
         <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
@@ -282,6 +353,12 @@ export function FinancialTrendChart() {
             <div className="flex items-center gap-2">
               <div className="w-8 h-0.5 border-t-2 border-dashed" style={{ borderColor: COLORS.forecast }} />
               <span>Capital (Forecast)</span>
+            </div>
+          )}
+          {goals.length > 0 && (
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              <span>Goal Markers (click to view wishlist)</span>
             </div>
           )}
         </div>
