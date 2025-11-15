@@ -98,6 +98,23 @@ export const wishlist = pgTable("wishlist", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Planned Transactions table
+export const plannedTransactions = pgTable("planned_transactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  category: text("category"),
+  targetDate: date("target_date").notNull(),
+  source: text("source").default("manual"), // 'manual' | 'wishlist'
+  wishlistId: integer("wishlist_id").references(() => wishlist.id, { onDelete: "set null" }),
+  status: text("status").default("planned"), // 'planned' | 'purchased' | 'cancelled'
+  purchasedAt: timestamp("purchased_at"),
+  transactionId: integer("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Settings table
 export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
@@ -394,6 +411,18 @@ export const insertWishlistSchema = createInsertSchema(wishlist, {
   priority: z.enum(["low", "medium", "high"]),
 }).omit({ id: true, createdAt: true });
 
+export const insertPlannedTransactionSchema = createInsertSchema(plannedTransactions, {
+  amount: z.string().regex(/^\d+(\.\d{1,2})?$/),
+  targetDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
+  source: z.enum(["manual", "wishlist"]).optional(),
+  status: z.enum(["planned", "purchased", "cancelled"]).optional(),
+}).omit({ 
+  id: true, 
+  userId: true,
+  createdAt: true,
+  updatedAt: true 
+});
+
 const VALID_TIMEZONES = [
   "UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
   "America/Phoenix", "America/Toronto", "America/Mexico_City", "America/Sao_Paulo",
@@ -501,6 +530,9 @@ export type Recurring = typeof recurring.$inferSelect;
 
 export type InsertWishlist = z.infer<typeof insertWishlistSchema>;
 export type WishlistItem = typeof wishlist.$inferSelect;
+
+export type InsertPlannedTransaction = z.infer<typeof insertPlannedTransactionSchema>;
+export type PlannedTransaction = typeof plannedTransactions.$inferSelect;
 
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;
