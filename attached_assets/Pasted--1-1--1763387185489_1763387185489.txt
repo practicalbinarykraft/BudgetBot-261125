@@ -1,0 +1,1820 @@
+# 🎯 ПОШАГОВЫЙ ПЛАН (МАЛЕНЬКИЕ ЗАДАЧИ)
+
+-----
+
+## 📋 СТРУКТУРА СПРИНТА
+
+```
+СПРИНТ 1: ПОДГОТОВКА (1 час)
+├─ Задача 1.1: Cleanup UI (15 мин)
+├─ Задача 1.2: База данных (30 мин)
+└─ Задача 1.3: Тестирование миграции (15 мин)
+
+СПРИНТ 2: RECEIPT ITEMS (3 часа)
+├─ Задача 2.1: Repository (30 мин)
+├─ Задача 2.2: OCR Parser (1 час)
+├─ Задача 2.3: API Endpoint (30 мин)
+└─ Задача 2.4: UI Integration (1 час)
+
+СПРИНТ 3: PRICE COMPARISON (2.5 часа)
+├─ Задача 3.1: Service (1 час)
+├─ Задача 3.2: UI Component (1 час)
+└─ Задача 3.3: Integration (30 мин)
+
+СПРИНТ 4: AI CHAT (4 часа)
+├─ Задача 4.1: Chat Service (1 час)
+├─ Задача 4.2: Context Builder (1 час)
+├─ Задача 4.3: UI Component (1.5 часа)
+└─ Задача 4.4: Integration (30 мин)
+
+СПРИНТ 5: POLISH (1.5 часа)
+├─ Задача 5.1: Error Handling (30 мин)
+├─ Задача 5.2: Loading States (30 мин)
+└─ Задача 5.3: E2E Testing (30 мин)
+
+ИТОГО: 12 часов, 17 задач
+```
+
+-----
+
+## 🚀 СПРИНТ 1: ПОДГОТОВКА
+
+### **ЗАДАЧА 1.1: CLEANUP UI (15 минут)**
+
+```
+ЦЕЛЬ: Убрать лишнюю вкладку, оставить одну AI Analysis
+
+ЧТО ДЕЛАТЬ:
+1. Открыть client/src/components/layout/app-sidebar.tsx
+2. Найти строки 80-88 (AI Training, AI Analysis)
+3. УДАЛИТЬ блок с AI Training
+4. Оставить только AI Analysis
+
+КОД (УДАЛИТЬ):
+{
+  title: "AI Training",
+  icon: Brain,
+  url: "/ai-training/history"
+}
+
+ПРОВЕРКА:
+└─ В sidebar только "AI Analysis" ✅
+└─ Клик работает → /ai-analysis ✅
+
+ФАЙЛЫ:
+└─ app-sidebar.tsx (1 файл, -5 строк)
+
+БЕЗОПАСНОСТЬ:
+✅ Не трогаем логику, только UI
+✅ Страница /ai-training остаётся (можно зайти по ссылке)
+```
+
+-----
+
+### **ЗАДАЧА 1.2: БАЗА ДАННЫХ (30 минут)**
+
+```
+ЦЕЛЬ: Создать 2 новые таблицы
+
+ЧТО ДЕЛАТЬ:
+1. Открыть shared/schema.ts
+2. В КОНЦЕ файла добавить:
+
+// ========== RECEIPT ITEMS ==========
+export const receiptItems = pgTable("receipt_items", {
+  id: serial("id").primaryKey(),
+  transactionId: integer("transaction_id")
+    .references(() => dailyTransactions.id, { onDelete: "cascade" })
+    .notNull(),
+  
+  // Товар
+  itemName: text("item_name").notNull(),
+  normalizedName: text("normalized_name"), // "orange juice"
+  quantity: decimal("quantity", { precision: 10, scale: 2 }),
+  unit: text("unit"), // 'pcs', 'kg', 'L'
+  
+  // Цена
+  pricePerUnit: decimal("price_per_unit", { precision: 10, scale: 2 }).notNull(),
+  totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").default("IDR"),
+  
+  // Метаданные
+  merchantName: text("merchant_name"),
+  category: text("category"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertReceiptItemSchema = createInsertSchema(receiptItems);
+export const selectReceiptItemSchema = createSelectSchema(receiptItems);
+
+export type InsertReceiptItem = z.infer<typeof insertReceiptItemSchema>;
+export type ReceiptItem = z.infer<typeof selectReceiptItemSchema>;
+
+// ========== AI CHAT MESSAGES ==========
+export const aiChatMessages = pgTable("ai_chat_messages", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  
+  role: text("role").notNull(), // 'user' | 'assistant'
+  content: text("content").notNull(),
+  
+  // Контекст
+  contextType: text("context_type"),
+  contextData: text("context_data"), // JSON string
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertAiChatMessageSchema = createInsertSchema(aiChatMessages);
+export const selectAiChatMessageSchema = createSelectSchema(aiChatMessages);
+
+export type InsertAiChatMessage = z.infer<typeof insertAiChatMessageSchema>;
+export type AiChatMessage = z.infer<typeof selectAiChatMessageSchema>;
+
+3. Сохранить файл
+
+ФАЙЛЫ:
+└─ shared/schema.ts (+60 строк в конце файла)
+
+БЕЗОПАСНОСТЬ:
+✅ Добавляем в КОНЕЦ, не трогаем существующие таблицы
+✅ Используем существующие паттерны (pgTable, serial, etc)
+```
+
+-----
+
+### **ЗАДАЧА 1.3: МИГРАЦИЯ БД (15 минут)**
+
+```
+ЦЕЛЬ: Применить изменения к базе данных
+
+ЧТО ДЕЛАТЬ:
+1. Терминал: npm run db:push
+2. Проверить нет ли ошибок
+3. Если спросит про data loss → подтвердить (новые таблицы, данных нет)
+
+ПРОВЕРКА:
+└─ Команда завершилась успешно ✅
+└─ В логах: "✓ Schema pushed to database" ✅
+
+БЕЗОПАСНОСТЬ:
+✅ Новые таблицы, не затрагивают старые
+✅ Можно откатить (просто удалить таблицы)
+```
+
+-----
+
+## 🛒 СПРИНТ 2: RECEIPT ITEMS
+
+### **ЗАДАЧА 2.1: REPOSITORY (30 минут)**
+
+```
+ЦЕЛЬ: Создать репозиторий для receipt_items
+
+ЧТО ДЕЛАТЬ:
+Создать файл: server/repositories/receipt-items.repository.ts
+
+КОД:
+import { BaseRepository } from './base.repository';
+import { db } from '../db';
+import { receiptItems, type InsertReceiptItem, type ReceiptItem } from '@shared/schema';
+import { eq, and } from 'drizzle-orm';
+
+/**
+ * Repository для работы с товарами из чеков
+ * Ответственность: CRUD операции, поиск похожих товаров
+ */
+export class ReceiptItemsRepository extends BaseRepository<
+  typeof receiptItems,
+  ReceiptItem,
+  InsertReceiptItem,
+  Partial<InsertReceiptItem>
+> {
+  protected getTable() {
+    return receiptItems;
+  }
+  
+  protected getRepositoryName() {
+    return 'ReceiptItemsRepository';
+  }
+  
+  /**
+   * Создать несколько товаров за раз
+   */
+  async createBulk(items: InsertReceiptItem[]) {
+    return await this.db
+      .insert(receiptItems)
+      .values(items)
+      .returning();
+  }
+  
+  /**
+   * Найти все товары транзакции
+   */
+  async findByTransaction(transactionId: number) {
+    return await this.findMany({
+      where: eq(receiptItems.transactionId, transactionId)
+    });
+  }
+  
+  /**
+   * Найти все покупки похожего товара пользователем
+   * (для сравнения цен между магазинами)
+   */
+  async findSimilarItems(normalizedName: string, userId: number) {
+    const items = await this.db
+      .select()
+      .from(receiptItems)
+      .innerJoin(
+        dailyTransactions,
+        eq(receiptItems.transactionId, dailyTransactions.id)
+      )
+      .where(
+        and(
+          eq(receiptItems.normalizedName, normalizedName),
+          eq(dailyTransactions.userId, userId)
+        )
+      );
+    
+    return items.map(item => item.receipt_items);
+  }
+}
+
+// Экспорт singleton
+export const receiptItemsRepository = new ReceiptItemsRepository(db);
+
+РАЗМЕР: ~90 строк ✅
+
+ФАЙЛЫ:
+└─ server/repositories/receipt-items.repository.ts (новый)
+
+БЕЗОПАСНОСТЬ:
+✅ Extends BaseRepository (используем существующий паттерн)
+✅ Не трогаем другие файлы
+```
+
+-----
+
+### **ЗАДАЧА 2.2: OCR PARSER (1 час)**
+
+```
+ЦЕЛЬ: Парсить товары из чека через Claude API
+
+ЧТО ДЕЛАТЬ:
+Создать файл: server/services/ocr/receipt-parser.service.ts
+
+КОД:
+import Anthropic from '@anthropic-ai/sdk';
+
+/**
+ * Сервис для парсинга чеков с извлечением списка товаров
+ * Ответственность: OCR + парсинг структурированных данных
+ */
+
+interface ParsedReceiptItem {
+  name: string;
+  normalizedName: string;
+  quantity: number;
+  pricePerUnit: number;
+  totalPrice: number;
+}
+
+interface ParsedReceipt {
+  total: number;
+  merchant: string;
+  date: string;
+  items: ParsedReceiptItem[];
+}
+
+/**
+ * Нормализовать название товара для сравнения
+ */
+function normalizeItemName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[0-9]+\s*(ml|l|kg|g|pcs|шт)/gi, '') // убрать размеры
+    .replace(/[^a-zа-яё\s]/g, '') // только буквы
+    .trim();
+}
+
+/**
+ * Парсить чек с извлечением товаров
+ */
+export async function parseReceiptWithItems(
+  imageBase64: string,
+  apiKey: string
+): Promise<ParsedReceipt> {
+  
+  const anthropic = new Anthropic({ apiKey });
+  
+  const prompt = `
+    Parse this receipt image and extract:
+    1. Total amount (number)
+    2. Merchant/store name (string)
+    3. Date (YYYY-MM-DD format)
+    4. List of purchased items with:
+       - Item name (string)
+       - Quantity (number, default 1 if not specified)
+       - Price per unit (number)
+       - Total price for this item (number)
+    
+    Return ONLY valid JSON in this exact format:
+    {
+      "total": 180000,
+      "merchant": "Moris Grocier",
+      "date": "2025-11-17",
+      "items": [
+        {
+          "name": "Orange Juice 1L",
+          "quantity": 2,
+          "pricePerUnit": 32000,
+          "totalPrice": 64000
+        }
+      ]
+    }
+    
+    Rules:
+    - All prices in original currency (IDR, USD, RUB, etc)
+    - If quantity not specified, use 1
+    - pricePerUnit = totalPrice / quantity
+    - Return ONLY JSON, no explanations
+  `;
+  
+  const response = await anthropic.messages.create({
+    model: "claude-3-5-sonnet-20241022",
+    max_tokens: 2000,
+    messages: [{
+      role: "user",
+      content: [
+        {
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: "image/jpeg",
+            data: imageBase64
+          }
+        },
+        {
+          type: "text",
+          text: prompt
+        }
+      ]
+    }]
+  });
+  
+  // Парсить JSON из ответа
+  const text = response.content[0].type === 'text' 
+    ? response.content[0].text 
+    : '';
+  
+  const parsed: ParsedReceipt = JSON.parse(text);
+  
+  // Нормализовать названия товаров
+  parsed.items = parsed.items.map(item => ({
+    ...item,
+    normalizedName: normalizeItemName(item.name)
+  }));
+  
+  return parsed;
+}
+
+РАЗМЕР: ~120 строк ✅
+
+ФАЙЛЫ:
+└─ server/services/ocr/receipt-parser.service.ts (новый)
+
+БЕЗОПАСНОСТЬ:
+✅ Изолированный сервис
+✅ Не трогает существующий код
+✅ Try-catch будет добавлен в endpoint
+```
+
+-----
+
+### **ЗАДАЧА 2.3: API ENDPOINT (30 минут)**
+
+```
+ЦЕЛЬ: Создать endpoint для загрузки чека с парсингом товаров
+
+ЧТО ДЕЛАТЬ:
+Обновить файл: server/routes/ai.routes.ts
+
+ДОБАВИТЬ В КОНЕЦ (перед export default router):
+
+// ========== RECEIPT WITH ITEMS ==========
+
+/**
+ * POST /api/ai/receipt-with-items
+ * Парсить чек и сохранить товары
+ */
+router.post('/receipt-with-items', requireAuth, async (req, res) => {
+  try {
+    const { imageBase64, transactionId } = req.body;
+    const userId = req.user!.id;
+    
+    // Валидация
+    if (!imageBase64) {
+      return res.status(400).json({ 
+        error: 'imageBase64 is required' 
+      });
+    }
+    
+    // Получить API ключ юзера
+    const apiKey = await getUserApiKey(userId, 'anthropic');
+    if (!apiKey) {
+      return res.status(400).json({
+        error: 'Anthropic API key not configured. Please add it in Settings.'
+      });
+    }
+    
+    // Парсить чек
+    const parsed = await parseReceiptWithItems(imageBase64, apiKey);
+    
+    // Если transactionId указан - привязать товары к транзакции
+    if (transactionId) {
+      const items = parsed.items.map(item => ({
+        transactionId,
+        itemName: item.name,
+        normalizedName: item.normalizedName,
+        quantity: item.quantity.toString(),
+        pricePerUnit: item.pricePerUnit.toString(),
+        totalPrice: item.totalPrice.toString(),
+        merchantName: parsed.merchant
+      }));
+      
+      await receiptItemsRepository.createBulk(items);
+    }
+    
+    res.json({
+      success: true,
+      receipt: parsed,
+      itemsCount: parsed.items.length
+    });
+    
+  } catch (error) {
+    console.error('Receipt parsing error:', error);
+    res.status(500).json({
+      error: 'Failed to parse receipt',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+РАЗМЕР: +60 строк
+
+ФАЙЛЫ:
+└─ server/routes/ai.routes.ts (обновить)
+
+ИМПОРТЫ (добавить в начало файла):
+import { parseReceiptWithItems } from '../services/ocr/receipt-parser.service';
+import { receiptItemsRepository } from '../repositories/receipt-items.repository';
+
+БЕЗОПАСНОСТЬ:
+✅ Добавляем В КОНЕЦ файла
+✅ Try-catch обработка ошибок
+✅ Валидация входных данных
+```
+
+-----
+
+### **ЗАДАЧА 2.4: UI INTEGRATION (1 час)**
+
+```
+ЦЕЛЬ: Добавить кнопку "Scan Receipt" в AI Analysis
+
+ЧТО ДЕЛАТЬ:
+Обновить файл: client/src/pages/ai-analysis-page.tsx
+
+НАЙТИ блок "Receipt OCR Scanner" (~строка 150):
+<Card>
+  <CardHeader>
+    <CardTitle>Receipt OCR Scanner</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <Button disabled>
+      Scan Receipt (Coming Soon)
+    </Button>
+  </CardContent>
+</Card>
+
+ЗАМЕНИТЬ НА:
+<Card>
+  <CardHeader>
+    <CardTitle className="flex items-center gap-2">
+      <Camera className="h-5 w-5" />
+      Receipt OCR Scanner
+    </CardTitle>
+    <CardDescription>
+      Upload a receipt to automatically extract items and prices
+    </CardDescription>
+  </CardHeader>
+  <CardContent>
+    <div className="space-y-4">
+      <Input
+        type="file"
+        accept="image/*"
+        onChange={handleReceiptUpload}
+        ref={fileInputRef}
+        className="hidden"
+      />
+      
+      <Button 
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploadMutation.isPending}
+      >
+        {uploadMutation.isPending ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Scanning...
+          </>
+        ) : (
+          <>
+            <Camera className="mr-2 h-4 w-4" />
+            Upload Receipt
+          </>
+        )}
+      </Button>
+      
+      {uploadResult && (
+        <div className="mt-4 p-4 bg-green-50 rounded-lg">
+          <p className="text-sm font-medium text-green-900">
+            ✓ Receipt scanned successfully!
+          </p>
+          <p className="text-xs text-green-700 mt-1">
+            Found {uploadResult.itemsCount} items from {uploadResult.receipt.merchant}
+          </p>
+        </div>
+      )}
+    </div>
+  </CardContent>
+</Card>
+
+ДОБАВИТЬ В НАЧАЛО КОМПОНЕНТА:
+const fileInputRef = useRef<HTMLInputElement>(null);
+const [uploadResult, setUploadResult] = useState<any>(null);
+
+const uploadMutation = useMutation({
+  mutationFn: async (file: File) => {
+    // Конвертировать в base64
+    const base64 = await fileToBase64(file);
+    
+    // Отправить на сервер
+    const response = await fetch('/api/ai/receipt-with-items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64: base64 })
+    });
+    
+    if (!response.ok) throw new Error('Failed to parse receipt');
+    return response.json();
+  },
+  onSuccess: (data) => {
+    setUploadResult(data);
+    toast.success(`Scanned ${data.itemsCount} items!`);
+  },
+  onError: (error) => {
+    toast.error('Failed to scan receipt');
+  }
+});
+
+const handleReceiptUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (file) uploadMutation.mutate(file);
+};
+
+// Helper
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      resolve(base64.split(',')[1]); // убрать "data:image/jpeg;base64,"
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+ИМПОРТЫ (добавить):
+import { Camera, Loader2 } from 'lucide-react';
+import { useRef, useState } from 'react';
+
+ФАЙЛЫ:
+└─ client/src/pages/ai-analysis-page.tsx (обновить)
+
+РАЗМЕР: +80 строк
+
+БЕЗОПАСНОСТЬ:
+✅ Заменяем только один блок
+✅ Не трогаем другие части страницы
+```
+
+-----
+
+## 💰 СПРИНТ 3: PRICE COMPARISON
+
+### **ЗАДАЧА 3.1: SERVICE (1 час)**
+
+```
+ЦЕЛЬ: Создать сервис сравнения цен
+
+ЧТО ДЕЛАТЬ:
+Создать файл: server/services/ai/price-comparison.service.ts
+
+КОД:
+import { db } from '../../db';
+import { receiptItems, dailyTransactions } from '@shared/schema';
+import { eq, and, gte } from 'drizzle-orm';
+
+/**
+ * Сервис для сравнения цен между магазинами
+ * Ответственность: Анализ цен, генерация рекомендаций
+ */
+
+interface PriceRecommendation {
+  itemName: string;
+  normalizedName: string;
+  cheapestMerchant: string;
+  cheapestPrice: number;
+  expensiveMerchant: string;
+  expensivePrice: number;
+  savingsAmount: number;
+  savingsPercent: number;
+  purchaseCount: number;
+  recommendation: string;
+}
+
+/**
+ * Сгруппировать массив по ключу
+ */
+function groupBy<T>(array: T[], keyFn: (item: T) => string): Record<string, T[]> {
+  return array.reduce((result, item) => {
+    const key = keyFn(item);
+    if (!result[key]) result[key] = [];
+    result[key].push(item);
+    return result;
+  }, {} as Record<string, T[]>);
+}
+
+/**
+ * Генерировать рекомендации по ценам
+ */
+export async function generatePriceRecommendations(
+  userId: number,
+  minSavingsPercent: number = 20
+): Promise<PriceRecommendation[]> {
+  
+  // 1. Загрузить все товары за последние 3 месяца
+  const threeMonthsAgo = new Date();
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+  
+  const items = await db
+    .select({
+      itemName: receiptItems.itemName,
+      normalizedName: receiptItems.normalizedName,
+      pricePerUnit: receiptItems.pricePerUnit,
+      merchantName: receiptItems.merchantName
+    })
+    .from(receiptItems)
+    .innerJoin(
+      dailyTransactions,
+      eq(receiptItems.transactionId, dailyTransactions.id)
+    )
+    .where(
+      and(
+        eq(dailyTransactions.userId, userId),
+        gte(dailyTransactions.date, threeMonthsAgo.toISOString().split('T')[0])
+      )
+    );
+  
+  if (items.length === 0) {
+    return [];
+  }
+  
+  // 2. Сгруппировать по normalizedName
+  const grouped = groupBy(items, item => item.normalizedName || '');
+  
+  // 3. Найти товары с разницей цен
+  const recommendations: PriceRecommendation[] = [];
+  
+  for (const [normalizedName, purchases] of Object.entries(grouped)) {
+    if (!normalizedName || purchases.length < 2) continue;
+    
+    // Сортировать по цене
+    const sorted = purchases.sort((a, b) => 
+      parseFloat(a.pricePerUnit) - parseFloat(b.pricePerUnit)
+    );
+    
+    const cheapest = sorted[0];
+    const mostExpensive = sorted[sorted.length - 1];
+    
+    const cheapPrice = parseFloat(cheapest.pricePerUnit);
+    const expPrice = parseFloat(mostExpensive.pricePerUnit);
+    
+    const savingsAmount = expPrice - cheapPrice;
+    const savingsPercent = (savingsAmount / expPrice) * 100;
+    
+    if (savingsPercent >= minSavingsPercent) {
+      recommendations.push({
+        itemName: cheapest.itemName,
+        normalizedName,
+        cheapestMerchant: cheapest.merchantName || 'Unknown',
+        cheapestPrice: cheapPrice,
+        expensiveMerchant: mostExpensive.merchantName || 'Unknown',
+        expensivePrice: expPrice,
+        savingsAmount,
+        savingsPercent,
+        purchaseCount: purchases.length,
+        recommendation: `Buy "${cheapest.itemName}" at ${cheapest.merchantName} (${cheapPrice.toFixed(0)}) instead of ${mostExpensive.merchantName} (${expPrice.toFixed(0)}). Save ${savingsAmount.toFixed(0)} (${savingsPercent.toFixed(0)}%)!`
+      });
+    }
+  }
+  
+  // 4. Сортировать по потенциальной экономии
+  return recommendations.sort((a, b) => b.savingsAmount - a.savingsAmount);
+}
+
+РАЗМЕР: ~150 строк ✅
+
+ФАЙЛЫ:
+└─ server/services/ai/price-comparison.service.ts (новый)
+
+БЕЗОПАСНОСТЬ:
+✅ Изолированный сервис
+✅ Не трогает другие файлы
+✅ Простая математика, нет AI API
+```
+
+-----
+
+### **ЗАДАЧА 3.2: UI COMPONENT (1 час)**
+
+```
+ЦЕЛЬ: Создать компонент списка рекомендаций
+
+ЧТО ДЕЛАТЬ:
+Создать файл: client/src/components/ai/price-recommendations.tsx
+
+КОД:
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { TrendingDown, Store } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+
+/**
+ * Компонент списка рекомендаций по ценам
+ * Показывает где покупать дешевле
+ */
+
+interface PriceRecommendation {
+  itemName: string;
+  cheapestMerchant: string;
+  cheapestPrice: number;
+  expensiveMerchant: string;
+  expensivePrice: number;
+  savingsAmount: number;
+  savingsPercent: number;
+  recommendation: string;
+}
+
+export function PriceRecommendations() {
+  const { data: recommendations, isLoading } = useQuery<PriceRecommendation[]>({
+    queryKey: ['/api/ai/price-recommendations'],
+  });
+  
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <p className="text-sm text-gray-500">Loading recommendations...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  if (!recommendations || recommendations.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingDown className="h-5 w-5" />
+            Price Recommendations
+          </CardTitle>
+          <CardDescription>
+            Upload receipts to get personalized money-saving recommendations
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-500">
+            No recommendations yet. Upload 2+ receipts with the same items from different stores.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <TrendingDown className="h-5 w-5 text-green-600" />
+          Price Recommendations
+        </CardTitle>
+        <CardDescription>
+          Save money by shopping at the right stores
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {recommendations.map((rec, index) => (
+            <div 
+              key={index}
+              className="p-4 border rounded-lg hover:bg-gray-50 transition"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="font-medium text-sm">
+                    {rec.itemName}
+                  </p>
+                  
+                  <div className="mt-2 flex items-center gap-4 text-xs text-gray-600">
+                    <div className="flex items-center gap-1">
+                      <Store className="h-3 w-3 text-green-600" />
+                      <span className="font-medium text-green-700">
+                        {rec.cheapestMerchant}
+                      </span>
+                      <span>${rec.cheapestPrice.toFixed(2)}</span>
+                    </div>
+                    
+                    <span className="text-gray-400">vs</span>
+                    
+                    <div className="flex items-center gap-1">
+                      <Store className="h-3 w-3 text-red-600" />
+                      <span className="font-medium text-red-700">
+                        {rec.expensiveMerchant}
+                      </span>
+                      <span>${rec.expensivePrice.toFixed(2)}</span>
+                    </div>
+                  </div>
+                  
+                  <p className="mt-2 text-xs text-gray-700">
+                    {rec.recommendation}
+                  </p>
+                </div>
+                
+                <Badge variant="secondary" className="ml-4">
+                  Save ${rec.savingsAmount.toFixed(2)}
+                </Badge>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+РАЗМЕР: ~140 строк ✅
+
+ФАЙЛЫ:
+└─ client/src/components/ai/price-recommendations.tsx (новый)
+
+БЕЗОПАСНОСТЬ:
+✅ Изолированный компонент
+✅ Не трогает существующий код
+```
+
+-----
+
+### **ЗАДАЧА 3.3: INTEGRATION (30 минут)**
+
+```
+ЦЕЛЬ: Добавить endpoint + интегрировать в AI Analysis
+
+ЧТО ДЕЛАТЬ:
+
+1. BACKEND:
+Обновить server/routes/ai.routes.ts
+
+ДОБАВИТЬ В КОНЕЦ:
+
+// ========== PRICE RECOMMENDATIONS ==========
+
+/**
+ * GET /api/ai/price-recommendations
+ * Получить рекомендации по ценам
+ */
+router.get('/price-recommendations', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    
+    const recommendations = await generatePriceRecommendations(userId);
+    
+    res.json(recommendations);
+    
+  } catch (error) {
+    console.error('Price recommendations error:', error);
+    res.status(500).json({ error: 'Failed to generate recommendations' });
+  }
+});
+
+ИМПОРТ (добавить в начало):
+import { generatePriceRecommendations } from '../services/ai/price-comparison.service';
+
+2. FRONTEND:
+Обновить client/src/pages/ai-analysis-page.tsx
+
+ДОБАВИТЬ перед "Receipt OCR Scanner":
+
+<PriceRecommendations />
+
+ИМПОРТ (добавить):
+import { PriceRecommendations } from '@/components/ai/price-recommendations';
+
+ФАЙЛЫ:
+├─ server/routes/ai.routes.ts (+20 строк)
+└─ client/src/pages/ai-analysis-page.tsx (+2 строки)
+
+БЕЗОПАСНОСТЬ:
+✅ Минимальные изменения
+✅ Добавляем в конец/начало
+```
+
+-----
+
+## 💬 СПРИНТ 4: AI CHAT
+
+### **ЗАДАЧА 4.1: CHAT SERVICE (1 час)**
+
+```
+ЦЕЛЬ: Создать backend для чата с AI
+
+ЧТО ДЕЛАТЬ:
+Создать файл: server/services/ai/chat.service.ts
+
+КОД:
+import Anthropic from '@anthropic-ai/sdk';
+import { db } from '../../db';
+import { aiChatMessages } from '@shared/schema';
+import { eq, desc } from 'drizzle-orm';
+
+/**
+ * AI чат-сервис
+ * Ответственность: Общение с Claude, сохранение истории
+ */
+
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+interface ChatResponse {
+  message: string;
+  contextUsed: string[];
+}
+
+/**
+ * Отправить сообщение в AI чат
+ */
+export async function chatWithAI(
+  userId: number,
+  userMessage: string,
+  apiKey: string
+): Promise<ChatResponse> {
+  
+  const anthropic = new Anthropic({ apiKey });
+  
+  // 1. Загрузить историю чата (последние 10 сообщений)
+  const history = await db
+    .select()
+    .from(aiChatMessages)
+    .where(eq(aiChatMessages.userId, userId))
+    .orderBy(desc(aiChatMessages.createdAt))
+    .limit(10);
+  
+  const messages: ChatMessage[] = history
+    .reverse()
+    .map(msg => ({
+      role: msg.role as 'user' | 'assistant',
+      content: msg.content
+    }));
+  
+  // 2. Системный промпт (контекст будет добавлен в след. задаче)
+  const systemPrompt = `
+    You are a personal finance advisor for Budget Buddy app.
+    
+    Answer user questions about their finances.
+    Give concrete, actionable advice.
+    Be friendly and helpful.
+    Keep responses concise (2-3 paragraphs max).
+  `;
+  
+  // 3. Отправить в Claude
+  const response = await anthropic.messages.create({
+    model: "claude-3-5-sonnet-20241022",
+    max_tokens: 1000,
+    system: systemPrompt,
+    messages: [
+      ...messages,
+      {
+        role: "user",
+        content: userMessage
+      }
+    ]
+  });
+  
+  const assistantMessage = response.content[0].type === 'text'
+    ? response.content[0].text
+    : '';
+  
+  // 4. Сохранить в историю
+  await db.insert(aiChatMessages).values([
+    {
+      userId,
+      role: 'user',
+      content: userMessage
+    },
+    {
+      userId,
+      role: 'assistant',
+      content: assistantMessage
+    }
+  ]);
+  
+  return {
+    message: assistantMessage,
+    contextUsed: []
+  };
+}
+
+/**
+ * Получить историю чата
+ */
+export async function getChatHistory(
+  userId: number,
+  limit: number = 50
+) {
+  return await db
+    .select()
+    .from(aiChatMessages)
+    .where(eq(aiChatMessages.userId, userId))
+    .orderBy(desc(aiChatMessages.createdAt))
+    .limit(limit);
+}
+
+/**
+ * Очистить историю чата
+ */
+export async function clearChatHistory(userId: number) {
+  await db
+    .delete(aiChatMessages)
+    .where(eq(aiChatMessages.userId, userId));
+}
+
+РАЗМЕР: ~130 строк ✅
+
+ФАЙЛЫ:
+└─ server/services/ai/chat.service.ts (новый)
+
+БЕЗОПАСНОСТЬ:
+✅ Изолированный сервис
+✅ История чата в БД
+✅ Простой промпт (контекст добавим в след. задаче)
+```
+
+-----
+
+### **ЗАДАЧА 4.2: CONTEXT BUILDER (1 час)**
+
+```
+ЦЕЛЬ: Добавить финансовый контекст в чат
+
+ЧТО ДЕЛАТЬ:
+Создать файл: server/services/ai/chat-context.service.ts
+
+КОД:
+import { db } from '../../db';
+import { dailyTransactions, wallets, budgetLimits } from '@shared/schema';
+import { eq, gte, sql } from 'drizzle-orm';
+import { generatePriceRecommendations } from './price-comparison.service';
+
+/**
+ * Сервис для построения финансового контекста пользователя
+ * Ответственность: Агрегация данных для AI
+ */
+
+interface FinancialContext {
+  monthlyIncome: number;
+  monthlyExpenses: number;
+  freeCapital: number;
+  currentBalance: number;
+  priceRecommendations: string[];
+  budgetStatus: string[];
+  recentTransactions: string[];
+}
+
+/**
+ * Построить финансовый контекст пользователя
+ */
+export async function buildFinancialContext(
+  userId: number
+): Promise<FinancialContext> {
+  
+  // 1. Рассчитать среднемесячный доход/расход (последние 3 месяца)
+  const threeMonthsAgo = new Date();
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+  
+  const stats = await db
+    .select({
+      totalIncome: sql<number>`SUM(CASE WHEN type = 'income' THEN amount_usd ELSE 0 END)`,
+      totalExpense: sql<number>`SUM(CASE WHEN type = 'expense' THEN amount_usd ELSE 0 END)`,
+      transactionCount: sql<number>`COUNT(*)`
+    })
+    .from(dailyTransactions)
+    .where(
+      eq(dailyTransactions.userId, userId),
+      gte(dailyTransactions.date, threeMonthsAgo.toISOString().split('T')[0])
+    );
+  
+  const monthlyIncome = (stats[0]?.totalIncome || 0) / 3;
+  const monthlyExpenses = (stats[0]?.totalExpense || 0) / 3;
+  
+  // 2. Текущий баланс (сумма всех кошельков)
+  const walletsData = await db
+    .select()
+    .from(wallets)
+    .where(eq(wallets.userId, userId));
+  
+  const currentBalance = walletsData.reduce((sum, w) => 
+    sum + parseFloat(w.balanceUsd || '0'), 0
+  );
+  
+  // 3. Рекомендации по ценам
+  const priceRecs = await generatePriceRecommendations(userId);
+  const priceRecommendations = priceRecs.slice(0, 3).map(r => r.recommendation);
+  
+  // 4. Последние транзакции
+  const recentTxs = await db
+    .select()
+    .from(dailyTransactions)
+    .where(eq(dailyTransactions.userId, userId))
+    .orderBy(desc(dailyTransactions.date))
+    .limit(5);
+  
+  const recentTransactions = recentTxs.map(tx =>
+    `${tx.description}: $${tx.amountUsd} (${tx.type})`
+  );
+  
+  return {
+    monthlyIncome,
+    monthlyExpenses,
+    freeCapital: monthlyIncome - monthlyExpenses,
+    currentBalance,
+    priceRecommendations,
+    budgetStatus: [], // TODO: добавить позже если нужно
+    recentTransactions
+  };
+}
+
+/**
+ * Форматировать контекст для системного промпта
+ */
+export function formatContextForPrompt(context: FinancialContext): string {
+  return `
+User's Financial Context:
+- Monthly income: $${context.monthlyIncome.toFixed(2)}
+- Monthly expenses: $${context.monthlyExpenses.toFixed(2)}
+- Free capital: $${context.freeCapital.toFixed(2)}
+- Current balance: $${context.currentBalance.toFixed(2)}
+
+Recent transactions:
+${context.recentTransactions.map(tx => `- ${tx}`).join('\n')}
+
+${context.priceRecommendations.length > 0 ? `
+Money-saving opportunities:
+${context.priceRecommendations.map(rec => `- ${rec}`).join('\n')}
+` : ''}
+  `.trim();
+}
+
+РАЗМЕР: ~120 строк ✅
+
+ФАЙЛЫ:
+└─ server/services/ai/chat-context.service.ts (новый)
+
+БЕЗОПАСНОСТЬ:
+✅ Изолированный сервис
+✅ Не трогает другие файлы
+✅ Простые SQL запросы
+```
+
+-----
+
+**ОБНОВИТЬ chat.service.ts:**
+
+```typescript
+// В начале файла добавить импорт:
+import { buildFinancialContext, formatContextForPrompt } from './chat-context.service';
+
+// В функции chatWithAI(), перед "Системный промпт":
+
+// 2. Загрузить финансовый контекст
+const context = await buildFinancialContext(userId);
+const contextText = formatContextForPrompt(context);
+
+// 2. Системный промпт (ОБНОВИТЬ):
+const systemPrompt = `
+  You are a personal finance advisor for Budget Buddy app.
+  
+  ${contextText}
+  
+  Answer user questions about their finances.
+  Give concrete, actionable advice based on the data above.
+  Be friendly and helpful.
+  Keep responses concise (2-3 paragraphs max).
+`;
+
+РАЗМЕР: +10 строк
+
+ФАЙЛЫ:
+└─ server/services/ai/chat.service.ts (обновить)
+```
+
+-----
+
+### **ЗАДАЧА 4.3: UI COMPONENT (1.5 часа)**
+
+```
+ЦЕЛЬ: Создать chat UI
+
+ЧТО ДЕЛАТЬ:
+Создать файл: client/src/components/ai/ai-chat.tsx
+
+КОД:
+import { useState, useRef, useEffect } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { MessageCircle, Send, Loader2, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+
+/**
+ * AI Chat компонент
+ * Разговор с AI финансовым советником
+ */
+
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export function AIChat() {
+  const [input, setInput] = useState('');
+  const [messages, setMessages] = useState<Message[]>([]);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+  
+  // Загрузить историю
+  const { data: history } = useQuery<Message[]>({
+    queryKey: ['/api/ai/chat/history'],
+    onSuccess: (data) => {
+      setMessages(data.reverse());
+    }
+  });
+  
+  // Отправить сообщение
+  const sendMutation = useMutation({
+    mutationFn: async (message: string) => {
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to send message');
+      }
+      
+      return response.json();
+    },
+    onMutate: (message) => {
+      // Оптимистичное обновление
+      setMessages(prev => [...prev, { role: 'user', content: message }]);
+      setInput('');
+    },
+    onSuccess: (data) => {
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: data.message 
+      }]);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+      // Убрать оптимистичное сообщение
+      setMessages(prev => prev.slice(0, -1));
+    }
+  });
+  
+  // Очистить историю
+  const clearMutation = useMutation({
+    mutationFn: async () => {
+      await fetch('/api/ai/chat/history', { method: 'DELETE' });
+    },
+    onSuccess: () => {
+      setMessages([]);
+      toast({ title: "Chat cleared" });
+    }
+  });
+  
+  // Автоскролл вниз
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+  
+  const handleSend = () => {
+    if (!input.trim() || sendMutation.isPending) return;
+    sendMutation.mutate(input);
+  };
+  
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5" />
+              AI Financial Advisor
+            </CardTitle>
+            <CardDescription>
+              Ask questions about your finances and get personalized advice
+            </CardDescription>
+          </div>
+          
+          {messages.length > 0 && (
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => clearMutation.mutate()}
+              disabled={clearMutation.isPending}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      
+      <CardContent>
+        <div className="space-y-4">
+          {/* Сообщения */}
+          <ScrollArea className="h-[400px] pr-4" ref={scrollRef}>
+            <div className="space-y-4">
+              {messages.length === 0 ? (
+                <div className="text-center text-sm text-gray-500 py-8">
+                  <p className="mb-4">Start a conversation with your AI advisor!</p>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setInput("Where can I save money?")}
+                    >
+                      💰 Where can I save?
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setInput("What are the cheapest stores?")}
+                    >
+                      🛒 Cheapest stores?
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setInput("Analyze my spending")}
+                    >
+                      📊 Analyze spending
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                messages.map((msg, i) => (
+                  <div 
+                    key={i}
+                    className={cn(
+                      "p-3 rounded-lg max-w-[85%]",
+                      msg.role === 'user' 
+                        ? "bg-blue-100 ml-auto" 
+                        : "bg-gray-100 mr-auto"
+                    )}
+                  >
+                    <p className="text-sm whitespace-pre-wrap">
+                      {msg.content}
+                    </p>
+                  </div>
+                ))
+              )}
+              
+              {sendMutation.isPending && (
+                <div className="bg-gray-100 p-3 rounded-lg max-w-[85%] mr-auto animate-pulse">
+                  <p className="text-sm text-gray-500">
+                    AI is thinking...
+                  </p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+          
+          {/* Инпут */}
+          <div className="flex gap-2">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask me anything about your finances..."
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' && !sendMutation.isPending) {
+                  handleSend();
+                }
+              }}
+              disabled={sendMutation.isPending}
+            />
+            <Button 
+              onClick={handleSend}
+              disabled={sendMutation.isPending || !input.trim()}
+              size="icon"
+            >
+              {sendMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+РАЗМЕР: ~200 строк ✅
+
+ФАЙЛЫ:
+└─ client/src/components/ai/ai-chat.tsx (новый)
+
+БЕЗОПАСНОСТЬ:
+✅ Изолированный компонент
+✅ Оптимистичное обновление
+✅ Error handling
+```
+
+-----
+
+### **ЗАДАЧА 4.4: INTEGRATION (30 минут)**
+
+```
+ЦЕЛЬ: Добавить endpoints + интегрировать в страницу
+
+ЧТО ДЕЛАТЬ:
+
+1. BACKEND:
+Создать файл: server/routes/ai-chat.routes.ts
+
+КОД:
+import { Router } from 'express';
+import { requireAuth } from '../middleware/auth';
+import { chatWithAI, getChatHistory, clearChatHistory } from '../services/ai/chat.service';
+import { getUserApiKey } from '../services/user-api-keys.service';
+
+const router = Router();
+
+/**
+ * POST /api/ai/chat
+ * Отправить сообщение в чат
+ */
+router.post('/', requireAuth, async (req, res) => {
+  try {
+    const { message } = req.body;
+    const userId = req.user!.id;
+    
+    if (!message) {
+      return res.status(400).json({ error: 'message is required' });
+    }
+    
+    // Получить API ключ
+    const apiKey = await getUserApiKey(userId, 'anthropic');
+    if (!apiKey) {
+      return res.status(400).json({
+        error: 'Anthropic API key not configured. Please add it in Settings.'
+      });
+    }
+    
+    const response = await chatWithAI(userId, message, apiKey);
+    
+    res.json(response);
+    
+  } catch (error) {
+    console.error('Chat error:', error);
+    res.status(500).json({ 
+      error: 'Failed to send message',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * GET /api/ai/chat/history
+ * Получить историю чата
+ */
+router.get('/history', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const history = await getChatHistory(userId);
+    res.json(history);
+  } catch (error) {
+    console.error('Chat history error:', error);
+    res.status(500).json({ error: 'Failed to load history' });
+  }
+});
+
+/**
+ * DELETE /api/ai/chat/history
+ * Очистить историю чата
+ */
+router.delete('/history', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    await clearChatHistory(userId);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Clear history error:', error);
+    res.status(500).json({ error: 'Failed to clear history' });
+  }
+});
+
+export default router;
+
+2. РЕГИСТРАЦИЯ ROUTER:
+Обновить server/index.ts
+
+НАЙТИ:
+app.use("/api/ai", aiRoutes);
+
+ДОБАВИТЬ ПОСЛЕ:
+import aiChatRoutes from './routes/ai-chat.routes';
+app.use("/api/ai/chat", aiChatRoutes);
+
+3. FRONTEND:
+Обновить client/src/pages/ai-analysis-page.tsx
+
+ДОБАВИТЬ В НАЧАЛО (самый верх страницы):
+
+<AIChat />
+
+ИМПОРТ:
+import { AIChat } from '@/components/ai/ai-chat';
+
+ФАЙЛЫ:
+├─ server/routes/ai-chat.routes.ts (новый, ~90 строк)
+├─ server/index.ts (+2 строки)
+└─ client/src/pages/ai-analysis-page.tsx (+2 строки)
+
+БЕЗОПАСНОСТЬ:
+✅ Минимальные изменения
+✅ Изолированные routes
+```
+
+-----
+
+## 🎨 СПРИНТ 5: POLISH
+
+### **ЗАДАЧА 5.1: ERROR HANDLING (30 минут)**
+
+```
+ЦЕЛЬ: Улучшить обработку ошибок
+
+ЧТО ДЕЛАТЬ:
+
+1. ОБЩИЙ ERROR HANDLER (если еще нет):
+Проверить есть ли в server/index.ts:
+
+app.use((err, req, res, next) => {
+  console.error('Global error:', err);
+  res.status(500).json({
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
+2. API KEY MISSING HANDLER:
+Создать: server/middleware/require-api-key.ts
+
+export async function requireApiKey(provider: string) {
+  return async (req, res, next) => {
+    const userId = req.user!.id;
+    const apiKey = await getUserApiKey(userId, provider);
+    
+    if (!apiKey) {
+      return res.status(400).json({
+        error: `${provider} API key not configured`,
+        action: 'Please add your API key in Settings'
+      });
+    }
+    
+    req.apiKey = apiKey;
+    next();
+  };
+}
+
+ИСПОЛЬЗОВАТЬ в routes:
+router.post('/chat', requireAuth, requireApiKey('anthropic'), async (req, res) => {
+  const apiKey = req.apiKey; // уже есть!
+  ...
+});
+
+ФАЙЛЫ:
+├─ server/middleware/require-api-key.ts (новый, ~30 строк)
+└─ обновить routes (опционально)
+```
+
+-----
+
+### **ЗАДАЧА 5.2: LOADING STATES (30 минут)**
+
+```
+ЦЕЛЬ: Добавить скелетоны и загрузки
+
+ЧТО ДЕЛАТЬ:
+
+Обновить client/src/components/ai/price-recommendations.tsx
+
+НАЙТИ:
+if (isLoading) {
+  return <p>Loading recommendations...</p>
+}
+
+ЗАМЕНИТЬ НА:
+if (isLoading) {
+  return (
+    <Card>
+      <CardHeader>
+        <Skeleton className="h-6 w-48" />
+        <Skeleton className="h-4 w-64 mt-2" />
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {[1, 2, 3].map(i => (
+            <Skeleton key={i} className="h-24 w-full" />
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+ИМПОРТ:
+import { Skeleton } from '@/components/ui/skeleton';
+
+ФАЙЛЫ:
+└─ client/src/components/ai/price-recommendations.tsx (+10 строк)
+```
+
+-----
+
+### **ЗАДАЧА 5.3: E2E TESTING (30 минут)**
+
+```
+ЦЕЛЬ: Проверить все работает
+
+ЧТО ТЕСТИРОВАТЬ:
+
+1. Receipt Upload:
+   - Загрузить фото чека
+   - Проверить парсинг товаров
+   - Убедиться сохранились в БД
+
+2. Price Recommendations:
+   - Загрузить 2+ чека с одинаковыми товарами
+   - Проверить появились рекомендации
+   - Убедиться правильно считает экономию
+
+3. AI Chat:
+   - Отправить сообщение
+   - Проверить ответ AI
+   - Проверить сохранилась история
+
+4. UI Cleanup:
+   - Проверить только 1 вкладка AI Analysis
+   - Проверить Training History спрятана
+
+CHECKLIST:
+□ Receipt upload работает
+□ Товары парсятся
+□ Recommendations показываются
+□ Chat отвечает
+□ История сохраняется
+□ UI чистый
+□ Нет ошибок в консоли
+
+ВРЕМЯ: 30 минут
+```
+
+-----
+
+## 📊 ФИНАЛЬНЫЙ ЧЕКЛИСТ
+
+```
+СПРИНТ 1: ПОДГОТОВКА ✅
+├─ 1.1: Cleanup UI (15 мин)
+├─ 1.2: База данных (30 мин)
+└─ 1.3: Миграция (15 мин)
+
+СПРИНТ 2: RECEIPT ITEMS ✅
+├─ 2.1: Repository (30 мин)
+├─ 2.2: OCR Parser (1 час)
+├─ 2.3: API Endpoint (30 мин)
+└─ 2.4: UI Integration (1 час)
+
+СПРИНТ 3: PRICE COMPARISON ✅
+├─ 3.1: Service (1 час)
+├─ 3.2: UI Component (1 час)
+└─ 3.3: Integration (30 мин)
+
+СПРИНТ 4: AI CHAT ✅
+├─ 4.1: Chat Service (1 час)
+├─ 4.2: Context Builder (1 час)
+├─ 4.3: UI Component (1.5 часа)
+└─ 4.4: Integration (30 мин)
+
+СПРИНТ 5: POLISH ✅
+├─ 5.1: Error Handling (30 мин)
+├─ 5.2: Loading States (30 мин)
+└─ 5.3: E2E Testing (30 мин)
+
+ИТОГО: 12 часов, 17 задач
+```
+
+-----
+
+## 🎯 КАК ДАВАТЬ ЗАДАЧИ REPLIT
+
+```
+ФОРМАТ:
+
+"ЗАДАЧА X.Y: [НАЗВАНИЕ]
+
+ЦЕЛЬ: [что делаем]
+
+ЧТО ДЕЛАТЬ:
+[пошаговая инструкция]
+
+КОД:
+[весь код полностью]
+
+ФАЙЛЫ:
+[список файлов]
+
+БЕЗОПАСНОСТЬ:
+[что не трогаем]"
+
+ПРИМЕР:
+"ЗАДАЧА 1.1: CLEANUP UI
+
+ЦЕЛЬ: Убрать AI Training из sidebar
+
+ЧТО ДЕЛАТЬ:
+1. Открыть app-sidebar.tsx
+2. Удалить блок AI Training
+3. Оставить только AI Analysis
+
+КОД:
+[код здесь]
+
+ФАЙЛЫ:
+└─ app-sidebar.tsx (-5 строк)
+
+БЕЗОПАСНОСТЬ:
+✅ Только UI, логика не трогается"
+```
+
+-----
+
+## 💪 ГОТОВ НАЧИНАТЬ?
+
+**С КАКОГО СПРИНТА СТАРТУЕМ?**
+
+**A.** Спринт 1 (подготовка) - 1 час  
+**B.** Сразу все по порядку  
+**C.** Только определённые задачи
+
+**ГОВОРИ НОМЕР И НАЧИНАЕМ!** 🚀​​​​​​​​​​​​​​​​
