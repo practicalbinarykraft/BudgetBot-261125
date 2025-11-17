@@ -1,22 +1,18 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-let anthropicClient: Anthropic | null = null;
-
-function getAnthropicClient(): Anthropic | null {
-  if (!anthropicClient && process.env.ANTHROPIC_API_KEY) {
-    anthropicClient = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
+/**
+ * Analyze user spending patterns using AI
+ * Responsibility: Process transactions and provide financial insights
+ */
+export async function analyzeSpending(
+  transactions: any[],
+  apiKey: string
+): Promise<string> {
+  if (!apiKey) {
+    throw new Error("Anthropic API key is required for spending analysis");
   }
-  return anthropicClient;
-}
 
-export async function analyzeSpending(transactions: any[]): Promise<string> {
-  const client = getAnthropicClient();
-  
-  if (!client) {
-    throw new Error("Anthropic API key not configured. Please add your API key in your Replit profile settings.");
-  }
+  const anthropic = new Anthropic({ apiKey });
 
   const transactionsSummary = transactions.map((t) => ({
     date: t.date,
@@ -40,7 +36,7 @@ Please provide:
 Keep the response concise and actionable.`;
 
   try {
-    const message = await client.messages.create({
+    const message = await anthropic.messages.create({
       model: "claude-3-5-sonnet-20241022",
       max_tokens: 1024,
       messages: [
@@ -62,20 +58,27 @@ Keep the response concise and actionable.`;
   }
 }
 
-export async function scanReceipt(imageBase64: string): Promise<{
+/**
+ * Scan receipt image and extract transaction data
+ * Responsibility: OCR for basic receipt information
+ */
+export async function scanReceipt(
+  imageBase64: string,
+  apiKey: string
+): Promise<{
   amount: number;
   description: string;
   category?: string;
   date?: string;
 }> {
-  const client = getAnthropicClient();
-  
-  if (!client) {
-    throw new Error("Anthropic API key not configured. Please add your API key in your Replit profile settings.");
+  if (!apiKey) {
+    throw new Error("Anthropic API key is required for receipt scanning");
   }
 
+  const anthropic = new Anthropic({ apiKey });
+
   try {
-    const message = await client.messages.create({
+    const message = await anthropic.messages.create({
       model: "claude-3-5-sonnet-20241022",
       max_tokens: 1024,
       messages: [

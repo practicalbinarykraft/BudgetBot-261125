@@ -9,8 +9,20 @@ const router = Router();
 // POST /api/ai/analyze
 router.post("/analyze", withAuth(async (req, res) => {
   try {
-    const transactions = await storage.getTransactionsByUserId(req.user.id);
-    const analysis = await analyzeSpending(transactions);
+    const userId = req.user.id;
+    
+    // Get API key from user settings (BYOK pattern)
+    const settings = await storage.getSettingsByUserId(userId);
+    const anthropicApiKey = settings?.anthropicApiKey;
+    
+    if (!anthropicApiKey) {
+      return res.status(400).json({
+        error: "Anthropic API key not configured. Please add it in Settings."
+      });
+    }
+    
+    const transactions = await storage.getTransactionsByUserId(userId);
+    const analysis = await analyzeSpending(transactions, anthropicApiKey);
     res.json({ analysis });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -21,11 +33,23 @@ router.post("/analyze", withAuth(async (req, res) => {
 router.post("/scan-receipt", withAuth(async (req, res) => {
   try {
     const { image } = req.body;
+    const userId = req.user.id;
+    
     if (!image) {
       return res.status(400).json({ error: "Image required" });
     }
     
-    const result = await scanReceipt(image);
+    // Get API key from user settings (BYOK pattern)
+    const settings = await storage.getSettingsByUserId(userId);
+    const anthropicApiKey = settings?.anthropicApiKey;
+    
+    if (!anthropicApiKey) {
+      return res.status(400).json({
+        error: "Anthropic API key not configured. Please add it in Settings."
+      });
+    }
+    
+    const result = await scanReceipt(image, anthropicApiKey);
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message });

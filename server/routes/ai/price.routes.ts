@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { storage } from "../../storage";
 import { withAuth } from "../../middleware/auth-utils";
 import { receiptItemsRepository } from "../../repositories/receipt-items.repository";
 import { comparePrices, getAIPriceInsights } from "../../services/ai/price-comparison.service";
@@ -26,7 +27,10 @@ router.get("/price-recommendations", withAuth(async (req, res) => {
     
     let aiInsights = null;
     if (includeInsights && comparisonResult.recommendations.length > 0) {
-      const anthropicApiKey = req.headers['x-anthropic-key'] as string;
+      // Get API key from user settings (BYOK pattern)
+      const settings = await storage.getSettingsByUserId(userId);
+      const anthropicApiKey = settings?.anthropicApiKey;
+      
       if (anthropicApiKey) {
         try {
           aiInsights = await getAIPriceInsights(
