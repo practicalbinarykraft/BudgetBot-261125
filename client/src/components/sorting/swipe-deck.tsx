@@ -59,8 +59,8 @@ export function SwipeDeck({
     mutationFn: async (data: {
       id: number;
       financialType: string;
-      personalTagId?: number;
-      categoryId?: number;
+      personalTagId?: number | null;
+      categoryId?: number | null;
     }) => {
       const res = await fetch(`/api/transactions/${data.id}`, {
         method: 'PATCH',
@@ -108,8 +108,8 @@ export function SwipeDeck({
       await updateTransactionMutation.mutateAsync({
         id: transaction.id,
         financialType: direction,
-        personalTagId: currentTagId || undefined,
-        categoryId: currentCategoryId || undefined,
+        personalTagId: currentTagId ?? null,
+        categoryId: currentCategoryId ?? null,
       });
 
       await saveTrainingMutation.mutateAsync({
