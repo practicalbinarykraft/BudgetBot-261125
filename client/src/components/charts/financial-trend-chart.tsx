@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceDot } from "recharts";
 import { useFinancialTrend } from "@/hooks/use-financial-trend";
 import { WishlistItemWithPrediction } from "@/types/goal-prediction";
@@ -51,8 +51,15 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
   if (error) return <ChartErrorState error={error as Error} />;
   if (trendData.length === 0) return <ChartEmptyState />;
 
+  // Always process full trendData for proper forecast connection
   const { todayDate, historicalData, forecastData, forecastWithConnection } = 
     processChartData(trendData);
+
+  // Filter chart data for rendering: show only historical when forecastDays = 0
+  const chartData = forecastDays > 0 ? trendData : historicalData;
+
+  // Memoize tooltip to ensure it re-renders when chartData changes
+  const tooltipContent = useMemo(() => createChartTooltip(chartData), [chartData]);
 
   return (
     <Card data-testid="card-financial-trend">
@@ -82,7 +89,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
         {/* Chart */}
         <div className="h-[400px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={trendData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+            <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
               
               <XAxis
@@ -98,7 +105,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                 stroke="hsl(var(--muted-foreground))"
               />
               
-              <Tooltip content={createChartTooltip(trendData)} />
+              <Tooltip content={tooltipContent} />
 
               {/* "Today" vertical line */}
               {todayDate && (
@@ -112,7 +119,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
 
               {/* Income Line */}
               <Line
-                data={trendData}
+                data={chartData}
                 dataKey="income"
                 stroke={CHART_COLORS.income}
                 strokeWidth={2}
@@ -123,7 +130,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
 
               {/* Expense Line */}
               <Line
-                data={trendData}
+                data={chartData}
                 dataKey="expense"
                 stroke={CHART_COLORS.expense}
                 strokeWidth={2}
@@ -160,7 +167,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
               {/* Goal Markers on Timeline */}
               <GoalMarkersLayer
                 goals={goals}
-                trendData={trendData}
+                trendData={chartData}
                 onGoalHover={(id, x, y) => {
                   setHoveredGoal(id);
                   setTooltipPosition({ x, y });
