@@ -3,9 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { format, parseISO } from "date-fns";
 import { motion, useAnimation } from "framer-motion";
-import { Calendar, DollarSign } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { AISuggestionBox } from "./ai-suggestion-box";
 import { useAuth } from "@/hooks/use-auth";
+import { formatTransactionAmount } from "@/lib/currency-utils";
 import type { Transaction, Category, PersonalTag } from "@shared/schema";
 
 interface AIPrediction {
@@ -59,7 +60,7 @@ export function SwipeCard({
   const isExpense = transaction.type === 'expense';
   const amountColor = isExpense ? 'text-red-600' : 'text-green-600';
   const amountSign = isExpense ? '-' : '+';
-  const amount = parseFloat(transaction.amount);
+  const currencyDisplay = formatTransactionAmount(transaction);
   const category = categories.find(c => c.id === selectedCategoryId);
   const tag = tags.find(t => t.id === selectedTagId);
 
@@ -98,9 +99,31 @@ export function SwipeCard({
       <Card className="h-full flex flex-col p-8 bg-card border-2 cursor-grab active:cursor-grabbing select-none">
         <div className="flex-1 flex flex-col items-center justify-center space-y-6">
           <div className="text-center space-y-2">
-            <h3 className="text-2xl font-bold">{transaction.description}</h3>
-            <div className={`text-4xl font-mono font-bold ${amountColor}`}>
-              {amountSign}${Math.abs(amount).toFixed(2)}
+            <h3 className="text-2xl font-bold" data-testid={`card-description-${transaction.id}`}>
+              {transaction.description}
+            </h3>
+            <div className="space-y-1">
+              <div 
+                className={`text-4xl font-mono font-bold ${amountColor}`}
+                data-testid={`card-amount-${transaction.id}`}
+              >
+                {amountSign}{currencyDisplay.mainSymbol}{currencyDisplay.mainAmount}
+              </div>
+              {currencyDisplay.showConversion && currencyDisplay.convertedAmount && (
+                <div className="text-sm text-muted-foreground" data-testid={`card-converted-${transaction.id}`}>
+                  ≈ ${currencyDisplay.convertedAmount} USD
+                  {transaction.exchangeRate && (() => {
+                    const rateValue = transaction.exchangeRate;
+                    if (rateValue == null) return null;
+                    const rate = Number(rateValue);
+                    return Number.isFinite(rate) && rate !== 0 ? (
+                      <span className="ml-2">
+                        (курс: 1 {currencyDisplay.mainSymbol} = ${rate.toFixed(4)})
+                      </span>
+                    ) : null;
+                  })()}
+                </div>
+              )}
             </div>
           </div>
 
@@ -108,11 +131,6 @@ export function SwipeCard({
             <div className="flex items-center gap-3 text-muted-foreground">
               <Calendar className="w-5 h-5" />
               <span>{format(parseISO(transaction.date), 'MMM dd, yyyy')}</span>
-            </div>
-
-            <div className="flex items-center gap-3 text-muted-foreground">
-              <DollarSign className="w-5 h-5" />
-              <span className="text-sm">{transaction.currency}</span>
             </div>
 
             {prediction && (
