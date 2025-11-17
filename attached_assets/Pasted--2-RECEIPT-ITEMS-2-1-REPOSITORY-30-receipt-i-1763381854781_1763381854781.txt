@@ -1,0 +1,84 @@
+🛒 СПРИНТ 2: RECEIPT ITEMS
+ЗАДАЧА 2.1: REPOSITORY (30 минут)
+ЦЕЛЬ: Создать репозиторий для receipt_items
+
+ЧТО ДЕЛАТЬ:
+Создать файл: server/repositories/receipt-items.repository.ts
+
+КОД:
+import { BaseRepository } from './base.repository';
+import { db } from '../db';
+import { receiptItems, type InsertReceiptItem, type ReceiptItem } from '@shared/schema';
+import { eq, and } from 'drizzle-orm';
+
+/**
+ * Repository для работы с товарами из чеков
+ * Ответственность: CRUD операции, поиск похожих товаров
+ */
+export class ReceiptItemsRepository extends BaseRepository
+  typeof receiptItems,
+  ReceiptItem,
+  InsertReceiptItem,
+  Partial<InsertReceiptItem>
+> {
+  protected getTable() {
+    return receiptItems;
+  }
+  
+  protected getRepositoryName() {
+    return 'ReceiptItemsRepository';
+  }
+  
+  /**
+   * Создать несколько товаров за раз
+   */
+  async createBulk(items: InsertReceiptItem[]) {
+    return await this.db
+      .insert(receiptItems)
+      .values(items)
+      .returning();
+  }
+  
+  /**
+   * Найти все товары транзакции
+   */
+  async findByTransaction(transactionId: number) {
+    return await this.findMany({
+      where: eq(receiptItems.transactionId, transactionId)
+    });
+  }
+  
+  /**
+   * Найти все покупки похожего товара пользователем
+   * (для сравнения цен между магазинами)
+   */
+  async findSimilarItems(normalizedName: string, userId: number) {
+    const items = await this.db
+      .select()
+      .from(receiptItems)
+      .innerJoin(
+        dailyTransactions,
+        eq(receiptItems.transactionId, dailyTransactions.id)
+      )
+      .where(
+        and(
+          eq(receiptItems.normalizedName, normalizedName),
+          eq(dailyTransactions.userId, userId)
+        )
+      );
+    
+    return items.map(item => item.receipt_items);
+  }
+}
+
+// Экспорт singleton
+export const receiptItemsRepository = new ReceiptItemsRepository(db);
+
+РАЗМЕР: ~90 строк ✅
+
+ФАЙЛЫ:
+└─ server/repositories/receipt-items.repository.ts (новый)
+
+БЕЗОПАСНОСТЬ:
+✅ Extends BaseRepository (используем существующий паттерн)
+✅ Не трогаем другие файлы
