@@ -4,6 +4,7 @@ import { analyzeSpending, scanReceipt } from "../services/ai-service";
 import { withAuth } from "../middleware/auth-utils";
 import { predictForTransaction, enrichPrediction } from "../services/ai/prediction.service";
 import { getTrainingStats, saveTrainingExample } from "../services/ai/training.service";
+import { getTrainingHistory } from "../services/ai/training-history.service";
 import { insertAiTrainingExampleSchema, type TrainingStats } from "@shared/schema";
 
 const router = Router();
@@ -85,6 +86,23 @@ router.post("/training", withAuth(async (req, res) => {
   } catch (error: any) {
     console.error("Save training example error:", error);
     res.status(400).json({ error: error.message });
+  }
+}));
+
+// GET /api/ai/training/history
+router.get("/training/history", withAuth(async (req, res) => {
+  try {
+    const rawLimit = parseInt(req.query.limit as string);
+    const rawOffset = parseInt(req.query.offset as string);
+
+    const limit = Math.min(Math.max(isNaN(rawLimit) ? 50 : rawLimit, 1), 100);
+    const offset = Math.max(isNaN(rawOffset) ? 0 : rawOffset, 0);
+
+    const history = await getTrainingHistory(req.user.id, limit, offset);
+    res.json(history);
+  } catch (error: any) {
+    console.error("Training history error:", error);
+    res.status(500).json({ error: error.message });
   }
 }));
 

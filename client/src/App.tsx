@@ -22,6 +22,7 @@ import TagsSettingsPage from "@/pages/tags-settings-page";
 import TagDetailPage from "@/pages/tag-detail-page";
 import ExpensesAnalyticsPage from "@/pages/expenses-analytics-page";
 import SwipeSortPage from "@/pages/swipe-sort-page";
+import AiTrainingHistoryPage from "@/pages/ai-training-history-page";
 
 function Router() {
   return (
@@ -37,6 +38,7 @@ function Router() {
       <ProtectedRoute path="/planned" component={PlannedPage} />
       <ProtectedRoute path="/budgets" component={BudgetsPage} />
       <ProtectedRoute path="/ai-analysis" component={AIAnalysisPage} />
+      <ProtectedRoute path="/ai-training/history" component={AiTrainingHistoryPage} />
       <ProtectedRoute path="/expenses/analytics" component={ExpensesAnalyticsPage} />
       <ProtectedRoute path="/tags/:id" component={TagDetailPage} />
       <ProtectedRoute path="/tags" component={TagsSettingsPage} />
