@@ -39,10 +39,10 @@ export async function chatWithAI(params: ChatWithAIParams): Promise<ChatResponse
   // Build system prompt with financial context
   const systemPrompt = buildSystemPrompt(contextData);
 
-  // Convert messages to Anthropic format
+  // Convert messages to Anthropic format (content must be array of content blocks)
   const anthropicMessages = messages.map(msg => ({
     role: msg.role,
-    content: msg.content
+    content: [{ type: "text" as const, text: msg.content }]
   }));
 
   try {
