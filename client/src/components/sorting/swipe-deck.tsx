@@ -143,7 +143,7 @@ export function SwipeDeck({
   const currentTransaction = transactions[currentIndex];
 
   return (
-    <div className="relative h-96 w-full max-w-lg mx-auto pt-24 pb-24 px-32" data-testid="swipe-deck">
+    <div className="relative h-96 w-full max-w-lg mx-auto" data-testid="swipe-deck">
       <SwipeCard
         key={currentTransaction.id}
         transaction={currentTransaction}

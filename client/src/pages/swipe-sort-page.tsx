@@ -187,7 +187,7 @@ export default function SwipeSortPage() {
 
       <TrainingHeader />
 
-      <div className="relative mt-8">
+      <div className="relative mt-32 px-4 sm:px-8 md:px-16 lg:px-32">
         <SwipeDeck
           transactions={unsortedTransactions}
           categories={categories ?? []}
