@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Transaction } from "@shared/schema";
+import { WishlistItemWithPrediction } from "@/types/goal-prediction";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { TransactionList } from "@/components/dashboard/transaction-list";
 import { FinancialTrendChart } from "@/components/charts/financial-trend-chart";
@@ -50,6 +51,10 @@ export default function DashboardPage() {
       if (!res.ok) throw new Error("Failed to fetch stats");
       return res.json();
     },
+  });
+
+  const { data: wishlistItems = [] } = useQuery<WishlistItemWithPrediction[]>({
+    queryKey: ["/api/wishlist"],
   });
 
   const deleteMutation = useMutation({
@@ -150,7 +155,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      <FinancialTrendChart />
+      <FinancialTrendChart wishlistPredictions={wishlistItems} />
 
       <TransactionList 
         transactions={recentTransactions}

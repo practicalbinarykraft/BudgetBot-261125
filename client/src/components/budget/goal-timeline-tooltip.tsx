@@ -31,7 +31,7 @@ export function GoalTimelineTooltip({ goal, position }: GoalTimelineTooltipProps
 
   const amount = parseFloat(goal.amount);
   const affordableDate = parseISO(goal.prediction.affordableDate);
-  const targetDate = parseISO(goal.targetDate);
+  const targetDate = goal.targetDate ? parseISO(goal.targetDate) : null;
   
   // Priority badge variant (derived from targetDate proximity)
   const priorityVariant = goal.priority === "high" ? "destructive"
@@ -78,7 +78,7 @@ export function GoalTimelineTooltip({ goal, position }: GoalTimelineTooltipProps
           <Calendar className="h-3 w-3 text-muted-foreground" />
           <span className="text-muted-foreground">Target:</span>
           <span className="font-medium" data-testid="tooltip-target-date">
-            {format(targetDate, 'MMM d, yyyy')}
+            {targetDate ? format(targetDate, 'MMM d, yyyy') : 'Not set'}
           </span>
         </div>
         

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceDot } from "recharts";
 import { useFinancialTrend } from "@/hooks/use-financial-trend";
+import { WishlistItemWithPrediction } from "@/types/goal-prediction";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -108,10 +109,14 @@ function formatChartDate(dateStr: string): string {
  * Financial Trend Chart
  * Shows income, expenses, and capital over time with AI forecast + goal markers
  */
-export function FinancialTrendChart() {
+interface FinancialTrendChartProps {
+  wishlistPredictions?: WishlistItemWithPrediction[];
+}
+
+export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrendChartProps) {
   const [historyDays, setHistoryDays] = useState(30);
   const [forecastDays, setForecastDays] = useState(365);
-  const [hoveredGoal, setHoveredGoal] = useState<number | null>(null);
+  const [hoveredGoal, setHoveredGoal] = useState<string | null>(null); // String only (all IDs normalized)
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [, setLocation] = useLocation();
 
@@ -122,7 +127,36 @@ export function FinancialTrendChart() {
 
   // Destructure trend data and goals
   const trendData = data?.trendData || [];
-  const goals = data?.goals || [];
+  const trendGoals = data?.goals || [];
+  
+  // Merge trend goals (planned transactions) with wishlist predictions
+  // Normalize BOTH sources to consistent GoalMarker format
+  const normalizedTrendGoals = trendGoals
+    .filter(goal => goal.prediction?.affordableDate) // Only goals with predictions
+    .map(goal => ({
+      id: String(goal.id),
+      name: goal.name,
+      amount: String(goal.amount), // Ensure string
+      targetDate: goal.targetDate,
+      status: goal.status || "planned",
+      priority: goal.priority || "low", // Ensure priority exists
+      prediction: goal.prediction,
+    }));
+  
+  const wishlistGoals = wishlistPredictions
+    .filter(item => item.prediction?.affordableDate) // Only items with predictions
+    .map(item => ({
+      id: `w-${item.id}`,
+      name: item.name,
+      amount: String(item.amount), // Ensure string
+      targetDate: item.targetDate || "",
+      status: "wishlist" as const,
+      priority: item.priority || "medium", // Ensure priority exists
+      prediction: item.prediction!,  // Safe after filter
+    }));
+  
+  // Combine both sources - all fields normalized to GoalMarker format
+  const goals = [...normalizedTrendGoals, ...wishlistGoals];
 
   if (isLoading) {
     return (
@@ -368,7 +402,7 @@ export function FinancialTrendChart() {
                         <GoalTimelineMarker
                           {...props}
                           priority={goal.priority}
-                          onClick={() => setLocation("/planned")}
+                          onClick={() => setLocation(goal.status === "wishlist" ? "/wishlist" : "/planned")}
                         />
                       </g>
                     )}
@@ -415,7 +449,7 @@ export function FinancialTrendChart() {
           {goals.length > 0 && (
             <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-primary" />
-              <span>Goal Markers (click to view planned)</span>
+              <span>Goal Markers (click for details)</span>
             </div>
           )}
         </div>
