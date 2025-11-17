@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MessageCircle, Send, Bot, User, Wallet, TrendingDown, Lightbulb } from "lucide-react";
+import { MessageCircle, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { ChatMessage } from "./chat-message";
+import { TypingIndicator } from "./typing-indicator";
+import { QuickActions } from "./quick-actions";
 import type { AiChatMessage } from "@shared/schema";
 
 interface ChatResponse {
@@ -21,6 +24,7 @@ interface ChatResponse {
 export function AIChat() {
   const [message, setMessage] = useState("");
   const { toast } = useToast();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: messages = [], isLoading } = useQuery<AiChatMessage[]>({
     queryKey: ["/api/ai/chat/history"],
@@ -35,6 +39,7 @@ export function AIChat() {
       return response.json() as Promise<ChatResponse>;
     },
     onSuccess: () => {
+      // Refetch chat history to show both user message and AI response
       queryClient.invalidateQueries({ queryKey: ["/api/ai/chat/history"] });
       setMessage("");
     },
@@ -46,6 +51,11 @@ export function AIChat() {
       });
     }
   });
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const handleSend = () => {
     const trimmed = message.trim();
@@ -90,76 +100,22 @@ export function AIChat() {
             </div>
           ) : (
             messages.map((msg, idx) => (
-              <div
-                key={idx}
-                className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                data-testid={`message-${msg.role}-${idx}`}
-              >
-                {msg.role === "assistant" && (
-                  <div className="flex-shrink-0">
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Bot className="h-5 w-5 text-primary" />
-                    </div>
-                  </div>
-                )}
-                <div
-                  className={`max-w-[80%] rounded-lg p-3 ${
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-card border"
-                  }`}
-                  data-testid={`message-content-${idx}`}
-                >
-                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                </div>
-                {msg.role === "user" && (
-                  <div className="flex-shrink-0">
-                    <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                      <User className="h-5 w-5 text-primary-foreground" />
-                    </div>
-                  </div>
-                )}
-              </div>
+              <ChatMessage key={idx} message={msg} index={idx} />
             ))
           )}
+          
+          {/* Typing indicator inside messages */}
+          {sendMessageMutation.isPending && <TypingIndicator />}
+          
+          {/* Scroll anchor */}
+          <div ref={messagesEndRef} />
         </div>
 
         {messages.length === 0 && !sendMessageMutation.isPending && (
-          <div className="flex flex-wrap gap-2" data-testid="quick-actions">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => askQuickQuestion("How should I distribute my budget?")}
-              disabled={sendMessageMutation.isPending}
-              data-testid="quick-action-budget"
-              className="hover-elevate"
-            >
-              <Wallet className="h-4 w-4 mr-1" />
-              Ask about budget
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => askQuickQuestion("Analyze my spending patterns")}
-              disabled={sendMessageMutation.isPending}
-              data-testid="quick-action-spending"
-              className="hover-elevate"
-            >
-              <TrendingDown className="h-4 w-4 mr-1" />
-              Analyze spending
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => askQuickQuestion("Give me tips on how to save money")}
-              disabled={sendMessageMutation.isPending}
-              data-testid="quick-action-savings"
-              className="hover-elevate"
-            >
-              <Lightbulb className="h-4 w-4 mr-1" />
-              Savings tips
-            </Button>
-          </div>
+          <QuickActions 
+            onAskQuestion={askQuickQuestion} 
+            disabled={sendMessageMutation.isPending}
+          />
         )}
 
         <div className="flex gap-2">
@@ -183,13 +139,6 @@ export function AIChat() {
             <Send className="h-4 w-4" />
           </Button>
         </div>
-
-        {sendMessageMutation.isPending && (
-          <div className="text-sm text-muted-foreground flex items-center gap-2" data-testid="loading-chat">
-            <Bot className="h-4 w-4 animate-pulse" />
-            AI is thinking...
-          </div>
-        )}
       </CardContent>
     </Card>
   );

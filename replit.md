@@ -48,8 +48,13 @@ The application uses Shadcn/ui (Radix UI primitives) and Tailwind CSS with a cus
     - `financial-context.service.ts` (85 lines): buildFinancialContext() gathers wallets, transactions, budgets for AI consumption with accurate time windows
     - `financial-formatters.ts` (142 lines): Helper functions for formatting financial data (wallets, transactions, budgets limits, summary stats) with NaN guards and safe division
 *   **AI Chat UI (Nov 2025):** Interactive chat interface with AI financial advisor:
-    - `ai-chat.tsx` (196 lines): Full chat UI with message history, input validation, quick action buttons ("Ask about budget", "Analyze spending", "Savings tips"), skeleton loading states, disabled states during API calls
-    - Features: Multi-turn conversation support, automatic context inclusion, error toasts, real-time "AI is thinking" indicator
+    - `ai-chat.tsx` (145 lines): Main chat container with message history, input handling, auto-scroll, refactored into modular subcomponents
+    - `chat-message.tsx` (45 lines): Message bubble component with markdown rendering, role-based styling (user/assistant), avatar icons
+    - `typing-indicator.tsx` (32 lines): Animated "AI is thinking" indicator with bouncing dots, positioned inline with messages
+    - `quick-actions.tsx` (47 lines): Pre-defined question buttons ("Ask about budget", "Analyze spending", "Savings tips")
+    - `markdown-renderer.ts` (71 lines): Lightweight XSS-safe markdown parser supporting **bold**, *italic*, lists without external dependencies
+    - **UX Improvements (Nov 2025):** Auto-scroll to new messages, inline typing indicator, markdown formatting for AI responses (lists, bold, italic), message-bubble design resembling modern chat apps
+    - Features: Multi-turn conversation support, automatic context inclusion, error toasts, markdown-rendered AI responses
 *   **Modular AI Routes (Nov 2025):** Refactored monolithic ai.routes.ts (348 lines) into domain-specific modules:
     - `server/routes/ai/chat.routes.ts` (111 lines): Chat endpoints (GET /history, POST /) with limit validation (1-100), message trimming, length checks
     - `server/routes/ai/training.routes.ts` (62 lines): Training stats, examples, and history endpoints
@@ -68,7 +73,7 @@ The application uses Shadcn/ui (Radix UI primitives) and Tailwind CSS with a cus
 
 ### Third-Party Services
 
-*   **Anthropic Claude API:** Used for AI-powered spending analysis and receipt OCR.
+*   **Anthropic Claude API:** Used for AI-powered spending analysis, receipt OCR, and financial chat. **Model:** Claude Sonnet 4.5 (`claude-sonnet-4-5-20250929`) as of Nov 2025 - latest recommended model.
 *   **Neon Serverless PostgreSQL:** The primary database.
 
 ### UI Component Libraries
