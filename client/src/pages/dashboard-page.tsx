@@ -141,9 +141,9 @@ export default function DashboardPage() {
           className="border-l-4 border-l-red-500"
           action={
             <Link href="/expenses/analytics">
-              <a className="text-sm text-primary hover:underline flex items-center gap-1" data-testid="link-view-analytics">
+              <span className="text-sm text-primary hover:underline flex items-center gap-1 cursor-pointer" data-testid="link-view-analytics">
                 View Details <ArrowRight className="h-3 w-3" />
-              </a>
+              </span>
             </Link>
           }
         />
