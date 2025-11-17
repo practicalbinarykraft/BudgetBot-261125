@@ -6,6 +6,8 @@ import { predictForTransaction, enrichPrediction } from "../services/ai/predicti
 import { getTrainingStats, saveTrainingExample } from "../services/ai/training.service";
 import { getTrainingHistory } from "../services/ai/training-history.service";
 import { insertAiTrainingExampleSchema, type TrainingStats } from "@shared/schema";
+import { parseReceiptWithItems } from "../services/ocr/receipt-parser.service";
+import { receiptItemsRepository } from "../repositories/receipt-items.repository";
 
 const router = Router();
 
@@ -103,6 +105,90 @@ router.get("/training/history", withAuth(async (req, res) => {
   } catch (error: any) {
     console.error("Training history error:", error);
     res.status(500).json({ error: error.message });
+  }
+}));
+
+// ========== RECEIPT WITH ITEMS ==========
+
+/**
+ * POST /api/ai/receipt-with-items
+ * Parse receipt and extract individual items with prices
+ * 
+ * Body:
+ * - imageBase64: Base64-encoded image (without data:image prefix)
+ * - mimeType: Image MIME type (image/jpeg, image/png, image/webp)
+ * - transactionId: Optional - link items to existing transaction
+ * 
+ * Response:
+ * - receipt: Parsed receipt data (total, merchant, date, items)
+ * - itemsCount: Number of items extracted
+ */
+router.post("/receipt-with-items", withAuth(async (req, res) => {
+  try {
+    const { imageBase64, mimeType, transactionId } = req.body;
+    const userId = req.user.id;
+    
+    // Валидация
+    if (!imageBase64) {
+      return res.status(400).json({ 
+        error: "imageBase64 is required" 
+      });
+    }
+    
+    // Получить API ключ пользователя
+    const settings = await storage.getSettingsByUserId(userId);
+    const anthropicApiKey = settings?.anthropicApiKey;
+    
+    if (!anthropicApiKey) {
+      return res.status(400).json({
+        error: "Anthropic API key not configured. Please add it in Settings."
+      });
+    }
+    
+    // Парсить чек с поддержкой разных форматов изображений
+    const validMimeType = mimeType || 'image/jpeg';
+    const parsed = await parseReceiptWithItems(imageBase64, anthropicApiKey, validMimeType);
+    
+    // Если transactionId указан - привязать товары к транзакции
+    if (transactionId) {
+      const txId = parseInt(transactionId);
+      if (isNaN(txId)) {
+        return res.status(400).json({ error: "Invalid transactionId" });
+      }
+      
+      // Verify transaction ownership
+      const transaction = await storage.getTransactionById(txId);
+      if (!transaction || transaction.userId !== userId) {
+        return res.status(403).json({ error: "Transaction not found or access denied" });
+      }
+      
+      // Use transaction's currency for items (receipt amounts are in same currency as transaction)
+      const items = parsed.items.map(item => ({
+        transactionId: txId,
+        itemName: item.name,
+        normalizedName: item.normalizedName || item.name, // Fallback to original name if normalization failed
+        quantity: (item.quantity ?? 1).toString(), // Default to 1 if not specified
+        pricePerUnit: (item.pricePerUnit ?? 0).toString(), // Prevent crashes if missing
+        totalPrice: (item.totalPrice ?? 0).toString(), // Prevent crashes if missing
+        currency: transaction.currency, // Use transaction's currency
+        merchantName: parsed.merchant || '', // Default to empty string if parser didn't find merchant
+      }));
+      
+      await receiptItemsRepository.createBulk(items);
+    }
+    
+    res.json({
+      success: true,
+      receipt: parsed,
+      itemsCount: parsed.items.length
+    });
+    
+  } catch (error: any) {
+    console.error("Receipt parsing error:", error);
+    res.status(500).json({
+      error: "Failed to parse receipt",
+      details: error.message || "Unknown error"
+    });
   }
 }));
 

@@ -1,0 +1,80 @@
+ЗАДАЧА 2.3: API ENDPOINT (30 минут)
+ЦЕЛЬ: Создать endpoint для загрузки чека с парсингом товаров
+
+ЧТО ДЕЛАТЬ:
+Обновить файл: server/routes/ai.routes.ts
+
+ДОБАВИТЬ В КОНЕЦ (перед export default router):
+
+// ========== RECEIPT WITH ITEMS ==========
+
+/**
+ * POST /api/ai/receipt-with-items
+ * Парсить чек и сохранить товары
+ */
+router.post('/receipt-with-items', requireAuth, async (req, res) => {
+  try {
+    const { imageBase64, transactionId } = req.body;
+    const userId = req.user!.id;
+    
+    // Валидация
+    if (!imageBase64) {
+      return res.status(400).json({ 
+        error: 'imageBase64 is required' 
+      });
+    }
+    
+    // Получить API ключ юзера
+    const apiKey = await getUserApiKey(userId, 'anthropic');
+    if (!apiKey) {
+      return res.status(400).json({
+        error: 'Anthropic API key not configured. Please add it in Settings.'
+      });
+    }
+    
+    // Парсить чек
+    const parsed = await parseReceiptWithItems(imageBase64, apiKey);
+    
+    // Если transactionId указан - привязать товары к транзакции
+    if (transactionId) {
+      const items = parsed.items.map(item => ({
+        transactionId,
+        itemName: item.name,
+        normalizedName: item.normalizedName,
+        quantity: item.quantity.toString(),
+        pricePerUnit: item.pricePerUnit.toString(),
+        totalPrice: item.totalPrice.toString(),
+        merchantName: parsed.merchant
+      }));
+      
+      await receiptItemsRepository.createBulk(items);
+    }
+    
+    res.json({
+      success: true,
+      receipt: parsed,
+      itemsCount: parsed.items.length
+    });
+    
+  } catch (error) {
+    console.error('Receipt parsing error:', error);
+    res.status(500).json({
+      error: 'Failed to parse receipt',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+РАЗМЕР: +60 строк
+
+ФАЙЛЫ:
+└─ server/routes/ai.routes.ts (обновить)
+
+ИМПОРТЫ (добавить в начало файла):
+import { parseReceiptWithItems } from '../services/ocr/receipt-parser.service';
+import { receiptItemsRepository } from '../repositories/receipt-items.repository';
+
+БЕЗОПАСНОСТЬ:
+✅ Добавляем В КОНЕЦ файла
+✅ Try-catch обработка ошибок
+✅ Валидация входных данных
