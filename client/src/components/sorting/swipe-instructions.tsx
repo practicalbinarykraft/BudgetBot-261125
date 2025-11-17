@@ -15,7 +15,7 @@ export function SwipeInstructions() {
     <>
       {/* LEFT: Essential */}
       <div 
-        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full flex items-center gap-3 pr-6 pointer-events-none"
+        className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-3 pointer-events-none"
         data-testid="instruction-essential"
       >
         <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center shrink-0 shadow-md">
@@ -29,7 +29,7 @@ export function SwipeInstructions() {
 
       {/* RIGHT: Discretionary */}
       <div 
-        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full flex items-center gap-3 pl-6 pointer-events-none"
+        className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-3 pointer-events-none"
         data-testid="instruction-discretionary"
       >
         <div className="text-left">
@@ -43,7 +43,7 @@ export function SwipeInstructions() {
 
       {/* TOP: Asset */}
       <div 
-        className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full flex flex-col items-center gap-2 pb-6 pointer-events-none"
+        className="absolute top-2 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none"
         data-testid="instruction-asset"
       >
         <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center shrink-0 shadow-md">
@@ -57,7 +57,7 @@ export function SwipeInstructions() {
 
       {/* BOTTOM: Liability */}
       <div 
-        className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full flex flex-col items-center gap-2 pt-6 pointer-events-none"
+        className="absolute bottom-2 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none"
         data-testid="instruction-liability"
       >
         <div className="text-center">
