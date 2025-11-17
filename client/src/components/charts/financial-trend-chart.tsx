@@ -20,6 +20,56 @@ const COLORS = {
 };
 
 /**
+ * Custom tooltip that shows all data including capital
+ * Receives trendData via closure
+ */
+function createCustomTooltip(trendData: any[]) {
+  return function CustomTooltip({ active, label }: any) {
+    if (!active || !label) {
+      return null;
+    }
+
+    // Find the data point from trendData by date
+    const dataPoint = trendData.find(d => d.date === label);
+    if (!dataPoint) return null;
+    
+    return (
+      <div
+        style={{
+          backgroundColor: "hsl(var(--card))",
+          border: "1px solid hsl(var(--border))",
+          borderRadius: "8px",
+          padding: "12px",
+        }}
+      >
+        <p className="font-medium mb-2">{formatChartDate(label)}</p>
+        
+        {/* Income */}
+        {dataPoint.income != null && (
+          <p style={{ color: COLORS.income, margin: "4px 0" }}>
+            Income: {formatCurrency(dataPoint.income)}
+          </p>
+        )}
+        
+        {/* Expense */}
+        {dataPoint.expense != null && (
+          <p style={{ color: COLORS.expense, margin: "4px 0" }}>
+            Expense: {formatCurrency(dataPoint.expense)}
+          </p>
+        )}
+        
+        {/* Capital */}
+        {dataPoint.capital != null && (
+          <p style={{ color: COLORS.capital, margin: "4px 0" }}>
+            {dataPoint.isForecast ? "Forecast" : "Capital"}: {formatCurrency(dataPoint.capital)}
+          </p>
+        )}
+      </div>
+    );
+  };
+}
+
+/**
  * Format currency for chart axis (compact)
  */
 function formatCompactCurrency(value: number): string {
@@ -188,7 +238,7 @@ export function FinancialTrendChart() {
         {/* Chart */}
         <div className="h-[400px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+            <LineChart data={trendData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
               
               <XAxis
@@ -204,15 +254,7 @@ export function FinancialTrendChart() {
                 stroke="hsl(var(--muted-foreground))"
               />
               
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "8px",
-                }}
-                labelFormatter={formatChartDate}
-                formatter={(value: number) => formatCurrency(value)}
-              />
+              <Tooltip content={createCustomTooltip(trendData)} />
 
               {/* "Today" vertical line */}
               {todayDate && (

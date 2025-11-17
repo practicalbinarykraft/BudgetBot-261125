@@ -62,6 +62,12 @@ export async function calculateTrend(
   );
 
   // ШАГ 2: Рассчитать исторические данные
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const historyStart = new Date(today);
+  historyStart.setDate(today.getDate() - historyDays);
+  const historyStartStr = historyStart.toISOString().split('T')[0];
+  
   const historicalData = calculateHistoricalData(
     transactions,
     historyDays,
@@ -71,11 +77,21 @@ export async function calculateTrend(
   // ШАГ 3: Сделать income/expense накопительными (плавные линии!)
   const historicalCumulative = makeCumulative(historicalData);
 
-  // ШАГ 3.5: Рассчитать capital (УПРОЩЁННАЯ ВЕРСИЯ)
-  // Capital = Cumulative Income - Cumulative Expense
-  // БЕЗ adjustment к wallet balance (отложено на потом)
+  // ШАГ 3.5: Рассчитать capital с учётом баланса кошельков
+  // Capital на начало периода = текущий баланс - (доход после начала - расход после начала)
+  const transactionsAfterPeriodStart = transactions.filter(t => t.date >= historyStartStr);
+  const incomeAfterStart = transactionsAfterPeriodStart
+    .filter(t => t.type === 'income')
+    .reduce((sum, t) => sum + parseFloat(t.amountUsd as unknown as string), 0);
+  const expenseAfterStart = transactionsAfterPeriodStart
+    .filter(t => t.type === 'expense')
+    .reduce((sum, t) => sum + parseFloat(t.amountUsd as unknown as string), 0);
+  
+  const capitalAtPeriodStart = currentCapital - incomeAfterStart + expenseAfterStart;
+  
+  // Capital для каждого дня = начальный капитал + cumulative income - cumulative expense
   historicalCumulative.forEach(point => {
-    point.capital = point.income - point.expense;
+    point.capital = capitalAtPeriodStart + point.income - point.expense;
   });
 
   // ШАГ 4: Получить прогноз от AI (если есть API ключ)
@@ -100,7 +116,7 @@ export async function calculateTrend(
         isForecast: true,
       }));
 
-      // ШАГ 6: Сделать прогноз накопительным и рассчитать capital (УПРОЩЁННО)
+      // ШАГ 6: Сделать прогноз накопительным и рассчитать capital
       
       if (historicalCumulative.length > 0) {
         // Есть история: продолжаем от последней исторической точки
@@ -113,17 +129,17 @@ export async function calculateTrend(
           lastHistorical.expense
         );
 
-        // Capital = Cumulative Income - Cumulative Expense (просто!)
+        // Capital = начальный капитал + cumulative income - cumulative expense
         forecastData.forEach(point => {
-          point.capital = point.income - point.expense;
+          point.capital = capitalAtPeriodStart + point.income - point.expense;
         });
       } else {
-        // Нет истории: начинаем с нуля
+        // Нет истории: начинаем с текущего баланса кошельков
         forecastData = makeCumulativeFromBase(forecastData, 0, 0);
 
-        // Capital = Cumulative Income - Cumulative Expense
+        // Capital = текущий баланс + cumulative income - cumulative expense
         forecastData.forEach(point => {
-          point.capital = point.income - point.expense;
+          point.capital = currentCapital + point.income - point.expense;
         });
       }
 
