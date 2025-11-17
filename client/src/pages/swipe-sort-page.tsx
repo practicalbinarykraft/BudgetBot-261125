@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Card } from "@/components/ui/card";
@@ -25,6 +25,7 @@ export default function SwipeSortPage() {
   const { user } = useAuth();
   const [sessionTransactionsSorted, setSessionTransactionsSorted] = useState(0);
   const [sessionPoints, setSessionPoints] = useState(0);
+  const [initialUnsortedCount, setInitialUnsortedCount] = useState<number | null>(null);
 
   const { data: stats, isLoading: statsLoading } = useQuery<SortingStats>({
     queryKey: ['/api/sorting/stats'],
@@ -52,6 +53,12 @@ export default function SwipeSortPage() {
     queryKey: ['/api/ai/training-stats'],
     enabled: !!user,
   });
+
+  useEffect(() => {
+    if (unsortedData && initialUnsortedCount === null) {
+      setInitialUnsortedCount(unsortedData.count);
+    }
+  }, [unsortedData, initialUnsortedCount]);
 
   const saveSortingSessionMutation = useMutation({
     mutationFn: async (transactionsSorted: number) => {
@@ -129,7 +136,7 @@ export default function SwipeSortPage() {
     );
   }
 
-  const totalUnsorted = stats?.unsortedCount ?? 0;
+  const totalUnsorted = initialUnsortedCount ?? 0;
   const progressPercent = totalUnsorted > 0 
     ? Math.round(((totalUnsorted - unsortedTransactions.length) / totalUnsorted) * 100)
     : 0;
