@@ -29,42 +29,64 @@ export async function processReceiptImage(
   mimeType: string = 'image/jpeg'
 ): Promise<(ParsedTransaction & { items?: ParsedReceiptItem[] }) | null> {
   try {
+    console.log('1️⃣ Starting OCR process for user:', userId);
+    
     // 1. Загрузить настройки пользователя
     const settings = await storage.getSettingsByUserId(userId);
     const apiKey = settings?.anthropicApiKey;
 
     if (!apiKey) {
-      console.error('OCR failed: User has no Anthropic API key in Settings');
+      console.error('❌ OCR failed: User has no Anthropic API key in Settings');
       return null;
     }
+    console.log('2️⃣ API key found ✅');
+    console.log('3️⃣ Image size:', imageBase64.length, 'bytes');
 
     // 2. Использовать новый сервис с извлечением товаров
+    console.log('4️⃣ Calling parseReceiptWithItems...');
     const validMimeType = mimeType as "image/jpeg" | "image/png" | "image/webp" | "image/gif";
     const parsedReceipt = await parseReceiptWithItems(imageBase64, apiKey, validMimeType);
 
     if (!parsedReceipt) {
-      console.error('Failed to parse receipt with items');
+      console.error('❌ Failed to parse receipt with items');
       return null;
     }
 
+    console.log('5️⃣ Parsed result:', {
+      merchant: parsedReceipt.merchant,
+      total: parsedReceipt.total,
+      itemsCount: parsedReceipt.items?.length || 0,
+      date: parsedReceipt.date
+    });
+
     // 3. Конвертировать валюту (если нужно)
     const currency = mapCurrency(parsedReceipt.merchant);
+    console.log('6️⃣ Currency detected:', currency);
 
     // 4. Определить категорию
     const category = detectCategory(parsedReceipt.merchant);
+    console.log('7️⃣ Category detected:', category);
 
     // 5. Вернуть результат с товарами
-    return {
+    const result = {
       amount: parsedReceipt.total,
       currency,
       description: parsedReceipt.merchant,
       category,
-      type: 'expense',
+      type: 'expense' as const,
       items: parsedReceipt.items || []
     };
+    
+    console.log('✅ OCR completed successfully!');
+    return result;
 
   } catch (error) {
-    console.error('OCR error:', error);
+    console.error('❌ OCR Error Details:', {
+      userId,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      imageSize: imageBase64.length
+    });
     return null;
   }
 }

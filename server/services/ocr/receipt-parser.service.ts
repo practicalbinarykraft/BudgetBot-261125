@@ -136,13 +136,23 @@ Rules:
     throw new Error('Claude did not return any text content. Receipt parsing failed.');
   }
   
-  const text = textParts.join('\n');
+  let text = textParts.join('\n');
+  
+  // Извлечь JSON из markdown блока (если есть)
+  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (jsonMatch) {
+    text = jsonMatch[1].trim();
+  }
   
   // Парсить JSON с обработкой ошибок
   let parsed: ParsedReceipt;
   try {
     parsed = JSON.parse(text);
   } catch (error) {
+    console.error('OCR Parse Error:', {
+      error: error instanceof Error ? error.message : String(error),
+      responseStart: text.substring(0, 300)
+    });
     throw new Error(
       `Failed to parse Claude response as JSON. Response: ${text.substring(0, 200)}...`
     );
