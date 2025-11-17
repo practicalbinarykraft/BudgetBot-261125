@@ -1,0 +1,129 @@
+💰 СПРИНТ 3: PRICE COMPARISON
+ЗАДАЧА 3.1: SERVICE (1 час)
+ЦЕЛЬ: Создать сервис сравнения цен
+
+ЧТО ДЕЛАТЬ:
+Создать файл: server/services/ai/price-comparison.service.ts
+
+КОД:
+import { db } from '../../db';
+import { receiptItems, dailyTransactions } from '@shared/schema';
+import { eq, and, gte } from 'drizzle-orm';
+
+/**
+ * Сервис для сравнения цен между магазинами
+ * Ответственность: Анализ цен, генерация рекомендаций
+ */
+
+interface PriceRecommendation {
+  itemName: string;
+  normalizedName: string;
+  cheapestMerchant: string;
+  cheapestPrice: number;
+  expensiveMerchant: string;
+  expensivePrice: number;
+  savingsAmount: number;
+  savingsPercent: number;
+  purchaseCount: number;
+  recommendation: string;
+}
+
+/**
+ * Сгруппировать массив по ключу
+ */
+function groupBy<T>(array: T[], keyFn: (item: T) => string): Record<string, T[]> {
+  return array.reduce((result, item) => {
+    const key = keyFn(item);
+    if (!result[key]) result[key] = [];
+    result[key].push(item);
+    return result;
+  }, {} as Record<string, T[]>);
+}
+
+/**
+ * Генерировать рекомендации по ценам
+ */
+export async function generatePriceRecommendations(
+  userId: number,
+  minSavingsPercent: number = 20
+): Promise<PriceRecommendation[]> {
+  
+  // 1. Загрузить все товары за последние 3 месяца
+  const threeMonthsAgo = new Date();
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+  
+  const items = await db
+    .select({
+      itemName: receiptItems.itemName,
+      normalizedName: receiptItems.normalizedName,
+      pricePerUnit: receiptItems.pricePerUnit,
+      merchantName: receiptItems.merchantName
+    })
+    .from(receiptItems)
+    .innerJoin(
+      dailyTransactions,
+      eq(receiptItems.transactionId, dailyTransactions.id)
+    )
+    .where(
+      and(
+        eq(dailyTransactions.userId, userId),
+        gte(dailyTransactions.date, threeMonthsAgo.toISOString().split('T')[0])
+      )
+    );
+  
+  if (items.length === 0) {
+    return [];
+  }
+  
+  // 2. Сгруппировать по normalizedName
+  const grouped = groupBy(items, item => item.normalizedName || '');
+  
+  // 3. Найти товары с разницей цен
+  const recommendations: PriceRecommendation[] = [];
+  
+  for (const [normalizedName, purchases] of Object.entries(grouped)) {
+    if (!normalizedName || purchases.length < 2) continue;
+    
+    // Сортировать по цене
+    const sorted = purchases.sort((a, b) => 
+      parseFloat(a.pricePerUnit) - parseFloat(b.pricePerUnit)
+    );
+    
+    const cheapest = sorted[0];
+    const mostExpensive = sorted[sorted.length - 1];
+    
+    const cheapPrice = parseFloat(cheapest.pricePerUnit);
+    const expPrice = parseFloat(mostExpensive.pricePerUnit);
+    
+    const savingsAmount = expPrice - cheapPrice;
+    const savingsPercent = (savingsAmount / expPrice) * 100;
+    
+    if (savingsPercent >= minSavingsPercent) {
+      recommendations.push({
+        itemName: cheapest.itemName,
+        normalizedName,
+        cheapestMerchant: cheapest.merchantName || 'Unknown',
+        cheapestPrice: cheapPrice,
+        expensiveMerchant: mostExpensive.merchantName || 'Unknown',
+        expensivePrice: expPrice,
+        savingsAmount,
+        savingsPercent,
+        purchaseCount: purchases.length,
+        recommendation: `Buy "${cheapest.itemName}" at ${cheapest.merchantName} (${cheapPrice.toFixed(0)}) instead of ${mostExpensive.merchantName} (${expPrice.toFixed(0)}). Save ${savingsAmount.toFixed(0)} (${savingsPercent.toFixed(0)}%)!`
+      });
+    }
+  }
+  
+  // 4. Сортировать по потенциальной экономии
+  return recommendations.sort((a, b) => b.savingsAmount - a.savingsAmount);
+}
+
+РАЗМЕР: ~150 строк ✅
+
+ФАЙЛЫ:
+└─ server/services/ai/price-comparison.service.ts (новый)
+
+БЕЗОПАСНОСТЬ:
+✅ Изолированный сервис
+✅ Не трогает другие файлы
+✅ Простая математика, нет AI API
