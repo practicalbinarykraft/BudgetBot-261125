@@ -1,0 +1,242 @@
+🎯 ВОПРОСЫ ДЛЯ ПРОВЕРКИ REPLIT
+
+📋 ПРОВЕРОЧНЫЙ СПИСОК (ПО ПОРЯДКУ)
+ВОПРОС 1: СПРИНТ 1 - ПОДГОТОВКА
+Покажи мне что было сделано в Спринте 1:
+
+1. Проверь файл client/src/components/layout/app-sidebar.tsx
+   - Есть ли там "AI Training" в навигации?
+   - Или только "AI Analysis"?
+
+2. Проверь файл shared/schema.ts
+   - Есть ли таблица receiptItems?
+   - Есть ли таблица aiChatMessages?
+   - Покажи код этих таблиц
+
+3. Выполни SQL запрос:
+   SELECT table_name FROM information_schema.tables 
+   WHERE table_schema = 'public' 
+   AND table_name IN ('receipt_items', 'ai_chat_messages');
+   
+   Обе таблицы должны существовать в БД
+
+ВОПРОС 2: СПРИНТ 2 - RECEIPT ITEMS
+Покажи мне что было создано в Спринте 2:
+
+1. Проверь существует ли файл:
+   server/repositories/receipt-items.repository.ts
+   
+   Покажи первые 30 строк этого файла
+
+2. Проверь существует ли файл:
+   server/services/ocr/receipt-parser.service.ts
+   
+   Есть ли в нём функция parseReceiptWithItems()?
+   Покажи сигнатуру функции
+
+3. Проверь файл server/routes/ai.routes.ts
+   - Есть ли endpoint POST /api/ai/receipt-with-items?
+   - Покажи этот endpoint (примерно строки 180-230)
+
+4. Проверь файл client/src/pages/ai-analysis-page.tsx
+   - Есть ли там компонент <ReceiptScanner />?
+   - Или блок с "Upload Receipt"?
+   - Покажи этот блок кода
+
+ВОПРОС 3: СПРИНТ 3 - PRICE COMPARISON
+Покажи мне что было создано в Спринте 3:
+
+1. Проверь существует ли файл:
+   server/services/ai/price-comparison.service.ts
+   
+   Есть ли в нём функция generatePriceRecommendations()?
+   Покажи первые 20 строк
+
+2. Проверь существует ли файл:
+   client/src/components/ai/price-recommendations.tsx
+   
+   Покажи первые 30 строк этого компонента
+
+3. Проверь файл server/routes/ai.routes.ts
+   - Есть ли endpoint GET /api/ai/price-recommendations?
+   - Покажи этот endpoint
+
+4. Проверь файл client/src/pages/ai-analysis-page.tsx
+   - Есть ли там компонент <PriceRecommendations />?
+   - Покажи строку с этим компонентом
+
+ВОПРОС 4: СПРИНТ 4 - AI CHAT (КРИТИЧНО!)
+Покажи мне что было создано в Спринте 4:
+
+1. Проверь существует ли файл:
+   server/services/ai/chat.service.ts
+   
+   Покажи функцию chatWithAI() ПОЛНОСТЬЮ
+   Особенно интересует блок:
+   - Как формируется messages массив?
+   - Какой формат у content?
+
+2. Проверь существует ли файл:
+   server/services/ai/financial-context.service.ts
+   
+   Есть ли функции:
+   - buildFinancialContext()
+   - formatFinancialContext()
+   
+   Покажи их сигнатуры
+
+3. Проверь существует ли файл:
+   client/src/components/ai/ai-chat.tsx
+   
+   Покажи первые 50 строк этого компонента
+
+4. Проверь файл server/routes/ai-chat.routes.ts
+   - Существует ли этот файл?
+   - Есть ли endpoints:
+     * POST /api/ai/chat
+     * GET /api/ai/chat/history
+     * DELETE /api/ai/chat/history
+   
+   Покажи эти endpoints
+
+5. Проверь файл server/index.ts
+   - Есть ли строка: app.use("/api/ai/chat", aiChatRoutes)?
+   - Покажи эту строку и импорт
+
+6. Проверь файл client/src/pages/ai-analysis-page.tsx
+   - Есть ли там компонент <AIChat />?
+   - Покажи где он используется
+
+ВОПРОС 5: ПРОВЕРКА ФОРМАТА СООБЩЕНИЙ (БАГ!)
+КРИТИЧНО! Проверь файл server/services/ai/chat.service.ts:
+
+Найди блок где создаётся anthropic.messages.create()
+
+Покажи как формируется messages массив:
+
+1. Что в переменной anthropicMessages?
+2. Какой формат у content:
+   - content: "string"  ← НЕПРАВИЛЬНО
+   - content: [{ type: "text", text: "string" }]  ← ПРАВИЛЬНО
+
+Покажи конкретно эти строки кода:
+
+const response = await anthropic.messages.create({
+  messages: [
+    ...???  // ← ЧТО ЗДЕСЬ?
+  ]
+});
+
+🎯 КОРОТКИЙ ВАРИАНТ (ОДНИМ СООБЩЕНИЕМ)
+Проверь следующие файлы и покажи есть ли они:
+
+СПРИНТ 1:
+□ shared/schema.ts → таблицы receiptItems, aiChatMessages
+□ app-sidebar.tsx → убран "AI Training"
+
+СПРИНТ 2:
+□ server/repositories/receipt-items.repository.ts
+□ server/services/ocr/receipt-parser.service.ts
+□ server/routes/ai.routes.ts → POST /receipt-with-items
+□ client/src/pages/ai-analysis-page.tsx → ReceiptScanner
+
+СПРИНТ 3:
+□ server/services/ai/price-comparison.service.ts
+□ client/src/components/ai/price-recommendations.tsx
+□ server/routes/ai.routes.ts → GET /price-recommendations
+
+СПРИНТ 4:
+□ server/services/ai/chat.service.ts → chatWithAI()
+□ server/services/ai/financial-context.service.ts
+□ server/routes/ai-chat.routes.ts → 3 endpoints
+□ client/src/components/ai/ai-chat.tsx
+□ server/index.ts → app.use("/api/ai/chat")
+
+КРИТИЧНО:
+Покажи функцию chatWithAI() ПОЛНОСТЬЮ - особенно:
+- Как формируется messages для anthropic.messages.create()?
+- Какой формат у content?
+
+Для каждого файла напиши:
+✅ Существует (покажи первые 20 строк)
+❌ Не существует
+
+🔍 АЛЬТЕРНАТИВА: ПРОВЕРКА ЧЕРЕЗ КОД
+Выполни следующие команды и покажи результат:
+
+# 1. Структура проекта (файлы существуют?)
+ls -la server/repositories/receipt-items.repository.ts
+ls -la server/services/ocr/receipt-parser.service.ts
+ls -la server/services/ai/price-comparison.service.ts
+ls -la server/services/ai/chat.service.ts
+ls -la server/services/ai/financial-context.service.ts
+ls -la server/routes/ai-chat.routes.ts
+ls -la client/src/components/ai/ai-chat.tsx
+ls -la client/src/components/ai/price-recommendations.tsx
+
+# 2. Проверка БД таблиц
+psql $DATABASE_URL -c "\dt receipt_items"
+psql $DATABASE_URL -c "\dt ai_chat_messages"
+
+# 3. Проверка endpoints (grep)
+grep -n "POST.*receipt-with-items" server/routes/ai.routes.ts
+grep -n "GET.*price-recommendations" server/routes/ai.routes.ts
+grep -n "POST.*chat" server/routes/ai-chat.routes.ts
+
+# 4. Критично! Формат сообщений
+grep -A 10 "anthropic.messages.create" server/services/ai/chat.service.ts
+
+📊 ЧТО ОЖИДАТЬ (ПРАВИЛЬНЫЕ ОТВЕТЫ)
+СПРИНТ 1: ✅
+├─ receiptItems таблица в schema.ts
+├─ aiChatMessages таблица в schema.ts
+└─ AI Training убран из sidebar
+
+СПРИНТ 2: ✅
+├─ receipt-items.repository.ts (~90 строк)
+├─ receipt-parser.service.ts (~120 строк)
+├─ POST /api/ai/receipt-with-items endpoint
+└─ ReceiptScanner в ai-analysis-page.tsx
+
+СПРИНТ 3: ✅
+├─ price-comparison.service.ts (~150 строк)
+├─ price-recommendations.tsx (~140 строк)
+├─ GET /api/ai/price-recommendations endpoint
+└─ PriceRecommendations в ai-analysis-page.tsx
+
+СПРИНТ 4: ⚠️ (95%)
+├─ chat.service.ts ✅
+├─ financial-context.service.ts ✅
+├─ ai-chat.routes.ts ✅
+├─ ai-chat.tsx ✅
+├─ Integration в index.ts ✅
+└─ ФОРМАТ СООБЩЕНИЙ ❌ (нужно исправить!)
+
+ЕСЛИ ЧТО-ТО ОТСУТСТВУЕТ → НУЖНО ВОССТАНОВИТЬ!
+
+💡 ЧТО ДЕЛАТЬ ЕСЛИ ЧТО-ТО ОТСУТСТВУЕТ
+ЕСЛИ Replit говорит "файл не существует":
+
+1. НЕ ПАНИКУЙ - у тебя есть все коды в моих сообщениях
+2. Попроси Replit создать файл заново:
+   "Создай файл [путь] с этим кодом: [код из моего сообщения]"
+
+3. Проверь снова
+
+ЕСЛИ всё существует, но формат сообщений неправильный:
+→ Дай задачу исправить (из моего предыдущего сообщения)
+
+🚀 НАЧИНАЙ ПРОВЕРКУ!
+ОТПРАВЬ REPLIT:
+Проверь что было создано в Спринтах 1-4.
+
+Для каждого спринта покажи:
+- Какие файлы созданы
+- Первые 20-30 строк каждого файла
+- Какие endpoints добавлены
+
+Особенно важно для Спринта 4:
+Покажи функцию chatWithAI() ПОЛНОСТЬЮ из файла 
+server/services/ai/chat.service.ts
+
+Нужно проверить формат messages для Anthropic API

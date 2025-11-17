@@ -101,7 +101,7 @@ import {
   budgets,
   aiChatMessages
 } from "@shared/schema";
-import { eq, and, desc, gte, lte } from "drizzle-orm";
+import { eq, and, desc, asc, gte, lte } from "drizzle-orm";
 
 export class DatabaseStorage implements IStorage {
   // Users
@@ -348,7 +348,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(aiChatMessages)
       .where(eq(aiChatMessages.userId, userId))
-      .orderBy(desc(aiChatMessages.createdAt))
+      .orderBy(asc(aiChatMessages.createdAt))
       .limit(limit);
   }
 
