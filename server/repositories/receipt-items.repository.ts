@@ -54,6 +54,25 @@ export class ReceiptItemsRepository {
   }
   
   /**
+   * Получить все товары пользователя из всех чеков
+   * Используется для price recommendations
+   */
+  async getAllByUserId(userId: number): Promise<ReceiptItem[]> {
+    const items = await db
+      .select({
+        item: receiptItems,
+      })
+      .from(receiptItems)
+      .innerJoin(
+        transactions,
+        eq(receiptItems.transactionId, transactions.id)
+      )
+      .where(eq(transactions.userId, userId));
+    
+    return items.map(row => row.item);
+  }
+  
+  /**
    * Найти все покупки похожего товара пользователем
    * Используется для сравнения цен между магазинами
    * 

@@ -43,6 +43,10 @@ The application uses Shadcn/ui (Radix UI primitives) and Tailwind CSS with a cus
 *   **AI Training History:** Dedicated page (`/ai-training/history`) displaying user's training data history ("lightning bolts" from `aiTrainingExamples` table). Shows total examples, correct predictions, accuracy rate, and recent training sessions with category/tag/type classifications. Backend endpoint `/api/ai/training/history` includes input validation (limit: 1-100, offset: ≥0) and enriches data with category/tag names via joins.
 *   **Receipt Item Parsing (Nov 2025):** New `receipt_items` table stores individual items parsed from receipt OCR. Each item links to a transaction (cascade delete) and includes: itemName, normalizedName (for price comparison), quantity, unit, pricePerUnit, totalPrice, currency, merchantName, and category. Supports multi-item receipt analysis and merchant price comparison features.
 *   **AI Chat Messages (Nov 2025):** New `ai_chat_messages` table stores chat history with AI financial advisor. Links to users (cascade delete) and includes: role ('user' | 'assistant'), content, contextType (e.g., 'budget', 'spending', 'goal'), and contextData (JSON string with relevant financial data). Enables personalized financial advice with full conversation context.
+*   **AI Services (Nov 2025):** Modular AI service layer with junior-friendly architecture (files <200 lines):
+    - `chat.service.ts` (58 lines): chatWithAI() function with BYOK pattern, OwnedInsert typing, streaming support, error handling
+    - `financial-context.service.ts` (85 lines): buildFinancialContext() gathers wallets, transactions, budgets for AI consumption with accurate time windows
+    - `financial-formatters.ts` (142 lines): Helper functions for formatting financial data (wallets, transactions, budgets limits, summary stats) with NaN guards and safe division
 
 ### System Design Choices
 

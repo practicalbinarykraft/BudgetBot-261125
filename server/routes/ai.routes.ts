@@ -9,6 +9,8 @@ import { insertAiTrainingExampleSchema, type TrainingStats } from "@shared/schem
 import { parseReceiptWithItems } from "../services/ocr/receipt-parser.service";
 import { receiptItemsRepository } from "../repositories/receipt-items.repository";
 import { comparePrices, getAIPriceInsights } from "../services/ai/price-comparison.service";
+import { chatWithAI } from "../services/ai/chat.service";
+import { buildFinancialContext } from "../services/ai/financial-context.service";
 
 const router = Router();
 
@@ -188,6 +190,90 @@ router.post("/receipt-with-items", withAuth(async (req, res) => {
     console.error("Receipt parsing error:", error);
     res.status(500).json({
       error: "Failed to parse receipt",
+      details: error.message || "Unknown error"
+    });
+  }
+}));
+
+// GET /api/ai/chat/history
+router.get("/chat/history", withAuth(async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const limit = parseInt(req.query.limit as string) || 50;
+    
+    const messages = await storage.getAIChatMessages(userId, limit);
+    res.json(messages);
+  } catch (error: any) {
+    console.error("Chat history error:", error);
+    res.status(500).json({ error: error.message });
+  }
+}));
+
+// POST /api/ai/chat
+router.post("/chat", withAuth(async (req, res) => {
+  try {
+    const { message, includeContext = true } = req.body;
+    const userId = req.user.id;
+    
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ error: "Message is required" });
+    }
+    
+    const settings = await storage.getSettingsByUserId(userId);
+    const anthropicApiKey = settings?.anthropicApiKey;
+    
+    if (!anthropicApiKey) {
+      return res.status(400).json({
+        error: "Anthropic API key not configured. Please add it in Settings."
+      });
+    }
+    
+    // Build financial context if requested
+    let contextData: string | undefined;
+    if (includeContext) {
+      contextData = await buildFinancialContext({ userId });
+    }
+    
+    // Get recent chat history
+    const recentMessages = await storage.getAIChatMessages(userId, 10);
+    const chatHistory = recentMessages.map(msg => ({
+      role: msg.role as "user" | "assistant",
+      content: msg.content
+    }));
+    
+    // Add current user message
+    chatHistory.push({ role: "user", content: message });
+    
+    // Call AI
+    const aiResponse = await chatWithAI({
+      messages: chatHistory,
+      contextData,
+      apiKey: anthropicApiKey
+    });
+    
+    // Save both messages to DB
+    await storage.createAIChatMessage({
+      userId,
+      role: "user",
+      content: message
+    });
+    
+    await storage.createAIChatMessage({
+      userId,
+      role: "assistant",
+      content: aiResponse.message
+    });
+    
+    res.json({
+      success: true,
+      message: aiResponse.message,
+      usage: aiResponse.usage
+    });
+    
+  } catch (error: any) {
+    console.error("AI chat error:", error);
+    res.status(500).json({
+      error: "Failed to process chat",
       details: error.message || "Unknown error"
     });
   }

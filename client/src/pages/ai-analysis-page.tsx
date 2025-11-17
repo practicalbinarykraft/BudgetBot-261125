@@ -6,6 +6,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { PriceRecommendations } from "@/components/ai/price-recommendations";
 import { ReceiptScanner } from "@/components/ai/receipt-scanner";
 import { SpendingAnalysisCard } from "@/components/ai/spending-analysis-card";
+import { AIChat } from "@/components/ai/ai-chat";
 
 interface FinancialHealthScore {
   score: number;
@@ -92,6 +93,8 @@ export default function AIAnalysisPage() {
       </div>
 
       <ReceiptScanner />
+
+      <AIChat />
 
       <Accordion type="single" collapsible className="w-full" data-testid="accordion-price-recommendations">
         <AccordionItem value="price-recommendations">
