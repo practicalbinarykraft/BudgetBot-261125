@@ -8,6 +8,7 @@ import { getTrainingHistory } from "../services/ai/training-history.service";
 import { insertAiTrainingExampleSchema, type TrainingStats } from "@shared/schema";
 import { parseReceiptWithItems } from "../services/ocr/receipt-parser.service";
 import { receiptItemsRepository } from "../repositories/receipt-items.repository";
+import { comparePrices, getAIPriceInsights } from "../services/ai/price-comparison.service";
 
 const router = Router();
 
@@ -189,6 +190,54 @@ router.post("/receipt-with-items", withAuth(async (req, res) => {
       error: "Failed to parse receipt",
       details: error.message || "Unknown error"
     });
+  }
+}));
+
+// GET /api/ai/price-recommendations
+router.get("/price-recommendations", withAuth(async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const includeInsights = req.query.includeInsights === 'true';
+    
+    // Get all receipt items for this user
+    const allItems = await receiptItemsRepository.getAllByUserId(userId);
+    
+    if (allItems.length === 0) {
+      return res.json({
+        recommendations: [],
+        totalPotentialSavings: 0,
+        averageSavingsPercent: 0,
+        aiInsights: null
+      });
+    }
+    
+    // Compare prices (no API key needed for local comparison)
+    const comparisonResult = await comparePrices(allItems);
+    
+    // Optionally generate AI insights
+    let aiInsights = null;
+    if (includeInsights && comparisonResult.recommendations.length > 0) {
+      const anthropicApiKey = req.headers['x-anthropic-key'] as string;
+      if (anthropicApiKey) {
+        try {
+          aiInsights = await getAIPriceInsights(
+            comparisonResult.recommendations,
+            anthropicApiKey
+          );
+        } catch (error) {
+          console.error("AI insights generation failed:", error);
+          // Don't fail the whole request if insights fail
+        }
+      }
+    }
+    
+    res.json({
+      ...comparisonResult,
+      aiInsights
+    });
+  } catch (error: any) {
+    console.error("Price recommendations error:", error);
+    res.status(500).json({ error: error.message });
   }
 }));
 

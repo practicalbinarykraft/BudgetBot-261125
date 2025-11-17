@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { PriceRecommendations } from "@/components/ai/price-recommendations";
 
 interface FinancialHealthScore {
   score: number;
@@ -29,6 +31,11 @@ export default function AIAnalysisPage() {
   // Fetch real financial health score
   const { data: healthScore, isLoading: isLoadingHealth } = useQuery<FinancialHealthScore>({
     queryKey: ["/api/financial-health"],
+  });
+
+  // Fetch price recommendations
+  const { data: priceRecommendations, isLoading: isLoadingRecommendations } = useQuery({
+    queryKey: ["/api/ai/price-recommendations"],
   });
 
   // Receipt upload mutation
@@ -292,6 +299,34 @@ export default function AIAnalysisPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Accordion type="single" collapsible className="w-full" data-testid="accordion-price-recommendations">
+        <AccordionItem value="price-recommendations">
+          <AccordionTrigger data-testid="accordion-trigger-price-recommendations">
+            Price Recommendations
+          </AccordionTrigger>
+          <AccordionContent>
+            {isLoadingRecommendations ? (
+              <div className="space-y-4">
+                <Skeleton className="h-24 w-full" data-testid="skeleton-price-recommendations" />
+                <Skeleton className="h-32 w-full" />
+              </div>
+            ) : priceRecommendations ? (
+              <PriceRecommendations
+                recommendations={priceRecommendations.recommendations || []}
+                totalPotentialSavings={priceRecommendations.totalPotentialSavings || 0}
+                averageSavingsPercent={priceRecommendations.averageSavingsPercent || 0}
+                currency="IDR"
+                aiInsights={priceRecommendations.aiInsights}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground" data-testid="empty-price-recommendations">
+                No price data available yet. Scan more receipts to discover savings!
+              </p>
+            )}
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }
