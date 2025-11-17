@@ -24,7 +24,8 @@ async function formatTransactionMessage(
   description: string,
   categoryId: number | null,
   type: 'income' | 'expense',
-  lang: Language
+  lang: Language,
+  items?: any[]  // Receipt items (optional)
 ): Promise<{ message: string; reply_markup?: TelegramBot.InlineKeyboardMarkup }> {
   const userWallets = await db
     .select()
@@ -124,6 +125,25 @@ async function formatTransactionMessage(
   
   if (budgetInfo) {
     message += budgetInfo;
+  }
+
+  // Add receipt items if available
+  if (items && items.length > 0) {
+    const currencySymbol = currency === 'IDR' ? 'Rp' : currency === 'RUB' ? '₽' : '$';
+    message += '\n\n🛒 ' + (lang === 'ru' ? 'Товары' : 'Items') + ':\n';
+    
+    const displayItems = items.slice(0, 5);
+    for (const item of displayItems) {
+      const price = parseFloat(item.totalPrice || item.pricePerUnit || 0);
+      const formattedPrice = price.toLocaleString('en-US', { maximumFractionDigits: 0 });
+      message += `• ${item.name} - ${currencySymbol}${formattedPrice}\n`;
+    }
+    
+    if (items.length > 5) {
+      const remaining = items.length - 5;
+      const andMore = lang === 'ru' ? `... и ещё ${remaining}` : `... and ${remaining} more`;
+      message += andMore + '\n';
+    }
   }
 
   const reply_markup: TelegramBot.InlineKeyboardMarkup = {
@@ -819,7 +839,8 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
         parsed.description,
         categoryId,
         'expense',
-        lang
+        lang,
+        'items' in parsed ? parsed.items : undefined  // Pass receipt items
       );
 
       await bot.editMessageText(message, {
