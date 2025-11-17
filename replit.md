@@ -44,9 +44,20 @@ The application uses Shadcn/ui (Radix UI primitives) and Tailwind CSS with a cus
 *   **Receipt Item Parsing (Nov 2025):** New `receipt_items` table stores individual items parsed from receipt OCR. Each item links to a transaction (cascade delete) and includes: itemName, normalizedName (for price comparison), quantity, unit, pricePerUnit, totalPrice, currency, merchantName, and category. Supports multi-item receipt analysis and merchant price comparison features.
 *   **AI Chat Messages (Nov 2025):** New `ai_chat_messages` table stores chat history with AI financial advisor. Links to users (cascade delete) and includes: role ('user' | 'assistant'), content, contextType (e.g., 'budget', 'spending', 'goal'), and contextData (JSON string with relevant financial data). Enables personalized financial advice with full conversation context.
 *   **AI Services (Nov 2025):** Modular AI service layer with junior-friendly architecture (files <200 lines):
-    - `chat.service.ts` (58 lines): chatWithAI() function with BYOK pattern, OwnedInsert typing, streaming support, error handling
+    - `chat.service.ts` (163 lines): chatWithAI() function with BYOK pattern, Anthropic Messages API array format for multi-turn conversations, enhanced error handling (401/400/429/network errors), message length validation (max 4000 chars)
     - `financial-context.service.ts` (85 lines): buildFinancialContext() gathers wallets, transactions, budgets for AI consumption with accurate time windows
     - `financial-formatters.ts` (142 lines): Helper functions for formatting financial data (wallets, transactions, budgets limits, summary stats) with NaN guards and safe division
+*   **AI Chat UI (Nov 2025):** Interactive chat interface with AI financial advisor:
+    - `ai-chat.tsx` (196 lines): Full chat UI with message history, input validation, quick action buttons ("Ask about budget", "Analyze spending", "Savings tips"), skeleton loading states, disabled states during API calls
+    - Features: Multi-turn conversation support, automatic context inclusion, error toasts, real-time "AI is thinking" indicator
+*   **Modular AI Routes (Nov 2025):** Refactored monolithic ai.routes.ts (348 lines) into domain-specific modules:
+    - `server/routes/ai/chat.routes.ts` (111 lines): Chat endpoints (GET /history, POST /) with limit validation (1-100), message trimming, length checks
+    - `server/routes/ai/training.routes.ts` (62 lines): Training stats, examples, and history endpoints
+    - `server/routes/ai/analyze.routes.ts` (53 lines): Spending analysis, receipt scanning, prediction endpoints
+    - `server/routes/ai/receipts.routes.ts` (85 lines): Receipt parsing with items extraction
+    - `server/routes/ai/price.routes.ts` (52 lines): Price recommendations and AI insights
+    - `server/routes/ai/index.ts` (17 lines): Aggregator mounting all sub-routers
+    - **Design principle:** One file = one responsibility, all files <200 lines for junior-friendly maintenance
 
 ### System Design Choices
 
