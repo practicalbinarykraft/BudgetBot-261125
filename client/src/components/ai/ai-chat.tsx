@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MessageCircle, Send, Bot, User } from "lucide-react";
+import { MessageCircle, Send, Bot, User, Wallet, TrendingDown, Lightbulb } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { AiChatMessage } from "@shared/schema";
@@ -59,6 +59,11 @@ export function AIChat() {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const askQuickQuestion = (question: string) => {
+    setMessage(question);
+    sendMessageMutation.mutate(question);
   };
 
   return (
@@ -118,6 +123,44 @@ export function AIChat() {
             ))
           )}
         </div>
+
+        {messages.length === 0 && !sendMessageMutation.isPending && (
+          <div className="flex flex-wrap gap-2" data-testid="quick-actions">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => askQuickQuestion("How should I distribute my budget?")}
+              disabled={sendMessageMutation.isPending}
+              data-testid="quick-action-budget"
+              className="hover-elevate"
+            >
+              <Wallet className="h-4 w-4 mr-1" />
+              Ask about budget
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => askQuickQuestion("Analyze my spending patterns")}
+              disabled={sendMessageMutation.isPending}
+              data-testid="quick-action-spending"
+              className="hover-elevate"
+            >
+              <TrendingDown className="h-4 w-4 mr-1" />
+              Analyze spending
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => askQuickQuestion("Give me tips on how to save money")}
+              disabled={sendMessageMutation.isPending}
+              data-testid="quick-action-savings"
+              className="hover-elevate"
+            >
+              <Lightbulb className="h-4 w-4 mr-1" />
+              Savings tips
+            </Button>
+          </div>
+        )}
 
         <div className="flex gap-2">
           <Textarea
