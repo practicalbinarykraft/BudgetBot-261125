@@ -39,6 +39,8 @@ export default function TransactionsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/sorting/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/unsorted"], exact: false });
       toast({
         title: "Success",
         description: "Transaction deleted successfully",

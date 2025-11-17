@@ -84,6 +84,8 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
       queryClient.invalidateQueries({ queryKey: ["/api/stats"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["/api/tags"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["/api/sorting/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/unsorted"], exact: false });
       toast({
         title: "Success",
         description: "Transaction updated successfully",

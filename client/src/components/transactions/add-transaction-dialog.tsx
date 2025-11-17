@@ -93,6 +93,8 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tags"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["/api/sorting/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/unsorted"], exact: false });
       
       if (transaction.mlSuggested && transaction.category) {
         toast({

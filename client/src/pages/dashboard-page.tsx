@@ -65,6 +65,8 @@ export default function DashboardPage() {
       // Invalidate all transaction queries (including date-filtered ones)
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["/api/sorting/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/unsorted"], exact: false });
       toast({
         title: "Success",
         description: "Transaction deleted successfully",

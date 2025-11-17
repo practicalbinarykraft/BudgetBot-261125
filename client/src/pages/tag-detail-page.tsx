@@ -62,6 +62,8 @@ export default function TagDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/sorting/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/unsorted"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["/api/tags", tagId, "stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transactions", { personalTagId: tagId }], exact: false });
       toast({
