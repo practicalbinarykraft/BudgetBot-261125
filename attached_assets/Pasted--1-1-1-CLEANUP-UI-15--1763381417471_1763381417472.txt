@@ -1,0 +1,97 @@
+🚀 СПРИНТ 1: ПОДГОТОВКА
+ЗАДАЧА 1.1: CLEANUP UI (15 минут)
+ЦЕЛЬ: Убрать лишнюю вкладку, оставить одну AI Analysis
+
+ЧТО ДЕЛАТЬ:
+1. Открыть client/src/components/layout/app-sidebar.tsx
+2. Найти строки 80-88 (AI Training, AI Analysis)
+3. УДАЛИТЬ блок с AI Training
+4. Оставить только AI Analysis
+
+КОД (УДАЛИТЬ):
+{
+  title: "AI Training",
+  icon: Brain,
+  url: "/ai-training/history"
+}
+
+ПРОВЕРКА:
+└─ В sidebar только "AI Analysis" ✅
+└─ Клик работает → /ai-analysis ✅
+
+ФАЙЛЫ:
+└─ app-sidebar.tsx (1 файл, -5 строк)
+
+БЕЗОПАСНОСТЬ:
+✅ Не трогаем логику, только UI
+✅ Страница /ai-training остаётся (можно зайти по ссылке)
+
+ЗАДАЧА 1.2: БАЗА ДАННЫХ (30 минут)
+ЦЕЛЬ: Создать 2 новые таблицы
+
+ЧТО ДЕЛАТЬ:
+1. Открыть shared/schema.ts
+2. В КОНЦЕ файла добавить:
+
+// ========== RECEIPT ITEMS ==========
+export const receiptItems = pgTable("receipt_items", {
+  id: serial("id").primaryKey(),
+  transactionId: integer("transaction_id")
+    .references(() => dailyTransactions.id, { onDelete: "cascade" })
+    .notNull(),
+  
+  // Товар
+  itemName: text("item_name").notNull(),
+  normalizedName: text("normalized_name"), // "orange juice"
+  quantity: decimal("quantity", { precision: 10, scale: 2 }),
+  unit: text("unit"), // 'pcs', 'kg', 'L'
+  
+  // Цена
+  pricePerUnit: decimal("price_per_unit", { precision: 10, scale: 2 }).notNull(),
+  totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").default("IDR"),
+  
+  // Метаданные
+  merchantName: text("merchant_name"),
+  category: text("category"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertReceiptItemSchema = createInsertSchema(receiptItems);
+export const selectReceiptItemSchema = createSelectSchema(receiptItems);
+
+export type InsertReceiptItem = z.infer<typeof insertReceiptItemSchema>;
+export type ReceiptItem = z.infer<typeof selectReceiptItemSchema>;
+
+// ========== AI CHAT MESSAGES ==========
+export const aiChatMessages = pgTable("ai_chat_messages", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  
+  role: text("role").notNull(), // 'user' | 'assistant'
+  content: text("content").notNull(),
+  
+  // Контекст
+  contextType: text("context_type"),
+  contextData: text("context_data"), // JSON string
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertAiChatMessageSchema = createInsertSchema(aiChatMessages);
+export const selectAiChatMessageSchema = createSelectSchema(aiChatMessages);
+
+export type InsertAiChatMessage = z.infer<typeof insertAiChatMessageSchema>;
+export type AiChatMessage = z.infer<typeof selectAiChatMessageSchema>;
+
+3. Сохранить файл
+
+ФАЙЛЫ:
+└─ shared/schema.ts (+60 строк в конце файла)
+
+БЕЗОПАСНОСТЬ:
+✅ Добавляем в КОНЕЦ, не трогаем существующие таблицы
+✅ Используем существующие паттерны (pgTable, serial, etc)

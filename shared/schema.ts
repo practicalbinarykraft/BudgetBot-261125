@@ -248,6 +248,48 @@ export const aiTrainingExamples = pgTable("ai_training_examples", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Receipt Items table (items parsed from receipts with OCR)
+export const receiptItems = pgTable("receipt_items", {
+  id: serial("id").primaryKey(),
+  transactionId: integer("transaction_id")
+    .references(() => transactions.id, { onDelete: "cascade" })
+    .notNull(),
+  
+  // Item details
+  itemName: text("item_name").notNull(),
+  normalizedName: text("normalized_name"), // "orange juice" for comparison
+  quantity: decimal("quantity", { precision: 10, scale: 2 }),
+  unit: text("unit"), // 'pcs', 'kg', 'L'
+  
+  // Price
+  pricePerUnit: decimal("price_per_unit", { precision: 10, scale: 2 }).notNull(),
+  totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").default("IDR"),
+  
+  // Metadata
+  merchantName: text("merchant_name"),
+  category: text("category"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// AI Chat Messages table (chat history with AI financial advisor)
+export const aiChatMessages = pgTable("ai_chat_messages", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  
+  role: text("role").notNull(), // 'user' | 'assistant'
+  content: text("content").notNull(),
+  
+  // Context
+  contextType: text("context_type"), // e.g., 'budget', 'spending', 'goal'
+  contextData: text("context_data"), // JSON string with relevant data
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   transactions: many(transactions),
@@ -264,9 +306,10 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   sortingProgress: one(sortingProgress),
   settings: one(settings),
   aiTrainingExamples: many(aiTrainingExamples),
+  aiChatMessages: many(aiChatMessages),
 }));
 
-export const transactionsRelations = relations(transactions, ({ one }) => ({
+export const transactionsRelations = relations(transactions, ({ one, many }) => ({
   user: one(users, {
     fields: [transactions.userId],
     references: [users.id],
@@ -279,6 +322,7 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
     fields: [transactions.personalTagId],
     references: [personalTags.id],
   }),
+  receiptItems: many(receiptItems),
 }));
 
 export const walletsRelations = relations(wallets, ({ one, many }) => ({
@@ -375,6 +419,20 @@ export const sortingSessionsRelations = relations(sortingSessions, ({ one }) => 
 export const aiTrainingExamplesRelations = relations(aiTrainingExamples, ({ one }) => ({
   user: one(users, {
     fields: [aiTrainingExamples.userId],
+    references: [users.id],
+  }),
+}));
+
+export const receiptItemsRelations = relations(receiptItems, ({ one }) => ({
+  transaction: one(transactions, {
+    fields: [receiptItems.transactionId],
+    references: [transactions.id],
+  }),
+}));
+
+export const aiChatMessagesRelations = relations(aiChatMessages, ({ one }) => ({
+  user: one(users, {
+    fields: [aiChatMessages.userId],
     references: [users.id],
   }),
 }));
@@ -519,6 +577,25 @@ export const insertAiTrainingExampleSchema = createInsertSchema(aiTrainingExampl
   createdAt: true,
 });
 
+export const insertReceiptItemSchema = createInsertSchema(receiptItems, {
+  itemName: z.string().min(1),
+  pricePerUnit: z.string().regex(/^\d+(\.\d{1,2})?$/),
+  totalPrice: z.string().regex(/^\d+(\.\d{1,2})?$/),
+  quantity: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAiChatMessageSchema = createInsertSchema(aiChatMessages, {
+  role: z.enum(["user", "assistant"]),
+  content: z.string().min(1),
+}).omit({
+  id: true,
+  userId: true,  // Server-side only
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -566,6 +643,12 @@ export type SortingProgress = typeof sortingProgress.$inferSelect;
 
 export type InsertAiTrainingExample = z.infer<typeof insertAiTrainingExampleSchema>;
 export type AiTrainingExample = typeof aiTrainingExamples.$inferSelect;
+
+export type InsertReceiptItem = z.infer<typeof insertReceiptItemSchema>;
+export type ReceiptItem = typeof receiptItems.$inferSelect;
+
+export type InsertAiChatMessage = z.infer<typeof insertAiChatMessageSchema>;
+export type AiChatMessage = typeof aiChatMessages.$inferSelect;
 
 export interface TrainingStats {
   totalExamples: number;
