@@ -13,6 +13,7 @@ import { storage } from '../storage';
 import { pendingReceipts } from './pending-receipts';
 import { pendingEdits } from './pending-edits';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
+import { ReceiptItemsRepository } from '../repositories/receipt-items.repository';
 
 async function formatTransactionMessage(
   userId: number,
@@ -777,6 +778,29 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
           walletId: primaryWallet.id,
         })
         .returning();
+
+      // Save receipt items if available
+      if ('items' in parsed && parsed.items && parsed.items.length > 0) {
+        try {
+          const receiptItemsRepo = new ReceiptItemsRepository();
+          const itemsToSave = parsed.items.map((item: any) => ({
+            transactionId: transaction.id,
+            itemName: item.name,
+            normalizedName: item.normalizedName,
+            quantity: item.quantity?.toString(),
+            pricePerUnit: item.pricePerUnit.toString(),
+            totalPrice: item.totalPrice.toString(),
+            currency: parsed.currency,
+            merchantName: parsed.description
+          }));
+          
+          await receiptItemsRepo.createBulk(itemsToSave);
+          console.log(`✅ Saved ${itemsToSave.length} items from receipt for transaction ${transaction.id}`);
+        } catch (error) {
+          console.error('Failed to save receipt items:', error);
+          // Don't fail the transaction if items fail to save
+        }
+      }
 
       // Update wallet balance
       await updateWalletBalance(

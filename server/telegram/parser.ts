@@ -1,4 +1,5 @@
 import { CATEGORY_KEYWORDS, DEFAULT_CATEGORY_EXPENSE } from './config';
+import type { ParsedReceiptItem } from '../services/ocr/receipt-parser.service';
 
 export interface ParsedTransaction {
   amount: number;
@@ -6,6 +7,7 @@ export interface ParsedTransaction {
   description: string;
   category: string;
   type: 'expense' | 'income';
+  items?: ParsedReceiptItem[];  // Receipt items from OCR
 }
 
 const CURRENCY_SYMBOLS: Record<string, 'USD' | 'RUB' | 'IDR'> = {

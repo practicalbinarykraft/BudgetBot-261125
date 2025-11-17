@@ -1,13 +1,8 @@
 import { randomBytes } from 'crypto';
+import type { ParsedTransaction } from './parser';
 
 interface PendingReceipt {
-  parsed: {
-    amount: number;
-    currency: string;
-    description: string;
-    category: string;
-    type: 'expense' | 'income';
-  };
+  parsed: ParsedTransaction;
   categoryId: number | null;
   userId: number;
   expiresAt: number;

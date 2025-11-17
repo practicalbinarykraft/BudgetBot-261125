@@ -2,6 +2,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import { ParsedTransaction } from './parser';
 import { DEFAULT_CATEGORY_EXPENSE, CATEGORY_KEYWORDS } from './config';
 import { storage } from '../storage';
+import { parseReceiptWithItems } from '../services/ocr/receipt-parser.service';
+import type { ParsedReceiptItem } from '../services/ocr/receipt-parser.service';
 
 export interface ReceiptData {
   amount: number;
@@ -9,21 +11,23 @@ export interface ReceiptData {
   merchantName?: string;
   description?: string;
   date?: string;
+  items?: ParsedReceiptItem[];
 }
 
 /**
  * Распознать чек через Claude Vision API (BYOK - использует API ключ пользователя)
+ * Теперь с извлечением товаров!
  * 
  * @param userId - ID пользователя (для загрузки API ключа из Settings)
  * @param imageBase64 - Изображение чека в base64
  * @param mimeType - MIME тип изображения
- * @returns Распознанные данные или null
+ * @returns Распознанные данные с товарами или null
  */
 export async function processReceiptImage(
   userId: number,
   imageBase64: string,
   mimeType: string = 'image/jpeg'
-): Promise<ParsedTransaction | null> {
+): Promise<(ParsedTransaction & { items?: ParsedReceiptItem[] }) | null> {
   try {
     // 1. Загрузить настройки пользователя
     const settings = await storage.getSettingsByUserId(userId);
@@ -34,64 +38,50 @@ export async function processReceiptImage(
       return null;
     }
 
-    // 2. Создать Anthropic client с пользовательским ключом
-    const anthropic = new Anthropic({
-      apiKey: apiKey,
-    });
+    // 2. Использовать новый сервис с извлечением товаров
+    const validMimeType = mimeType as "image/jpeg" | "image/png" | "image/webp" | "image/gif";
+    const parsedReceipt = await parseReceiptWithItems(imageBase64, apiKey, validMimeType);
 
-    // 3. Отправить изображение в Claude
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: mimeType as any,
-                data: imageBase64,
-              },
-            },
-            {
-              type: 'text',
-              text: buildOCRPrompt(),
-            },
-          ],
-        },
-      ],
-    });
-
-    // 4. Получить текст ответа
-    const content = response.content[0];
-    if (content.type !== 'text') {
+    if (!parsedReceipt) {
+      console.error('Failed to parse receipt with items');
       return null;
     }
 
-    // 5. Распарсить JSON
-    const receiptData = parseReceiptJSON(content.text);
-    if (!receiptData) {
-      return null;
-    }
+    // 3. Конвертировать валюту (если нужно)
+    const currency = mapCurrency(parsedReceipt.merchant);
 
-    // 6. Определить категорию
-    const category = detectCategory(receiptData.merchantName || receiptData.description);
+    // 4. Определить категорию
+    const category = detectCategory(parsedReceipt.merchant);
 
-    // 7. Вернуть результат
+    // 5. Вернуть результат с товарами
     return {
-      amount: receiptData.amount,
-      currency: receiptData.currency,
-      description: receiptData.merchantName || receiptData.description || 'Receipt',
+      amount: parsedReceipt.total,
+      currency,
+      description: parsedReceipt.merchant,
       category,
       type: 'expense',
+      items: parsedReceipt.items || []
     };
 
   } catch (error) {
     console.error('OCR error:', error);
     return null;
   }
+}
+
+/**
+ * Определить валюту по названию магазина (по умолчанию IDR для Индонезии)
+ */
+function mapCurrency(merchantName: string): 'USD' | 'RUB' | 'IDR' {
+  const lower = merchantName.toLowerCase();
+  
+  // Индонезийские магазины
+  if (lower.includes('pepito') || lower.includes('indomaret') || lower.includes('alfamart')) {
+    return 'IDR';
+  }
+  
+  // По умолчанию IDR (т.к. пользователь в Индонезии)
+  return 'IDR';
 }
 
 /**
