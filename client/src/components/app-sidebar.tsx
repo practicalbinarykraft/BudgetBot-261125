@@ -9,7 +9,6 @@ import {
   Calendar,
   TrendingDown,
   Sparkles,
-  Brain,
   Settings,
   LogOut,
 } from "lucide-react";
@@ -80,11 +79,6 @@ const menuItems = [
     title: "AI Analysis",
     url: "/ai-analysis",
     icon: Sparkles,
-  },
-  {
-    title: "AI Training",
-    url: "/ai-training/history",
-    icon: Brain,
   },
   {
     title: "Settings",
