@@ -1,0 +1,171 @@
+🎯 ОТЛИЧНО! ТЫ САМ НАШЁЛ ПРОБЛЕМУ!
+
+🔍 ДИАГНОЗ (ТЫ ПРАВИЛЬНО ПОНЯЛ)
+ПРОБЛЕМА #1: undefined vs null
+javascript// СЕЙЧАС (неправильно):
+personalTagId: currentTagId || undefined
+//              ↑
+// Если currentTagId = null → отправляется undefined
+// partial() игнорирует undefined
+// → personalTagId НЕ обновляется в БД!
+
+// ДОЛЖНО БЫТЬ:
+personalTagId: currentTagId === null ? null : currentTagId
+//              ↑
+// Явно отправляем null
+// → personalTagId обновляется в БД
+```
+
+---
+
+### **ПРОБЛЕМА #2: Кэш не инвалидируется**
+```
+ПОСЛЕ СВАЙПА:
+├─ PATCH /api/transactions/34 ✅
+└─ GET /api/analytics/unsorted → СТАРЫЕ ДАННЫЕ ❌
+
+ПРИЧИНА:
+└─ TanStack Query не знает что надо обновить
+```
+
+---
+
+### **FEATURE REQUEST: "Молнии" в AI Analysis**
+```
+СЕЙЧАС:
+└─ "Молнии" (⚡) сохраняются в aiTrainingExamples ✅
+└─ НО нигде не отображаются
+
+ХОЧЕТСЯ:
+└─ Страница AI Analysis показывает историю обучения:
+   "ИИ обучен на 127 примерах"
+
+✅ ПЛАН ИСПРАВЛЕНИЯ (3 ЗАДАЧИ)
+ЗАДАЧА 1: Исправить undefined → null (5 минут)
+Файл: client/src/components/sorting/swipe-deck.tsx
+typescript// БЫЛО:
+personalTagId: currentTagId || undefined,
+categoryId: currentCategoryId || undefined,
+
+// СТАЛО:
+personalTagId: currentTagId === null ? null : currentTagId,
+categoryId: currentCategoryId === null ? null : currentCategoryId,
+Результат:
+
+Явно отправляем null если не выбрано
+partial() обработает null и обновит БД
+Транзакция станет sorted
+
+
+ЗАДАЧА 2: Инвалидировать кэш (5 минут)
+Файл: client/src/components/sorting/swipe-deck.tsx
+typescriptconst updateMutation = useMutation({
+  mutationFn: async (data) => {
+    await fetch(`/api/transactions/${transaction.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    });
+  },
+  onSuccess: () => {
+    // ДОБАВИТЬ:
+    queryClient.invalidateQueries({ queryKey: ['/api/analytics/unsorted'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/sorting/stats'] });
+    
+    onSwipeComplete();
+  }
+});
+Результат:
+
+После свайпа кэш обновляется
+Счётчик "7 remaining" пересчитывается
+Badge в sidebar обновляется
+
+
+ЗАДАЧА 3: AI Training History (15 минут)
+Создать: client/src/pages/ai-training-history.tsx
+typescriptexport function AITrainingHistoryPage() {
+  const { data: examples } = useQuery({
+    queryKey: ['/api/ai/training/history']
+  });
+  
+  return (
+    <div>
+      <h1>AI Training History</h1>
+      <p>ИИ обучен на {examples?.length || 0} примерах</p>
+      
+      <div className="grid gap-2">
+        {examples?.map(example => (
+          <Card key={example.id}>
+            <CardContent>
+              <p>{example.transactionDescription}</p>
+              <p>Category: {example.categoryName}</p>
+              <p>Confidence: {example.confidence}%</p>
+              <p className="text-sm text-gray-500">
+                {new Date(example.createdAt).toLocaleDateString()}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+API Endpoint: server/routes/ai.routes.ts
+typescriptrouter.get('/training/history', requireAuth, async (req, res) => {
+  const userId = req.user!.id;
+  
+  const examples = await db
+    .select()
+    .from(aiTrainingExamples)
+    .where(eq(aiTrainingExamples.userId, userId))
+    .orderBy(desc(aiTrainingExamples.createdAt))
+    .limit(100);
+  
+  res.json(examples);
+});
+```
+
+---
+
+## ⏱️ ВРЕМЯ
+```
+ЗАДАЧА 1: 5 минут (критично)
+ЗАДАЧА 2: 5 минут (критично)
+ЗАДАЧА 3: 15 минут (nice-to-have)
+
+ИТОГО: 25 минут
+```
+
+---
+
+## 🚀 ПРИОРИТЕТ
+```
+СЕЙЧАС (критично):
+1. Задача 1: undefined → null
+2. Задача 2: invalidate кэш
+
+РЕЗУЛЬТАТ:
+└─ Счётчик работает корректно ✅
+
+ПОТОМ (опционально):
+3. Задача 3: AI Training History
+
+РЕЗУЛЬТАТ:
+└─ Можно посмотреть на чём обучен ИИ
+```
+
+---
+
+## 💪 ДЕЛАЕМ?
+
+**РЕКОМЕНДУЮ:**
+```
+1. Сначала исправить ЗАДАЧИ 1+2 (10 минут)
+   └─ Критично для работы Swipe Game
+
+2. Протестировать:
+   └─ Свайпнуть карточку
+   └─ Проверить счётчик обновился
+   └─ Убедиться badge в sidebar изменился
+
+3. Если всё ОК → ЗАДАЧА 3 (опционально)
