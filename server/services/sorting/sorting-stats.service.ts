@@ -1,40 +1,15 @@
 import { db } from '../../db';
-import { transactions, personalTags, sortingProgress } from '@shared/schema';
-import { eq, and, or, isNull } from 'drizzle-orm';
+import { transactions, sortingProgress } from '@shared/schema';
+import { eq, and, isNull } from 'drizzle-orm';
 
 /**
  * Подсчет несортированных транзакций для пользователя
  * 
  * Транзакция считается несортированной если:
- * - personalTagId = NULL
- * - personalTagId = "Неопределена" (дефолтный тег)
- * - financialType = NULL
+ * - financialType = NULL (personalTagId and categoryId are optional secondary classifications)
  */
 export async function getUnsortedCount(userId: number): Promise<number> {
-  // Найти тег "Неопределена"
-  const undefinedTag = await db
-    .select()
-    .from(personalTags)
-    .where(
-      and(
-        eq(personalTags.userId, userId),
-        eq(personalTags.name, 'Неопределена')
-      )
-    )
-    .limit(1);
-
-  const undefinedTagId = undefinedTag[0]?.id;
-
-  const orConditions = [
-    isNull(transactions.personalTagId),
-    isNull(transactions.financialType)
-  ];
-  
-  if (undefinedTagId !== undefined) {
-    orConditions.push(eq(transactions.personalTagId, undefinedTagId));
-  }
-
-  // Подсчитать несортированные транзакции
+  // Подсчитать несортированные транзакции (только financialType=NULL)
   const results = await db
     .select()
     .from(transactions)
@@ -42,7 +17,7 @@ export async function getUnsortedCount(userId: number): Promise<number> {
       and(
         eq(transactions.userId, userId),
         eq(transactions.type, 'expense'),
-        or(...orConditions)
+        isNull(transactions.financialType)
       )
     );
 
