@@ -8,28 +8,6 @@ export async function getUnsortedTransactions(
   startDate: string,
   endDate: string
 ): Promise<Transaction[]> {
-  const undefinedTag = await db
-    .select()
-    .from(personalTags)
-    .where(
-      and(
-        eq(personalTags.userId, userId),
-        eq(personalTags.name, 'Неопределена')
-      )
-    )
-    .limit(1);
-
-  const undefinedTagId = undefinedTag[0]?.id;
-
-  const orConditions = [
-    isNull(transactions.personalTagId),
-    isNull(transactions.financialType)
-  ];
-  
-  if (undefinedTagId !== undefined) {
-    orConditions.push(eq(transactions.personalTagId, undefinedTagId));
-  }
-
   const results = await db
     .select()
     .from(transactions)
@@ -39,7 +17,7 @@ export async function getUnsortedTransactions(
         eq(transactions.type, 'expense'),
         gte(transactions.date, startDate),
         lte(transactions.date, endDate),
-        or(...orConditions)
+        isNull(transactions.financialType)
       )
     )
     .orderBy(transactions.date);
