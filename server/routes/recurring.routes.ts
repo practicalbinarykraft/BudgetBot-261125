@@ -2,6 +2,7 @@ import { Router } from "express";
 import { storage } from "../storage";
 import { insertRecurringSchema } from "@shared/schema";
 import { withAuth } from "../middleware/auth-utils";
+import { convertToUSD, getExchangeRate } from "../services/currency-service";
 
 const router = Router();
 
@@ -18,10 +19,40 @@ router.get("/", withAuth(async (req, res) => {
 // POST /api/recurring
 router.post("/", withAuth(async (req, res) => {
   try {
-    const data = insertRecurringSchema.parse({
+    const inputData = {
       ...req.body,
       userId: req.user.id,
+    };
+    
+    const currency = inputData.currency || 'USD';
+    const amountStr = inputData.amount;
+    const amount = parseFloat(amountStr);
+    
+    let amountUsd: string;
+    let originalAmount: string | undefined;
+    let originalCurrency: string | undefined;
+    let exchangeRate: string | undefined;
+    
+    if (currency !== 'USD') {
+      const usdValue = convertToUSD(amount, currency);
+      amountUsd = usdValue.toFixed(2);
+      originalAmount = amountStr;
+      originalCurrency = currency;
+      exchangeRate = getExchangeRate(currency).toString();
+    } else {
+      amountUsd = amount.toFixed(2);
+    }
+    
+    const data = insertRecurringSchema.parse({
+      ...inputData,
+      amount: amountStr,
+      currency,
+      amountUsd,
+      originalAmount,
+      originalCurrency,
+      exchangeRate,
     });
+    
     const recurringItem = await storage.createRecurring(data);
     res.json(recurringItem);
   } catch (error: any) {

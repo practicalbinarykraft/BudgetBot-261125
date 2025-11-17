@@ -49,6 +49,8 @@ export default function RecurringPage() {
       frequency: "monthly",
       nextDate: new Date().toISOString().split("T")[0],
       isActive: true,
+      currency: "USD",
+      amountUsd: "0",
     },
   });
 
