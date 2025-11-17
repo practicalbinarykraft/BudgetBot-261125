@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceDot } from "recharts";
 import { useFinancialTrend } from "@/hooks/use-financial-trend";
 import { WishlistItemWithPrediction } from "@/types/goal-prediction";
@@ -58,9 +58,6 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
   // Filter chart data for rendering: show only historical when forecastDays = 0
   const chartData = forecastDays > 0 ? trendData : historicalData;
 
-  // Memoize tooltip to ensure it re-renders when chartData changes
-  const tooltipContent = useMemo(() => createChartTooltip(chartData), [chartData]);
-
   return (
     <Card data-testid="card-financial-trend">
       <CardHeader>
@@ -105,7 +102,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                 stroke="hsl(var(--muted-foreground))"
               />
               
-              <Tooltip content={tooltipContent} />
+              <Tooltip key={forecastDays} content={createChartTooltip(chartData)} />
 
               {/* "Today" vertical line */}
               {todayDate && (
