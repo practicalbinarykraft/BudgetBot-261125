@@ -92,11 +92,17 @@ export function TrainingHeader() {
             </div>
           )}
 
-          <div className="pt-2 border-t">
-            <Badge variant="secondary" className="w-full justify-center py-2">
-              {stats.level}
-              {stats.canEnableAutoMode && " • Auto-mode Ready"}
-            </Badge>
+          <div className="pt-4 border-t mt-4">
+            <div className="flex items-center justify-center gap-2">
+              <Badge variant="secondary" className="whitespace-nowrap">
+                {stats.level}
+              </Badge>
+              {stats.canEnableAutoMode && (
+                <Badge variant="secondary" className="whitespace-nowrap">
+                  Auto-mode Ready
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
       )}
