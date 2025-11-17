@@ -144,7 +144,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
               />
 
               {/* Capital Line (Forecast - Dashed) */}
-              {forecastData.length > 0 && (
+              {forecastDays > 0 && forecastData.length > 0 && (
                 <Line
                   data={forecastWithConnection}
                   dataKey="capital"
@@ -189,7 +189,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
 
         {/* Legend */}
         <ChartLegend
-          hasForecast={forecastData.length > 0}
+          hasForecast={forecastDays > 0 && forecastData.length > 0}
           hasGoals={goals.length > 0}
         />
       </CardContent>
