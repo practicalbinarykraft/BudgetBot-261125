@@ -24,7 +24,7 @@ import budgetsRouter from "./budgets.routes";
 import limitsRouter from "./limits.routes";
 import settingsRouter from "./settings.routes";
 import statsRouter from "./stats.routes";
-import aiRouter from "./ai.routes";
+import aiRouter from "./ai";
 import currencyRouter from "./currency.routes";
 import calibrationsRouter from "./calibrations.routes";
 import telegramRouter from "./telegram.routes";

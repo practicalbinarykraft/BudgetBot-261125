@@ -201,6 +201,13 @@ router.get("/chat/history", withAuth(async (req, res) => {
     const userId = req.user.id;
     const limit = parseInt(req.query.limit as string) || 50;
     
+    // Validate limit
+    if (limit < 1 || limit > 100) {
+      return res.status(400).json({ 
+        error: "Invalid limit. Must be between 1 and 100." 
+      });
+    }
+    
     const messages = await storage.getAIChatMessages(userId, limit);
     res.json(messages);
   } catch (error: any) {
@@ -217,6 +224,17 @@ router.post("/chat", withAuth(async (req, res) => {
     
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: "Message is required" });
+    }
+    
+    const trimmedMessage = message.trim();
+    if (trimmedMessage.length === 0) {
+      return res.status(400).json({ error: "Message cannot be empty" });
+    }
+    
+    if (trimmedMessage.length > 4000) {
+      return res.status(400).json({ 
+        error: `Message too long (${trimmedMessage.length} characters). Maximum is 4000.` 
+      });
     }
     
     const settings = await storage.getSettingsByUserId(userId);
@@ -241,8 +259,8 @@ router.post("/chat", withAuth(async (req, res) => {
       content: msg.content
     }));
     
-    // Add current user message
-    chatHistory.push({ role: "user", content: message });
+    // Add current user message (use trimmed version)
+    chatHistory.push({ role: "user", content: trimmedMessage });
     
     // Call AI
     const aiResponse = await chatWithAI({
@@ -251,11 +269,11 @@ router.post("/chat", withAuth(async (req, res) => {
       apiKey: anthropicApiKey
     });
     
-    // Save both messages to DB
+    // Save both messages to DB (use trimmed version)
     await storage.createAIChatMessage({
       userId,
       role: "user",
-      content: message
+      content: trimmedMessage
     });
     
     await storage.createAIChatMessage({

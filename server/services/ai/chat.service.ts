@@ -34,6 +34,14 @@ export async function chatWithAI(params: ChatWithAIParams): Promise<ChatResponse
     throw new Error("Messages array cannot be empty");
   }
 
+  // Validate message content length (Anthropic has limits)
+  const MAX_MESSAGE_LENGTH = 4000;
+  for (const msg of messages) {
+    if (msg.content.length > MAX_MESSAGE_LENGTH) {
+      throw new Error(`Message too long (${msg.content.length} characters). Maximum is ${MAX_MESSAGE_LENGTH}.`);
+    }
+  }
+
   const anthropic = new Anthropic({ apiKey });
 
   // Build system prompt with financial context
@@ -72,8 +80,16 @@ export async function chatWithAI(params: ChatWithAIParams): Promise<ChatResponse
       throw new Error("Invalid Anthropic API key. Please check your settings.");
     }
     
+    if (error.status === 400) {
+      throw new Error("Invalid request format. Please try a shorter message or contact support.");
+    }
+    
     if (error.status === 429) {
       throw new Error("API rate limit exceeded. Please try again later.");
+    }
+    
+    if (error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT') {
+      throw new Error("Network error. Please check your internet connection.");
     }
     
     throw new Error(`Failed to chat with AI: ${error.message}`);
