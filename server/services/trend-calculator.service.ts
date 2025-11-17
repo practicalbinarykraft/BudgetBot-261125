@@ -10,21 +10,14 @@
 
 import { storage } from "../storage";
 import { generateForecast } from "./forecast.service";
-import { generateDateRange } from "../lib/charts/chart-formatters";
 import { makeCumulative } from "../lib/charts/cumulative";
-import type { Transaction } from "@shared/schema";
+import { 
+  calculateHistoricalData, 
+  makeCumulativeFromBase,
+  type TrendDataPoint 
+} from "../lib/charts/historical-data-helpers";
 
-/**
- * Точка данных для графика
- */
-export interface TrendDataPoint {
-  date: string;
-  income: number;     // Накопительный доход (cumulative)
-  expense: number;    // Накопительный расход (cumulative)
-  capital: number;    // Капитал (доход - расход)
-  isToday: boolean;   // Сегодняшняя дата (для вертикальной линии)
-  isForecast: boolean; // Прогноз или история
-}
+export type { TrendDataPoint };
 
 /**
  * Параметры расчёта тренда
@@ -68,11 +61,7 @@ export async function calculateTrend(
   historyStart.setDate(today.getDate() - historyDays);
   const historyStartStr = historyStart.toISOString().split('T')[0];
   
-  const historicalData = calculateHistoricalData(
-    transactions,
-    historyDays,
-    currentCapital
-  );
+  const historicalData = calculateHistoricalData(transactions, historyDays);
 
   // ШАГ 3: Сделать income/expense накопительными (плавные линии!)
   const historicalCumulative = makeCumulative(historicalData);
@@ -95,147 +84,81 @@ export async function calculateTrend(
   });
 
   // ШАГ 4: Получить прогноз от AI (если есть API ключ)
-  let forecastData: TrendDataPoint[] = [];
-  
-  if (anthropicApiKey && forecastDays > 0) {
-    try {
-      const forecast = await generateForecast(
-        userId,
-        anthropicApiKey,
-        forecastDays,
-        currentCapital
-      );
+  const forecastData = await generateAndProcessForecast({
+    userId,
+    anthropicApiKey,
+    forecastDays,
+    currentCapital,
+    capitalAtPeriodStart,
+    historicalCumulative,
+  });
 
-      // ШАГ 5: Преобразовать прогноз в формат графика
-      forecastData = forecast.map(f => ({
-        date: f.date,
-        income: f.predictedIncome,    // Пока дневные значения
-        expense: f.predictedExpense,  // Пока дневные значения
-        capital: f.predictedCapital,
-        isToday: false,
-        isForecast: true,
-      }));
-
-      // ШАГ 6: Сделать прогноз накопительным и рассчитать capital
-      
-      if (historicalCumulative.length > 0) {
-        // Есть история: продолжаем от последней исторической точки
-        const lastHistorical = historicalCumulative[historicalCumulative.length - 1];
-        
-        // Income/Expense продолжаются накопительно
-        forecastData = makeCumulativeFromBase(
-          forecastData,
-          lastHistorical.income,
-          lastHistorical.expense
-        );
-
-        // Capital = начальный капитал + cumulative income - cumulative expense
-        forecastData.forEach(point => {
-          point.capital = capitalAtPeriodStart + point.income - point.expense;
-        });
-      } else {
-        // Нет истории: начинаем с текущего баланса кошельков
-        forecastData = makeCumulativeFromBase(forecastData, 0, 0);
-
-        // Capital = текущий баланс + cumulative income - cumulative expense
-        forecastData.forEach(point => {
-          point.capital = currentCapital + point.income - point.expense;
-        });
-      }
-
-    } catch (error: any) {
-      console.error("Forecast generation failed:", error.message);
-      // Продолжаем без прогноза
-    }
-  }
-
-  // ШАГ 7: Объединить историю + прогноз
+  // ШАГ 5: Объединить историю + прогноз
   return [...historicalCumulative, ...forecastData];
 }
 
 /**
- * Рассчитать исторические данные
- * 
- * Для джуна: Берём транзакции и группируем по дням
- * Каждый день считаем доход и расход (пока НЕ накопительные)
+ * Генерация и обработка прогноза
  */
-function calculateHistoricalData(
-  transactions: Transaction[],
-  historyDays: number,
-  currentCapital: number
-): TrendDataPoint[] {
-  // Определить диапазон дат
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayStr = today.toISOString().split('T')[0];
+async function generateAndProcessForecast(params: {
+  userId: number;
+  anthropicApiKey?: string;
+  forecastDays: number;
+  currentCapital: number;
+  capitalAtPeriodStart: number;
+  historicalCumulative: TrendDataPoint[];
+}): Promise<TrendDataPoint[]> {
+  const {
+    userId,
+    anthropicApiKey,
+    forecastDays,
+    currentCapital,
+    capitalAtPeriodStart,
+    historicalCumulative,
+  } = params;
 
-  const historyStart = new Date(today);
-  historyStart.setDate(today.getDate() - historyDays);
-  const historyStartStr = historyStart.toISOString().split('T')[0];
-
-  // ВАЖНО: Фильтруем транзакции только за нужный период!
-  // Иначе будем обрабатывать ВСЕ транзакции пользователя (медленно!)
-  const filteredTransactions = transactions.filter(t => 
-    t.date >= historyStartStr && t.date <= todayStr
-  );
-
-  // ВАЖНО: Если нет транзакций в filtered range - вернуть пустой массив!
-  // Это позволит forecast branch правильно обработать пустую историю
-  if (filteredTransactions.length === 0) {
+  if (!anthropicApiKey || forecastDays === 0) {
     return [];
   }
 
-  // Генерировать массив дат
-  const dateRange = generateDateRange(historyStart, today);
-  const historicalData: TrendDataPoint[] = [];
+  try {
+    const forecast = await generateForecast(
+      userId,
+      anthropicApiKey,
+      forecastDays,
+      currentCapital
+    );
 
-  // Для каждого дня считаем доход/расход
-  for (const dateStr of dateRange) {
-    const dayTransactions = filteredTransactions.filter(t => t.date === dateStr);
-    
-    const dayIncome = dayTransactions
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + parseFloat(t.amountUsd as unknown as string), 0);
-    
-    const dayExpense = dayTransactions
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + parseFloat(t.amountUsd as unknown as string), 0);
+    let forecastData = forecast.map(f => ({
+      date: f.date,
+      income: f.predictedIncome,
+      expense: f.predictedExpense,
+      capital: f.predictedCapital,
+      isToday: false,
+      isForecast: true,
+    }));
 
-    historicalData.push({
-      date: dateStr,
-      income: dayIncome,      // ДНЕВНОЕ значение (позже станет накопительным)
-      expense: dayExpense,    // ДНЕВНОЕ значение (позже станет накопительным)
-      capital: 0,             // Будет рассчитан позже на основе накопительных
-      isToday: dateStr === todayStr,
-      isForecast: false,
-    });
+    if (historicalCumulative.length > 0) {
+      const lastHistorical = historicalCumulative[historicalCumulative.length - 1];
+      forecastData = makeCumulativeFromBase(
+        forecastData,
+        lastHistorical.income,
+        lastHistorical.expense
+      );
+      forecastData.forEach(point => {
+        point.capital = capitalAtPeriodStart + point.income - point.expense;
+      });
+    } else {
+      forecastData = makeCumulativeFromBase(forecastData, 0, 0);
+      forecastData.forEach(point => {
+        point.capital = currentCapital + point.income - point.expense;
+      });
+    }
+
+    return forecastData;
+  } catch (error: any) {
+    console.error("Forecast generation failed:", error.message);
+    return [];
   }
-
-  return historicalData;
 }
 
-/**
- * Сделать массив накопительным, начиная с базовых значений
- * 
- * Для джуна: Как одометр который уже показывает 1000 км,
- * и мы продолжаем отсчёт дальше
- */
-function makeCumulativeFromBase<T extends { income: number; expense: number }>(
-  dataPoints: T[],
-  baseIncome: number,
-  baseExpense: number
-): T[] {
-  let cumulativeIncome = baseIncome;
-  let cumulativeExpense = baseExpense;
-
-  return dataPoints.map((point) => {
-    cumulativeIncome += point.income || 0;
-    cumulativeExpense += point.expense || 0;
-
-    return {
-      ...point,
-      income: cumulativeIncome,
-      expense: cumulativeExpense,
-    };
-  });
-}
