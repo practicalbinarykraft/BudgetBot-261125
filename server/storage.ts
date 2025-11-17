@@ -17,6 +17,8 @@ import {
   InsertSettings,
   Budget,
   InsertBudget,
+  AiChatMessage,
+  InsertAiChatMessage,
   OwnedInsert
 } from "@shared/schema";
 
@@ -80,6 +82,10 @@ export interface IStorage {
   createBudget(budget: OwnedInsert<InsertBudget>): Promise<Budget>;
   updateBudget(id: number, budget: Partial<InsertBudget>): Promise<Budget>;
   deleteBudget(id: number): Promise<void>;
+  
+  // AI Chat Messages
+  getAIChatMessages(userId: number, limit?: number): Promise<AiChatMessage[]>;
+  createAIChatMessage(message: OwnedInsert<InsertAiChatMessage>): Promise<number>;
 }
 
 import { db } from "./db";
@@ -92,7 +98,8 @@ import {
   wishlist, 
   plannedTransactions,
   settings,
-  budgets
+  budgets,
+  aiChatMessages
 } from "@shared/schema";
 import { eq, and, desc, gte, lte } from "drizzle-orm";
 
@@ -333,6 +340,21 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBudget(id: number): Promise<void> {
     await db.delete(budgets).where(eq(budgets.id, id));
+  }
+
+  // AI Chat Messages
+  async getAIChatMessages(userId: number, limit: number = 50): Promise<AiChatMessage[]> {
+    return db
+      .select()
+      .from(aiChatMessages)
+      .where(eq(aiChatMessages.userId, userId))
+      .orderBy(desc(aiChatMessages.createdAt))
+      .limit(limit);
+  }
+
+  async createAIChatMessage(messageData: OwnedInsert<InsertAiChatMessage>): Promise<number> {
+    const result = await db.insert(aiChatMessages).values(messageData).returning();
+    return result[0].id;
   }
 }
 
