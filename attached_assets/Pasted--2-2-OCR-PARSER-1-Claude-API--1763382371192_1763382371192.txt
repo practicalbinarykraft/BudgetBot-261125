@@ -1,0 +1,130 @@
+ЗАДАЧА 2.2: OCR PARSER (1 час)
+ЦЕЛЬ: Парсить товары из чека через Claude API
+
+ЧТО ДЕЛАТЬ:
+Создать файл: server/services/ocr/receipt-parser.service.ts
+
+КОД:
+import Anthropic from '@anthropic-ai/sdk';
+
+/**
+ * Сервис для парсинга чеков с извлечением списка товаров
+ * Ответственность: OCR + парсинг структурированных данных
+ */
+
+interface ParsedReceiptItem {
+  name: string;
+  normalizedName: string;
+  quantity: number;
+  pricePerUnit: number;
+  totalPrice: number;
+}
+
+interface ParsedReceipt {
+  total: number;
+  merchant: string;
+  date: string;
+  items: ParsedReceiptItem[];
+}
+
+/**
+ * Нормализовать название товара для сравнения
+ */
+function normalizeItemName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[0-9]+\s*(ml|l|kg|g|pcs|шт)/gi, '') // убрать размеры
+    .replace(/[^a-zа-яё\s]/g, '') // только буквы
+    .trim();
+}
+
+/**
+ * Парсить чек с извлечением товаров
+ */
+export async function parseReceiptWithItems(
+  imageBase64: string,
+  apiKey: string
+): Promise<ParsedReceipt> {
+  
+  const anthropic = new Anthropic({ apiKey });
+  
+  const prompt = `
+    Parse this receipt image and extract:
+    1. Total amount (number)
+    2. Merchant/store name (string)
+    3. Date (YYYY-MM-DD format)
+    4. List of purchased items with:
+       - Item name (string)
+       - Quantity (number, default 1 if not specified)
+       - Price per unit (number)
+       - Total price for this item (number)
+    
+    Return ONLY valid JSON in this exact format:
+    {
+      "total": 180000,
+      "merchant": "Moris Grocier",
+      "date": "2025-11-17",
+      "items": [
+        {
+          "name": "Orange Juice 1L",
+          "quantity": 2,
+          "pricePerUnit": 32000,
+          "totalPrice": 64000
+        }
+      ]
+    }
+    
+    Rules:
+    - All prices in original currency (IDR, USD, RUB, etc)
+    - If quantity not specified, use 1
+    - pricePerUnit = totalPrice / quantity
+    - Return ONLY JSON, no explanations
+  `;
+  
+  const response = await anthropic.messages.create({
+    model: "claude-3-5-sonnet-20241022",
+    max_tokens: 2000,
+    messages: [{
+      role: "user",
+      content: [
+        {
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: "image/jpeg",
+            data: imageBase64
+          }
+        },
+        {
+          type: "text",
+          text: prompt
+        }
+      ]
+    }]
+  });
+  
+  // Парсить JSON из ответа
+  const text = response.content[0].type === 'text' 
+    ? response.content[0].text 
+    : '';
+  
+  const parsed: ParsedReceipt = JSON.parse(text);
+  
+  // Нормализовать названия товаров
+  parsed.items = parsed.items.map(item => ({
+    ...item,
+    normalizedName: normalizeItemName(item.name)
+  }));
+  
+  return parsed;
+}
+
+РАЗМЕР: ~120 строк ✅
+
+ФАЙЛЫ:
+└─ server/services/ocr/receipt-parser.service.ts (новый)
+
+БЕЗОПАСНОСТЬ:
+✅ Изолированный сервис
+✅ Не трогает существующий код
+✅ Try-catch будет добавлен в endpoint
