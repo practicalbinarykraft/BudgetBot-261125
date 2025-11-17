@@ -1,0 +1,95 @@
+2. RECURRING В GOAL PREDICTOR ⏸️
+❌ Goal Predictor НЕ учитывает Recurring доходы/расходы
+
+ТВОЙ СЛУЧАЙ:
+├─ Recurring доходы: $27,000/мес
+├─ Recurring расходы: $1,650/мес
+└─ Goal Predictor видит: $0 (смотрит только Transactions)
+
+РЕЗУЛЬТАТ:
+└─ "Not Affordable" хотя реально есть $25,350/мес
+
+НУЖНО:
+└─ Учитывать Recurring в calculateGoalTimeline
+
+📊 ОБЩИЙ ПРОГРЕСС
+CORE ФУНКЦИОНАЛ:
+├─ ✅ Transactions, Wallets, Categories
+├─ ✅ Budgets + Limits
+├─ ✅ Wishlist
+├─ ✅ Planned Purchases (новое!)
+├─ ✅ Recurring
+├─ ✅ AI Goal Predictor
+├─ ✅ Telegram Bot + Notifications
+├─ ✅ Swipe Game
+├─ ✅ ML Auto-categorization
+└─ ✅ Multi-currency (исправлено!)
+
+WOW-ФИЧИ:
+├─ ⚠️ Timeline маркеры (50% - есть компоненты, нет данных)
+├─ ⚠️ Goal Predictor + Recurring (не учитывает)
+└─ ⏳ Capital calculation (исправляется сейчас)
+
+ОЦЕНКА: 85% ГОТОВО
+
+🎯 ПРИОРИТЕТЫ (ЧТО ДАЛЬШЕ)
+ВАРИАНТ A: ЗАВЕРШИТЬ КРИТИЧНОЕ (рекомендую)
+1. Capital calculation (в процессе, 30 мин)
+2. Goal Predictor + Recurring (1 час)
+3. Timeline маркеры (1 час)
+
+ИТОГО: 2.5 часа
+РЕЗУЛЬТАТ: ВСЁ РАБОТАЕТ КАК ЗАДУМАНО
+ВАРИАНТ B: ДОБАВИТЬ ПОЛИРОВКУ
+1. Goal Insights Dashboard (scenarios)
+2. Impact analysis (лимиты → цели)
+3. Better UX/UI
+
+ИТОГО: 3-4 дня
+РЕЗУЛЬТАТ: PREMIUM ФИЧИ
+
+💪 МОЁ МНЕНИЕ
+СДЕЛАТЬ В ТАКОМ ПОРЯДКЕ:
+СЕЙЧАС (⏳ в процессе):
+└─ Capital calculation (30 мин)
+
+СРАЗУ ПОСЛЕ:
+└─ Goal Predictor + Recurring (1 час)
+   └─ КРИТИЧНО! Без этого Goal Predictor не работает
+
+ПОТОМ:
+└─ Timeline маркеры (1 час)
+   └─ Завершит визуализацию
+
+ИТОГО: 2.5 часа до ПОЛНОГО функционала!
+
+📈 ТЫ МОЛОДЕЦ!
+НАЧИНАЛИ С:
+└─ "Хочу видеть могу ли купить iPhone"
+
+СЕЙЧАС ЕСТЬ:
+├─ Лимиты с уведомлениями ✅
+├─ Wishlist с AI анализом ✅
+├─ Planned purchases ✅
+├─ График с прогнозом ✅
+├─ Мультивалютность ✅
+├─ Telegram интеграция ✅
+└─ Swipe Game ✅
+
+ОСТАЛОСЬ ТОЛЬКО:
+├─ Исправить Capital (30 мин)
+├─ Учесть Recurring (1 час)
+└─ Добавить маркеры (1 час)
+
+ПОЧТИ ГОТОВО! 🔥
+
+_______
+
+Что из этого осталось?
+
+Код написан по принципу "Junior-Friendly Code"?
+
+✅ Модульная архитектура - каждый файл <200 строк
+✅ Один файл = одна ответственность
+✅ Понятные имена функций и переменных
+✅ Никаких монстр-файлов
