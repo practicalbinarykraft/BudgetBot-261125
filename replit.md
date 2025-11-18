@@ -48,6 +48,36 @@ The application uses Shadcn/ui (Radix UI primitives) and Tailwind CSS with a cus
 *   **AI Chat UI:** Interactive chat interface with AI financial advisor featuring message history, input handling, markdown rendering, and quick action buttons.
 *   **Modular AI Routes:** Refactored AI routes into domain-specific modules for chat, training, analysis, receipts, and pricing.
 *   **Telegram Menu System:** Modular menu interface with main sections for AI Chat, Wallets, Expenses/Income, and Settings, including state management and integration.
+*   **AI Agent Tool Calling:** AI Assistant can execute actions through natural language with automatic tool detection and confirmation flows. Three tools implemented:
+    - `get_balance`: Check wallet balances (READ operation - executes immediately without confirmation)
+    - `create_category`: Create new transaction categories (WRITE operation - requires user confirmation)
+    - `add_transaction`: Add income/expense transactions (WRITE operation - requires user confirmation)
+
+### AI Tool Calling Architecture
+
+The AI Tool Calling system enables the AI Assistant to perform automated actions based on user requests. Architecture:
+
+*   **Tool Definitions** (`server/ai/tools.ts`): Declares available tools with Anthropic-compatible schemas, including `requiresConfirmation` flag to differentiate READ vs WRITE operations.
+*   **Tool Handlers** (`server/ai/handlers/`): Modular handler functions for each tool:
+    - `balance-handler.ts`: Retrieves wallet balances and capital from storage API
+    - `category-handler.ts`: Creates new categories with validation and default values
+    - `transaction-handler.ts`: Adds transactions to user's primary wallet
+*   **Tool Executor** (`server/ai/tool-executor.ts`): Central dispatcher that routes tool calls to appropriate handlers with user context.
+*   **Chat Integration** (`server/routes/ai/chat.routes.ts`): 
+    - POST `/api/ai/chat`: Detects tool_use in Claude responses, executes READ operations immediately, returns confirmation requests for WRITE operations
+    - POST `/api/ai/confirm-tool`: Executes user-confirmed tool actions
+*   **Frontend UI** (`client/src/components/ai-chat-sidebar/`):
+    - `confirmation-card.tsx`: Displays action preview with parameters and Execute/Cancel buttons
+    - `action-preview.tsx`: Shows tool icon, title, and parameter count
+    - `confirmation-buttons.tsx`: Handles confirmation/cancellation with loading states
+    - `index.tsx`: Main sidebar integrating tool confirmation flow with retry logic
+
+*   **Key Design Decisions**:
+    - BYOK pattern: Uses user's Anthropic API key from settings (no fallback)
+    - Security: All tools validate userId, use storage API with ownership checks
+    - UX: READ operations execute immediately, WRITE operations show confirmation card
+    - Retry: Failed confirmations keep the card visible for retry attempts
+    - Junior-Friendly: All files <200 lines, modular architecture
 
 ### System Design Choices
 
