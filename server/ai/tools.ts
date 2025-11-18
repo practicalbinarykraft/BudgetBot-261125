@@ -62,9 +62,17 @@ export const ANTHROPIC_TOOLS = [
           enum: ['income', 'expense'], 
           description: 'Transaction type: income or expense' 
         },
+        personal_tag: { 
+          type: 'string', 
+          description: 'Personal tag name for tracking who spent/received (optional)' 
+        },
         date: { 
           type: 'string', 
           description: 'Date in YYYY-MM-DD format (optional, defaults to today)' 
+        },
+        currency: { 
+          type: 'string', 
+          description: '3-letter currency code like KRW, USD, RUB (optional)' 
         }
       },
       required: ['amount', 'description', 'type']

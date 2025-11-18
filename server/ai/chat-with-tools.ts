@@ -25,6 +25,9 @@ export async function chatWithTools(
     ? categories.map(c => `- ${c.name} (${c.type})`).join('\n')
     : '(No categories yet)';
   
+  // User's default currency
+  const defaultCurrency = settings.currency || 'USD';
+  
   // Initialize Anthropic client with user's key
   const anthropic = new Anthropic({ 
     apiKey: settings.anthropicApiKey 
@@ -32,6 +35,9 @@ export async function chatWithTools(
   
   // System prompt for financial assistant with tool calling
   const systemPrompt = `You are a helpful financial assistant for Budget Buddy app.
+
+User settings:
+- Default currency: ${defaultCurrency}
 
 Available user categories:
 ${categoriesList}
@@ -43,11 +49,21 @@ Smart category detection (when adding transactions):
 - "развлечения", "кино", "cinema", "entertainment" → Развлечения/Entertainment
 - "здоровье", "аптека", "врач", "health", "pharmacy" → Здоровье/Health
 
+Currency detection rules (when adding transactions):
+- "к", "won", "₩", ending with "k" (Korean context) → KRW
+- "р", "руб", "₽", "rub" → RUB  
+- "$", "usd", "dollar", "bucks" → USD
+- "€", "eur", "euro" → EUR
+- "¥", "cny", "yuan", "rmb" → CNY
+- If no currency mentioned → use ${defaultCurrency}
+- Examples: "220k" (Korean) → 220000 KRW, "100р" → 100 RUB, "$50" → 50 USD
+
 Rules:
 1. Try to detect category from description using keywords above
 2. Use exact category name from user's list
 3. If category not found in user's list → leave empty (user will choose)
-4. Support multilingual input (English/Russian)
+4. Always try to detect currency from context/symbols
+5. Support multilingual input (English/Russian/Korean)
 
 You can help users with:
 - Checking their balance and wallet information

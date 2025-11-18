@@ -28,6 +28,13 @@ interface MLSuggestion {
   confidence: number;
 }
 
+interface PersonalTag {
+  id: number;
+  name: string;
+  icon?: string;
+  color?: string;
+}
+
 interface ChatResponse {
   type: 'message' | 'tool_confirmation';
   content?: string;
@@ -36,6 +43,7 @@ interface ChatResponse {
   toolUseId?: string;
   mlSuggestion?: MLSuggestion | null;
   availableCategories?: Category[] | null;
+  availablePersonalTags?: PersonalTag[] | null;
 }
 
 export function AIChatSidebar() {
@@ -49,6 +57,7 @@ export function AIChatSidebar() {
     toolUseId: string;
     mlSuggestion?: MLSuggestion | null;
     availableCategories?: Category[] | null;
+    availablePersonalTags?: PersonalTag[] | null;
   } | null>(null);
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -88,6 +97,7 @@ export function AIChatSidebar() {
           toolUseId: data.toolUseId!,
           mlSuggestion: data.mlSuggestion,
           availableCategories: data.availableCategories,
+          availablePersonalTags: data.availablePersonalTags,
         });
       } else if (data.type === 'message') {
         // Regular message - refresh history
@@ -322,6 +332,7 @@ export function AIChatSidebar() {
                   params={pendingConfirmation.params}
                   mlSuggestion={pendingConfirmation.mlSuggestion}
                   availableCategories={pendingConfirmation.availableCategories}
+                  availablePersonalTags={pendingConfirmation.availablePersonalTags || []}
                   onConfirm={(finalParams) => confirmToolMutation.mutate(finalParams)}
                   onCancel={handleCancelTool}
                 />

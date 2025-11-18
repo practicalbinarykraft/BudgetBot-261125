@@ -18,10 +18,11 @@ export const createCategorySchema = z.object({
 export const addTransactionSchema = z.object({
   amount: z.coerce.number().positive('Amount must be positive'),
   description: z.string().min(1, 'Description is required').max(200),
-  category: z.string().optional().transform(val => val || undefined), // Empty string → undefined
+  category: z.string().optional().transform(val => val || undefined),
   type: z.enum(['income', 'expense'], {
     errorMap: () => ({ message: 'Type must be income or expense' })
   }),
+  personal_tag: z.string().optional().transform(val => val || undefined),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD').optional(),
   currency: z.string().length(3, 'Currency must be 3-letter code').optional()
 });

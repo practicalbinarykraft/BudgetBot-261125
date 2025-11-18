@@ -10,6 +10,7 @@ export async function handleAddTransaction(
     description: string;
     category?: string;
     type: 'income' | 'expense';
+    personal_tag?: string;
     date?: string;
     currency?: string;
   }
@@ -30,6 +31,16 @@ export async function handleAddTransaction(
     const currency = params.currency || 'USD';
     const amount = params.amount;
     
+    // Resolve personal tag name to ID if provided (case-insensitive)
+    let personalTagId: number | undefined = undefined;
+    if (params.personal_tag) {
+      const tags = await storage.getPersonalTagsByUserId(userId);
+      const matchedTag = tags.find(t => 
+        t.name.toLowerCase() === params.personal_tag!.toLowerCase()
+      );
+      personalTagId = matchedTag?.id;
+    }
+    
     // Create transaction
     const transaction = await storage.createTransaction({
       userId,
@@ -37,6 +48,7 @@ export async function handleAddTransaction(
       amountUsd: amount.toString(), // Simplified: assume USD or convert later
       description: params.description,
       category: params.category,
+      personalTagId, // Will be set via frontend dropdown
       type: params.type,
       date: params.date || new Date().toISOString().split('T')[0],
       currency,

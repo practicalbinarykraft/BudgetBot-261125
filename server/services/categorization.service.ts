@@ -1,7 +1,7 @@
 // Shared categorization service for AI chat and Telegram bot
 import { getSuggestedCategory, learnCategory } from './ml-categories';
 import { storage } from '../storage';
-import type { Category } from '@shared/schema';
+import type { Category, PersonalTag } from '@shared/schema';
 
 export interface CategorySuggestion {
   categoryId: number;
@@ -59,4 +59,13 @@ export async function trainCategory(
   categoryName: string
 ): Promise<void> {
   await learnCategory(userId, description, categoryName);
+}
+
+/**
+ * Get all user personal tags for display in dropdowns
+ */
+export async function getUserPersonalTags(
+  userId: number
+): Promise<PersonalTag[]> {
+  return storage.getPersonalTagsByUserId(userId);
 }

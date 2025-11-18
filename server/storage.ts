@@ -7,6 +7,7 @@ import {
   InsertWallet,
   Category,
   InsertCategory,
+  PersonalTag,
   Recurring,
   InsertRecurring,
   WishlistItem,
@@ -49,6 +50,9 @@ export interface IStorage {
   createCategory(category: InsertCategory): Promise<Category>;
   updateCategory(id: number, category: Partial<InsertCategory>): Promise<Category>;
   deleteCategory(id: number): Promise<void>;
+  
+  // Personal Tags
+  getPersonalTagsByUserId(userId: number): Promise<PersonalTag[]>;
   
   // Recurring
   getRecurringByUserId(userId: number): Promise<Recurring[]>;
@@ -93,7 +97,8 @@ import {
   users, 
   transactions, 
   wallets, 
-  categories, 
+  categories,
+  personalTags,
   recurring, 
   wishlist, 
   plannedTransactions,
@@ -216,6 +221,11 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCategory(id: number): Promise<void> {
     await db.delete(categories).where(eq(categories.id, id));
+  }
+
+  // Personal Tags
+  async getPersonalTagsByUserId(userId: number): Promise<PersonalTag[]> {
+    return db.select().from(personalTags).where(eq(personalTags.userId, userId));
   }
 
   // Recurring

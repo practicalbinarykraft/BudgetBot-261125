@@ -52,6 +52,12 @@ The application uses Shadcn/ui (Radix UI primitives) and Tailwind CSS with a cus
     - `get_balance`: Check wallet balances (READ operation - executes immediately without confirmation)
     - `create_category`: Create new transaction categories (WRITE operation - requires user confirmation)
     - `add_transaction`: Add income/expense transactions (WRITE operation - requires user confirmation)
+*   **Editable Confirmation Card:** Fully interactive transaction confirmation UI with modular components:
+    - **Editable Fields:** Amount and description are editable via input fields before execution
+    - **Category Selection:** Dropdown with ML auto-categorization suggestions and confidence badges
+    - **Currency Selection:** Multi-currency dropdown (KRW, USD, RUB, EUR, CNY) with context-aware detection from chat
+    - **Personal Tag Selection:** "Who" classification dropdown for shared expense tracking
+    - **Junior-Friendly Architecture:** All components <200 lines (CategoryDropdown 70, CurrencyDropdown 44, PersonalTagDropdown 59, EditableField 37)
 
 ### AI Tool Calling Architecture
 
