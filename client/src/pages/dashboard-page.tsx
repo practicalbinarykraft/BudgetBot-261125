@@ -118,11 +118,11 @@ export default function DashboardPage() {
             data-testid="button-calibrate-wallets"
           >
             <Settings2 className="h-4 w-4 mr-2" />
-            Calibrate Wallets
+            {t("dashboard.calibrate_wallets")}
           </Button>
           <Button onClick={() => setShowAddDialog(true)} data-testid="button-add-transaction">
             <Plus className="h-4 w-4 mr-2" />
-            Add Transaction
+            {t("dashboard.add_transaction")}
           </Button>
         </div>
       </div>
@@ -133,26 +133,26 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <StatCard
-          title="Total Income"
+          title={t("dashboard.total_income")}
           value={`$${stats?.totalIncome?.toFixed(2) ?? "0.00"}`}
           icon={TrendingUp}
           className="border-l-4 border-l-green-500"
         />
         <StatCard
-          title="Total Expense"
+          title={t("dashboard.total_expense")}
           value={`$${stats?.totalExpense?.toFixed(2) ?? "0.00"}`}
           icon={TrendingDown}
           className="border-l-4 border-l-red-500"
           action={
             <Link href="/expenses/analytics">
               <span className="text-sm text-primary hover:underline flex items-center gap-1 cursor-pointer" data-testid="link-view-analytics">
-                View Details <ArrowRight className="h-3 w-3" />
+                {t("dashboard.view_details")} <ArrowRight className="h-3 w-3" />
               </span>
             </Link>
           }
         />
         <StatCard
-          title="Balance"
+          title={t("dashboard.balance")}
           value={`$${stats?.balance?.toFixed(2) ?? "0.00"}`}
           icon={Wallet}
           className="border-l-4 border-l-primary"

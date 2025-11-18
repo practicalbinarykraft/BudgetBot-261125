@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Trash2, Pencil } from "lucide-react";
 // ⏰ parseISO prevents timezone bugs when parsing date strings from DB
 import { format, parseISO, isToday, isYesterday } from "date-fns";
-import { ru } from "date-fns/locale";
+import { ru, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/i18n";
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -17,19 +18,20 @@ interface TransactionListProps {
 }
 
 // Helper function to format date headers
-function getDateHeader(dateStr: string): string {
+function getDateHeader(dateStr: string, lang: string, t: (key: string) => string): string {
   const date = parseISO(dateStr);
   
   if (isToday(date)) {
-    return "Сегодня";
+    return t("dashboard.today");
   }
   
   if (isYesterday(date)) {
-    return "Вчера";
+    return t("dashboard.yesterday");
   }
   
-  // Format: "14 ноября"
-  return format(date, "d MMMM", { locale: ru });
+  // Format: "14 November" or "14 ноября"
+  const locale = lang === 'ru' ? ru : enUS;
+  return format(date, "d MMMM", { locale });
 }
 
 // Helper function to group transactions by date
@@ -49,16 +51,18 @@ function groupTransactionsByDate(transactions: Transaction[]): Map<string, Trans
 }
 
 export function TransactionList({ transactions, onDelete, onEdit, showDelete = false, showEdit = false }: TransactionListProps) {
+  const { t, language } = useTranslation();
+  
   if (!transactions.length) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
+          <CardTitle>{t("dashboard.recent_transactions")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-muted-foreground">
-            <p>No transactions yet</p>
-            <p className="text-sm mt-1">Add your first transaction to get started</p>
+            <p>{t("dashboard.no_transactions")}</p>
+            <p className="text-sm mt-1">{t("dashboard.no_transactions_hint")}</p>
           </div>
         </CardContent>
       </Card>
@@ -70,13 +74,13 @@ export function TransactionList({ transactions, onDelete, onEdit, showDelete = f
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Recent Transactions</CardTitle>
+        <CardTitle>{t("dashboard.recent_transactions")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {Array.from(groupedTransactions.entries()).map(([date, dateTransactions]) => (
           <div key={date} className="space-y-2">
             <h3 className="text-sm font-semibold text-muted-foreground px-2" data-testid={`date-header-${date}`}>
-              {getDateHeader(date)}
+              {getDateHeader(date, language, t)}
             </h3>
             <div className="space-y-2">
               {dateTransactions.map((transaction) => (

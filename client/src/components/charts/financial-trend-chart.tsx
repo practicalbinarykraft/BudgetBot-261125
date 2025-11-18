@@ -16,6 +16,7 @@ import { ChartTimeControls } from "@/components/charts/chart-time-controls";
 import { ChartLegend } from "@/components/charts/chart-legend";
 import { GoalMarkersLayer } from "@/components/charts/goal-markers-layer";
 import { ChartLoadingState, ChartErrorState, ChartEmptyState } from "@/components/charts/chart-loading-states";
+import { useTranslation } from "@/i18n";
 
 /**
  * Financial Trend Chart
@@ -26,6 +27,7 @@ interface FinancialTrendChartProps {
 }
 
 export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrendChartProps) {
+  const { t } = useTranslation();
   const [historyDays, setHistoryDays] = useState(30);
   const [forecastDays, setForecastDays] = useState(365);
   const [hoveredGoal, setHoveredGoal] = useState<string | null>(null); // String only (all IDs normalized)
@@ -65,10 +67,10 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
           <div>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
-              Financial Trend
+              {t("dashboard.financial_trend_title")}
             </CardTitle>
             <CardDescription>
-              Income, expenses, and capital over time with AI forecast
+              {t("dashboard.financial_trend_subtitle")}
             </CardDescription>
           </div>
         </div>
@@ -102,7 +104,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                 stroke="hsl(var(--muted-foreground))"
               />
               
-              <Tooltip key={forecastDays} content={createChartTooltip(chartData)} />
+              <Tooltip key={forecastDays} content={createChartTooltip(chartData, t)} />
 
               {/* "Today" vertical line */}
               {todayDate && (
@@ -110,7 +112,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                   x={todayDate}
                   stroke={CHART_COLORS.today}
                   strokeDasharray="3 3"
-                  label={{ value: "Today", position: "top", fill: CHART_COLORS.today }}
+                  label={{ value: t("dashboard.chart_today"), position: "top", fill: CHART_COLORS.today }}
                 />
               )}
 
@@ -121,7 +123,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                 stroke={CHART_COLORS.income}
                 strokeWidth={2}
                 dot={false}
-                name="Income"
+                name={t("dashboard.chart_income")}
                 connectNulls
               />
 
@@ -132,7 +134,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                 stroke={CHART_COLORS.expense}
                 strokeWidth={2}
                 dot={false}
-                name="Expense"
+                name={t("dashboard.chart_expense")}
                 connectNulls
               />
 
@@ -143,7 +145,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                 stroke={CHART_COLORS.capital}
                 strokeWidth={2}
                 dot={false}
-                name="Capital"
+                name={t("dashboard.chart_capital")}
                 connectNulls
               />
 
@@ -156,7 +158,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                   strokeWidth={2}
                   strokeDasharray="5 5"
                   dot={false}
-                  name="Forecast"
+                  name={t("dashboard.chart_forecast")}
                   connectNulls
                 />
               )}

@@ -12,7 +12,9 @@ interface ChartCustomTooltipProps {
   trendData: TrendDataPoint[];
 }
 
-export function createChartTooltip(trendData: TrendDataPoint[]) {
+type TranslateFn = (key: string) => string;
+
+export function createChartTooltip(trendData: TrendDataPoint[], t: TranslateFn) {
   return function ChartTooltip({ active, label }: any) {
     if (!active || !label) {
       return null;
@@ -34,19 +36,19 @@ export function createChartTooltip(trendData: TrendDataPoint[]) {
         
         {dataPoint.income != null && (
           <p style={{ color: CHART_COLORS.income, margin: "4px 0" }}>
-            Income: {formatFullCurrency(dataPoint.income)}
+            {t("dashboard.chart_income")}: {formatFullCurrency(dataPoint.income)}
           </p>
         )}
         
         {dataPoint.expense != null && (
           <p style={{ color: CHART_COLORS.expense, margin: "4px 0" }}>
-            Expense: {formatFullCurrency(dataPoint.expense)}
+            {t("dashboard.chart_expense")}: {formatFullCurrency(dataPoint.expense)}
           </p>
         )}
         
         {dataPoint.capital != null && (
           <p style={{ color: CHART_COLORS.capital, margin: "4px 0" }}>
-            {dataPoint.isForecast ? "Forecast" : "Capital"}: {formatFullCurrency(dataPoint.capital)}
+            {dataPoint.isForecast ? t("dashboard.chart_forecast") : t("dashboard.chart_capital")}: {formatFullCurrency(dataPoint.capital)}
           </p>
         )}
       </div>

@@ -14,6 +14,7 @@ import { helpTranslations } from './help';
 import { notificationTranslations } from './notifications';
 import { webCommonTranslations } from './web-common';
 import { webDashboardTranslations } from './web-dashboard';
+import { webDashboardChartsTranslations } from './web-dashboard-charts';
 import { webTransactionsTranslations } from './web-transactions';
 import { webSettingsTranslations } from './web-settings';
 
@@ -32,6 +33,7 @@ const allTranslations: Translations = {
   ...notificationTranslations,
   ...webCommonTranslations,
   ...webDashboardTranslations,
+  ...webDashboardChartsTranslations,
   ...webTransactionsTranslations,
   ...webSettingsTranslations,
 };

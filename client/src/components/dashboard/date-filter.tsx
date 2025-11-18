@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/i18n";
 
 export type DateFilterValue = "week" | "month" | "year" | "all";
 
@@ -9,11 +10,13 @@ interface DateFilterProps {
 }
 
 export function DateFilter({ value, onChange }: DateFilterProps) {
+  const { t } = useTranslation();
+  
   const filters: { value: DateFilterValue; label: string }[] = [
-    { value: "week", label: "This Week" },
-    { value: "month", label: "This Month" },
-    { value: "year", label: "This Year" },
-    { value: "all", label: "All Time" },
+    { value: "week", label: t("dashboard.filter.week") },
+    { value: "month", label: t("dashboard.filter.month") },
+    { value: "year", label: t("dashboard.filter.year") },
+    { value: "all", label: t("dashboard.filter.all_time") },
   ];
 
   return (

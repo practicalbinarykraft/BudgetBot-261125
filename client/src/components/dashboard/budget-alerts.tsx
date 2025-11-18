@@ -6,8 +6,18 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 // ⏰ Budget calculation helpers extracted to separate file for reusability
 import { calculateBudgetProgress } from "@/lib/budget-helpers";
+import { useTranslation } from "@/i18n";
+
+// Helper to get correct plural form for Russian
+function getPluralKey(count: number, baseKey: string): string {
+  if (count === 1) return `${baseKey}_one`;
+  if (count >= 2 && count <= 4) return `${baseKey}_few`;
+  return `${baseKey}_many`;
+}
 
 export function BudgetAlerts() {
+  const { t } = useTranslation();
+  
   const { data: budgets = [] } = useQuery<Budget[]>({
     queryKey: ["/api/budgets"],
   });
@@ -53,12 +63,12 @@ export function BudgetAlerts() {
       {exceededBudgets.length > 0 && (
         <Alert variant="destructive" data-testid="alert-budgets-exceeded">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Budget Exceeded</AlertTitle>
+          <AlertTitle>{t("dashboard.budget_exceeded")}</AlertTitle>
           <AlertDescription className="space-y-2">
             <p>
               {exceededBudgets.length === 1
-                ? "1 budget has exceeded its limit:"
-                : `${exceededBudgets.length} budgets have exceeded their limits:`}
+                ? t("dashboard.budget_exceeded_one")
+                : `${exceededBudgets.length} ${t(getPluralKey(exceededBudgets.length, "dashboard.budget_exceeded"))}`}
             </p>
             <ul className="list-disc pl-5 space-y-1">
               {exceededBudgets.map(({ budget, category, progress }) => (
@@ -71,7 +81,7 @@ export function BudgetAlerts() {
               <Link href="/budgets">
                 <Button variant="outline" size="sm" data-testid="button-view-budgets">
                   <TrendingDown className="h-4 w-4 mr-2" />
-                  Manage Budgets
+                  {t("dashboard.manage_budgets")}
                 </Button>
               </Link>
             </div>
@@ -82,12 +92,12 @@ export function BudgetAlerts() {
       {warningBudgets.length > 0 && (
         <Alert data-testid="alert-budgets-warning">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Budget Warning</AlertTitle>
+          <AlertTitle>{t("dashboard.budget_warning")}</AlertTitle>
           <AlertDescription className="space-y-2">
             <p>
               {warningBudgets.length === 1
-                ? "1 budget is approaching its limit (80%+):"
-                : `${warningBudgets.length} budgets are approaching their limits (80%+):`}
+                ? t("dashboard.budget_warning_one")
+                : `${warningBudgets.length} ${t(getPluralKey(warningBudgets.length, "dashboard.budget_warning"))}`}
             </p>
             <ul className="list-disc pl-5 space-y-1">
               {warningBudgets.map(({ budget, category, progress }) => (
