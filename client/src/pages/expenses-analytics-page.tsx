@@ -117,23 +117,6 @@ export default function ExpensesAnalyticsPage() {
             <UnsortedTab period={period} />
           </TabsContent>
         </Tabs>
-
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              AI Insights
-              <span className="text-xs text-muted-foreground font-normal">
-                (Coming Soon)
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground text-sm">
-              AI-powered spending analysis and recommendations will appear here once implemented.
-              The system will identify optimization opportunities and suggest ways to improve your financial habits.
-            </p>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
