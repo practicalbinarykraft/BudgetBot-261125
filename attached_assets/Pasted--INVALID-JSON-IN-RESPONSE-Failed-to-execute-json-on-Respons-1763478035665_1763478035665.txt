@@ -1,0 +1,135 @@
+🐛 ОШИБКА: INVALID JSON IN RESPONSE
+
+🔍 ЧТО СЛУЧИЛОСЬ?
+ОШИБКА:
+"Failed to execute 'json' on 'Response': 
+ Unexpected token '<', "<!DOCTYPE "... is not valid JSON"
+
+ЧТО ЭТО ЗНАЧИТ:
+Frontend ожидает JSON: { success: true, ... }
+Но получает HTML: <!DOCTYPE html>...
+
+ПРИЧИНА:
+Backend вернул HTML страницу с ошибкой
+вместо JSON ответа
+
+🎯 ГДЕ ОШИБКА?
+СЦЕНАРИЙ:
+1. User нажал [Execute] ✅
+2. Frontend отправил POST /api/ai/confirm-tool ✅
+3. Backend обработал запрос ❌ ОШИБКА
+4. Backend вернул HTML error page ❌
+5. Frontend попытался парсить как JSON ❌
+
+ПРОБЛЕМА В BACKEND!
+
+🔧 ЧТО ПРОВЕРИТЬ?
+1. ПРОВЕРИТЬ BACKEND ЛОГИ
+bash# В Replit Console должна быть реальная ошибка:
+Error in /api/ai/confirm-tool: ...
+TypeError: ...
+или
+ReferenceError: ...
+
+2. ВОЗМОЖНЫЕ ПРИЧИНЫ
+typescript// ВАРИАНТ A: Ошибка в executeTool
+const result = await executeTool(action, params, userId);
+// → Может быть params не того типа?
+
+// ВАРИАНТ B: Ошибка в handlers
+// transaction-handler.ts:
+amount: params.amount  // ← params.amount = string? должно быть number!
+
+// ВАРИАНТ C: Ошибка в продолжении диалога
+const finalResponse = await anthropic.messages.create({
+  // → Может неправильный формат tool_result?
+});
+
+// ВАРИАНТ D: Ошибка типизации
+// personalTagId = string вместо number?
+```
+
+---
+
+## 🚨 НАЙДИ РЕАЛЬНУЮ ОШИБКУ
+
+### **ЗАДАЧА ДЛЯ REPLIT:**
+```
+ПРОБЛЕМА:
+Backend возвращает HTML error page вместо JSON при /api/ai/confirm-tool
+
+ОТЛАДКА:
+
+1. Добавь подробный error logging в ai.routes.ts:
+
+router.post('/api/ai/confirm-tool', async (req, res) => {
+  try {
+    console.log('✅ /api/ai/confirm-tool called');
+    console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
+    
+    const { action, params, toolUseId } = req.body;
+    const userId = req.user!.id;
+    
+    console.log('🔧 Executing tool:', action);
+    console.log('📋 Params:', params);
+    console.log('👤 User ID:', userId);
+    
+    // Выполнить tool
+    const result = await executeTool(action, params, userId);
+    console.log('✅ Tool result:', JSON.stringify(result, null, 2));
+    
+    if (!result.success) {
+      console.error('❌ Tool failed:', result.error);
+      return res.status(400).json({ error: result.error });
+    }
+    
+    // ... rest of code
+    
+  } catch (error: any) {
+    console.error('💥 ERROR in /api/ai/confirm-tool:', error);
+    console.error('Stack trace:', error.stack);
+    
+    return res.status(500).json({ 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+2. Проверь типы params:
+
+console.log('Type checks:');
+console.log('- amount type:', typeof params.amount); // должно быть 'number'
+console.log('- description type:', typeof params.description); // 'string'
+console.log('- personalTagId type:', typeof params.personalTagId); // 'number' or undefined
+
+3. Проверь validation в handler:
+
+// transaction-handler.ts
+export async function handleAddTransaction(
+  userId: number,
+  params: {
+    amount: number;  // ← проверь что приходит number!
+    description: string;
+    category?: string;
+    type: 'income' | 'expense';
+    date?: string;
+    currency?: string;
+    personalTagId?: number;
+  }
+): Promise<ToolResult> {
+  console.log('🔍 handleAddTransaction params:', params);
+  
+  // Validate types
+  if (typeof params.amount !== 'number') {
+    return {
+      success: false,
+      error: `Invalid amount type: ${typeof params.amount}, expected number`
+    };
+  }
+  
+  // ... rest
+}
+
+ПОСЛЕ ДОБАВЛЕНИЯ ЛОГОВ:
+Перезапусти сервер, попробуй снова, смотри в Console

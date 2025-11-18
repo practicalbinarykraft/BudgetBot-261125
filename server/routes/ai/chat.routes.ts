@@ -187,14 +187,20 @@ router.post("/", withAuth(async (req, res) => {
 // POST /api/ai/confirm-tool - execute confirmed tool action
 router.post("/confirm-tool", withAuth(async (req, res) => {
   try {
+    console.log('🔧 /api/ai/confirm-tool called');
+    console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
+    console.log('👤 User ID:', req.user?.id);
+    
     const { action, params } = req.body;
     const userId = req.user.id;
     
     if (!action || typeof action !== 'string') {
+      console.error('❌ No action provided');
       return res.status(400).json({ error: "Action is required" });
     }
     
     if (!params || typeof params !== 'object') {
+      console.error('❌ No params provided');
       return res.status(400).json({ error: "Params are required" });
     }
     
@@ -205,10 +211,13 @@ router.post("/confirm-tool", withAuth(async (req, res) => {
     }
     
     // Validate params with Zod schema (full type/constraint checking)
+    console.log('🔍 Validating params for action:', action);
     let validatedParams;
     try {
       validatedParams = validateToolParams(action, params);
+      console.log('✅ Params validated:', validatedParams);
     } catch (error) {
+      console.error('❌ Validation failed:', error);
       if (error instanceof ZodError) {
         return res.status(400).json({ 
           error: 'Invalid parameters',
@@ -222,9 +231,12 @@ router.post("/confirm-tool", withAuth(async (req, res) => {
     }
     
     // Execute the tool with validated params
+    console.log('⚙️ Executing tool:', action);
     const result = await executeTool(action as ToolName, validatedParams, userId);
+    console.log('📊 Tool result:', { success: result.success, error: result.error });
     
     if (!result.success) {
+      console.error('❌ Tool execution failed:', result.error);
       return res.status(400).json({ 
         error: result.error || 'Failed to execute action'
       });
@@ -234,12 +246,14 @@ router.post("/confirm-tool", withAuth(async (req, res) => {
     const confirmationMessage = result.message || 
       `Action completed: ${action} with ${JSON.stringify(result.data)}`;
     
+    console.log('💾 Saving to chat history');
     await storage.createAIChatMessage({
       userId,
       role: "assistant",
       content: confirmationMessage
     });
     
+    console.log('✅ Returning success response');
     return res.json({
       success: true,
       message: confirmationMessage,
@@ -247,7 +261,8 @@ router.post("/confirm-tool", withAuth(async (req, res) => {
     });
     
   } catch (error: any) {
-    console.error("Confirm tool error:", error);
+    console.error("💥 ERROR in /api/ai/confirm-tool:", error);
+    console.error("Stack trace:", error.stack);
     return res.status(500).json({
       error: "Failed to execute action",
       details: error.message || "Unknown error"
