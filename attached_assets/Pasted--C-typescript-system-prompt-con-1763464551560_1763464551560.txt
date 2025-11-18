@@ -1,0 +1,286 @@
+ВАРИАНТ C: УМНАЯ КАТЕГОРИЗАЦИЯ (ЛУЧШИЙ)
+typescript// Добавить в system prompt список категорий:
+
+const systemPrompt = `
+You are a financial assistant.
+
+User has these categories:
+${categories.map(c => `- ${c.name} (${c.type})`).join('\n')}
+
+When adding transaction:
+1. Try to guess category from description
+2. "ресторан", "кафе", "еда вне дома" → "Рестораны"
+3. "продукты", "магазин", "супермаркет" → "Продукты"
+4. "такси", "uber", "транспорт" → "Транспорт"
+5. If unsure → ask user to specify
+`;
+
+// AI будет умнее выбирать категории!
+```
+
+---
+
+## 2️⃣ ЧТО ОЗНАЧАЮТ ДВЕ КНОПКИ?
+```
+[✓ Execute]  →  ВЫПОЛНИТЬ ДЕЙСТВИЕ
+                AI создаст транзакцию в БД
+                Расход 220,000 будет добавлен
+
+[✕ Cancel]   →  ОТМЕНИТЬ
+                Транзакция НЕ будет создана
+                Вернёшься в чат
+```
+
+---
+
+## 3️⃣ КАК ОТРЕДАКТИРОВАТЬ ПАРАМЕТРЫ?
+```
+СЕЙЧАС: НЕЛЬЗЯ ❌
+
+Если хочешь изменить:
+1. Нажми [Cancel]
+2. Напиши заново правильно:
+   "Добавь расход 220к на Рестораны, Secret Spot"
+
+💎 КАК СДЕЛАТЬ РЕДАКТИРОВАНИЕ?
+ДОБАВИТЬ КНОПКУ [✏️ EDIT]
+typescript// В confirmation-card.tsx
+
+<ConfirmationButtons
+  onConfirm={handleConfirm}
+  onCancel={onCancel}
+  onEdit={() => setEditMode(true)} // ← НОВАЯ КНОПКА
+  loading={loading}
+/>
+
+// Когда edit mode:
+{editMode ? (
+  <form>
+    <input 
+      name="amount" 
+      defaultValue={params.amount}
+    />
+    <input 
+      name="description" 
+      defaultValue={params.description}
+    />
+    <select name="category">
+      <option>Рестораны</option>
+      <option>Продукты</option>
+    </select>
+    
+    <button onClick={saveEdits}>
+      💾 Сохранить
+    </button>
+  </form>
+) : (
+  <ParametersView params={params} />
+)}
+```
+
+---
+
+## 🚀 ЧТО СДЕЛАТЬ СЕЙЧАС?
+
+### **IMMEDIATE FIX (БЫСТРО):**
+```
+1. Добавить категории в system prompt:
+
+const categories = await repositories.categories.findByUser(userId);
+
+const systemPrompt = `
+You are a financial assistant.
+
+Available categories:
+${categories.map(c => `- ${c.name}`).join('\n')}
+
+When user mentions:
+- "ресторан", "кафе", "еда" → use "Рестораны"
+- "продукты", "магазин" → use "Продукты"  
+- "такси", "uber" → use "Транспорт"
+
+Always try to detect category from description.
+`;
+
+РЕЗУЛЬТАТ:
+User: "еда в Secret Spot 220к"
+AI: category: "Рестораны" ✅
+```
+
+---
+
+### **BETTER UX (СРЕДНЕСРОЧНО):**
+```
+2. Добавить dropdown в confirmation card:
+
+┌─────────────────────────────┐
+│ Add Transaction             │
+├─────────────────────────────┤
+│ Amount: 220000              │
+│ Description: Secret Spot    │
+│ Type: expense               │
+│ Category: [Рестораны ▼]     │ ← DROPDOWN!
+├─────────────────────────────┤
+│ [✓ Execute] [✕ Cancel]      │
+└─────────────────────────────┘
+
+// В ConfirmationCard:
+<select 
+  value={selectedCategory}
+  onChange={(e) => setSelectedCategory(e.target.value)}
+>
+  {categories.map(c => (
+    <option key={c.id} value={c.name}>
+      {c.icon} {c.name}
+    </option>
+  ))}
+</select>
+```
+
+---
+
+### **PERFECT SOLUTION (ДОЛГОСРОЧНО):**
+```
+3. ML-категоризация (как у Дзен-мани):
+
+// Добавить tool: suggest_category
+{
+  name: 'suggest_category',
+  description: 'Suggest category based on description',
+  input_schema: {
+    properties: {
+      description: { type: 'string' }
+    }
+  }
+}
+
+// Handler:
+async function suggestCategory(description: string) {
+  // ML model или rule-based
+  if (description.includes('ресторан')) return 'Рестораны';
+  if (description.includes('продукты')) return 'Продукты';
+  // ...
+}
+
+// AI использует:
+User: "еда в Secret Spot"
+AI: suggest_category("еда в Secret Spot")
+→ "Рестораны"
+AI: add_transaction(category="Рестораны") ✅
+```
+
+---
+
+## 📋 ЗАДАЧА ДЛЯ REPLIT (IMMEDIATE FIX)
+```
+Улучши определение категорий в AI Assistant
+
+ПРОБЛЕМА:
+AI не определяет категорию автоматически из описания.
+
+РЕШЕНИЕ:
+Добавить список категорий юзера в system prompt с правилами.
+
+ОБНОВИТЬ server/ai/chat-with-tools.ts:
+
+---
+export async function chatWithTools(
+  message: string,
+  userId: number
+) {
+  const settings = await repositories.settings.findByUser(userId);
+  
+  if (!settings?.anthropicApiKey) {
+    throw new Error('API key not configured');
+  }
+  
+  // Получить категории юзера
+  const categories = await repositories.categories.findByUser(userId);
+  
+  // System prompt с категориями
+  const systemPrompt = `You are a financial assistant for Budget Buddy.
+
+User ID: ${userId}
+
+Available transaction categories:
+${categories.map(c => `- ${c.name} (${c.type})`).join('\n')}
+
+Smart category detection rules:
+- "ресторан", "кафе", "еда вне дома", "restaurant" → "Рестораны"
+- "продукты", "магазин", "супермаркет", "groceries" → "Продукты"
+- "такси", "uber", "транспорт", "taxi" → "Транспорт"
+- "развлечения", "кино", "entertainment" → "Развлечения"
+
+When user adds transaction:
+1. Always try to detect category from description
+2. Use exact category name from the list above
+3. If category not in list → leave it empty (user will choose)
+
+Example:
+User: "еда в Secret Spot 220000"
+You: add_transaction(description="еда в Secret Spot", category="Рестораны")
+`;
+
+  const anthropic = new Anthropic({ 
+    apiKey: settings.anthropicApiKey 
+  });
+  
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-5-20250929',
+    max_tokens: 4096,
+    system: systemPrompt, // ← С категориями!
+    tools: ANTHROPIC_TOOLS,
+    messages: [{ role: 'user', content: message }]
+  });
+  
+  return response;
+}
+---
+
+РЕЗУЛЬТАТ:
+✅ AI видит список категорий юзера
+✅ AI знает правила определения
+✅ AI автоматически подставляет category
+✅ Если не уверен → оставляет пустым
+
+ТЕСТ:
+User: "еда в ресторане 1000 рублей"
+Expected: category = "Рестораны" (если такая есть у юзера)
+```
+
+---
+
+## 💡 ПРО КНОПКУ EDIT (ОПЦИОНАЛЬНО)
+```
+Если хочешь добавить редактирование:
+
+ЗАДАЧА:
+Добавить кнопку [✏️ Edit] в confirmation card
+
+ОБНОВИТЬ confirmation-card.tsx:
+
+1. Добавить edit mode state
+2. Показывать форму вместо параметров
+3. Кнопки: [Save] [Cancel edit]
+
+Это улучшит UX, но не критично.
+Сейчас можно просто нажать Cancel и написать заново.
+```
+
+---
+
+## 🎯 ИТОГО
+```
+ВОПРОС 1: Почему не определил категорию?
+ОТВЕТ: AI не видит список категорий + нет правил
+
+ВОПРОС 2: Что означают кнопки?
+ОТВЕТ: Execute = создать, Cancel = отменить
+
+ВОПРОС 3: Как редактировать?
+ОТВЕТ: Сейчас нельзя, нужно Cancel и написать заново
+       Или добавить Edit кнопку (TODO)
+
+IMMEDIATE FIX:
+└─ Добавить категории в system prompt
+└─ AI станет умнее! ✅
