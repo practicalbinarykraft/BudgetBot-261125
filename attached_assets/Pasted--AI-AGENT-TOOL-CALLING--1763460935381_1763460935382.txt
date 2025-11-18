@@ -1,0 +1,778 @@
+# 📋 ПОШАГОВЫЙ ПЛАН: AI AGENT С TOOL CALLING
+
+---
+
+## 🎯 ОБЩАЯ СТРАТЕГИЯ
+
+```
+ПРИНЦИП: Каждый шаг = одна функция = один файл
+
+БЕЗОПАСНОСТЬ:
+├─ Каждый шаг тестируем отдельно
+├─ Rollback если что-то сломалось
+├─ Не трогаем существующий код
+└─ Добавляем новое рядом
+
+МОДУЛЬНОСТЬ:
+└─ Все файлы <200 строк
+└─ Понятные имена
+└─ Одна ответственность
+```
+
+---
+
+## 📊 ВСЕГО: 8 ШАГОВ (5-7 ДНЕЙ)
+
+```
+ШАГ 1: Инфраструктура (1 день)
+ШАГ 2: Первый Tool (0.5 дня)
+ШАГ 3: Tool Handlers (0.5 дня)
+ШАГ 4: UI Подтверждений (1 день)
+ШАГ 5: Интеграция в Chat (1 день)
+ШАГ 6: Остальные Tools (1 день)
+ШАГ 7: Тестирование (1 день)
+ШАГ 8: Полировка (0.5 дня)
+```
+
+---
+
+## 🔧 ШАГ 1: ИНФРАСТРУКТУРА (1 ДЕНЬ)
+
+### **Цель:** Создать базовую структуру без изменения существующего кода
+
+### **Файлы (3 файла, ~150 строк):**
+
+```
+server/ai/
+├─ tools.ts           (50 строк)  - определения tools
+├─ tool-executor.ts   (50 строк)  - executor для tools
+└─ tool-types.ts      (50 строк)  - TypeScript типы
+```
+
+### **Задача:**
+
+```typescript
+// 1. server/ai/tool-types.ts (50 строк)
+export type ToolName = 
+  | 'create_category'
+  | 'add_transaction'
+  | 'get_balance';
+
+export interface Tool {
+  name: ToolName;
+  description: string;
+  input_schema: {
+    type: 'object';
+    properties: Record<string, any>;
+    required: string[];
+  };
+}
+
+export interface ToolResult {
+  success: boolean;
+  data?: any;
+  error?: string;
+}
+
+export interface ToolConfirmation {
+  action: ToolName;
+  params: Record<string, any>;
+  preview: string;
+}
+
+// 2. server/ai/tools.ts (50 строк)
+import { Tool } from './tool-types';
+
+export const TOOLS: Tool[] = [
+  {
+    name: 'get_balance',
+    description: 'Get current user balance and capital',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  }
+  // Пока ОДИН tool для теста
+];
+
+// 3. server/ai/tool-executor.ts (50 строк)
+import { ToolName, ToolResult } from './tool-types';
+
+export async function executeTool(
+  toolName: ToolName,
+  params: Record<string, any>,
+  userId: number
+): Promise<ToolResult> {
+  try {
+    switch (toolName) {
+      case 'get_balance':
+        // Временная заглушка
+        return {
+          success: true,
+          data: { balance: 10000 }
+        };
+      
+      default:
+        return {
+          success: false,
+          error: 'Unknown tool'
+        };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+```
+
+### **Тест:**
+```
+✅ Файлы созданы
+✅ TypeScript компилируется
+✅ Нет ошибок LSP
+✅ Существующий код не тронут
+```
+
+---
+
+## 🔧 ШАГ 2: ПЕРВЫЙ TOOL (0.5 ДНЯ)
+
+### **Цель:** Реализовать один работающий tool (get_balance)
+
+### **Файлы (1 файл, ~50 строк):**
+
+```
+server/ai/
+└─ handlers/
+   └─ balance-handler.ts (50 строк)
+```
+
+### **Задача:**
+
+```typescript
+// server/ai/handlers/balance-handler.ts (50 строк)
+import { repositories } from '../../repositories';
+import { ToolResult } from '../tool-types';
+
+export async function handleGetBalance(
+  userId: number
+): Promise<ToolResult> {
+  try {
+    // Получить кошельки
+    const wallets = await repositories.wallets.findByUser(userId);
+    
+    // Посчитать общий баланс
+    const totalBalance = wallets.reduce(
+      (sum, wallet) => sum + wallet.balanceUsd,
+      0
+    );
+    
+    return {
+      success: true,
+      data: {
+        balance: totalBalance,
+        wallets: wallets.length,
+        currency: 'USD'
+      }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+// Обновить tool-executor.ts:
+case 'get_balance':
+  return await handleGetBalance(userId);
+```
+
+### **Тест:**
+```typescript
+// Добавить тестовый endpoint:
+router.get('/api/ai/test-tool', async (req, res) => {
+  const result = await executeTool('get_balance', {}, req.user!.id);
+  res.json(result);
+});
+
+// Проверить:
+curl /api/ai/test-tool
+// → { success: true, data: { balance: 10000, ... } }
+```
+
+---
+
+## 🔧 ШАГ 3: TOOL HANDLERS (0.5 ДНЯ)
+
+### **Цель:** Добавить handlers для всех базовых tools
+
+### **Файлы (3 файла, ~150 строк):**
+
+```
+server/ai/handlers/
+├─ category-handler.ts     (50 строк)
+├─ transaction-handler.ts  (50 строк)
+└─ index.ts               (50 строк) - exports
+```
+
+### **Задача:**
+
+```typescript
+// 1. category-handler.ts (50 строк)
+export async function handleCreateCategory(
+  userId: number,
+  params: { name: string; type: string; icon?: string; color?: string }
+): Promise<ToolResult> {
+  const category = await repositories.categories.create({
+    userId,
+    ...params
+  });
+  
+  return {
+    success: true,
+    data: category
+  };
+}
+
+// 2. transaction-handler.ts (50 строк)
+export async function handleAddTransaction(
+  userId: number,
+  params: { amount: number; description: string; category: string; type: string }
+): Promise<ToolResult> {
+  const transaction = await repositories.transactions.create({
+    userId,
+    ...params,
+    date: new Date().toISOString()
+  });
+  
+  return {
+    success: true,
+    data: transaction
+  };
+}
+
+// 3. index.ts (50 строк)
+export { handleGetBalance } from './balance-handler';
+export { handleCreateCategory } from './category-handler';
+export { handleAddTransaction } from './transaction-handler';
+
+// 4. Обновить tools.ts (добавить 2 новых tool)
+{
+  name: 'create_category',
+  description: 'Create new transaction category',
+  input_schema: {
+    type: 'object',
+    properties: {
+      name: { type: 'string' },
+      type: { type: 'string', enum: ['income', 'expense'] },
+      icon: { type: 'string' },
+      color: { type: 'string' }
+    },
+    required: ['name', 'type']
+  }
+},
+{
+  name: 'add_transaction',
+  description: 'Add new transaction',
+  input_schema: {
+    type: 'object',
+    properties: {
+      amount: { type: 'number' },
+      description: { type: 'string' },
+      category: { type: 'string' },
+      type: { type: 'string', enum: ['income', 'expense'] }
+    },
+    required: ['amount', 'description', 'type']
+  }
+}
+```
+
+### **Тест:**
+```
+curl /api/ai/test-tool?tool=create_category
+curl /api/ai/test-tool?tool=add_transaction
+```
+
+---
+
+## 🔧 ШАГ 4: UI ПОДТВЕРЖДЕНИЙ (1 ДЕНЬ)
+
+### **Цель:** Создать компоненты для подтверждения действий
+
+### **Файлы (3 файла, ~180 строк):**
+
+```
+client/src/components/ai-chat-sidebar/
+├─ confirmation-card.tsx     (80 строк)
+├─ action-preview.tsx        (50 строк)
+└─ confirmation-buttons.tsx  (50 строк)
+```
+
+### **Задача:**
+
+```typescript
+// 1. action-preview.tsx (50 строк)
+interface ActionPreviewProps {
+  action: string;
+  params: Record<string, any>;
+}
+
+export function ActionPreview({ action, params }: ActionPreviewProps) {
+  const getIcon = () => {
+    switch (action) {
+      case 'create_category': return '📁';
+      case 'add_transaction': return '💸';
+      case 'get_balance': return '💰';
+      default: return '🤖';
+    }
+  };
+  
+  const getTitle = () => {
+    switch (action) {
+      case 'create_category': return 'Создать категорию';
+      case 'add_transaction': return 'Добавить транзакцию';
+      case 'get_balance': return 'Проверить баланс';
+    }
+  };
+  
+  return (
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 rounded-full bg-blue-500 
+                      flex items-center justify-center text-xl">
+        {getIcon()}
+      </div>
+      <div>
+        <h4 className="font-semibold">{getTitle()}</h4>
+        <p className="text-sm text-gray-500">
+          {Object.keys(params).length} параметров
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// 2. confirmation-buttons.tsx (50 строк)
+interface ConfirmationButtonsProps {
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading?: boolean;
+}
+
+export function ConfirmationButtons({ 
+  onConfirm, 
+  onCancel, 
+  loading 
+}: ConfirmationButtonsProps) {
+  return (
+    <div className="flex gap-2">
+      <button
+        onClick={onConfirm}
+        disabled={loading}
+        className="flex-1 p-2 bg-blue-500 text-white rounded-lg
+                   hover:bg-blue-600 disabled:opacity-50"
+      >
+        {loading ? '⏳ Выполняю...' : '✅ Выполнить'}
+      </button>
+      <button
+        onClick={onCancel}
+        disabled={loading}
+        className="px-4 p-2 border rounded-lg hover:bg-gray-100"
+      >
+        ❌ Отмена
+      </button>
+    </div>
+  );
+}
+
+// 3. confirmation-card.tsx (80 строк)
+interface ConfirmationCardProps {
+  action: string;
+  params: Record<string, any>;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+export function ConfirmationCard({
+  action,
+  params,
+  onConfirm,
+  onCancel
+}: ConfirmationCardProps) {
+  const [loading, setLoading] = useState(false);
+  
+  const handleConfirm = async () => {
+    setLoading(true);
+    await onConfirm();
+    setLoading(false);
+  };
+  
+  return (
+    <div className="p-4 border-2 border-blue-500 rounded-xl
+                    bg-blue-50 dark:bg-blue-900/20 space-y-3">
+      <ActionPreview action={action} params={params} />
+      
+      {/* Parameters */}
+      <div className="bg-white dark:bg-gray-800 p-3 rounded-lg text-sm">
+        {Object.entries(params).map(([key, value]) => (
+          <div key={key} className="flex justify-between py-1">
+            <span className="text-gray-500">{key}:</span>
+            <span className="font-medium">{String(value)}</span>
+          </div>
+        ))}
+      </div>
+      
+      <ConfirmationButtons
+        onConfirm={handleConfirm}
+        onCancel={onCancel}
+        loading={loading}
+      />
+    </div>
+  );
+}
+```
+
+### **Тест:**
+```typescript
+// Добавить в stories или отдельную страницу:
+<ConfirmationCard
+  action="create_category"
+  params={{ name: "Рестораны", type: "expense" }}
+  onConfirm={() => console.log('confirmed')}
+  onCancel={() => console.log('cancelled')}
+/>
+```
+
+---
+
+## 🔧 ШАГ 5: ИНТЕГРАЦИЯ В CHAT (1 ДЕНЬ)
+
+### **Цель:** Подключить tool calling к AI chat endpoint
+
+### **Файлы (2 файла, ~150 строк):**
+
+```
+server/routes/
+└─ ai.routes.ts (обновить, +100 строк)
+
+server/ai/
+└─ chat-with-tools.ts (50 строк) - новый
+```
+
+### **Задача:**
+
+```typescript
+// 1. chat-with-tools.ts (50 строк)
+import Anthropic from '@anthropic-ai/sdk';
+import { TOOLS } from './tools';
+
+export async function chatWithTools(
+  message: string,
+  apiKey: string,
+  systemPrompt: string
+) {
+  const anthropic = new Anthropic({ apiKey });
+  
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-5-20250929',
+    max_tokens: 4096,
+    system: systemPrompt,
+    tools: TOOLS, // ← Добавляем tools!
+    messages: [{ role: 'user', content: message }]
+  });
+  
+  return response;
+}
+
+// 2. Обновить ai.routes.ts (+100 строк)
+router.post('/api/ai/chat', async (req, res) => {
+  const { message } = req.body;
+  const userId = req.user!.id;
+  
+  // Получить API key
+  const settings = await repositories.settings.findByUser(userId);
+  const apiKey = settings?.anthropicApiKey;
+  
+  if (!apiKey) {
+    return res.status(400).json({ 
+      error: 'API key not configured' 
+    });
+  }
+  
+  // Вызвать Claude с tools
+  const response = await chatWithTools(
+    message,
+    apiKey,
+    `You are a financial assistant. User ID: ${userId}`
+  );
+  
+  // Проверить нужен ли tool
+  const toolUse = response.content.find(c => c.type === 'tool_use');
+  
+  if (toolUse) {
+    // Запросить подтверждение
+    return res.json({
+      type: 'tool_confirmation',
+      action: toolUse.name,
+      params: toolUse.input,
+      toolUseId: toolUse.id
+    });
+  }
+  
+  // Обычный ответ
+  const textContent = response.content.find(c => c.type === 'text');
+  return res.json({
+    type: 'message',
+    content: textContent.text
+  });
+});
+
+// 3. Новый endpoint для подтверждения
+router.post('/api/ai/confirm-tool', async (req, res) => {
+  const { action, params, toolUseId } = req.body;
+  const userId = req.user!.id;
+  
+  // Выполнить tool
+  const result = await executeTool(action, params, userId);
+  
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  
+  // Продолжить диалог
+  const settings = await repositories.settings.findByUser(userId);
+  const anthropic = new Anthropic({ 
+    apiKey: settings!.anthropicApiKey 
+  });
+  
+  const finalResponse = await anthropic.messages.create({
+    model: 'claude-sonnet-4-5-20250929',
+    max_tokens: 4096,
+    messages: [
+      ...previousMessages, // TODO: загрузить из БД
+      {
+        role: 'assistant',
+        content: [{
+          type: 'tool_use',
+          id: toolUseId,
+          name: action,
+          input: params
+        }]
+      },
+      {
+        role: 'user',
+        content: [{
+          type: 'tool_result',
+          tool_use_id: toolUseId,
+          content: JSON.stringify(result.data)
+        }]
+      }
+    ]
+  });
+  
+  const textContent = finalResponse.content.find(c => c.type === 'text');
+  return res.json({
+    type: 'message',
+    content: textContent.text
+  });
+});
+```
+
+### **Тест:**
+```bash
+# Отправить сообщение
+curl -X POST /api/ai/chat \
+  -d '{"message": "Какой у меня баланс?"}'
+
+# Должен вернуть:
+{
+  "type": "tool_confirmation",
+  "action": "get_balance",
+  "params": {}
+}
+
+# Подтвердить
+curl -X POST /api/ai/confirm-tool \
+  -d '{"action": "get_balance", "params": {}, "toolUseId": "..."}'
+
+# Должен вернуть:
+{
+  "type": "message",
+  "content": "Твой баланс: $10,000"
+}
+```
+
+---
+
+## 🔧 ШАГ 6: ОБНОВИТЬ FRONTEND (1 ДЕНЬ)
+
+### **Цель:** Интегрировать подтверждения в AI Chat Sidebar
+
+### **Файлы (1 файл, ~50 строк добавить):**
+
+```
+client/src/components/ai-chat-sidebar/index.tsx
+(обновить существующий)
+```
+
+### **Задача:**
+
+```typescript
+// Обновить index.tsx (+50 строк)
+
+const [pendingConfirmation, setPendingConfirmation] = useState<{
+  action: string;
+  params: Record<string, any>;
+  toolUseId: string;
+} | null>(null);
+
+const sendMessage = async (text: string) => {
+  // Добавить сообщение пользователя
+  addMessage({ role: 'user', content: text });
+  
+  // Отправить в API
+  const response = await fetch('/api/ai/chat', {
+    method: 'POST',
+    body: JSON.stringify({ message: text })
+  });
+  
+  const data = await response.json();
+  
+  if (data.type === 'tool_confirmation') {
+    // Показать карточку подтверждения
+    setPendingConfirmation({
+      action: data.action,
+      params: data.params,
+      toolUseId: data.toolUseId
+    });
+  } else {
+    // Обычное сообщение
+    addMessage({ role: 'assistant', content: data.content });
+  }
+};
+
+const confirmTool = async () => {
+  if (!pendingConfirmation) return;
+  
+  // Отправить подтверждение
+  const response = await fetch('/api/ai/confirm-tool', {
+    method: 'POST',
+    body: JSON.stringify(pendingConfirmation)
+  });
+  
+  const data = await response.json();
+  
+  // Добавить ответ AI
+  addMessage({ role: 'assistant', content: data.content });
+  
+  // Убрать карточку
+  setPendingConfirmation(null);
+};
+
+// В JSX:
+{pendingConfirmation && (
+  <ConfirmationCard
+    action={pendingConfirmation.action}
+    params={pendingConfirmation.params}
+    onConfirm={confirmTool}
+    onCancel={() => setPendingConfirmation(null)}
+  />
+)}
+```
+
+### **Тест:**
+```
+1. Открыть AI Chat Sidebar
+2. Написать: "Какой у меня баланс?"
+3. Должна появиться карточка подтверждения
+4. Нажать [✅ Выполнить]
+5. AI должен ответить с балансом
+```
+
+---
+
+## 🔧 ШАГ 7: ДОБАВИТЬ ОСТАЛЬНЫЕ TOOLS (1 ДЕНЬ)
+
+### **Цель:** Расширить функционал (опционально)
+
+### **Файлы (добавить по необходимости):**
+
+```
+server/ai/handlers/
+├─ goal-handler.ts
+├─ wallet-handler.ts
+└─ analytics-handler.ts
+```
+
+### **Можно добавить:**
+- create_goal
+- create_wallet
+- get_transactions
+- search_transactions
+
+---
+
+## 🔧 ШАГ 8: ТЕСТИРОВАНИЕ И ПОЛИРОВКА (1 ДЕНЬ)
+
+### **Чеклист:**
+
+```
+✅ Все tools работают
+✅ Подтверждения показываются
+✅ Отмена работает
+✅ Ошибки обрабатываются
+✅ UI адаптивный
+✅ Нет memory leaks
+✅ LSP чист
+✅ Все файлы <200 строк
+```
+
+---
+
+## 📊 ФИНАЛЬНАЯ СТРУКТУРА
+
+```
+server/ai/
+├─ tool-types.ts (50 строк)
+├─ tools.ts (50 строк)
+├─ tool-executor.ts (50 строк)
+├─ chat-with-tools.ts (50 строк)
+└─ handlers/
+   ├─ index.ts (50 строк)
+   ├─ balance-handler.ts (50 строк)
+   ├─ category-handler.ts (50 строк)
+   ├─ transaction-handler.ts (50 строк)
+   ├─ goal-handler.ts (50 строк - optional)
+   └─ wallet-handler.ts (50 строк - optional)
+
+client/src/components/ai-chat-sidebar/
+├─ index.tsx (обновлён, +50 строк)
+├─ confirmation-card.tsx (80 строк)
+├─ action-preview.tsx (50 строк)
+└─ confirmation-buttons.tsx (50 строк)
+
+ВСЕГО: ~600 строк нового кода
+ФАЙЛОВ: 13 файлов
+ВСЕ <200 СТРОК! ✅
+```
+
+---
+
+## 🎯 ПОРЯДОК РЕАЛИЗАЦИИ
+
+```
+ДЕНЬ 1: Шаги 1-2 (инфраструктура + первый tool)
+ДЕНЬ 2: Шаги 3-4 (handlers + UI)
+ДЕНЬ 3: Шаг 5 (интеграция в chat)
+ДЕНЬ 4: Шаг 6 (frontend)
+ДЕНЬ 5: Шаги 7-8 (расширение + тесты)
+
+ИТОГО: 5 ДНЕЙ БЕЗОПАСНОЙ РАЗРАБОТКИ
+```
+
+---
+
+**НАЧИНАЕМ С ШАГА 1?** 🚀

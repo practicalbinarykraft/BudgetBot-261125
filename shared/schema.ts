@@ -11,6 +11,13 @@ export const financialTypeEnum = pgEnum('financial_type', [
   'liability'       // Пассивы (loans, depreciating purchases)
 ]);
 
+export const toolExecutionStatusEnum = pgEnum('tool_execution_status', [
+  'pending',    // Waiting for user confirmation
+  'confirmed',  // User confirmed, executing
+  'executed',   // Successfully executed
+  'cancelled'   // User cancelled
+]);
+
 // Users table
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -295,6 +302,23 @@ export const aiChatMessages = pgTable("ai_chat_messages", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// AI Tool Executions table (history of AI agent tool calls)
+export const aiToolExecutions = pgTable("ai_tool_executions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  
+  sessionId: text("session_id"), // Group related tool calls
+  toolName: text("tool_name").notNull(), // e.g., 'get_balance', 'add_transaction'
+  params: text("params").notNull(), // JSON string with tool parameters
+  result: text("result"), // JSON string with execution result
+  status: toolExecutionStatusEnum("status").default("pending").notNull(),
+  
+  executedAt: timestamp("executed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   transactions: many(transactions),
@@ -312,6 +336,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   settings: one(settings),
   aiTrainingExamples: many(aiTrainingExamples),
   aiChatMessages: many(aiChatMessages),
+  aiToolExecutions: many(aiToolExecutions),
 }));
 
 export const transactionsRelations = relations(transactions, ({ one, many }) => ({
