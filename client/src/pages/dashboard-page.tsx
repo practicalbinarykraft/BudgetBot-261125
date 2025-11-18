@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
+import { useTranslation } from "@/i18n";
 
 export default function DashboardPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -24,6 +25,7 @@ export default function DashboardPage() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [dateFilter, setDateFilter] = useState<DateFilterValue>("month");
   const { toast } = useToast();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
 
   const dateRange = getDateRange(dateFilter);
@@ -68,8 +70,8 @@ export default function DashboardPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/sorting/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/unsorted"], exact: false });
       toast({
-        title: "Success",
-        description: "Transaction deleted successfully",
+        title: t("common.success"),
+        description: t("transaction.deleted"),
       });
     },
     onError: (error: Error) => {
@@ -88,8 +90,8 @@ export default function DashboardPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Dashboard</h1>
-            <p className="text-muted-foreground">Overview of your finances</p>
+            <h1 className="text-3xl font-bold">{t("dashboard.title")}</h1>
+            <p className="text-muted-foreground">{t("dashboard.overview")}</p>
           </div>
         </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -106,8 +108,8 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Overview of your finances</p>
+          <h1 className="text-3xl font-bold">{t("dashboard.title")}</h1>
+          <p className="text-muted-foreground">{t("dashboard.overview")}</p>
         </div>
         <div className="flex gap-2">
           <Button 

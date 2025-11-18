@@ -46,6 +46,14 @@ export const webCommonTranslations: Translations = {
     en: 'AI Analysis',
     ru: 'AI Анализ',
   },
+  'nav.recurring': {
+    en: 'Recurring',
+    ru: 'Повторяющиеся',
+  },
+  'nav.planned': {
+    en: 'Planned',
+    ru: 'Запланированные',
+  },
 
   // Common UI
   'common.loading': {
@@ -143,5 +151,13 @@ export const webCommonTranslations: Translations = {
   'common.actions': {
     en: 'Actions',
     ru: 'Действия',
+  },
+  'common.signed_in_as': {
+    en: 'Signed in as',
+    ru: 'Вы вошли как',
+  },
+  'common.logout': {
+    en: 'Logout',
+    ru: 'Выйти',
   },
 };
