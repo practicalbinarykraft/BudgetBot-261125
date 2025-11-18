@@ -94,6 +94,10 @@ export function AIChatSidebar() {
   const handleQuickAction = (question: string) => {
     setMessage(question);
     sendMessageMutation.mutate(question);
+    // Scroll to bottom to show the inserted text
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
