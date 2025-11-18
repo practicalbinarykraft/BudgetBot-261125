@@ -8,6 +8,8 @@ import { ANTHROPIC_TOOLS, requiresConfirmation } from "../../ai/tools";
 import { executeTool } from "../../ai/tool-executor";
 import type { ToolName } from "../../ai/tool-types";
 import { suggestCategory, getUserCategories } from "../../services/categorization.service";
+import { validateToolParams } from "../../ai/tool-schemas";
+import { ZodError } from "zod";
 
 const router = Router();
 
@@ -128,16 +130,21 @@ router.post("/", withAuth(async (req, res) => {
         // Get user categories for dropdown
         availableCategories = await getUserCategories(userId);
         
-        // If category not provided by AI, try ML suggestion
-        if (!enhancedParams.category && enhancedParams.description) {
+        // Ensure category field always exists (even if empty) for dropdown rendering
+        if (!enhancedParams.category) {
+          enhancedParams = {
+            ...enhancedParams,
+            category: '' // Empty string ensures Object.entries() includes it
+          };
+        }
+        
+        // Try ML suggestion if category not provided by AI
+        if (!toolUse.input.category && enhancedParams.description) {
           mlSuggestion = await suggestCategory(userId, enhancedParams.description);
           
           // Apply ML suggestion if confident enough
           if (mlSuggestion && mlSuggestion.confidence >= 0.6) {
-            enhancedParams = {
-              ...enhancedParams,
-              category: mlSuggestion.categoryName
-            };
+            enhancedParams.category = mlSuggestion.categoryName;
           }
         }
       }
@@ -192,13 +199,30 @@ router.post("/confirm-tool", withAuth(async (req, res) => {
     }
     
     // Verify the tool exists
-    const toolExists = ANTHROPIC_TOOLS.find(t => t.name === action);
-    if (!toolExists) {
+    const tool = ANTHROPIC_TOOLS.find(t => t.name === action);
+    if (!tool) {
       return res.status(400).json({ error: `Unknown action: ${action}` });
     }
     
-    // Execute the tool
-    const result = await executeTool(action as ToolName, params, userId);
+    // Validate params with Zod schema (full type/constraint checking)
+    let validatedParams;
+    try {
+      validatedParams = validateToolParams(action, params);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          error: 'Invalid parameters',
+          details: error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+        });
+      }
+      return res.status(400).json({ 
+        error: 'Parameter validation failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+    
+    // Execute the tool with validated params
+    const result = await executeTool(action as ToolName, validatedParams, userId);
     
     if (!result.success) {
       return res.status(400).json({ 

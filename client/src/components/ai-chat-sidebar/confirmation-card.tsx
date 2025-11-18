@@ -69,48 +69,52 @@ export function ConfirmationCard({
         <ActionPreview action={action} params={editableParams} />
         
         <div className="bg-muted p-3 rounded-md text-sm space-y-2">
-          {Object.entries(editableParams).map(([key, value]) => {
-            // Special handling for category field in add_transaction
-            if (key === 'category' && isAddTransaction && hasCategories) {
-              return (
-                <div key={key} className="space-y-1.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-muted-foreground capitalize text-xs">
-                      Category:
-                    </span>
-                    {mlSuggestion && (
-                      <Badge 
-                        variant="secondary" 
-                        className="text-xs gap-1"
-                        data-testid="badge-ml-confidence"
-                      >
-                        <Sparkles className="w-3 h-3" />
-                        {Math.round(mlSuggestion.confidence * 100)}%
-                      </Badge>
-                    )}
-                  </div>
-                  <Select 
-                    value={editableParams.category || ''} 
-                    onValueChange={handleCategoryChange}
-                    data-testid="select-category"
+          {/* Render category dropdown FIRST for add_transaction (before other params) */}
+          {isAddTransaction && hasCategories && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground capitalize text-xs">
+                  Category:
+                </span>
+                {mlSuggestion && (
+                  <Badge 
+                    variant="secondary" 
+                    className="text-xs gap-1"
+                    data-testid="badge-ml-confidence"
                   >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableCategories.map((cat) => (
-                        <SelectItem 
-                          key={cat.id} 
-                          value={cat.name}
-                          data-testid={`option-category-${cat.id}`}
-                        >
-                          {cat.icon} {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              );
+                    <Sparkles className="w-3 h-3" />
+                    {Math.round(mlSuggestion.confidence * 100)}%
+                  </Badge>
+                )}
+              </div>
+              <Select 
+                value={editableParams.category || ''} 
+                onValueChange={handleCategoryChange}
+                data-testid="select-category"
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableCategories.map((cat) => (
+                    <SelectItem 
+                      key={cat.id} 
+                      value={cat.name}
+                      data-testid={`option-category-${cat.id}`}
+                    >
+                      {cat.icon} {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          
+          {/* Render other params (skip category as it's rendered above) */}
+          {Object.entries(editableParams).map(([key, value]) => {
+            // Skip category - already rendered above
+            if (key === 'category' && isAddTransaction && hasCategories) {
+              return null;
             }
             
             // Default parameter display
