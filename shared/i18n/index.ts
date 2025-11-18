@@ -12,11 +12,15 @@ import { incomeTranslations } from './income';
 import { receiptTranslations } from './receipts';
 import { helpTranslations } from './help';
 import { notificationTranslations } from './notifications';
+import { webCommonTranslations } from './web-common';
+import { webDashboardTranslations } from './web-dashboard';
+import { webTransactionsTranslations } from './web-transactions';
+import { webSettingsTranslations } from './web-settings';
 
 // Export types
 export type { Language, Translation, Translations } from './types';
 
-// Combine all translations
+// Combine all translations (Telegram bot + Web client)
 const allTranslations: Translations = {
   ...commonTranslations,
   ...authTranslations,
@@ -26,6 +30,10 @@ const allTranslations: Translations = {
   ...receiptTranslations,
   ...helpTranslations,
   ...notificationTranslations,
+  ...webCommonTranslations,
+  ...webDashboardTranslations,
+  ...webTransactionsTranslations,
+  ...webSettingsTranslations,
 };
 
 /**
