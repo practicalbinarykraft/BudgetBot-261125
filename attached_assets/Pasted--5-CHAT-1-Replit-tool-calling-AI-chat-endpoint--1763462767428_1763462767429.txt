@@ -1,0 +1,103 @@
+🎯 ШАГ 5: ИНТЕГРАЦИЯ В CHAT (1 ДЕНЬ)
+Задача для Replit:
+Подключи tool calling к AI chat endpoint
+
+ОБНОВИТЬ server/routes/ai.routes.ts:
+
+Добавить поддержку tool calling в /api/ai/chat endpoint:
+
+1. При получении сообщения:
+   - Вызвать chatWithTools()
+   - Проверить есть ли tool_use в ответе
+   - Если есть:
+     * Проверить requiresConfirmation
+     * Если false → выполнить сразу
+     * Если true → вернуть confirmation запрос
+
+2. Создать новый endpoint /api/ai/confirm-tool:
+   - Получить action, params, toolUseId
+   - Выполнить tool через executeTool()
+   - Продолжить диалог с результатом
+
+ПСЕВДОКОД:
+
+router.post('/api/ai/chat', async (req, res) => {
+  const { message } = req.body;
+  const userId = req.user!.id;
+  
+  try {
+    // Вызвать Claude с tools
+    const response = await chatWithTools(message, userId);
+    
+    // Проверить нужен ли tool
+    const toolUse = response.content.find(c => c.type === 'tool_use');
+    
+    if (toolUse) {
+      const tool = TOOLS.find(t => t.name === toolUse.name);
+      
+      if (!tool.requiresConfirmation) {
+        // Выполнить сразу (READ операция)
+        const result = await executeTool(toolUse.name, toolUse.input, userId);
+        
+        // Продолжить диалог с результатом
+        // TODO: implement continuation
+        
+        return res.json({
+          type: 'message',
+          content: 'Tool executed...'
+        });
+      }
+      
+      // Запросить подтверждение (WRITE операция)
+      return res.json({
+        type: 'tool_confirmation',
+        action: toolUse.name,
+        params: toolUse.input,
+        toolUseId: toolUse.id
+      });
+    }
+    
+    // Обычный ответ без tools
+    const textContent = response.content.find(c => c.type === 'text');
+    return res.json({
+      type: 'message',
+      content: textContent?.text || 'No response'
+    });
+    
+  } catch (error: any) {
+    return res.status(500).json({ 
+      error: error.message 
+    });
+  }
+});
+
+router.post('/api/ai/confirm-tool', async (req, res) => {
+  const { action, params, toolUseId } = req.body;
+  const userId = req.user!.id;
+  
+  try {
+    // Выполнить tool
+    const result = await executeTool(action, params, userId);
+    
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+    
+    // TODO: Продолжить диалог с Claude
+    // Нужно передать tool_result обратно в Claude
+    
+    return res.json({
+      type: 'message',
+      content: `✅ Действие выполнено! ${JSON.stringify(result.data)}`
+    });
+    
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+ТРЕБОВАНИЯ:
+- Обработка ошибок
+- Проверка requiresConfirmation
+- READ tools выполняются сразу
+- WRITE tools требуют подтверждения

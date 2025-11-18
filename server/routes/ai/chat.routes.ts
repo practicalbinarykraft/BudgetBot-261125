@@ -3,6 +3,10 @@ import { storage } from "../../storage";
 import { withAuth } from "../../middleware/auth-utils";
 import { chatWithAI } from "../../services/ai/chat.service";
 import { buildFinancialContext } from "../../services/ai/financial-context.service";
+import { chatWithTools } from "../../ai/chat-with-tools";
+import { TOOLS } from "../../ai/tools";
+import { executeTool } from "../../ai/tool-executor";
+import type { ToolName } from "../../ai/tool-types";
 
 const router = Router();
 
@@ -27,10 +31,10 @@ router.get("/history", withAuth(async (req, res) => {
   }
 }));
 
-// POST /api/ai/chat
+// POST /api/ai/chat (with tool calling support)
 router.post("/", withAuth(async (req, res) => {
   try {
-    const { message, includeContext = true } = req.body;
+    const { message } = req.body;
     const userId = req.user.id;
     
     if (!message || typeof message !== 'string') {
@@ -49,38 +53,62 @@ router.post("/", withAuth(async (req, res) => {
     }
     
     const settings = await storage.getSettingsByUserId(userId);
-    const anthropicApiKey = settings?.anthropicApiKey;
-    
-    if (!anthropicApiKey) {
+    if (!settings?.anthropicApiKey) {
       return res.status(400).json({
         error: "Anthropic API key not configured. Please add it in Settings."
       });
     }
     
-    // Build financial context if requested
-    let contextData: string | undefined;
-    if (includeContext) {
-      contextData = await buildFinancialContext({ userId });
+    // Call Claude with tools enabled
+    const response = await chatWithTools(trimmedMessage, userId);
+    
+    // Check if Claude wants to use a tool
+    const toolUse = response.content.find((block: any) => block.type === 'tool_use');
+    
+    if (toolUse) {
+      const tool = TOOLS.find(t => t.name === toolUse.name);
+      
+      if (!tool) {
+        return res.status(500).json({ error: `Unknown tool: ${toolUse.name}` });
+      }
+      
+      // CHECK: Does this tool require confirmation?
+      if (!tool.requiresConfirmation) {
+        // READ operation - execute immediately
+        const result = await executeTool(
+          toolUse.name as ToolName, 
+          toolUse.input, 
+          userId
+        );
+        
+        if (!result.success) {
+          return res.json({
+            type: 'message',
+            content: `Failed to execute action: ${result.error}`
+          });
+        }
+        
+        // Return success message with result
+        return res.json({
+          type: 'message',
+          content: result.message || `Action completed: ${JSON.stringify(result.data)}`
+        });
+      }
+      
+      // WRITE operation - request confirmation
+      return res.json({
+        type: 'tool_confirmation',
+        action: toolUse.name,
+        params: toolUse.input,
+        toolUseId: toolUse.id
+      });
     }
     
-    // Get recent chat history
-    const recentMessages = await storage.getAIChatMessages(userId, 10);
-    const chatHistory = recentMessages.map(msg => ({
-      role: msg.role as "user" | "assistant",
-      content: msg.content
-    }));
+    // No tool use - return regular text response
+    const textContent = response.content.find((block: any) => block.type === 'text');
+    const aiMessage = textContent?.text || 'No response';
     
-    // Add current user message (use trimmed version)
-    chatHistory.push({ role: "user", content: trimmedMessage });
-    
-    // Call AI
-    const aiResponse = await chatWithAI({
-      messages: chatHistory,
-      contextData,
-      apiKey: anthropicApiKey
-    });
-    
-    // Save both messages to DB (use trimmed version)
+    // Save messages to DB
     await storage.createAIChatMessage({
       userId,
       role: "user",
@@ -90,33 +118,74 @@ router.post("/", withAuth(async (req, res) => {
     await storage.createAIChatMessage({
       userId,
       role: "assistant",
-      content: aiResponse.message
+      content: aiMessage
     });
     
-    res.json({
-      success: true,
-      message: aiResponse.message,
-      usage: aiResponse.usage
+    return res.json({
+      type: 'message',
+      content: aiMessage
     });
     
   } catch (error: any) {
     console.error("AI chat error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       error: "Failed to process chat",
       details: error.message || "Unknown error"
     });
   }
 }));
 
-// TEST endpoint - verify get_balance tool works
-router.get("/test-balance", withAuth(async (req, res) => {
+// POST /api/ai/confirm-tool - execute confirmed tool action
+router.post("/confirm-tool", withAuth(async (req, res) => {
   try {
-    const { executeTool } = await import("../../ai/tool-executor");
+    const { action, params } = req.body;
     const userId = req.user.id;
-    const result = await executeTool('get_balance', {}, userId);
-    res.json(result);
+    
+    if (!action || typeof action !== 'string') {
+      return res.status(400).json({ error: "Action is required" });
+    }
+    
+    if (!params || typeof params !== 'object') {
+      return res.status(400).json({ error: "Params are required" });
+    }
+    
+    // Verify the tool exists
+    const tool = TOOLS.find(t => t.name === action);
+    if (!tool) {
+      return res.status(400).json({ error: `Unknown action: ${action}` });
+    }
+    
+    // Execute the tool
+    const result = await executeTool(action as ToolName, params, userId);
+    
+    if (!result.success) {
+      return res.status(400).json({ 
+        error: result.error || 'Failed to execute action'
+      });
+    }
+    
+    // Save action confirmation to chat history
+    const confirmationMessage = result.message || 
+      `Action completed: ${action} with ${JSON.stringify(result.data)}`;
+    
+    await storage.createAIChatMessage({
+      userId,
+      role: "assistant",
+      content: confirmationMessage
+    });
+    
+    return res.json({
+      success: true,
+      message: confirmationMessage,
+      data: result.data
+    });
+    
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error("Confirm tool error:", error);
+    return res.status(500).json({
+      error: "Failed to execute action",
+      details: error.message || "Unknown error"
+    });
   }
 }));
 
