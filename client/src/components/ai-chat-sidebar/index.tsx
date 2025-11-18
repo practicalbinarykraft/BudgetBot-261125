@@ -24,6 +24,11 @@ export function AIChatSidebar() {
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [location] = useLocation();
+  
+  // DEBUG: Log component mount
+  useEffect(() => {
+    console.log('🤖 AIChatSidebar mounted! isOpen:', isOpen);
+  }, []);
 
   // Fetch chat history
   const { data: messages = [], isLoading } = useQuery<AiChatMessage[]>({

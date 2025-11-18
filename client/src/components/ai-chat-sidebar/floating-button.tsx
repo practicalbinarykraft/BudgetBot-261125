@@ -5,7 +5,11 @@ import { Button } from '@/components/ui/button';
 export function FloatingChatButton() {
   const { open, unreadCount, markAsRead } = useChatSidebar();
 
+  // DEBUG: Log component mount
+  console.log('🔵 FloatingChatButton rendered! unreadCount:', unreadCount);
+
   const handleClick = () => {
+    console.log('🔵 FloatingChatButton clicked!');
     open();
     markAsRead();
   };
