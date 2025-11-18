@@ -1,0 +1,228 @@
+🔧 ТОЧНО! ИСПРАВЛЯЕМ!
+
+🐛 ПРОБЛЕМА
+СЕЙЧАС (НЕПРАВИЛЬНО):
+const TOOLS = [{
+  name: 'create_category',
+  requiresConfirmation: true,  // ← ANTHROPIC НЕ ЗНАЕТ ЭТО ПОЛЕ!
+  description: '...',
+  input_schema: {...}
+}];
+
+ANTHROPIC ОЖИДАЕТ:
+{
+  name: string;
+  description: string;
+  input_schema: {...};
+}
+
+ВСЁ! БОЛЬШЕ НИЧЕГО!
+
+✅ РЕШЕНИЕ: РАЗДЕЛИТЬ НА 2 СТРУКТУРЫ
+1. ANTHROPIC_TOOLS:
+   └─ Чистые tool definitions для API
+   └─ Только name, description, input_schema
+
+2. TOOL_METADATA:
+   └─ Наши кастомные поля
+   └─ requiresConfirmation, icon, category
+
+📋 ИСПРАВЛЕННОЕ ТЗ ДЛЯ REPLIT
+ИСПРАВЬ ОШИБКУ "Extra inputs are not permitted"
+
+ПРОБЛЕМА:
+Anthropic API не принимает кастомное поле requiresConfirmation в tools.
+
+РЕШЕНИЕ:
+Разделить на 2 структуры - для API и для метаданных.
+
+ОБНОВИТЬ server/ai/tools.ts:
+
+---
+import { Tool } from './tool-types';
+
+// 1. Чистые tool definitions для Anthropic API
+export const ANTHROPIC_TOOLS = [
+  {
+    name: 'get_balance',
+    description: 'Get current user balance and total capital from all wallets',
+    input_schema: {
+      type: 'object' as const,
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'create_category',
+    description: 'Create a new transaction category for organizing expenses or income',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        name: { 
+          type: 'string', 
+          description: 'Category name (e.g., "Restaurants", "Groceries")' 
+        },
+        type: { 
+          type: 'string', 
+          enum: ['income', 'expense'],
+          description: 'Category type' 
+        },
+        icon: { 
+          type: 'string', 
+          description: 'Emoji icon (optional, e.g., "🍽️", "🛒")' 
+        },
+        color: { 
+          type: 'string', 
+          description: 'Hex color code (optional, e.g., "#FF5733")' 
+        }
+      },
+      required: ['name', 'type']
+    }
+  },
+  {
+    name: 'add_transaction',
+    description: 'Add a new income or expense transaction to the user budget',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        amount: { 
+          type: 'number', 
+          description: 'Transaction amount (positive number)' 
+        },
+        description: { 
+          type: 'string', 
+          description: 'Transaction description (e.g., "Coffee at Starbucks")' 
+        },
+        category: { 
+          type: 'string', 
+          description: 'Category name (optional, e.g., "Food")' 
+        },
+        type: { 
+          type: 'string', 
+          enum: ['income', 'expense'],
+          description: 'Transaction type' 
+        },
+        date: { 
+          type: 'string', 
+          description: 'Date in YYYY-MM-DD format (optional, defaults to today)' 
+        }
+      },
+      required: ['amount', 'description', 'type']
+    }
+  }
+];
+
+// 2. Метаданные для наших нужд
+export const TOOL_METADATA: Record<string, {
+  requiresConfirmation: boolean;
+  icon?: string;
+  category?: string;
+}> = {
+  'get_balance': {
+    requiresConfirmation: false,
+    icon: '💰',
+    category: 'read'
+  },
+  'create_category': {
+    requiresConfirmation: true,
+    icon: '📁',
+    category: 'write'
+  },
+  'add_transaction': {
+    requiresConfirmation: true,
+    icon: '💸',
+    category: 'write'
+  }
+};
+
+// 3. Helper функция
+export function requiresConfirmation(toolName: string): boolean {
+  return TOOL_METADATA[toolName]?.requiresConfirmation ?? false;
+}
+
+export function getToolIcon(toolName: string): string {
+  return TOOL_METADATA[toolName]?.icon ?? '🤖';
+}
+---
+
+ОБНОВИТЬ server/ai/chat-with-tools.ts:
+
+---
+import { ANTHROPIC_TOOLS } from './tools'; // ← Использовать ANTHROPIC_TOOLS
+
+const response = await anthropic.messages.create({
+  model: 'claude-sonnet-4-5-20250929',
+  max_tokens: 4096,
+  system: `You are a financial assistant...`,
+  tools: ANTHROPIC_TOOLS, // ← Вместо TOOLS
+  messages: [{ role: 'user', content: message }]
+});
+---
+
+ОБНОВИТЬ server/routes/ai.routes.ts:
+
+---
+import { requiresConfirmation } from '../ai/tools'; // ← Импортировать helper
+
+if (toolUse) {
+  if (!requiresConfirmation(toolUse.name)) {
+    // Выполнить сразу
+  } else {
+    // Запросить подтверждение
+  }
+}
+---
+
+ОБНОВИТЬ client/src/components/ai-chat-sidebar/action-preview.tsx:
+
+---
+// Можно импортировать через API endpoint или hardcode
+const getIcon = (action: string) => {
+  const icons: Record<string, string> = {
+    'get_balance': '💰',
+    'create_category': '📁',
+    'add_transaction': '💸'
+  };
+  return icons[action] || '🤖';
+};
+---
+
+РЕЗУЛЬТАТ:
+✅ Anthropic API получает чистые tools
+✅ requiresConfirmation работает через TOOL_METADATA
+✅ Нет ошибки "Extra inputs"
+✅ Код чистый и модульный
+
+🎯 ПОЧЕМУ ТАК ЛУЧШЕ?
+ПРЕИМУЩЕСТВА:
+
+1. СООТВЕТСТВИЕ API:
+   └─ Anthropic получает только то что ожидает
+   └─ Нет лишних полей
+
+2. РАСШИРЯЕМОСТЬ:
+   └─ Можем добавлять любые метаданные
+   └─ icon, category, permissions, etc
+
+3. ЧИСТОТА:
+   └─ Разделение concerns
+   └─ API структуры отдельно
+   └─ Наши данные отдельно
+
+4. ТИПИЗАЦИЯ:
+   └─ TypeScript happy
+   └─ Автокомплит работает
+
+📦 ИТОГОВАЯ СТРУКТУРА
+typescript// tools.ts
+
+// Для Anthropic API
+export const ANTHROPIC_TOOLS = [...];
+
+// Для нашей логики
+export const TOOL_METADATA = {...};
+
+// Helper функции
+export function requiresConfirmation(name: string): boolean;
+export function getToolIcon(name: string): string;
+export function getToolCategory(name: string): string;
