@@ -1,0 +1,64 @@
+// Transaction Tool Handler - add new income or expense transaction
+import { storage } from '../../storage';
+import { ToolResult } from '../tool-types';
+
+export async function handleAddTransaction(
+  userId: number,
+  params: {
+    amount: number;
+    description: string;
+    category?: string;
+    type: 'income' | 'expense';
+    date?: string;
+    currency?: string;
+  }
+): Promise<ToolResult> {
+  try {
+    // Validate required params
+    if (!params.amount || !params.description || !params.type) {
+      return {
+        success: false,
+        error: 'Missing required parameters: amount, description, and type'
+      };
+    }
+
+    // Get primary wallet for this user (needed for walletId)
+    const wallets = await storage.getWalletsByUserId(userId);
+    const primaryWallet = wallets.find(w => w.isPrimary === 1) || wallets[0];
+
+    const currency = params.currency || 'USD';
+    const amount = params.amount;
+    
+    // Create transaction
+    const transaction = await storage.createTransaction({
+      userId,
+      amount: amount.toString(),
+      amountUsd: amount.toString(), // Simplified: assume USD or convert later
+      description: params.description,
+      category: params.category,
+      type: params.type,
+      date: params.date || new Date().toISOString().split('T')[0],
+      currency,
+      source: 'manual', // AI-created transactions marked as manual
+      walletId: primaryWallet?.id
+    });
+    
+    return {
+      success: true,
+      data: {
+        id: transaction.id,
+        amount: transaction.amount,
+        description: transaction.description,
+        type: transaction.type,
+        date: transaction.date,
+        currency: transaction.currency
+      },
+      message: `${params.type === 'income' ? 'Income' : 'Expense'} of $${amount} added: ${params.description}`
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message || 'Failed to add transaction'
+    };
+  }
+}

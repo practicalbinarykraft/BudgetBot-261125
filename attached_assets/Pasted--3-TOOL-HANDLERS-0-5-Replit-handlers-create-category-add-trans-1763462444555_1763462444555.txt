@@ -1,0 +1,148 @@
+🎯 ШАГ 3: TOOL HANDLERS (0.5 ДНЯ)
+Задача для Replit:
+Добавь handlers для create_category и add_transaction
+
+ФАЙЛЫ (3 файла, ~150 строк):
+
+1. server/ai/handlers/category-handler.ts (50 строк):
+---
+import { repositories } from '../../repositories';
+import { ToolResult } from '../tool-types';
+
+export async function handleCreateCategory(
+  userId: number,
+  params: {
+    name: string;
+    type: 'income' | 'expense';
+    icon?: string;
+    color?: string;
+  }
+): Promise<ToolResult> {
+  try {
+    const category = await repositories.categories.create({
+      userId,
+      name: params.name,
+      type: params.type,
+      icon: params.icon || '📁',
+      color: params.color || '#3b82f6',
+      isSystem: false
+    });
+    
+    return {
+      success: true,
+      data: {
+        id: category.id,
+        name: category.name,
+        type: category.type,
+        icon: category.icon
+      }
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+---
+
+2. server/ai/handlers/transaction-handler.ts (50 строк):
+---
+import { repositories } from '../../repositories';
+import { ToolResult } from '../tool-types';
+
+export async function handleAddTransaction(
+  userId: number,
+  params: {
+    amount: number;
+    description: string;
+    category?: string;
+    type: 'income' | 'expense';
+    date?: string;
+  }
+): Promise<ToolResult> {
+  try {
+    const transaction = await repositories.transactions.create({
+      userId,
+      amount: params.amount,
+      description: params.description,
+      category: params.category,
+      type: params.type,
+      date: params.date || new Date().toISOString().split('T')[0],
+      status: 'confirmed'
+    });
+    
+    return {
+      success: true,
+      data: {
+        id: transaction.id,
+        amount: transaction.amount,
+        description: transaction.description,
+        type: transaction.type
+      }
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+---
+
+3. server/ai/handlers/index.ts (50 строк):
+---
+export { handleGetBalance } from './balance-handler';
+export { handleCreateCategory } from './category-handler';
+export { handleAddTransaction } from './transaction-handler';
+---
+
+4. Обновить server/ai/tools.ts (добавить 2 новых tool):
+---
+{
+  name: 'create_category',
+  description: 'Create a new transaction category',
+  requiresConfirmation: true, // Создаёт данные - требует подтверждения
+  input_schema: {
+    type: 'object',
+    properties: {
+      name: { type: 'string', description: 'Category name' },
+      type: { type: 'string', enum: ['income', 'expense'], description: 'Category type' },
+      icon: { type: 'string', description: 'Emoji icon (optional)' },
+      color: { type: 'string', description: 'Hex color (optional)' }
+    },
+    required: ['name', 'type']
+  }
+},
+{
+  name: 'add_transaction',
+  description: 'Add a new income or expense transaction',
+  requiresConfirmation: true, // Создаёт данные - требует подтверждения
+  input_schema: {
+    type: 'object',
+    properties: {
+      amount: { type: 'number', description: 'Transaction amount' },
+      description: { type: 'string', description: 'Transaction description' },
+      category: { type: 'string', description: 'Category name (optional)' },
+      type: { type: 'string', enum: ['income', 'expense'], description: 'Transaction type' },
+      date: { type: 'string', description: 'Date in YYYY-MM-DD format (optional, defaults to today)' }
+    },
+    required: ['amount', 'description', 'type']
+  }
+}
+---
+
+5. Обновить server/ai/tool-executor.ts:
+---
+import * as handlers from './handlers';
+
+case 'create_category':
+  return await handlers.handleCreateCategory(userId, params);
+
+case 'add_transaction':
+  return await handlers.handleAddTransaction(userId, params);
+---
+
+ТЕСТ:
+curl /api/ai/test-tool?tool=create_category
+curl /api/ai/test-tool?tool=add_transaction
