@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { ActionPreview } from './action-preview';
 import { ConfirmationButtons } from './confirmation-buttons';
@@ -6,6 +6,21 @@ import { CategoryDropdown } from './category-dropdown';
 import { CurrencyDropdown } from './currency-dropdown';
 import { PersonalTagDropdown } from './personal-tag-dropdown';
 import { EditableField } from './editable-field';
+
+// Exchange rates for USD conversion (approximate)
+const EXCHANGE_RATES: Record<string, number> = {
+  USD: 1,
+  KRW: 1300,
+  RUB: 100,
+  EUR: 0.92,
+  CNY: 7.2
+};
+
+function convertToUSD(amount: number, currency: string): number {
+  if (!amount || isNaN(amount)) return 0;
+  const rate = EXCHANGE_RATES[currency] || 1;
+  return amount / rate;
+}
 
 interface Category {
   id: number;
@@ -48,12 +63,23 @@ export function ConfirmationCard({
   onCancel
 }: ConfirmationCardProps) {
   const [loading, setLoading] = useState(false);
-  // Normalize params on mount - ensure amount is number
-  const normalizedParams = {
+  // Normalize params on mount - ensure amount is number and currency defaults to USD
+  const normalizedParams: Record<string, any> = {
     ...params,
-    amount: typeof params.amount === 'string' ? parseFloat(params.amount) : params.amount
+    amount: typeof params.amount === 'string' ? parseFloat(params.amount) : params.amount,
+    currency: params.currency || 'USD' // Always default to USD for transactions
   };
-  const [editableParams, setEditableParams] = useState(normalizedParams);
+  const [editableParams, setEditableParams] = useState<Record<string, any>>(normalizedParams);
+  
+  // Sync editableParams when params change (deep comparison for multi-interaction support)
+  useEffect(() => {
+    const normalized: Record<string, any> = {
+      ...params,
+      amount: typeof params.amount === 'string' ? parseFloat(params.amount) : params.amount,
+      currency: params.currency || 'USD'
+    };
+    setEditableParams(normalized);
+  }, [JSON.stringify(params)]);
   
   const isAddTransaction = action === 'add_transaction';
   const hasCategories = availableCategories && availableCategories.length > 0;
@@ -112,13 +138,26 @@ export function ConfirmationCard({
           {/* Editable fields for add_transaction */}
           {isAddTransaction && (
             <>
-              <EditableField
-                label="Amount"
-                type="number"
-                value={editableParams.amount || 0}
-                onChange={(val) => handleFieldChange('amount', val)}
-                testId="input-amount"
-              />
+              <div className="space-y-1.5">
+                <EditableField
+                  label="Amount"
+                  type="number"
+                  value={editableParams.amount || 0}
+                  onChange={(val) => handleFieldChange('amount', val)}
+                  testId="input-amount"
+                />
+                {/* Currency display and USD conversion - always show for transactions */}
+                <div className="flex items-center justify-between text-xs px-2">
+                  <span className="text-muted-foreground font-medium">
+                    {editableParams.currency || 'USD'}
+                  </span>
+                  {(editableParams.currency || 'USD') !== 'USD' && (
+                    <span className="text-muted-foreground">
+                      ≈ ${convertToUSD(editableParams.amount || 0, editableParams.currency || 'USD').toFixed(2)} USD
+                    </span>
+                  )}
+                </div>
+              </div>
               
               <EditableField
                 label="Description"
@@ -148,10 +187,10 @@ export function ConfirmationCard({
             />
           )}
           
-          {/* Currency dropdown - only show if currency was provided or needs selection */}
-          {isAddTransaction && editableParams.currency && (
+          {/* Currency dropdown - always show for transactions */}
+          {isAddTransaction && (
             <CurrencyDropdown 
-              value={editableParams.currency}
+              value={editableParams.currency || 'USD'}
               onChange={handleCurrencyChange}
             />
           )}
