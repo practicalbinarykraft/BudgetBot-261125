@@ -8,6 +8,8 @@
  * Junior-Friendly: <200 строк, одна ответственность
  */
 
+import { normalizeItemName, detectCurrency, parsePrice } from './shopping-list-helpers';
+
 export interface ShoppingItem {
   name: string;
   price: number;
@@ -19,70 +21,6 @@ export interface ParsedShoppingList {
   items: ShoppingItem[];
   total: number;
   currency: 'USD' | 'RUB' | 'IDR';
-}
-
-/**
- * Нормализовать название товара для сравнения цен
- * Приводит к lowercase, убирает цифры и спецсимволы
- */
-function normalizeItemName(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/\d+/g, '') // Удалить цифры
-    .replace(/[^a-zа-яё\s]/gi, '') // Только буквы и пробелы
-    .trim()
-    .replace(/\s+/g, ' '); // Множественные пробелы → один
-}
-
-/**
- * Определить валюту по тексту
- */
-function detectCurrency(text: string): 'USD' | 'RUB' | 'IDR' | null {
-  const lower = text.toLowerCase();
-  
-  if (lower.includes('₽') || lower.includes('руб') || lower.includes('rub')) {
-    return 'RUB';
-  }
-  
-  if (lower.includes('$') || lower.includes('usd')) {
-    return 'USD';
-  }
-  
-  // Check for explicit Indonesian Rupiah markers
-  if (lower.includes('rp') || lower.includes('idr') || lower.includes('₹')) {
-    return 'IDR';
-  }
-  
-  // If no explicit currency found, return null to use default
-  return null;
-}
-
-/**
- * Парсить цену с поддержкой сокращений
- * "22к" → 22000
- * "15.5к" → 15500
- * "189000" → 189000
- * "5,000" → 5000 (убирает запятые тысячных разделителей)
- */
-function parsePrice(priceStr: string): number | null {
-  // Убрать ВСЕ запятые и пробелы (тысячные разделители)
-  const cleaned = priceStr.toLowerCase().replace(/\s+/g, '').replace(/,/g, '');
-  
-  // Формат "22к" или "22k"
-  if (cleaned.endsWith('к') || cleaned.endsWith('k')) {
-    const num = parseFloat(cleaned.slice(0, -1));
-    if (!isNaN(num)) {
-      return num * 1000;
-    }
-  }
-  
-  // Обычное число
-  const num = parseFloat(cleaned);
-  if (!isNaN(num) && num > 0) {
-    return num;
-  }
-  
-  return null;
 }
 
 /**
@@ -127,6 +65,7 @@ function parseItemLine(line: string): ShoppingItem | null {
  * 3. "пепито\nхлеб 5,000\nмолоко 12,000" (без ":")
  * 
  * @param text - Текст сообщения пользователя
+ * @param defaultCurrency - Дефолтная валюта пользователя
  * @returns Распарсенный список или null если не список
  */
 export function parseShoppingList(
