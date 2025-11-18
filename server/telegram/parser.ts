@@ -26,7 +26,10 @@ const INCOME_KEYWORDS = [
   'возврат', 'refund', '+', 'плюс'
 ];
 
-export function parseTransactionText(text: string): ParsedTransaction | null {
+export function parseTransactionText(
+  text: string,
+  defaultCurrency: 'USD' | 'RUB' | 'IDR'
+): ParsedTransaction | null {
   if (!text || text.trim().length === 0) {
     return null;
   }
@@ -34,7 +37,7 @@ export function parseTransactionText(text: string): ParsedTransaction | null {
   const cleaned = text.trim().toLowerCase();
   
   let amount: number | null = null;
-  let currency: 'USD' | 'RUB' | 'IDR' = 'USD';
+  let currency: 'USD' | 'RUB' | 'IDR' = defaultCurrency;
   let description = '';
 
   const amountMatch = cleaned.match(/(\d+(?:[.,]\d+)?[kк]?)\s*([₽₹$]|руб|rub|idr|rp|usd)?/i);

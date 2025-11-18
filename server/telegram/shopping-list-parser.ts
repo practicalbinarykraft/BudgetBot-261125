@@ -37,7 +37,7 @@ function normalizeItemName(name: string): string {
 /**
  * Определить валюту по тексту
  */
-function detectCurrency(text: string): 'USD' | 'RUB' | 'IDR' {
+function detectCurrency(text: string): 'USD' | 'RUB' | 'IDR' | null {
   const lower = text.toLowerCase();
   
   if (lower.includes('₽') || lower.includes('руб') || lower.includes('rub')) {
@@ -48,8 +48,13 @@ function detectCurrency(text: string): 'USD' | 'RUB' | 'IDR' {
     return 'USD';
   }
   
-  // По умолчанию IDR (Индонезия)
-  return 'IDR';
+  // Check for explicit Indonesian Rupiah markers
+  if (lower.includes('rp') || lower.includes('idr') || lower.includes('₹')) {
+    return 'IDR';
+  }
+  
+  // If no explicit currency found, return null to use default
+  return null;
 }
 
 /**
@@ -124,7 +129,10 @@ function parseItemLine(line: string): ShoppingItem | null {
  * @param text - Текст сообщения пользователя
  * @returns Распарсенный список или null если не список
  */
-export function parseShoppingList(text: string): ParsedShoppingList | null {
+export function parseShoppingList(
+  text: string,
+  defaultCurrency: 'USD' | 'RUB' | 'IDR'
+): ParsedShoppingList | null {
   if (!text || text.trim().length === 0) {
     return null;
   }
@@ -166,8 +174,8 @@ export function parseShoppingList(text: string): ParsedShoppingList | null {
     return null;
   }
   
-  // Определить валюту из текста
-  const currency = detectCurrency(text);
+  // Use explicit currency from text, or fall back to user's default
+  const currency = detectCurrency(text) || defaultCurrency;
   
   // Парсить каждую строку товара
   const items: ShoppingItem[] = [];

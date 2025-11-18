@@ -12,6 +12,7 @@ import {
   handlePhotoMessage,
   handleCallbackQuery,
 } from './commands';
+import { handleCurrencyCommand, handleCurrencyCallback } from './currency-command';
 import { TELEGRAM_BOT_TOKEN } from './config';
 import { getUserLanguageByTelegramId } from './language';
 
@@ -69,6 +70,9 @@ export function initTelegramBot(): TelegramBot | null {
             case '/status':
               await handleStatusCommand(bot!, msg);
               break;
+            case '/currency':
+              await handleCurrencyCommand(bot!, msg);
+              break;
             default:
               // Get user's language for error message
               const { t } = await import('./i18n');
@@ -104,7 +108,12 @@ export function initTelegramBot(): TelegramBot | null {
 
     bot.on('callback_query', async (query) => {
       try {
-        await handleCallbackQuery(bot!, query);
+        // Handle currency selection callbacks
+        if (query.data?.startsWith('currency:')) {
+          await handleCurrencyCallback(bot!, query);
+        } else {
+          await handleCallbackQuery(bot!, query);
+        }
       } catch (error) {
         console.error('Error handling callback query:', error);
       }

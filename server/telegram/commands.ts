@@ -326,10 +326,19 @@ export async function handleTextMessage(bot: TelegramBot, msg: TelegramBot.Messa
 
     lang = await getUserLanguageByUserId(user.id);
 
+    // Get user's default currency from settings
+    const [userSettings] = await db
+      .select()
+      .from(settings)
+      .where(eq(settings.userId, user.id))
+      .limit(1);
+    
+    const defaultCurrency = (userSettings?.currency || 'USD') as 'USD' | 'RUB' | 'IDR';
+
     // Check if user is editing a transaction
     const pendingEdit = pendingEdits.get(telegramId);
     if (pendingEdit) {
-      const parsed = parseTransactionText(text);
+      const parsed = parseTransactionText(text, defaultCurrency);
 
       if (!parsed) {
         await bot.sendMessage(chatId, t('transaction.parse_error', lang), {
@@ -452,7 +461,7 @@ export async function handleTextMessage(bot: TelegramBot, msg: TelegramBot.Messa
     const trimmedText = text.trim();
     
     if (isShoppingList(trimmedText)) {
-      const shoppingList = parseShoppingList(trimmedText);
+      const shoppingList = parseShoppingList(trimmedText, defaultCurrency);
       
       if (shoppingList) {
         // Get primary wallet
@@ -563,7 +572,7 @@ export async function handleTextMessage(bot: TelegramBot, msg: TelegramBot.Messa
       return;
     }
 
-    const parsed = parseTransactionText(text);
+    const parsed = parseTransactionText(text, defaultCurrency);
 
     // Check 3: Invalid amount (negative or zero)
     if (!parsed) {
@@ -1392,7 +1401,16 @@ export async function handleIncomeCommand(bot: TelegramBot, msg: TelegramBot.Mes
 
     lang = await getUserLanguageByUserId(user.id);
 
-    const parsed = parseTransactionText(text);
+    // Get user's default currency from settings
+    const [userSettings] = await db
+      .select()
+      .from(settings)
+      .where(eq(settings.userId, user.id))
+      .limit(1);
+    
+    const defaultCurrency = (userSettings?.currency || 'USD') as 'USD' | 'RUB' | 'IDR';
+
+    const parsed = parseTransactionText(text, defaultCurrency);
 
     if (!parsed) {
       await bot.sendMessage(chatId, t('income.usage', lang), { parse_mode: 'Markdown' });
