@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { X, Send, Sparkles } from 'lucide-react';
+import { X, Send, Sparkles, Camera } from 'lucide-react';
 import { useChatSidebar } from '@/stores/chat-sidebar-store';
 import { FloatingChatButton } from './floating-button';
 import { QuickActions } from './quick-actions';
@@ -21,14 +21,27 @@ interface ChatResponse {
 export function AIChatSidebar() {
   const { isOpen, close } = useChatSidebar();
   const [message, setMessage] = useState('');
+  const [uploadedImage, setUploadedImage] = useState<File | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [location] = useLocation();
   
   // DEBUG: Log component mount
   useEffect(() => {
     console.log('🤖 AIChatSidebar mounted! isOpen:', isOpen);
   }, []);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
+  }, [message]);
 
   // Fetch chat history
   const { data: messages = [], isLoading } = useQuery<AiChatMessage[]>({
@@ -81,6 +94,71 @@ export function AIChatSidebar() {
   const handleQuickAction = (question: string) => {
     setMessage(question);
     sendMessageMutation.mutate(question);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Invalid file',
+        description: 'Please upload an image file',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: 'File too large',
+        description: 'Please upload an image smaller than 10MB',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsUploadingImage(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch('/api/ai/scan-receipt', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to scan receipt');
+      }
+
+      const data = await response.json();
+      
+      // Display AI response in chat
+      queryClient.invalidateQueries({ queryKey: ['/api/ai/chat/history'] });
+      
+      toast({
+        title: 'Receipt scanned!',
+        description: 'AI analyzed your receipt',
+      });
+      
+      setUploadedImage(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Scan failed',
+        description: error.message || 'Failed to scan receipt',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUploadingImage(false);
+    }
   };
 
   // Get current page context
@@ -170,17 +248,68 @@ export function AIChatSidebar() {
 
         {/* Input */}
         <div className="p-4 border-t border-border">
-          <div className="flex gap-2">
+          {/* Image preview */}
+          {uploadedImage && (
+            <div className="mb-2 relative inline-block">
+              <img
+                src={URL.createObjectURL(uploadedImage)}
+                alt="Upload preview"
+                className="max-h-20 rounded border"
+              />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background"
+                onClick={() => {
+                  setUploadedImage(null);
+                  if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                  }
+                }}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+          
+          <div className="flex gap-2 items-end">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageUpload}
+              disabled={isUploadingImage || sendMessageMutation.isPending}
+            />
+            
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploadingImage || sendMessageMutation.isPending}
+              size="icon"
+              variant="ghost"
+              className="shrink-0 min-h-[44px]"
+              data-testid="button-upload-image"
+            >
+              {isUploadingImage ? (
+                <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Camera className="w-5 h-5" />
+              )}
+            </Button>
+            
             <Textarea
+              ref={textareaRef}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyPress}
               placeholder="Ask AI..."
-              className="resize-none min-h-[44px] max-h-32"
+              className="resize-none overflow-hidden"
+              style={{ minHeight: '44px', maxHeight: '120px' }}
               rows={1}
               disabled={sendMessageMutation.isPending}
               data-testid="input-chat-message"
             />
+            
             <Button
               onClick={handleSend}
               disabled={!message.trim() || sendMessageMutation.isPending}
