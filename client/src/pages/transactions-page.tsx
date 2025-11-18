@@ -11,8 +11,10 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "@/i18n/context";
 
 export default function TransactionsPage() {
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -42,13 +44,13 @@ export default function TransactionsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/sorting/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/unsorted"], exact: false });
       toast({
-        title: "Success",
-        description: "Transaction deleted successfully",
+        title: t("common.success"),
+        description: t("transactions.deleted_successfully"),
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t("common.error"),
         description: error.message,
         variant: "destructive",
       });
@@ -68,8 +70,8 @@ export default function TransactionsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Transactions</h1>
-          <p className="text-muted-foreground">Manage all your income and expenses</p>
+          <h1 className="text-3xl font-bold">{t("transactions.title")}</h1>
+          <p className="text-muted-foreground">{t("transactions.manage")}</p>
         </div>
         <div className="flex gap-2">
           {unsortedCount > 0 && (
@@ -79,12 +81,12 @@ export default function TransactionsPage() {
               data-testid="button-sort-transactions"
             >
               <Shuffle className="h-4 w-4 mr-2" />
-              Sort ({unsortedCount})
+              {t("transactions.sort_button")} ({unsortedCount})
             </Button>
           )}
           <Button onClick={() => setShowAddDialog(true)} data-testid="button-add-transaction-page">
             <Plus className="h-4 w-4 mr-2" />
-            Add Transaction
+            {t("transactions.add_transaction")}
           </Button>
         </div>
       </div>

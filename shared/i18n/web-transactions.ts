@@ -9,6 +9,14 @@ export const webTransactionsTranslations: Translations = {
     en: 'Transactions',
     ru: 'Транзакции',
   },
+  'transactions.manage': {
+    en: 'Manage all your income and expenses',
+    ru: 'Управляйте всеми доходами и расходами',
+  },
+  'transactions.sort_button': {
+    en: 'Sort',
+    ru: 'Сортировать',
+  },
   'transactions.add_transaction': {
     en: 'Add Transaction',
     ru: 'Добавить транзакцию',
@@ -108,5 +116,9 @@ export const webTransactionsTranslations: Translations = {
   'transactions.clear_filters': {
     en: 'Clear Filters',
     ru: 'Очистить фильтры',
+  },
+  'transactions.deleted_successfully': {
+    en: 'Transaction deleted successfully',
+    ru: 'Транзакция успешно удалена',
   },
 };
