@@ -7,6 +7,7 @@ import { chatWithTools } from "../../ai/chat-with-tools";
 import { ANTHROPIC_TOOLS, requiresConfirmation } from "../../ai/tools";
 import { executeTool } from "../../ai/tool-executor";
 import type { ToolName } from "../../ai/tool-types";
+import { suggestCategory, getUserCategories } from "../../services/categorization.service";
 
 const router = Router();
 
@@ -117,11 +118,37 @@ router.post("/", withAuth(async (req, res) => {
       }
       
       // WRITE operation - request confirmation (don't save to history yet)
+      
+      // ML auto-categorization for add_transaction
+      let enhancedParams = toolUse.input;
+      let mlSuggestion = null;
+      let availableCategories = null;
+      
+      if (toolUse.name === 'add_transaction') {
+        // Get user categories for dropdown
+        availableCategories = await getUserCategories(userId);
+        
+        // If category not provided by AI, try ML suggestion
+        if (!enhancedParams.category && enhancedParams.description) {
+          mlSuggestion = await suggestCategory(userId, enhancedParams.description);
+          
+          // Apply ML suggestion if confident enough
+          if (mlSuggestion && mlSuggestion.confidence >= 0.6) {
+            enhancedParams = {
+              ...enhancedParams,
+              category: mlSuggestion.categoryName
+            };
+          }
+        }
+      }
+      
       return res.json({
         type: 'tool_confirmation',
         action: toolUse.name,
-        params: toolUse.input,
-        toolUseId: toolUse.id
+        params: enhancedParams,
+        toolUseId: toolUse.id,
+        mlSuggestion, // ML category suggestion with confidence
+        availableCategories // All user categories for dropdown
       });
     }
     
