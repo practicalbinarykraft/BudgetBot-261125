@@ -57,9 +57,11 @@ function detectCurrency(text: string): 'USD' | 'RUB' | 'IDR' {
  * "22к" → 22000
  * "15.5к" → 15500
  * "189000" → 189000
+ * "5,000" → 5000 (убирает запятые тысячных разделителей)
  */
 function parsePrice(priceStr: string): number | null {
-  const cleaned = priceStr.toLowerCase().replace(/\s+/g, '').replace(',', '.');
+  // Убрать ВСЕ запятые и пробелы (тысячные разделители)
+  const cleaned = priceStr.toLowerCase().replace(/\s+/g, '').replace(/,/g, '');
   
   // Формат "22к" или "22k"
   if (cleaned.endsWith('к') || cleaned.endsWith('k')) {
@@ -117,7 +119,7 @@ function parseItemLine(line: string): ShoppingItem | null {
  * Примеры входных данных:
  * 1. "Pepito: арбуз 22к, мыло 189к, сок 32к"
  * 2. "Покупки Moris:\n- арбуз 22000\n- мыло 189000"
- * 3. "Indomaret: хлеб 5к, молоко 12к, яйца 18к"
+ * 3. "пепито\nхлеб 5,000\nмолоко 12,000" (без ":")
  * 
  * @param text - Текст сообщения пользователя
  * @returns Распарсенный список или null если не список
@@ -127,32 +129,47 @@ export function parseShoppingList(text: string): ParsedShoppingList | null {
     return null;
   }
   
-  // 1. Извлечь магазин (всё до первого ":")
-  const merchantMatch = text.match(/^([^:\n]+):/i);
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
   
-  if (!merchantMatch) {
-    return null; // Не список покупок
-  }
-  
-  const merchant = merchantMatch[1].trim();
-  
-  // 2. Извлечь текст с товарами (всё после ":")
-  const itemsText = text.substring(merchantMatch[0].length).trim();
-  
-  if (!itemsText) {
+  if (lines.length === 0) {
     return null;
   }
   
-  // 3. Определить валюту из текста
+  const firstLine = lines[0];
+  let merchant: string;
+  let itemLines: string[];
+  
+  // Если первая строка содержит ":", это формат "Магазин: товары"
+  if (firstLine.includes(':')) {
+    const colonIndex = firstLine.indexOf(':');
+    merchant = firstLine.substring(0, colonIndex).trim();
+    const rest = firstLine.substring(colonIndex + 1).trim();
+    
+    // Товары могут быть на той же строке или на следующих
+    if (rest.length > 0) {
+      // Разделить по запятым если товары на одной строке
+      const sameLineItems = rest.split(',').map(i => i.trim());
+      itemLines = [...sameLineItems, ...lines.slice(1)];
+    } else {
+      itemLines = lines.slice(1);
+    }
+  } else if (!/\d/.test(firstLine)) {
+    // Первая строка без цифр = магазин, остальные = товары
+    merchant = firstLine;
+    itemLines = lines.slice(1);
+  } else {
+    // Неправильный формат
+    return null;
+  }
+  
+  if (!merchant || itemLines.length === 0) {
+    return null;
+  }
+  
+  // Определить валюту из текста
   const currency = detectCurrency(text);
   
-  // 4. Разделить на строки (поддержка запятых и новых строк)
-  const itemLines = itemsText
-    .split(/[,\n]/) // Разделить по запятым или переносам
-    .map(line => line.trim())
-    .filter(line => line.length > 0);
-  
-  // 5. Парсить каждую строку
+  // Парсить каждую строку товара
   const items: ShoppingItem[] = [];
   let total = 0;
   
@@ -165,7 +182,7 @@ export function parseShoppingList(text: string): ParsedShoppingList | null {
     }
   }
   
-  // 6. Проверка: минимум 1 товар
+  // Проверка: минимум 1 товар
   if (items.length === 0) {
     return null;
   }
@@ -187,13 +204,24 @@ export function isShoppingList(text: string): boolean {
     return false;
   }
   
-  // Должен содержать ":" в первой строке
-  const firstLine = text.split('\n')[0];
-  if (!firstLine.includes(':')) {
-    return false;
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  
+  if (lines.length < 2) {
+    return false; // Нужно минимум 2 строки (магазин + товар)
   }
   
-  // Должен содержать числа (цены)
+  const firstLine = lines[0];
+  
+  // Формат 1: "Магазин: товары" (с двоеточием)
+  // Формат 2: "магазин\nтовар цена" (без двоеточия, первая строка без цифр)
+  const hasColon = firstLine.includes(':');
+  const firstLineHasNoDigits = !/\d/.test(firstLine);
+  
+  if (!hasColon && !firstLineHasNoDigits) {
+    return false; // Не подходит ни под один формат
+  }
+  
+  // Должен содержать числа (цены) хотя бы в одной строке
   if (!/\d/.test(text)) {
     return false;
   }
