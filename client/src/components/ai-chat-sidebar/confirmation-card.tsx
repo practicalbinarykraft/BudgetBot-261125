@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { ActionPreview } from './action-preview';
 import { ConfirmationButtons } from './confirmation-buttons';
@@ -20,6 +20,15 @@ function convertToUSD(amount: number, currency: string): number {
   if (!amount || isNaN(amount)) return 0;
   const rate = EXCHANGE_RATES[currency] || 1;
   return amount / rate;
+}
+
+// Normalize params with defaults
+function normalizeParams(params: Record<string, any>): Record<string, any> {
+  return {
+    ...params,
+    amount: typeof params.amount === 'string' ? parseFloat(params.amount) : params.amount,
+    currency: params.currency || 'USD'
+  };
 }
 
 interface Category {
@@ -63,23 +72,40 @@ export function ConfirmationCard({
   onCancel
 }: ConfirmationCardProps) {
   const [loading, setLoading] = useState(false);
-  // Normalize params on mount - ensure amount is number and currency defaults to USD
-  const normalizedParams: Record<string, any> = {
-    ...params,
-    amount: typeof params.amount === 'string' ? parseFloat(params.amount) : params.amount,
-    currency: params.currency || 'USD' // Always default to USD for transactions
-  };
-  const [editableParams, setEditableParams] = useState<Record<string, any>>(normalizedParams);
   
-  // Sync editableParams when params change (deep comparison for multi-interaction support)
+  // Normalize params and compute stable signature
+  const paramsSignature = useMemo(() => JSON.stringify(params), [params]);
+  const normalizedParams = useMemo(() => normalizeParams(params), [paramsSignature]);
+  
+  const [editableParams, setEditableParams] = useState<Record<string, any>>(normalizedParams);
+  const lastSyncedParamsRef = useRef<Record<string, any>>(structuredClone(normalizedParams));
+  
+  // Sync editableParams when NEW params arrive (deep clone + comparison)
   useEffect(() => {
-    const normalized: Record<string, any> = {
-      ...params,
-      amount: typeof params.amount === 'string' ? parseFloat(params.amount) : params.amount,
-      currency: params.currency || 'USD'
-    };
-    setEditableParams(normalized);
-  }, [JSON.stringify(params)]);
+    const lastSynced = lastSyncedParamsRef.current;
+    
+    // Deep comparison: check all keys
+    const allKeys = new Set([
+      ...Object.keys(normalizedParams),
+      ...Object.keys(lastSynced)
+    ]);
+    
+    const hasChanged = Array.from(allKeys).some(key => {
+      const current = normalizedParams[key];
+      const last = lastSynced[key];
+      
+      // Deep equality for objects/arrays
+      if (typeof current === 'object' && typeof last === 'object') {
+        return JSON.stringify(current) !== JSON.stringify(last);
+      }
+      return current !== last;
+    });
+    
+    if (hasChanged) {
+      setEditableParams(normalizedParams);
+      lastSyncedParamsRef.current = structuredClone(normalizedParams);
+    }
+  }, [normalizedParams]);
   
   const isAddTransaction = action === 'add_transaction';
   const hasCategories = availableCategories && availableCategories.length > 0;
