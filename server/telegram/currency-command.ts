@@ -10,7 +10,7 @@ import { db } from '../db';
 import { settings, users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { getUserLanguageByTelegramId } from './language';
-import { t } from './i18n';
+import { t } from '@shared/i18n';
 
 /**
  * Handle /currency command - show currency selection inline keyboard

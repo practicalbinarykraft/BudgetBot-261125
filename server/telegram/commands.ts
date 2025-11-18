@@ -4,7 +4,7 @@ import { users, telegramVerificationCodes, wallets, transactions, categories, se
 import { eq, and, sql, gte, lte } from 'drizzle-orm';
 import { parseTransactionText, formatCurrency } from './parser';
 import { processReceiptImage } from './ocr';
-import { t, getWelcomeMessage, getHelpMessage, type Language } from './i18n';
+import { t, getWelcomeMessage, getHelpMessage, type Language } from '@shared/i18n';
 import { getUserLanguageByTelegramId, getUserLanguageByUserId } from './language';
 import { convertToUSD, getUserExchangeRates } from '../services/currency-service';
 import { resolveCategoryId } from '../services/category-resolution.service';

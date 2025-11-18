@@ -5,7 +5,7 @@ import { eq, and, isNotNull } from 'drizzle-orm';
 import { getTelegramBot } from '../telegram/bot';
 import { generateDailySummary } from '../services/budget/daily-summary.service';
 import { getUserLanguageByTelegramId } from '../telegram/language';
-import { t } from '../telegram/i18n';
+import { t } from '@shared/i18n';
 import { formatInTimeZone } from 'date-fns-tz';
 import { format } from 'date-fns';
 

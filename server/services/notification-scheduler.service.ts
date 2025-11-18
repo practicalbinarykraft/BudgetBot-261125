@@ -3,7 +3,7 @@ import { db } from '../db';
 import { settings, users } from '@shared/schema';
 import { eq, and, isNotNull } from 'drizzle-orm';
 import { getTelegramBot } from '../telegram/bot';
-import { t } from '../telegram/i18n';
+import { t } from '@shared/i18n';
 
 const scheduledTasks = new Map<number, cron.ScheduledTask>();
 

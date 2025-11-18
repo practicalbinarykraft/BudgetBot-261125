@@ -4,7 +4,7 @@ import { db } from '../../db';
 import { users, settings } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { getUserLanguageByTelegramId } from '../../telegram/language';
-import { t } from '../../telegram/i18n';
+import { t } from '@shared/i18n';
 
 export type LimitStatus = 'ok' | 'caution' | 'warning' | 'exceeded';
 

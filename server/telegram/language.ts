@@ -1,7 +1,7 @@
 import { db } from '../db';
 import { users, settings } from '@shared/schema';
 import { eq } from 'drizzle-orm';
-import { getUserLanguage, type Language } from './i18n';
+import { getUserLanguage, type Language } from '@shared/i18n';
 
 /**
  * Helper function to get user's language preference by Telegram ID
