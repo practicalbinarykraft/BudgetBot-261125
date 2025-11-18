@@ -37,14 +37,27 @@ export function parseTransactionText(text: string): ParsedTransaction | null {
   let currency: 'USD' | 'RUB' | 'IDR' = 'USD';
   let description = '';
 
-  const amountMatch = cleaned.match(/(\d+(?:[.,]\d+)?)\s*([₽₹$]|руб|rub|idr|rp)?/);
+  const amountMatch = cleaned.match(/(\d+(?:[.,]\d+)?[kк]?)\s*([₽₹$]|руб|rub|idr|rp|usd)?/i);
   
   if (!amountMatch) {
     return null;
   }
 
-  const amountStr = amountMatch[1].replace(',', '.');
-  amount = parseFloat(amountStr);
+  const amountStr = amountMatch[1].toLowerCase();
+  
+  // Remove ALL commas (thousand separators) before parsing
+  const cleanedAmount = amountStr.replace(/,/g, '');
+  
+  // Handle "k" or "к" suffix (thousands)
+  let parsedAmount: number;
+  if (cleanedAmount.endsWith('k') || cleanedAmount.endsWith('к')) {
+    const numStr = cleanedAmount.slice(0, -1);
+    parsedAmount = parseFloat(numStr) * 1000;
+  } else {
+    parsedAmount = parseFloat(cleanedAmount);
+  }
+
+  amount = parsedAmount;
 
   if (isNaN(amount) || amount <= 0) {
     return null;
@@ -53,6 +66,8 @@ export function parseTransactionText(text: string): ParsedTransaction | null {
   const currencySymbol = amountMatch[2];
   if (currencySymbol && CURRENCY_SYMBOLS[currencySymbol]) {
     currency = CURRENCY_SYMBOLS[currencySymbol];
+  } else if (cleaned.includes('usd') || currencySymbol?.toLowerCase() === 'usd') {
+    currency = 'USD';
   } else if (cleaned.includes('₽') || cleaned.includes('руб')) {
     currency = 'RUB';
   } else if (cleaned.includes('₹') || cleaned.includes('idr') || cleaned.includes('rp')) {
@@ -62,7 +77,7 @@ export function parseTransactionText(text: string): ParsedTransaction | null {
   description = cleaned
     .replace(amountMatch[0], '')
     .replace(/[₽₹$]/g, '')
-    .replace(/\b(руб|rub|idr|rp)\b/g, '')
+    .replace(/\b(руб|rub|idr|rp|usd)\b/gi, '')
     .trim();
 
   if (!description) {
