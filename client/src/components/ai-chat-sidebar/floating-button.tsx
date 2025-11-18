@@ -18,8 +18,13 @@ export function FloatingChatButton() {
     <Button
       onClick={handleClick}
       data-testid="button-ai-chat-floating"
+      style={{
+        position: 'fixed',
+        bottom: '24px',
+        right: '24px',
+        zIndex: 9999,
+      }}
       className="
-        fixed bottom-6 right-6 z-50
         w-16 h-16 rounded-full
         bg-gradient-to-r from-blue-500 to-purple-600
         shadow-lg hover:shadow-xl
