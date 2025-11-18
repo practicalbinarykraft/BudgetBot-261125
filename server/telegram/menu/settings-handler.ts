@@ -43,7 +43,10 @@ export async function showSettings(
     const currencyLabels = {
       USD: '🇺🇸 USD',
       RUB: '🇷🇺 RUB',
-      IDR: '🇮🇩 IDR'
+      IDR: '🇮🇩 IDR',
+      KRW: '🇰🇷 KRW',
+      EUR: '🇪🇺 EUR',
+      CNY: '🇨🇳 CNY'
     };
     
     const message = lang === 'ru'
@@ -138,6 +141,11 @@ export async function showCurrencyMenu(
           { text: '🇺🇸 USD', callback_data: 'settings:currency:USD' },
           { text: '🇷🇺 RUB', callback_data: 'settings:currency:RUB' },
           { text: '🇮🇩 IDR', callback_data: 'settings:currency:IDR' }
+        ],
+        [
+          { text: '🇰🇷 KRW', callback_data: 'settings:currency:KRW' },
+          { text: '🇪🇺 EUR', callback_data: 'settings:currency:EUR' },
+          { text: '🇨🇳 CNY', callback_data: 'settings:currency:CNY' }
         ],
         [{ text: lang === 'ru' ? '🔙 Назад' : '🔙 Back', callback_data: 'settings' }]
       ]

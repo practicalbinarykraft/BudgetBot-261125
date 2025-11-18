@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { ActionPreview } from './action-preview';
 import { ConfirmationButtons } from './confirmation-buttons';
@@ -7,19 +8,13 @@ import { CurrencyDropdown } from './currency-dropdown';
 import { PersonalTagDropdown } from './personal-tag-dropdown';
 import { EditableField } from './editable-field';
 
-// Exchange rates for USD conversion (approximate)
-const EXCHANGE_RATES: Record<string, number> = {
-  USD: 1,
-  KRW: 1300,
-  RUB: 100,
-  EUR: 0.92,
-  CNY: 7.2
-};
-
-function convertToUSD(amount: number, currency: string): number {
-  if (!amount || isNaN(amount)) return 0;
-  const rate = EXCHANGE_RATES[currency] || 1;
-  return amount / rate;
+interface Settings {
+  currency?: string;
+  exchangeRateRUB?: string;
+  exchangeRateIDR?: string;
+  exchangeRateKRW?: string;
+  exchangeRateEUR?: string;
+  exchangeRateCNY?: string;
 }
 
 // Normalize params with defaults
@@ -73,12 +68,60 @@ export function ConfirmationCard({
 }: ConfirmationCardProps) {
   const [loading, setLoading] = useState(false);
   
+  // Fetch user settings for exchange rates
+  const { data: settings } = useQuery<Settings>({
+    queryKey: ['/api/settings'],
+  });
+  
+  // Build exchange rates from user settings (only include configured rates)
+  const exchangeRates = useMemo(() => {
+    const rates: Record<string, number> = { USD: 1 }; // USD is always base currency
+    
+    if (settings?.exchangeRateRUB) {
+      rates.RUB = parseFloat(settings.exchangeRateRUB);
+    }
+    if (settings?.exchangeRateIDR) {
+      rates.IDR = parseFloat(settings.exchangeRateIDR);
+    }
+    if (settings?.exchangeRateKRW) {
+      rates.KRW = parseFloat(settings.exchangeRateKRW);
+    }
+    if (settings?.exchangeRateEUR) {
+      rates.EUR = parseFloat(settings.exchangeRateEUR);
+    }
+    if (settings?.exchangeRateCNY) {
+      rates.CNY = parseFloat(settings.exchangeRateCNY);
+    }
+    
+    return rates;
+  }, [settings]);
+  
   // Normalize params and compute stable signature
   const paramsSignature = useMemo(() => JSON.stringify(params), [params]);
   const normalizedParams = useMemo(() => normalizeParams(params), [paramsSignature]);
   
   const [editableParams, setEditableParams] = useState<Record<string, any>>(normalizedParams);
   const lastSyncedParamsRef = useRef<Record<string, any>>(structuredClone(normalizedParams));
+  
+  // Build available currencies for dropdown (always include USD + default + current transaction currency)
+  const availableCurrencies = useMemo(() => {
+    const currencies = new Set(['USD']); // USD always available
+    
+    // Add default currency even if no rate (prevents dropdown breaking)
+    if (settings?.currency) {
+      currencies.add(settings.currency);
+    }
+    
+    // Add current transaction currency (prevents dropdown from hiding selected value)
+    if (editableParams.currency) {
+      currencies.add(editableParams.currency);
+    }
+    
+    // Add all currencies with configured rates
+    Object.keys(exchangeRates).forEach(curr => currencies.add(curr));
+    
+    return Array.from(currencies);
+  }, [settings?.currency, editableParams.currency, exchangeRates]);
   
   // Sync editableParams when NEW params arrive (deep clone + comparison)
   useEffect(() => {
@@ -177,9 +220,9 @@ export function ConfirmationCard({
                   <span className="text-muted-foreground font-medium">
                     {editableParams.currency || 'USD'}
                   </span>
-                  {(editableParams.currency || 'USD') !== 'USD' && (
+                  {(editableParams.currency || 'USD') !== 'USD' && exchangeRates[editableParams.currency] && (
                     <span className="text-muted-foreground">
-                      ≈ ${convertToUSD(editableParams.amount || 0, editableParams.currency || 'USD').toFixed(2)} USD
+                      ≈ ${((editableParams.amount || 0) / exchangeRates[editableParams.currency]).toFixed(2)} USD
                     </span>
                   )}
                 </div>
@@ -213,11 +256,12 @@ export function ConfirmationCard({
             />
           )}
           
-          {/* Currency dropdown - always show for transactions */}
+          {/* Currency dropdown - show USD + default + current + configured */}
           {isAddTransaction && (
             <CurrencyDropdown 
               value={editableParams.currency || 'USD'}
               onChange={handleCurrencyChange}
+              availableCurrencies={availableCurrencies}
             />
           )}
           

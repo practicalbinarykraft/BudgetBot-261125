@@ -531,7 +531,7 @@ const VALID_TIMEZONES = [
 
 export const insertSettingsSchema = createInsertSchema(settings, {
   language: z.enum(["en", "ru"]),
-  currency: z.enum(["USD", "RUB", "IDR"]),
+  currency: z.enum(["USD", "RUB", "IDR", "KRW", "EUR", "CNY"]),
   timezone: z.string().refine(
     (tz) => !tz || VALID_TIMEZONES.includes(tz as any),
     { message: "Invalid timezone" }

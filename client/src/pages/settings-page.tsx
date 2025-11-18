@@ -232,6 +232,9 @@ export default function SettingsPage() {
                         <SelectItem value="USD">USD - US Dollar</SelectItem>
                         <SelectItem value="RUB">RUB - Russian Ruble</SelectItem>
                         <SelectItem value="IDR">IDR - Indonesian Rupiah</SelectItem>
+                        <SelectItem value="KRW">KRW - Korean Won</SelectItem>
+                        <SelectItem value="EUR">EUR - Euro</SelectItem>
+                        <SelectItem value="CNY">CNY - Chinese Yuan</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -392,8 +395,8 @@ export default function SettingsPage() {
               <div className="border-t pt-6 mt-6">
                 <h3 className="text-lg font-semibold mb-2">Exchange Rates</h3>
                 <p className="text-sm text-muted-foreground mb-6">
-                  Customize currency conversion rates for RUB and IDR. Leave empty to use default rates (1 USD = 92.5 RUB, 1 USD = 15,750 IDR). 
-                  Changes apply to all future transactions and Telegram bot conversions.
+                  Customize currency conversion rates. Configure the currencies you use, and the AI will only suggest those currencies.
+                  Leave empty to disable a currency. Changes apply to all future transactions and Telegram bot conversions.
                 </p>
 
                 <div className="space-y-4">
@@ -439,6 +442,78 @@ export default function SettingsPage() {
                         </FormControl>
                         <FormDescription>
                           How many Indonesian Rupiah equal 1 USD (e.g., 15750 means 1 USD = 15,750 IDR)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="exchangeRateKRW"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>KRW to USD Rate</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="1300"
+                            {...field}
+                            value={field.value || ""}
+                            data-testid="input-rate-krw"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          How many Korean Won equal 1 USD (e.g., 1300 means 1 USD = 1,300 KRW)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="exchangeRateEUR"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>EUR to USD Rate</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.0001"
+                            placeholder="0.92"
+                            {...field}
+                            value={field.value || ""}
+                            data-testid="input-rate-eur"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          How many Euros equal 1 USD (e.g., 0.92 means 1 USD = 0.92 EUR)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="exchangeRateCNY"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CNY to USD Rate</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="7.2"
+                            {...field}
+                            value={field.value || ""}
+                            data-testid="input-rate-cny"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          How many Chinese Yuan equal 1 USD (e.g., 7.2 means 1 USD = 7.2 CNY)
                         </FormDescription>
                         <FormMessage />
                       </FormItem>

@@ -1,9 +1,10 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const CURRENCIES = [
-  { code: 'KRW', symbol: '₩', name: 'Korean Won' },
   { code: 'USD', symbol: '$', name: 'US Dollar' },
   { code: 'RUB', symbol: '₽', name: 'Russian Ruble' },
+  { code: 'IDR', symbol: 'Rp', name: 'Indonesian Rupiah' },
+  { code: 'KRW', symbol: '₩', name: 'Korean Won' },
   { code: 'EUR', symbol: '€', name: 'Euro' },
   { code: 'CNY', symbol: '¥', name: 'Chinese Yuan' },
 ];
@@ -11,9 +12,15 @@ const CURRENCIES = [
 interface CurrencyDropdownProps {
   value: string;
   onChange: (currency: string) => void;
+  availableCurrencies?: string[]; // List of currency codes configured by user
 }
 
-export function CurrencyDropdown({ value, onChange }: CurrencyDropdownProps) {
+export function CurrencyDropdown({ value, onChange, availableCurrencies }: CurrencyDropdownProps) {
+  // Filter currencies to only show those configured by user (or all if not provided)
+  const filteredCurrencies = availableCurrencies
+    ? CURRENCIES.filter(curr => availableCurrencies.includes(curr.code))
+    : CURRENCIES;
+    
   return (
     <div className="space-y-1.5">
       <span className="text-muted-foreground capitalize text-xs">
@@ -28,7 +35,7 @@ export function CurrencyDropdown({ value, onChange }: CurrencyDropdownProps) {
           <SelectValue placeholder="Select currency" />
         </SelectTrigger>
         <SelectContent>
-          {CURRENCIES.map((curr) => (
+          {filteredCurrencies.map((curr) => (
             <SelectItem 
               key={curr.code} 
               value={curr.code}

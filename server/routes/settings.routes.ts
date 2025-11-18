@@ -34,8 +34,14 @@ router.patch("/", withAuth(async (req, res) => {
     
     const data = insertSettingsSchema.partial().parse(sanitizedBody);
     
-    // Update exchangeRatesUpdatedAt if rates are being changed
-    if (data.exchangeRateRUB !== undefined || data.exchangeRateIDR !== undefined) {
+    // Update exchangeRatesUpdatedAt if any exchange rate is being changed
+    if (
+      data.exchangeRateRUB !== undefined ||
+      data.exchangeRateIDR !== undefined ||
+      data.exchangeRateKRW !== undefined ||
+      data.exchangeRateEUR !== undefined ||
+      data.exchangeRateCNY !== undefined
+    ) {
       (data as any).exchangeRatesUpdatedAt = new Date();
     }
     
@@ -52,8 +58,14 @@ router.patch("/", withAuth(async (req, res) => {
       settings = await storage.updateSettings(req.user.id, data);
     }
     
-    // Invalidate exchange rate cache if rates were updated
-    if (data.exchangeRateRUB !== undefined || data.exchangeRateIDR !== undefined) {
+    // Invalidate exchange rate cache if any rate was updated
+    if (
+      data.exchangeRateRUB !== undefined ||
+      data.exchangeRateIDR !== undefined ||
+      data.exchangeRateKRW !== undefined ||
+      data.exchangeRateEUR !== undefined ||
+      data.exchangeRateCNY !== undefined
+    ) {
       invalidateUserRateCache(req.user.id);
     }
     
