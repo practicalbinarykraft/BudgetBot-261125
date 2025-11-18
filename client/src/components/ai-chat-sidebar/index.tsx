@@ -126,7 +126,14 @@ export function AIChatSidebar() {
       return response.json();
     },
     onSuccess: () => {
+      // Invalidate all related queries
       queryClient.invalidateQueries({ queryKey: ['/api/ai/chat/history'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/budgets'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/wallets'] });
+      
       setPendingConfirmation(null); // Only clear on success
       toast({
         title: 'Action completed',
