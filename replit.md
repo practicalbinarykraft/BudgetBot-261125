@@ -65,6 +65,16 @@ The application uses Shadcn/ui (Radix UI primitives) and Tailwind CSS with a cus
     - `server/routes/ai/price.routes.ts` (52 lines): Price recommendations and AI insights
     - `server/routes/ai/index.ts` (17 lines): Aggregator mounting all sub-routers
     - **Design principle:** One file = one responsibility, all files <200 lines for junior-friendly maintenance
+*   **Telegram Menu System (Nov 2025):** Modular menu interface with 4 main sections (AI Chat, Wallets, Expenses/Income, Settings). Implementation includes:
+    - `server/telegram/menu/keyboards.ts` (157 lines): Main menu and submenu keyboard generators with persistent hint text
+    - `server/telegram/menu/ai-chat-handler.ts` (268 lines): AI chat with BYOK pattern (checks settings.anthropicApiKey), unified history (web + Telegram via source field)
+    - `server/telegram/menu/wallets-handler.ts` (133 lines): Wallet list display with balances and currency conversion
+    - `server/telegram/menu/transactions-handler.ts` (164 lines): Transaction list with inline filters (all/expense/income)
+    - `server/telegram/menu/settings-handler.ts` (177 lines): Settings management (language, currency, timezone selection)
+    - **State management:** AI chat active state stored in DB (ai_chat_messages with source='telegram', 30-min timeout), no in-memory Maps
+    - **Schema changes:** Added source field ('web'|'telegram') to ai_chat_messages, added isPrimary to wallets table
+    - **Integration:** Commands /start and /verify show main menu after successful verification, bot.ts routes menu buttons and callbacks
+    - **Known improvements (TODO):** (1) Filter AI chat activation by role='user' to prevent assistant replies extending session, (2) Replace emoji button matching with callback_data for i18n safety, (3) Load currency list from config instead of hardcoded USD/RUB/IDR
 
 ### System Design Choices
 

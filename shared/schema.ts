@@ -58,6 +58,7 @@ export const wallets = pgTable("wallets", {
   currency: text("currency").default("USD"),
   // 💱 Multi-currency: auto-converted balance in USD for aggregations
   balanceUsd: decimal("balance_usd", { precision: 10, scale: 2 }),
+  isPrimary: integer("is_primary").default(0).notNull(), // 1 for primary wallet, 0 otherwise
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -283,6 +284,9 @@ export const aiChatMessages = pgTable("ai_chat_messages", {
   
   role: text("role").notNull(), // 'user' | 'assistant'
   content: text("content").notNull(),
+  
+  // Source of the message (web app or telegram bot)
+  source: text("source").default("web").notNull(), // 'web' | 'telegram'
   
   // Context
   contextType: text("context_type"), // e.g., 'budget', 'spending', 'goal'

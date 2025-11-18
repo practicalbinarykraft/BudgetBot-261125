@@ -165,7 +165,26 @@ export async function handleStartCommand(bot: TelegramBot, msg: TelegramBot.Mess
   
   const lang = telegramId ? await getUserLanguageByTelegramId(telegramId) : 'en';
   
+  // ALWAYS send welcome message first (for both verified and unverified users)
   await bot.sendMessage(chatId, getWelcomeMessage(lang), { parse_mode: 'Markdown' });
+  
+  // Show main menu ONLY if user is already verified
+  if (telegramId) {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.telegramId, telegramId))
+      .limit(1);
+    
+    if (user) {
+      const { getMainMenuKeyboard, getMainMenuHint } = await import('./menu/keyboards');
+      
+      await bot.sendMessage(chatId, getMainMenuHint(lang), {
+        parse_mode: 'Markdown',
+        reply_markup: getMainMenuKeyboard()
+      });
+    }
+  }
 }
 
 export async function handleVerifyCommand(
@@ -227,6 +246,14 @@ export async function handleVerifyCommand(
     lang = await getUserLanguageByTelegramId(telegramId);
 
     await bot.sendMessage(chatId, t('verify.success', lang), { parse_mode: 'Markdown' });
+    
+    // Показать главное меню после успешной верификации
+    const { getMainMenuKeyboard, getMainMenuHint } = await import('./menu/keyboards');
+    
+    await bot.sendMessage(chatId, getMainMenuHint(lang), {
+      parse_mode: 'Markdown',
+      reply_markup: getMainMenuKeyboard()
+    });
   } catch (error) {
     console.error('Verification error:', error);
     await bot.sendMessage(chatId, t('error.generic', lang));
