@@ -59,6 +59,13 @@ router.post("/", withAuth(async (req, res) => {
       });
     }
     
+    // Save user message to history first
+    await storage.createAIChatMessage({
+      userId,
+      role: "user",
+      content: trimmedMessage
+    });
+    
     // Call Claude with tools enabled
     const response = await chatWithTools(trimmedMessage, userId);
     
@@ -82,20 +89,33 @@ router.post("/", withAuth(async (req, res) => {
         );
         
         if (!result.success) {
+          const errorMsg = `Failed to execute action: ${result.error}`;
+          await storage.createAIChatMessage({
+            userId,
+            role: "assistant",
+            content: errorMsg
+          });
           return res.json({
             type: 'message',
-            content: `Failed to execute action: ${result.error}`
+            content: errorMsg
           });
         }
         
-        // Return success message with result
+        // Save success message
+        const successMsg = result.message || `Action completed: ${JSON.stringify(result.data)}`;
+        await storage.createAIChatMessage({
+          userId,
+          role: "assistant",
+          content: successMsg
+        });
+        
         return res.json({
           type: 'message',
-          content: result.message || `Action completed: ${JSON.stringify(result.data)}`
+          content: successMsg
         });
       }
       
-      // WRITE operation - request confirmation
+      // WRITE operation - request confirmation (don't save to history yet)
       return res.json({
         type: 'tool_confirmation',
         action: toolUse.name,
@@ -108,13 +128,7 @@ router.post("/", withAuth(async (req, res) => {
     const textContent = response.content.find((block: any) => block.type === 'text');
     const aiMessage = textContent?.text || 'No response';
     
-    // Save messages to DB
-    await storage.createAIChatMessage({
-      userId,
-      role: "user",
-      content: trimmedMessage
-    });
-    
+    // Save assistant message to DB (user message already saved above)
     await storage.createAIChatMessage({
       userId,
       role: "assistant",

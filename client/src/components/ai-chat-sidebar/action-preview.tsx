@@ -27,14 +27,16 @@ export function ActionPreview({ action, params }: ActionPreviewProps) {
   const Icon = getIcon();
   
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3" data-testid={`preview-${action}`}>
       <div className="w-10 h-10 rounded-full bg-primary
                       flex items-center justify-center text-primary-foreground">
         <Icon className="w-5 h-5" />
       </div>
       <div className="flex-1">
-        <h4 className="font-semibold text-sm">{getTitle()}</h4>
-        <p className="text-xs text-muted-foreground">
+        <h4 className="font-semibold text-sm" data-testid="text-action-title">
+          {getTitle()}
+        </h4>
+        <p className="text-xs text-muted-foreground" data-testid="text-param-count">
           {Object.keys(params).length} parameter{Object.keys(params).length !== 1 ? 's' : ''}
         </p>
       </div>

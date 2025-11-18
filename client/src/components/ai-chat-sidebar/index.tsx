@@ -97,17 +97,17 @@ export function AIChatSidebar() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/ai/chat/history'] });
-      setPendingConfirmation(null);
+      setPendingConfirmation(null); // Only clear on success
       toast({
         title: 'Action completed',
         description: 'Your request has been executed',
       });
     },
     onError: (error: any) => {
-      setPendingConfirmation(null);
+      // Keep confirmation visible so user can retry
       toast({
         title: 'Action failed',
-        description: error.message || 'Failed to execute action',
+        description: error.message || 'Failed to execute action. You can try again.',
         variant: 'destructive',
       });
     },

@@ -36,18 +36,16 @@ export function ConfirmationCard({
       <CardContent className="p-4 space-y-3">
         <ActionPreview action={action} params={params} />
         
-        <Card>
-          <CardContent className="p-3 text-sm space-y-1">
-            {Object.entries(params).map(([key, value]) => (
-              <div key={key} className="flex justify-between gap-4">
-                <span className="text-muted-foreground capitalize">{key}:</span>
-                <span className="font-medium text-right break-all">
-                  {String(value)}
-                </span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+        <div className="bg-muted p-3 rounded-md text-sm space-y-1">
+          {Object.entries(params).map(([key, value]) => (
+            <div key={key} className="flex justify-between gap-4">
+              <span className="text-muted-foreground capitalize">{key}:</span>
+              <span className="font-medium text-right break-all">
+                {String(value)}
+              </span>
+            </div>
+          ))}
+        </div>
         
         <ConfirmationButtons
           onConfirm={handleConfirm}
