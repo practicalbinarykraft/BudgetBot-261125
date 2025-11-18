@@ -16,6 +16,14 @@ The application uses Shadcn/ui (Radix UI primitives) and Tailwind CSS with a cus
 
 ### Technical Implementations
 
+*   **Internationalization (i18n):** Unified bilingual system (English/Russian) shared between Web and Telegram bot. Architecture:
+    - `shared/i18n/`: Modular translation system with 10+ files (all <200 lines each)
+    - Core modules: types.ts, common.ts, auth.ts, transactions.ts, balance.ts, income.ts, receipts.ts, help.ts, notifications.ts
+    - Web-specific modules: web-common.ts, web-dashboard.ts, web-transactions.ts, web-settings.ts
+    - `client/src/i18n/`: React Context (I18nProvider) with useTranslation hook, auto-syncs with user settings.language from database
+    - Translation function `t(key, lang)` with fallback chain: specific lang → English → key itself
+    - Design principle: Single source of truth - both Telegram and Web share EXACT same translations
+    - Stable identifiers: Navigation items use `id` field for keys/test-ids, `url` for badge logic (locale-independent)
 *   **Frontend:** Built with React 18 (TypeScript, Vite), Wouter for routing, TanStack Query for data fetching, React Hook Form with Zod for form management, and Context API for state.
 *   **Backend:** Developed using Express.js (TypeScript) and Drizzle ORM for PostgreSQL.
 *   **Authentication:** Session-based authentication using Passport.js (Local Strategy) and `express-session`, with BCrypt for password hashing.
