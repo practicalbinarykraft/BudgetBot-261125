@@ -101,7 +101,7 @@ export async function scanReceipt(
 3. Date (in YYYY-MM-DD format if available)
 4. Category (e.g., groceries, dining, shopping, etc.)
 
-Respond in JSON format:
+Return ONLY JSON, no markdown:
 {
   "amount": <number>,
   "description": "<merchant name>",
@@ -116,7 +116,9 @@ Respond in JSON format:
 
     const content = message.content[0];
     if (content.type === "text") {
-      const parsed = JSON.parse(content.text);
+      // Remove markdown code blocks if present
+      const cleanedText = content.text.replace(/```json\n?|```\n?/g, '').trim();
+      const parsed = JSON.parse(cleanedText);
       return {
         amount: parsed.amount || 0,
         description: parsed.description || "Receipt scan",

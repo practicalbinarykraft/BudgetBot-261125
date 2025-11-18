@@ -70,7 +70,9 @@ export async function generateForecast(
     }
 
     // Parse AI response (expecting JSON array)
-    const forecast = JSON.parse(content.text);
+    // Remove markdown code blocks if present
+    const cleanedText = content.text.replace(/```json\n?|```\n?/g, '').trim();
+    const forecast = JSON.parse(cleanedText);
     
     return forecast as ForecastDataPoint[];
   } catch (error: any) {
