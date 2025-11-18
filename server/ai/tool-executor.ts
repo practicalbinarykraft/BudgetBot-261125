@@ -1,5 +1,6 @@
 // Tool Executor - executes AI agent tool calls
 import { ToolName, ToolResult } from './tool-types';
+import { handleGetBalance } from './handlers/balance-handler';
 
 export async function executeTool(
   toolName: ToolName,
@@ -9,12 +10,7 @@ export async function executeTool(
   try {
     switch (toolName) {
       case 'get_balance':
-        // Will be implemented in Step 2 with real handler
-        return {
-          success: true,
-          data: { balance: 0, message: 'Handler not yet implemented' },
-          message: 'Balance retrieved successfully'
-        };
+        return await handleGetBalance(userId);
       
       case 'create_category':
         // Will be implemented in Step 3

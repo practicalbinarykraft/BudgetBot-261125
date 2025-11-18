@@ -1,0 +1,208 @@
+🎯 ШАГ 1: ИНФРАСТРУКТУРА (1 ДЕНЬ)
+Цель: Создать базовую структуру для tool calling
+Задача для Replit:
+Создай базовую инфраструктуру для AI tool calling.
+
+ФАЙЛЫ (4 файла, ~200 строк):
+
+1. server/ai/tool-types.ts (50 строк):
+---
+export type ToolName = 
+  | 'get_balance'
+  | 'create_category'
+  | 'add_transaction';
+
+export interface Tool {
+  name: ToolName;
+  description: string;
+  requiresConfirmation: boolean; // false = выполнить сразу, true = запросить подтверждение
+  input_schema: {
+    type: 'object';
+    properties: Record<string, any>;
+    required: string[];
+  };
+}
+
+export interface ToolResult {
+  success: boolean;
+  data?: any;
+  error?: string;
+}
+
+export interface ToolConfirmation {
+  action: ToolName;
+  params: Record<string, any>;
+  preview: string;
+}
+---
+
+2. server/ai/tools.ts (50 строк):
+---
+import { Tool } from './tool-types';
+
+export const TOOLS: Tool[] = [
+  {
+    name: 'get_balance',
+    description: 'Get current user balance and total capital',
+    requiresConfirmation: false, // Читает данные - не требует подтверждения
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  }
+];
+---
+
+3. server/ai/tool-executor.ts (50 строк):
+---
+import { ToolName, ToolResult } from './tool-types';
+
+export async function executeTool(
+  toolName: ToolName,
+  params: Record<string, any>,
+  userId: number
+): Promise<ToolResult> {
+  try {
+    switch (toolName) {
+      case 'get_balance':
+        // Заглушка для теста
+        return {
+          success: true,
+          data: { balance: 0, message: 'Tool infrastructure ready' }
+        };
+      
+      default:
+        return {
+          success: false,
+          error: `Unknown tool: ${toolName}`
+        };
+    }
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+---
+
+4. server/ai/chat-with-tools.ts (50 строк):
+---
+import Anthropic from '@anthropic-ai/sdk';
+import { TOOLS } from './tools';
+import { repositories } from '../repositories';
+
+export async function chatWithTools(
+  message: string,
+  userId: number
+) {
+  // Получить API ключ ЮЗЕРА из БД (BYOK)
+  const settings = await repositories.settings.findByUser(userId);
+  
+  if (!settings?.anthropicApiKey) {
+    throw new Error('API key not configured. Please add your Anthropic API key in Settings.');
+  }
+  
+  // Использовать ключ юзера
+  const anthropic = new Anthropic({ 
+    apiKey: settings.anthropicApiKey 
+  });
+  
+  // Вызвать Claude с tools
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-5-20250929',
+    max_tokens: 4096,
+    system: `You are a financial assistant for Budget Buddy app. User ID: ${userId}`,
+    tools: TOOLS,
+    messages: [{ role: 'user', content: message }]
+  });
+  
+  return response;
+}
+---
+
+ТРЕБОВАНИЯ:
+- Все файлы <200 строк (Junior-Friendly)
+- TypeScript strict mode
+- Нет LSP ошибок
+- Не трогать существующий код
+
+РЕЗУЛЬТАТ:
+✅ Базовая структура создана
+✅ TOOLS определены
+✅ Executor готов (пока с заглушкой)
+✅ Chat использует BYOK (settings.anthropicApiKey)
+
+🎯 ШАГ 2: ПЕРВЫЙ TOOL (0.5 ДНЯ)
+Задача для Replit:
+Реализуй первый рабочий tool: get_balance
+
+ФАЙЛЫ (1 файл, 50 строк):
+
+1. server/ai/handlers/balance-handler.ts:
+---
+import { repositories } from '../../repositories';
+import { ToolResult } from '../tool-types';
+
+export async function handleGetBalance(
+  userId: number
+): Promise<ToolResult> {
+  try {
+    // Получить все кошельки юзера
+    const wallets = await repositories.wallets.findByUser(userId);
+    
+    // Посчитать общий баланс в USD
+    const totalBalance = wallets.reduce(
+      (sum, wallet) => sum + (wallet.balanceUsd || 0),
+      0
+    );
+    
+    // Получить статистику
+    const walletCount = wallets.length;
+    const activeWallets = wallets.filter(w => w.isActive).length;
+    
+    return {
+      success: true,
+      data: {
+        balance: totalBalance,
+        currency: 'USD',
+        wallets: walletCount,
+        activeWallets: activeWallets,
+        formatted: `$${totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      }
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+---
+
+2. Обновить server/ai/tool-executor.ts:
+---
+Заменить заглушку в case 'get_balance':
+import { handleGetBalance } from './handlers/balance-handler';
+
+case 'get_balance':
+  return await handleGetBalance(userId);
+---
+
+ТЕСТ:
+Добавить временный endpoint для проверки:
+
+router.get('/api/ai/test-balance', async (req, res) => {
+  const userId = req.user!.id;
+  const result = await executeTool('get_balance', {}, userId);
+  res.json(result);
+});
+
+Проверить: curl /api/ai/test-balance
+Должен вернуть: { success: true, data: { balance: ..., wallets: ... } }
+
+ТРЕБОВАНИЯ:
+- Файл <200 строк
+- Использовать repositories (не прямые SQL)
+- Обработка ошибок

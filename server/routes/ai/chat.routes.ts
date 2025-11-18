@@ -108,4 +108,16 @@ router.post("/", withAuth(async (req, res) => {
   }
 }));
 
+// TEST endpoint - verify get_balance tool works
+router.get("/test-balance", withAuth(async (req, res) => {
+  try {
+    const { executeTool } = await import("../../ai/tool-executor");
+    const userId = req.user.id;
+    const result = await executeTool('get_balance', {}, userId);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+}));
+
 export default router;
