@@ -1,13 +1,13 @@
 // AI Agent Tool Definitions
-import { Tool } from './tool-types';
+// Split into 2 structures to comply with Anthropic API requirements
 
-export const TOOLS: Tool[] = [
+// 1. Clean tool definitions for Anthropic API (no custom fields)
+export const ANTHROPIC_TOOLS = [
   {
     name: 'get_balance',
     description: 'Get current user wallet balance and capital. Use this when user asks about their money, balance, or how much they have.',
-    requiresConfirmation: false, // READ operation - no confirmation needed
     input_schema: {
-      type: 'object',
+      type: 'object' as const,
       properties: {},
       required: []
     }
@@ -15,9 +15,8 @@ export const TOOLS: Tool[] = [
   {
     name: 'create_category',
     description: 'Create a new transaction category for organizing income or expenses. Use this when user wants to add a new category.',
-    requiresConfirmation: true, // WRITE operation - requires confirmation
     input_schema: {
-      type: 'object',
+      type: 'object' as const,
       properties: {
         name: { 
           type: 'string', 
@@ -43,9 +42,8 @@ export const TOOLS: Tool[] = [
   {
     name: 'add_transaction',
     description: 'Add a new income or expense transaction. Use this when user wants to record spending or income.',
-    requiresConfirmation: true, // WRITE operation - requires confirmation
     input_schema: {
-      type: 'object',
+      type: 'object' as const,
       properties: {
         amount: { 
           type: 'number', 
@@ -73,3 +71,39 @@ export const TOOLS: Tool[] = [
     }
   }
 ];
+
+// 2. Tool metadata for our custom logic (confirmation, icons, etc)
+export const TOOL_METADATA: Record<string, {
+  requiresConfirmation: boolean;
+  icon?: string;
+  category?: string;
+}> = {
+  'get_balance': {
+    requiresConfirmation: false, // READ operation
+    icon: 'wallet',
+    category: 'read'
+  },
+  'create_category': {
+    requiresConfirmation: true, // WRITE operation
+    icon: 'folder',
+    category: 'write'
+  },
+  'add_transaction': {
+    requiresConfirmation: true, // WRITE operation
+    icon: 'dollar-sign',
+    category: 'write'
+  }
+};
+
+// 3. Helper functions
+export function requiresConfirmation(toolName: string): boolean {
+  return TOOL_METADATA[toolName]?.requiresConfirmation ?? false;
+}
+
+export function getToolIcon(toolName: string): string {
+  return TOOL_METADATA[toolName]?.icon ?? 'bot';
+}
+
+export function getToolCategory(toolName: string): string {
+  return TOOL_METADATA[toolName]?.category ?? 'unknown';
+}

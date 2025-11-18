@@ -1,6 +1,6 @@
 // AI Chat with Tool Calling - uses BYOK (Bring Your Own Key)
 import Anthropic from '@anthropic-ai/sdk';
-import { TOOLS } from './tools';
+import { ANTHROPIC_TOOLS } from './tools';
 import { storage } from '../storage';
 
 export async function chatWithTools(
@@ -36,7 +36,7 @@ Be concise, friendly, and accurate. Always confirm before making changes to user
     model: 'claude-sonnet-4-5-20250929',
     max_tokens: 4096,
     system: systemPrompt,
-    tools: TOOLS, // Enable tool calling
+    tools: ANTHROPIC_TOOLS, // Enable tool calling (clean definitions only)
     messages: [{ role: 'user', content: message }]
   });
   

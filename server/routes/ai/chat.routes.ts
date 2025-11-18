@@ -4,7 +4,7 @@ import { withAuth } from "../../middleware/auth-utils";
 import { chatWithAI } from "../../services/ai/chat.service";
 import { buildFinancialContext } from "../../services/ai/financial-context.service";
 import { chatWithTools } from "../../ai/chat-with-tools";
-import { TOOLS } from "../../ai/tools";
+import { ANTHROPIC_TOOLS, requiresConfirmation } from "../../ai/tools";
 import { executeTool } from "../../ai/tool-executor";
 import type { ToolName } from "../../ai/tool-types";
 
@@ -70,17 +70,18 @@ router.post("/", withAuth(async (req, res) => {
     const response = await chatWithTools(trimmedMessage, userId);
     
     // Check if Claude wants to use a tool
-    const toolUse = response.content.find((block: any) => block.type === 'tool_use');
+    const toolUse = response.content.find((block: any) => block.type === 'tool_use') as any;
     
     if (toolUse) {
-      const tool = TOOLS.find(t => t.name === toolUse.name);
+      // Verify tool exists in our definitions
+      const toolExists = ANTHROPIC_TOOLS.find(t => t.name === toolUse.name);
       
-      if (!tool) {
+      if (!toolExists) {
         return res.status(500).json({ error: `Unknown tool: ${toolUse.name}` });
       }
       
       // CHECK: Does this tool require confirmation?
-      if (!tool.requiresConfirmation) {
+      if (!requiresConfirmation(toolUse.name)) {
         // READ operation - execute immediately
         const result = await executeTool(
           toolUse.name as ToolName, 
@@ -125,7 +126,7 @@ router.post("/", withAuth(async (req, res) => {
     }
     
     // No tool use - return regular text response
-    const textContent = response.content.find((block: any) => block.type === 'text');
+    const textContent: any = response.content.find((block: any) => block.type === 'text');
     const aiMessage = textContent?.text || 'No response';
     
     // Save assistant message to DB (user message already saved above)
@@ -164,8 +165,8 @@ router.post("/confirm-tool", withAuth(async (req, res) => {
     }
     
     // Verify the tool exists
-    const tool = TOOLS.find(t => t.name === action);
-    if (!tool) {
+    const toolExists = ANTHROPIC_TOOLS.find(t => t.name === action);
+    if (!toolExists) {
       return res.status(400).json({ error: `Unknown action: ${action}` });
     }
     
