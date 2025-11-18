@@ -14,12 +14,28 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
 import type { AiChatMessage } from '@shared/schema';
 
+interface Category {
+  id: number;
+  name: string;
+  type: 'income' | 'expense';
+  icon?: string;
+  color?: string;
+}
+
+interface MLSuggestion {
+  categoryId: number;
+  categoryName: string;
+  confidence: number;
+}
+
 interface ChatResponse {
   type: 'message' | 'tool_confirmation';
   content?: string;
   action?: string;
   params?: Record<string, any>;
   toolUseId?: string;
+  mlSuggestion?: MLSuggestion | null;
+  availableCategories?: Category[] | null;
 }
 
 export function AIChatSidebar() {
@@ -31,6 +47,8 @@ export function AIChatSidebar() {
     action: string;
     params: Record<string, any>;
     toolUseId: string;
+    mlSuggestion?: MLSuggestion | null;
+    availableCategories?: Category[] | null;
   } | null>(null);
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -63,11 +81,13 @@ export function AIChatSidebar() {
     },
     onSuccess: (data) => {
       if (data.type === 'tool_confirmation') {
-        // Show confirmation card
+        // Show confirmation card with ML suggestion and categories
         setPendingConfirmation({
           action: data.action!,
           params: data.params!,
           toolUseId: data.toolUseId!,
+          mlSuggestion: data.mlSuggestion,
+          availableCategories: data.availableCategories,
         });
       } else if (data.type === 'message') {
         // Regular message - refresh history
@@ -86,12 +106,12 @@ export function AIChatSidebar() {
 
   // Confirm tool execution mutation
   const confirmToolMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (finalParams: Record<string, any>) => {
       if (!pendingConfirmation) throw new Error('No pending confirmation');
       
       const response = await apiRequest('POST', '/api/ai/confirm-tool', {
         action: pendingConfirmation.action,
-        params: pendingConfirmation.params,
+        params: finalParams, // Use updated params from user
       });
       return response.json();
     },
@@ -300,7 +320,9 @@ export function AIChatSidebar() {
                 <ConfirmationCard
                   action={pendingConfirmation.action}
                   params={pendingConfirmation.params}
-                  onConfirm={() => confirmToolMutation.mutate()}
+                  mlSuggestion={pendingConfirmation.mlSuggestion}
+                  availableCategories={pendingConfirmation.availableCategories}
+                  onConfirm={(finalParams) => confirmToolMutation.mutate(finalParams)}
                   onCancel={handleCancelTool}
                 />
               )}
