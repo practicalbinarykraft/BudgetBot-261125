@@ -265,6 +265,7 @@ export const receiptItems = pgTable("receipt_items", {
   pricePerUnit: decimal("price_per_unit", { precision: 10, scale: 2 }).notNull(),
   totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
   currency: text("currency").default("IDR"),
+  amountUsd: decimal("amount_usd", { precision: 10, scale: 2 }), // USD for analytics
   
   // Metadata
   merchantName: text("merchant_name"),

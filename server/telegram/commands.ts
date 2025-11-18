@@ -14,6 +14,7 @@ import { pendingReceipts } from './pending-receipts';
 import { pendingEdits } from './pending-edits';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 import { ReceiptItemsRepository } from '../repositories/receipt-items.repository';
+import { parseShoppingList, isShoppingList } from './shopping-list-parser';
 
 async function formatTransactionMessage(
   userId: number,
@@ -447,9 +448,104 @@ export async function handleTextMessage(bot: TelegramBot, msg: TelegramBot.Messa
       return;
     }
 
-    // Pre-parse validation for better error messages
+    // SHOPPING LIST CHECK: Try to parse as shopping list first
     const trimmedText = text.trim();
     
+    if (isShoppingList(trimmedText)) {
+      const shoppingList = parseShoppingList(trimmedText);
+      
+      if (shoppingList) {
+        // Get primary wallet
+        const primaryWallet = await getPrimaryWallet(user.id);
+        
+        // Get exchange rates
+        const rates = await getUserExchangeRates(user.id);
+        const amountUsd = convertToUSD(shoppingList.total, shoppingList.currency, rates);
+        const exchangeRate = shoppingList.currency === 'USD' ? 1 : rates[shoppingList.currency] || 1;
+        
+        // Resolve category (use merchant name or default)
+        const categoryId = await resolveCategoryId(user.id, shoppingList.merchant);
+        
+        // Create transaction
+        const [transaction] = await db
+          .insert(transactions)
+          .values({
+            userId: user.id,
+            date: format(new Date(), 'yyyy-MM-dd'),
+            type: 'expense',
+            amount: shoppingList.total.toString(),
+            description: shoppingList.merchant,
+            categoryId,
+            currency: shoppingList.currency,
+            amountUsd: amountUsd.toFixed(2),
+            originalAmount: shoppingList.total.toString(),
+            originalCurrency: shoppingList.currency,
+            exchangeRate: exchangeRate.toFixed(4),
+            source: 'telegram',
+            walletId: primaryWallet.id,
+          })
+          .returning();
+        
+        // Save receipt items with USD conversion
+        if (shoppingList.items.length > 0) {
+          try {
+            const receiptItemsRepo = new ReceiptItemsRepository();
+            const itemsToSave = shoppingList.items.map(item => {
+              // Convert item price to USD
+              const itemUsd = convertToUSD(item.price, shoppingList.currency, rates);
+              
+              return {
+                transactionId: transaction.id,
+                itemName: item.name,
+                normalizedName: item.normalizedName,
+                quantity: '1',
+                pricePerUnit: item.price.toString(),
+                totalPrice: item.price.toString(),
+                currency: shoppingList.currency,
+                merchantName: shoppingList.merchant,
+                amountUsd: itemUsd.toFixed(2)  // USD conversion for analytics
+              };
+            });
+            
+            await receiptItemsRepo.createBulk(itemsToSave);
+            console.log(`✅ Saved ${itemsToSave.length} items from shopping list for transaction ${transaction.id}`);
+          } catch (error) {
+            console.error('Failed to save shopping list items:', error);
+          }
+        }
+        
+        // Update wallet balance
+        await updateWalletBalance(
+          primaryWallet.id,
+          user.id,
+          amountUsd,
+          'expense'
+        );
+        
+        // Format response message
+        const { message, reply_markup } = await formatTransactionMessage(
+          user.id,
+          transaction.id,
+          shoppingList.total,
+          shoppingList.currency,
+          amountUsd,
+          shoppingList.merchant,
+          categoryId,
+          'expense',
+          lang,
+          shoppingList.items  // Pass items to show in message
+        );
+        
+        await bot.sendMessage(chatId, message, {
+          parse_mode: 'Markdown',
+          reply_markup
+        });
+        
+        return; // Shopping list handled, exit
+      }
+    }
+    
+    // NORMAL TRANSACTION: Pre-parse validation for better error messages
     // Check 1: Empty text
     if (trimmedText.length === 0) {
       await bot.sendMessage(chatId, t('transaction.parse_error_empty', lang), {
@@ -799,20 +895,30 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
         })
         .returning();
 
-      // Save receipt items if available
+      // Save receipt items if available (with USD conversion for analytics)
       if ('items' in parsed && parsed.items && parsed.items.length > 0) {
         try {
           const receiptItemsRepo = new ReceiptItemsRepository();
-          const itemsToSave = parsed.items.map((item: any) => ({
-            transactionId: transaction.id,
-            itemName: item.name,
-            normalizedName: item.normalizedName,
-            quantity: item.quantity?.toString(),
-            pricePerUnit: item.pricePerUnit.toString(),
-            totalPrice: item.totalPrice.toString(),
-            currency: parsed.currency,
-            merchantName: parsed.description
-          }));
+          const itemsToSave = parsed.items.map((item: any) => {
+            // Convert item total price to USD
+            const itemTotalUsd = convertToUSD(
+              parseFloat(item.totalPrice), 
+              parsed.currency, 
+              rates
+            );
+            
+            return {
+              transactionId: transaction.id,
+              itemName: item.name,
+              normalizedName: item.normalizedName,
+              quantity: item.quantity?.toString(),
+              pricePerUnit: item.pricePerUnit.toString(),
+              totalPrice: item.totalPrice.toString(),
+              currency: parsed.currency,
+              merchantName: parsed.description,
+              amountUsd: itemTotalUsd.toFixed(2)  // USD conversion for analytics
+            };
+          });
           
           await receiptItemsRepo.createBulk(itemsToSave);
           console.log(`✅ Saved ${itemsToSave.length} items from receipt for transaction ${transaction.id}`);
