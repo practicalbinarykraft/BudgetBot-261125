@@ -6,10 +6,14 @@ import { settings } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
 // Static exchange rates (fallback values)
+// Format: "X units of currency = 1 USD"
 const EXCHANGE_RATES: Record<string, number> = {
   USD: 1,
-  RUB: 92.5,  // 1 USD = 92.5 RUB (fallback)
-  IDR: 15750, // 1 USD = 15,750 IDR (fallback)
+  RUB: 92.5,   // 1 USD = 92.5 RUB (fallback)
+  IDR: 15750,  // 1 USD = 15,750 IDR (fallback)
+  KRW: 1320,   // 1 USD = 1,320 KRW (fallback)
+  EUR: 0.92,   // 1 USD = 0.92 EUR (fallback)
+  CNY: 7.24,   // 1 USD = 7.24 CNY (fallback)
 };
 
 // In-memory cache for user-specific exchange rates
@@ -55,6 +59,15 @@ export async function getUserExchangeRates(userId: number): Promise<Record<strin
     }
     if (userSettings.exchangeRateIDR) {
       rates.IDR = parseFloat(userSettings.exchangeRateIDR as unknown as string);
+    }
+    if (userSettings.exchangeRateKRW) {
+      rates.KRW = parseFloat(userSettings.exchangeRateKRW as unknown as string);
+    }
+    if (userSettings.exchangeRateEUR) {
+      rates.EUR = parseFloat(userSettings.exchangeRateEUR as unknown as string);
+    }
+    if (userSettings.exchangeRateCNY) {
+      rates.CNY = parseFloat(userSettings.exchangeRateCNY as unknown as string);
     }
   }
 

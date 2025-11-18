@@ -73,6 +73,11 @@ export async function updateWalletBalance(
     newBalanceUsd = currentBalanceUsd + deltaUsd;
   }
 
+  // Overdraft protection: prevent negative balance for expenses
+  if (transactionType === 'expense' && newBalanceUsd < 0) {
+    throw new Error(`Insufficient balance: wallet has $${currentBalanceUsd.toFixed(2)} but expense is $${amountUsd.toFixed(2)}`);
+  }
+
   // Update wallet
   await db
     .update(wallets)

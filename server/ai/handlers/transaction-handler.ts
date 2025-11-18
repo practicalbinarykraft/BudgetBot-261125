@@ -1,6 +1,8 @@
 // Transaction Tool Handler - add new income or expense transaction
 import { storage } from '../../storage';
 import { trainCategory } from '../../services/categorization.service';
+import { updateWalletBalance } from '../../services/wallet.service';
+import { getUserExchangeRates, convertToUSD } from '../../services/currency-service';
 import { ToolResult } from '../tool-types';
 
 export async function handleAddTransaction(
@@ -28,8 +30,25 @@ export async function handleAddTransaction(
     const wallets = await storage.getWalletsByUserId(userId);
     const primaryWallet = wallets.find(w => w.isPrimary === 1) || wallets[0];
 
-    const currency = params.currency || 'USD';
+    // Get user settings for default currency
+    const settings = await storage.getSettingsByUserId(userId);
+    const currency = params.currency || settings?.currency || 'USD';
     const amount = params.amount;
+    
+    // Get user's exchange rates (includes custom rates + fallbacks)
+    const exchangeRates = await getUserExchangeRates(userId);
+    
+    // Validate currency is supported
+    if (!exchangeRates[currency]) {
+      return {
+        success: false,
+        error: `Unsupported currency: ${currency}. Supported: ${Object.keys(exchangeRates).join(', ')}`
+      };
+    }
+    
+    // Convert to USD using cached exchange rates
+    const amountUsd = convertToUSD(amount, currency, exchangeRates);
+    const exchangeRate = exchangeRates[currency];
     
     // Resolve personal tag name to ID if provided (case-insensitive)
     let personalTagId: number | undefined = undefined;
@@ -41,20 +60,32 @@ export async function handleAddTransaction(
       personalTagId = matchedTag?.id;
     }
     
-    // Create transaction
+    // Create transaction with proper USD conversion (preserve precision)
     const transaction = await storage.createTransaction({
       userId,
       amount: amount.toString(),
-      amountUsd: amount.toString(), // Simplified: assume USD or convert later
+      amountUsd: amountUsd.toString(), // Preserve full precision, database handles scale
       description: params.description,
       category: params.category,
-      personalTagId, // Will be set via frontend dropdown
+      personalTagId,
       type: params.type,
       date: params.date || new Date().toISOString().split('T')[0],
       currency,
+      exchangeRate: exchangeRate.toString(),
       source: 'manual', // AI-created transactions marked as manual
       walletId: primaryWallet?.id
     });
+    
+    // Update wallet balance atomically (round to match DECIMAL(10,2) precision)
+    if (primaryWallet?.id) {
+      const roundedAmountUsd = Math.round(amountUsd * 100) / 100; // Round to 2 decimals
+      await updateWalletBalance(
+        primaryWallet.id,
+        userId,
+        roundedAmountUsd,
+        params.type
+      );
+    }
     
     // Train ML model if category was provided
     if (params.category) {
@@ -71,7 +102,7 @@ export async function handleAddTransaction(
         date: transaction.date,
         currency: transaction.currency
       },
-      message: `${params.type === 'income' ? 'Income' : 'Expense'} of $${amount} added: ${params.description}`
+      message: `${params.type === 'income' ? 'Income' : 'Expense'} of ${amount} ${currency} added: ${params.description}`
     };
   } catch (error: any) {
     return {
