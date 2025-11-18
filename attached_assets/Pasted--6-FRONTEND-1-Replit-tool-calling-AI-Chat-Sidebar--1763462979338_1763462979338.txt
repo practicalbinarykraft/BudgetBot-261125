@@ -1,0 +1,108 @@
+🎯 ШАГ 6: ОБНОВИТЬ FRONTEND (1 ДЕНЬ)
+Задача для Replit:
+Интегрируй tool calling в AI Chat Sidebar
+
+ОБНОВИТЬ client/src/components/ai-chat-sidebar/index.tsx:
+
+1. Добавить состояние для pending confirmation:
+---
+const [pendingConfirmation, setPendingConfirmation] = useState<{
+  action: string;
+  params: Record<string, any>;
+  toolUseId: string;
+} | null>(null);
+---
+
+2. Обновить sendMessage функцию:
+---
+const sendMessage = async (text: string) => {
+  if (!text.trim()) return;
+  
+  // Добавить сообщение юзера
+  addMessage({ role: 'user', content: text });
+  setInput('');
+  
+  try {
+    // Отправить в API
+    const response = await fetch('/api/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ message: text })
+    });
+    
+    const data = await response.json();
+    
+    if (data.type === 'tool_confirmation') {
+      // Показать карточку подтверждения
+      setPendingConfirmation({
+        action: data.action,
+        params: data.params,
+        toolUseId: data.toolUseId
+      });
+    } else if (data.type === 'message') {
+      // Обычное сообщение
+      addMessage({ role: 'assistant', content: data.content });
+    }
+  } catch (error: any) {
+    addMessage({ 
+      role: 'assistant', 
+      content: `❌ Ошибка: ${error.message}` 
+    });
+  }
+};
+---
+
+3. Добавить функцию подтверждения:
+---
+const confirmTool = async () => {
+  if (!pendingConfirmation) return;
+  
+  try {
+    const response = await fetch('/api/ai/confirm-tool', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(pendingConfirmation)
+    });
+    
+    const data = await response.json();
+    
+    // Добавить ответ AI
+    addMessage({ role: 'assistant', content: data.content });
+    
+    // Убрать карточку
+    setPendingConfirmation(null);
+  } catch (error: any) {
+    addMessage({ 
+      role: 'assistant', 
+      content: `❌ Ошибка: ${error.message}` 
+    });
+    setPendingConfirmation(null);
+  }
+};
+---
+
+4. Добавить в JSX (перед messages):
+---
+{pendingConfirmation && (
+  <ConfirmationCard
+    action={pendingConfirmation.action}
+    params={pendingConfirmation.params}
+    onConfirm={confirmTool}
+    onCancel={() => {
+      addMessage({ 
+        role: 'assistant', 
+        content: '❌ Действие отменено' 
+      });
+      setPendingConfirmation(null);
+    }}
+  />
+)}
+---
+
+ТРЕБОВАНИЯ:
+- Импортировать ConfirmationCard
+- Обработка ошибок
+- Отмена действия
+- Сообщения об успехе/ошибке

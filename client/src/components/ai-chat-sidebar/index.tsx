@@ -6,6 +6,7 @@ import { FloatingChatButton } from './floating-button';
 import { QuickActions } from './quick-actions';
 import { ChatMessage } from '@/components/ai/chat-message';
 import { TypingIndicator } from '@/components/ai/typing-indicator';
+import { ConfirmationCard } from './confirmation-card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
@@ -14,8 +15,11 @@ import { useLocation } from 'wouter';
 import type { AiChatMessage } from '@shared/schema';
 
 interface ChatResponse {
-  success: boolean;
-  message: string;
+  type: 'message' | 'tool_confirmation';
+  content?: string;
+  action?: string;
+  params?: Record<string, any>;
+  toolUseId?: string;
 }
 
 export function AIChatSidebar() {
@@ -23,16 +27,16 @@ export function AIChatSidebar() {
   const [message, setMessage] = useState('');
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [pendingConfirmation, setPendingConfirmation] = useState<{
+    action: string;
+    params: Record<string, any>;
+    toolUseId: string;
+  } | null>(null);
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [location] = useLocation();
-  
-  // DEBUG: Log component mount
-  useEffect(() => {
-    console.log('🤖 AIChatSidebar mounted! isOpen:', isOpen);
-  }, []);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -54,12 +58,21 @@ export function AIChatSidebar() {
     mutationFn: async (userMessage: string) => {
       const response = await apiRequest('POST', '/api/ai/chat', {
         message: userMessage,
-        includeContext: true,
       });
       return response.json() as Promise<ChatResponse>;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/ai/chat/history'] });
+    onSuccess: (data) => {
+      if (data.type === 'tool_confirmation') {
+        // Show confirmation card
+        setPendingConfirmation({
+          action: data.action!,
+          params: data.params!,
+          toolUseId: data.toolUseId!,
+        });
+      } else if (data.type === 'message') {
+        // Regular message - refresh history
+        queryClient.invalidateQueries({ queryKey: ['/api/ai/chat/history'] });
+      }
       setMessage('');
     },
     onError: (error: any) => {
@@ -71,12 +84,49 @@ export function AIChatSidebar() {
     },
   });
 
+  // Confirm tool execution mutation
+  const confirmToolMutation = useMutation({
+    mutationFn: async () => {
+      if (!pendingConfirmation) throw new Error('No pending confirmation');
+      
+      const response = await apiRequest('POST', '/api/ai/confirm-tool', {
+        action: pendingConfirmation.action,
+        params: pendingConfirmation.params,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/ai/chat/history'] });
+      setPendingConfirmation(null);
+      toast({
+        title: 'Action completed',
+        description: 'Your request has been executed',
+      });
+    },
+    onError: (error: any) => {
+      setPendingConfirmation(null);
+      toast({
+        title: 'Action failed',
+        description: error.message || 'Failed to execute action',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleCancelTool = () => {
+    setPendingConfirmation(null);
+    toast({
+      title: 'Action cancelled',
+      description: 'You cancelled the action',
+    });
+  };
+
   // Auto-scroll to bottom
   useEffect(() => {
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isOpen]);
+  }, [messages, isOpen, pendingConfirmation]);
 
   const handleSend = () => {
     const trimmed = message.trim();
@@ -232,7 +282,7 @@ export function AIChatSidebar() {
             <div className="flex items-center justify-center h-full">
               <p className="text-sm text-muted-foreground">Loading chat...</p>
             </div>
-          ) : messages.length === 0 ? (
+          ) : messages.length === 0 && !pendingConfirmation ? (
             <div className="flex flex-col items-center justify-center h-full text-center px-4">
               <Sparkles className="w-12 h-12 text-purple-500 mb-4" />
               <h4 className="font-semibold mb-2">Start a conversation</h4>
@@ -241,9 +291,20 @@ export function AIChatSidebar() {
               </p>
             </div>
           ) : (
-            messages.map((msg, index) => (
-              <ChatMessage key={msg.id} message={msg} index={index} />
-            ))
+            <>
+              {messages.map((msg, index) => (
+                <ChatMessage key={msg.id} message={msg} index={index} />
+              ))}
+              
+              {pendingConfirmation && (
+                <ConfirmationCard
+                  action={pendingConfirmation.action}
+                  params={pendingConfirmation.params}
+                  onConfirm={() => confirmToolMutation.mutate()}
+                  onCancel={handleCancelTool}
+                />
+              )}
+            </>
           )}
 
           {sendMessageMutation.isPending && <TypingIndicator />}
