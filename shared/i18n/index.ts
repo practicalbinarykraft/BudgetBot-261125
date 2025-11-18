@@ -17,6 +17,7 @@ import { webDashboardTranslations } from './web-dashboard';
 import { webDashboardChartsTranslations } from './web-dashboard-charts';
 import { webTransactionsTranslations } from './web-transactions';
 import { webSettingsTranslations } from './web-settings';
+import { webSettingsOptionsTranslations } from './web-settings-options';
 
 // Export types
 export type { Language, Translation, Translations } from './types';
@@ -36,6 +37,7 @@ const allTranslations: Translations = {
   ...webDashboardChartsTranslations,
   ...webTransactionsTranslations,
   ...webSettingsTranslations,
+  ...webSettingsOptionsTranslations,
 };
 
 /**

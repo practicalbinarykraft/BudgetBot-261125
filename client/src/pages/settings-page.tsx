@@ -59,7 +59,7 @@ export default function SettingsPage() {
       setCopied(false);
       toast({
         title: t("settings.verification_code"),
-        description: `Your verification code expires in ${data.ttlMinutes} minutes`,
+        description: t("settings.code_generated").replace("{minutes}", data.ttlMinutes.toString()),
       });
     },
     onError: (error: Error) => {
@@ -81,7 +81,7 @@ export default function SettingsPage() {
       setVerificationCode(null);
       toast({
         title: t("settings.telegram"),
-        description: "Telegram account disconnected successfully",
+        description: t("settings.telegram_disconnected"),
       });
     },
     onError: (error: Error) => {
@@ -207,13 +207,13 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-muted-foreground">Manage your preferences</p>
+        <h1 className="text-3xl font-bold">{t("settings.title")}</h1>
+        <p className="text-muted-foreground">{t("settings.manage_preferences")}</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>General Settings</CardTitle>
+          <CardTitle>{t("settings.general_settings")}</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -227,16 +227,16 @@ export default function SettingsPage() {
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger data-testid="select-currency">
-                          <SelectValue placeholder="Select currency" />
+                          <SelectValue placeholder={t("settings.select_currency")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="USD">USD - US Dollar</SelectItem>
-                        <SelectItem value="RUB">RUB - Russian Ruble</SelectItem>
-                        <SelectItem value="IDR">IDR - Indonesian Rupiah</SelectItem>
-                        <SelectItem value="KRW">KRW - Korean Won</SelectItem>
-                        <SelectItem value="EUR">EUR - Euro</SelectItem>
-                        <SelectItem value="CNY">CNY - Chinese Yuan</SelectItem>
+                        <SelectItem value="USD">{t("settings.currency.usd")}</SelectItem>
+                        <SelectItem value="RUB">{t("settings.currency.rub")}</SelectItem>
+                        <SelectItem value="IDR">{t("settings.currency.idr")}</SelectItem>
+                        <SelectItem value="KRW">{t("settings.currency.krw")}</SelectItem>
+                        <SelectItem value="EUR">{t("settings.currency.eur")}</SelectItem>
+                        <SelectItem value="CNY">{t("settings.currency.cny")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -253,12 +253,12 @@ export default function SettingsPage() {
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger data-testid="select-language">
-                          <SelectValue placeholder="Select language" />
+                          <SelectValue placeholder={t("settings.select_language")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="en">English</SelectItem>
-                        <SelectItem value="ru">Русский</SelectItem>
+                        <SelectItem value="en">{t("settings.language.english")}</SelectItem>
+                        <SelectItem value="ru">{t("settings.language.russian")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -274,7 +274,7 @@ export default function SettingsPage() {
                     <div>
                       <FormLabel>{t("settings.telegram_notifications")}</FormLabel>
                       <p className="text-sm text-muted-foreground">
-                        Receive spending alerts via Telegram
+                        {t("settings.receive_alerts")}
                       </p>
                     </div>
                     <FormControl>
@@ -289,9 +289,9 @@ export default function SettingsPage() {
               />
 
               <div className="border-t pt-6 mt-6">
-                <h3 className="text-lg font-semibold mb-2">Notification Settings</h3>
+                <h3 className="text-lg font-semibold mb-2">{t("settings.notification_settings")}</h3>
                 <p className="text-sm text-muted-foreground mb-6">
-                  Configure when you receive daily notifications from the Telegram bot
+                  {t("settings.notification_settings.description")}
                 </p>
 
                 <div className="space-y-4">
@@ -304,35 +304,35 @@ export default function SettingsPage() {
                         <Select onValueChange={field.onChange} value={field.value || "UTC"}>
                           <FormControl>
                             <SelectTrigger data-testid="select-timezone">
-                              <SelectValue placeholder="Select timezone" />
+                              <SelectValue placeholder={t("settings.select_timezone")} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="UTC">UTC (Coordinated Universal Time)</SelectItem>
-                            <SelectItem value="America/New_York">Eastern Time (US & Canada)</SelectItem>
-                            <SelectItem value="America/Chicago">Central Time (US & Canada)</SelectItem>
-                            <SelectItem value="America/Denver">Mountain Time (US)</SelectItem>
-                            <SelectItem value="America/Los_Angeles">Pacific Time (US & Canada)</SelectItem>
-                            <SelectItem value="America/Phoenix">Arizona (US)</SelectItem>
-                            <SelectItem value="America/Toronto">Toronto</SelectItem>
-                            <SelectItem value="America/Mexico_City">Mexico City</SelectItem>
-                            <SelectItem value="America/Sao_Paulo">São Paulo</SelectItem>
-                            <SelectItem value="Europe/London">London</SelectItem>
-                            <SelectItem value="Europe/Paris">Paris, Berlin, Rome</SelectItem>
-                            <SelectItem value="Europe/Moscow">Moscow</SelectItem>
-                            <SelectItem value="Asia/Dubai">Dubai</SelectItem>
-                            <SelectItem value="Asia/Kolkata">India Standard Time</SelectItem>
-                            <SelectItem value="Asia/Singapore">Singapore</SelectItem>
-                            <SelectItem value="Asia/Shanghai">Beijing, Shanghai</SelectItem>
-                            <SelectItem value="Asia/Tokyo">Tokyo</SelectItem>
-                            <SelectItem value="Asia/Seoul">Seoul</SelectItem>
-                            <SelectItem value="Asia/Jakarta">Jakarta</SelectItem>
-                            <SelectItem value="Australia/Sydney">Sydney</SelectItem>
-                            <SelectItem value="Pacific/Auckland">Auckland</SelectItem>
+                            <SelectItem value="UTC">{t("settings.tz.utc")}</SelectItem>
+                            <SelectItem value="America/New_York">{t("settings.tz.eastern")}</SelectItem>
+                            <SelectItem value="America/Chicago">{t("settings.tz.central")}</SelectItem>
+                            <SelectItem value="America/Denver">{t("settings.tz.mountain")}</SelectItem>
+                            <SelectItem value="America/Los_Angeles">{t("settings.tz.pacific")}</SelectItem>
+                            <SelectItem value="America/Phoenix">{t("settings.tz.arizona")}</SelectItem>
+                            <SelectItem value="America/Toronto">{t("settings.tz.toronto")}</SelectItem>
+                            <SelectItem value="America/Mexico_City">{t("settings.tz.mexico_city")}</SelectItem>
+                            <SelectItem value="America/Sao_Paulo">{t("settings.tz.sao_paulo")}</SelectItem>
+                            <SelectItem value="Europe/London">{t("settings.tz.london")}</SelectItem>
+                            <SelectItem value="Europe/Paris">{t("settings.tz.paris")}</SelectItem>
+                            <SelectItem value="Europe/Moscow">{t("settings.tz.moscow")}</SelectItem>
+                            <SelectItem value="Asia/Dubai">{t("settings.tz.dubai")}</SelectItem>
+                            <SelectItem value="Asia/Kolkata">{t("settings.tz.india")}</SelectItem>
+                            <SelectItem value="Asia/Singapore">{t("settings.tz.singapore")}</SelectItem>
+                            <SelectItem value="Asia/Shanghai">{t("settings.tz.shanghai")}</SelectItem>
+                            <SelectItem value="Asia/Tokyo">{t("settings.tz.tokyo")}</SelectItem>
+                            <SelectItem value="Asia/Seoul">{t("settings.tz.seoul")}</SelectItem>
+                            <SelectItem value="Asia/Jakarta">{t("settings.tz.jakarta")}</SelectItem>
+                            <SelectItem value="Australia/Sydney">{t("settings.tz.sydney")}</SelectItem>
+                            <SelectItem value="Pacific/Auckland">{t("settings.tz.auckland")}</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormDescription>
-                          Used to send daily notifications at the right time for your location
+                          {t("settings.timezone.description")}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -354,7 +354,7 @@ export default function SettingsPage() {
                           />
                         </FormControl>
                         <FormDescription>
-                          Time when you want to receive daily budget summary (in your timezone)
+                          {t("settings.notification_time.description")}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -372,22 +372,14 @@ export default function SettingsPage() {
                     <FormControl>
                       <Input
                         type="password"
-                        placeholder="sk-ant-..."
+                        placeholder={t("settings.anthropic_api_key.placeholder")}
                         {...field}
                         value={field.value || ""}
                         data-testid="input-anthropic-key"
                       />
                     </FormControl>
                     <FormDescription>
-                      Your personal Anthropic API key for AI-powered forecasting and analysis. Get one at{" "}
-                      <a
-                        href="https://console.anthropic.com/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline"
-                      >
-                        console.anthropic.com
-                      </a>
+                      {t("settings.anthropic_api_key.description")}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -395,10 +387,9 @@ export default function SettingsPage() {
               />
 
               <div className="border-t pt-6 mt-6">
-                <h3 className="text-lg font-semibold mb-2">Exchange Rates</h3>
+                <h3 className="text-lg font-semibold mb-2">{t("settings.exchange_rates")}</h3>
                 <p className="text-sm text-muted-foreground mb-6">
-                  Customize currency conversion rates. Configure the currencies you use, and the AI will only suggest those currencies.
-                  Leave empty to disable a currency. Changes apply to all future transactions and Telegram bot conversions.
+                  {t("settings.exchange_rates.customize")}
                 </p>
 
                 <div className="space-y-4">
@@ -407,7 +398,7 @@ export default function SettingsPage() {
                     name="exchangeRateRUB"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>RUB to USD Rate</FormLabel>
+                        <FormLabel>{t("settings.exchange_rate_rub")}</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -419,7 +410,7 @@ export default function SettingsPage() {
                           />
                         </FormControl>
                         <FormDescription>
-                          How many Russian Rubles equal 1 USD (e.g., 92.5 means 1 USD = 92.5 RUB)
+                          {t("settings.exchange_rate_rub.description")}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -431,7 +422,7 @@ export default function SettingsPage() {
                     name="exchangeRateIDR"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>IDR to USD Rate</FormLabel>
+                        <FormLabel>{t("settings.exchange_rate_idr")}</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -443,7 +434,7 @@ export default function SettingsPage() {
                           />
                         </FormControl>
                         <FormDescription>
-                          How many Indonesian Rupiah equal 1 USD (e.g., 15750 means 1 USD = 15,750 IDR)
+                          {t("settings.exchange_rate_idr.description")}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -455,7 +446,7 @@ export default function SettingsPage() {
                     name="exchangeRateKRW"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>KRW to USD Rate</FormLabel>
+                        <FormLabel>{t("settings.exchange_rate_krw")}</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -467,7 +458,7 @@ export default function SettingsPage() {
                           />
                         </FormControl>
                         <FormDescription>
-                          How many Korean Won equal 1 USD (e.g., 1300 means 1 USD = 1,300 KRW)
+                          {t("settings.exchange_rate_krw.description")}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -479,7 +470,7 @@ export default function SettingsPage() {
                     name="exchangeRateEUR"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>EUR to USD Rate</FormLabel>
+                        <FormLabel>{t("settings.exchange_rate_eur")}</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -491,7 +482,7 @@ export default function SettingsPage() {
                           />
                         </FormControl>
                         <FormDescription>
-                          How many Euros equal 1 USD (e.g., 0.92 means 1 USD = 0.92 EUR)
+                          {t("settings.exchange_rate_eur.description")}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -503,7 +494,7 @@ export default function SettingsPage() {
                     name="exchangeRateCNY"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>CNY to USD Rate</FormLabel>
+                        <FormLabel>{t("settings.exchange_rate_cny")}</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -515,7 +506,7 @@ export default function SettingsPage() {
                           />
                         </FormControl>
                         <FormDescription>
-                          How many Chinese Yuan equal 1 USD (e.g., 7.2 means 1 USD = 7.2 CNY)
+                          {t("settings.exchange_rate_cny.description")}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -524,14 +515,14 @@ export default function SettingsPage() {
 
                   {settings?.exchangeRatesUpdatedAt && (
                     <p className="text-sm text-muted-foreground">
-                      Last updated: {new Date(settings.exchangeRatesUpdatedAt).toLocaleString()}
+                      {t("settings.last_updated")}: {new Date(settings.exchangeRatesUpdatedAt).toLocaleString()}
                     </p>
                   )}
                 </div>
               </div>
 
               <Button type="submit" disabled={updateMutation.isPending} data-testid="button-save-settings">
-                {updateMutation.isPending ? "Saving..." : "Save Settings"}
+                {updateMutation.isPending ? `${t("settings.save_settings")}...` : t("settings.save_settings")}
               </Button>
             </form>
           </Form>
@@ -540,8 +531,8 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Telegram Integration</CardTitle>
-          <CardDescription>Connect your Telegram account to track expenses on the go</CardDescription>
+          <CardTitle>{t("settings.telegram_integration")}</CardTitle>
+          <CardDescription>{t("settings.telegram_integration.description")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {isTelegramLoading ? (
@@ -552,25 +543,25 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-3">
                   <MessageCircle className="h-5 w-5 text-muted-foreground" />
                   <div>
-                    <p className="font-medium">Connection Status</p>
+                    <p className="font-medium">{t("settings.connection_status")}</p>
                     {telegramStatus?.connected ? (
                       <p className="text-sm text-muted-foreground">
-                        Connected as @{telegramStatus.username || "unknown"}
+                        {t("settings.connected_as")} @{telegramStatus.username || "unknown"}
                       </p>
                     ) : (
-                      <p className="text-sm text-muted-foreground">Not connected</p>
+                      <p className="text-sm text-muted-foreground">{t("settings.telegram_not_connected")}</p>
                     )}
                   </div>
                 </div>
                 <Badge variant={telegramStatus?.connected ? "default" : "secondary"} data-testid="badge-telegram-status">
-                  {telegramStatus?.connected ? "Connected" : "Not Connected"}
+                  {telegramStatus?.connected ? t("settings.telegram_connected") : t("settings.telegram_not_connected")}
                 </Badge>
               </div>
 
               {telegramStatus?.connected ? (
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    Your Telegram account is connected. You can now send expenses directly to the bot!
+                    {t("settings.connected_account")}
                   </p>
                   <Button
                     variant="destructive"
@@ -578,7 +569,7 @@ export default function SettingsPage() {
                     disabled={disconnectMutation.isPending}
                     data-testid="button-disconnect-telegram"
                   >
-                    {disconnectMutation.isPending ? "Disconnecting..." : "Disconnect Telegram"}
+                    {disconnectMutation.isPending ? `${t("settings.disconnecting")}...` : t("settings.disconnect_telegram")}
                   </Button>
                 </div>
               ) : (
@@ -586,20 +577,20 @@ export default function SettingsPage() {
                   {!verificationCode ? (
                     <>
                       <p className="text-sm text-muted-foreground">
-                        Generate a verification code to link your Telegram account
+                        {t("settings.generate_code_description")}
                       </p>
                       <Button
                         onClick={() => generateCodeMutation.mutate()}
                         disabled={generateCodeMutation.isPending}
                         data-testid="button-generate-code"
                       >
-                        {generateCodeMutation.isPending ? "Generating..." : "Generate Code"}
+                        {generateCodeMutation.isPending ? `${t("settings.generating")}...` : t("settings.generate_code")}
                       </Button>
                     </>
                   ) : (
                     <div className="space-y-4 rounded-md border p-4 bg-accent/5">
                       <div className="space-y-2">
-                        <p className="text-sm font-medium">Your Verification Code:</p>
+                        <p className="text-sm font-medium">{t("settings.verification_code_label")}</p>
                         <div className="flex items-center gap-2">
                           <code className="relative rounded bg-muted px-3 py-1.5 font-mono text-2xl font-bold tracking-wider" data-testid="text-verification-code">
                             {verificationCode.code}
@@ -615,17 +606,17 @@ export default function SettingsPage() {
                         </div>
                         {timeLeft !== null && (
                           <p className="text-sm text-muted-foreground">
-                            Expires in: <span className="font-medium" data-testid="text-time-left">{formatTime(timeLeft)}</span>
+                            {t("settings.expires_in")}: <span className="font-medium" data-testid="text-time-left">{formatTime(timeLeft)}</span>
                           </p>
                         )}
                       </div>
 
                       <div className="space-y-2 border-t pt-4">
-                        <p className="text-sm font-medium">How to connect:</p>
+                        <p className="text-sm font-medium">{t("settings.how_to_connect")}</p>
                         <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
-                          <li>Open Telegram and find @BudgetBuddyBot</li>
-                          <li>Send the command: /verify {verificationCode.code}</li>
-                          <li>Start tracking expenses instantly!</li>
+                          <li>{t("settings.telegram_step1")}</li>
+                          <li>{t("settings.telegram_step2")}: /verify {verificationCode.code}</li>
+                          <li>{t("settings.telegram_step3")}</li>
                         </ol>
                       </div>
 
@@ -635,7 +626,7 @@ export default function SettingsPage() {
                         data-testid="button-cancel-code"
                       >
                         <X className="h-4 w-4 mr-2" />
-                        Cancel
+                        {t("settings.cancel")}
                       </Button>
                     </div>
                   )}
@@ -648,15 +639,15 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Account Information</CardTitle>
+          <CardTitle>{t("settings.account_information")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div>
-            <p className="text-sm text-muted-foreground">Name</p>
+            <p className="text-sm text-muted-foreground">{t("common.name")}</p>
             <p className="font-medium">{user?.name}</p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Email</p>
+            <p className="text-sm text-muted-foreground">{t("settings.email")}</p>
             <p className="font-medium">{user?.email}</p>
           </div>
         </CardContent>
