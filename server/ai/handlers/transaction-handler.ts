@@ -1,5 +1,6 @@
 // Transaction Tool Handler - add new income or expense transaction
 import { storage } from '../../storage';
+import { trainCategory } from '../../services/categorization.service';
 import { ToolResult } from '../tool-types';
 
 export async function handleAddTransaction(
@@ -42,6 +43,11 @@ export async function handleAddTransaction(
       source: 'manual', // AI-created transactions marked as manual
       walletId: primaryWallet?.id
     });
+    
+    // Train ML model if category was provided
+    if (params.category) {
+      await trainCategory(userId, params.description, params.category);
+    }
     
     return {
       success: true,
