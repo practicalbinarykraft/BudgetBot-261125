@@ -44,6 +44,12 @@ The application uses Shadcn/ui (Radix UI primitives) and Tailwind CSS with a cus
 *   **Shopping List Parser:** Telegram bot integration accepts shopping lists as text messages, extracting merchant, items, and prices, saving them to `receipt_items`.
 *   **Default Currency System:** User-configurable default currency used as a fallback. Supports various currency input formats and provides UI/bot commands for selection.
 *   **User-Configurable Exchange Rates:** Complete exchange rate customization system replacing all hardcoded rates. Users configure rates for RUB, IDR, KRW, EUR, CNY via Settings UI and Telegram bot. AI Assistant dynamically suggests only configured currencies. Currency dropdown always shows: USD (base) + default currency + current transaction currency + all configured rates. Handles edge cases: default without rate (no conversion), transaction currency after rate deletion (preserved in dropdown), fresh users (USD only).
+    - **Currency Conversion Architecture:** 
+        - `currency-service.ts`: Centralized service with getUserExchangeRates() (1-hour cache), convertToUSD() helper, supports all 5 currencies with fallback rates
+        - **Exchange Rate Semantics:** "Units per USD" format (e.g., 16000 IDR = 1 USD). Conversion formula: `amountUsd = amount / exchangeRate`
+        - **Precision Handling:** Transaction records preserve full precision (amountUsd.toString()), wallet balances use rounded values (Math.round * 100 / 100) to match DECIMAL(10,2) schema
+        - **Overdraft Protection:** updateWalletBalance enforces non-negative balance guard for expenses, prevents precision drift
+        - **Database Schema:** amountUsd DECIMAL(10,2), exchangeRate DECIMAL(10,4) for accurate conversion tracking
 *   **AI Chat Messages:** New table stores chat history with AI financial advisor, including role, content, contextType, and contextData for personalized advice.
 *   **AI Services:** Modular AI service layer with functions for `chatWithAI()`, `buildFinancialContext()`, and `financial-formatters` for data preparation.
 *   **AI Chat UI:** Interactive chat interface with AI financial advisor featuring message history, input handling, markdown rendering, and quick action buttons.
