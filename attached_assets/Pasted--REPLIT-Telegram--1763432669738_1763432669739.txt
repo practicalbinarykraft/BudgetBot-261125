@@ -1,0 +1,166 @@
+ОТПРАВЬ REPLIT:
+
+---
+
+Добавь парсинг списков покупок в Telegram бота.
+
+ЗАДАЧА:
+Пользователь может написать:
+"Pepito: арбуз 22к, мыло 189к, сок 32к"
+
+Бот должен:
+1. Распарсить список товаров
+2. Создать транзакцию (сумма = 22к + 189к + 32к)
+3. Сохранить каждый товар в receipt_items
+
+ФОРМАТЫ ПОДДЕРЖАТЬ:
+
+1. Короткий:
+   "Pepito: арбуз 22к, мыло 189к, сок 32к"
+
+2. Многострочный:
+   "Покупки Pepito:
+   - арбуз 22000
+   - мыло 189000
+   - сок 32500"
+
+3. С запятыми:
+   "Moris: хлеб 5000, молоко 12000, яйца 18000"
+
+ПАРСЕР:
+
+// server/telegram/parser.ts
+
+export function parseShoppingList(text: string): ParsedShoppingList | null {
+  // 1. Извлечь магазин
+  const merchantMatch = text.match(/^([^:]+):/i);
+  if (!merchantMatch) return null;
+  
+  const merchant = merchantMatch[1].trim();
+  
+  // 2. Извлечь список товаров
+  const itemsText = text.substring(merchantMatch[0].length).trim();
+  
+  // Разделить по запятым или новым строкам
+  const itemLines = itemsText
+    .split(/[,\n]/)
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+  
+  const items: ShoppingItem[] = [];
+  let total = 0;
+  
+  for (const line of itemLines) {
+    // Убрать префиксы "- " или "• "
+    const cleaned = line.replace(/^[-•]\s*/, '');
+    
+    // Формат: "товар цена" или "товар: цена"
+    const match = cleaned.match(/^(.+?)\s*:?\s*(\d+[кk]?|\d+,\d+)$/i);
+    
+    if (match) {
+      const name = match[1].trim();
+      let price = match[2].toLowerCase().replace(',', '.');
+      
+      // Обработать "22к" → 22000
+      if (price.endsWith('к') || price.endsWith('k')) {
+        price = parseFloat(price) * 1000;
+      } else {
+        price = parseFloat(price);
+      }
+      
+      items.push({
+        name,
+        price,
+        normalizedName: normalizeItemName(name)
+      });
+      
+      total += price;
+    }
+  }
+  
+  if (items.length === 0) return null;
+  
+  return {
+    merchant,
+    items,
+    total
+  };
+}
+
+interface ShoppingItem {
+  name: string;
+  price: number;
+  normalizedName: string;
+}
+
+interface ParsedShoppingList {
+  merchant: string;
+  items: ShoppingItem[];
+  total: number;
+}
+
+ИНТЕГРАЦИЯ В КОМАНДЫ:
+
+В server/telegram/commands.ts добавь обработку перед обычным парсингом:
+
+// Попробовать распарсить как список покупок
+const shoppingList = parseShoppingList(trimmedMessage);
+
+if (shoppingList) {
+  // Создать транзакцию
+  const transaction = await db.insert(dailyTransactions).values({
+    userId: ctx.from.id,
+    description: shoppingList.merchant,
+    amountUsd: shoppingList.total / exchangeRate,
+    type: 'expense',
+    source: 'telegram',
+    date: new Date().toISOString().split('T')[0]
+  }).returning();
+  
+  // Сохранить товары
+  const receiptItems = shoppingList.items.map(item => ({
+    transactionId: transaction[0].id,
+    itemName: item.name,
+    normalizedName: item.normalizedName,
+    quantity: '1',
+    pricePerUnit: item.price.toString(),
+    totalPrice: item.price.toString(),
+    merchantName: shoppingList.merchant
+  }));
+  
+  await receiptItemsRepository.createBulk(receiptItems);
+  
+  // Ответить с товарами
+  const itemsList = shoppingList.items
+    .map(item => `• ${item.name} - ₹${item.price.toLocaleString()}`)
+    .join('\n');
+  
+  ctx.reply(`💸 Покупки добавлены!
+
+🏪 Магазин: ${shoppingList.merchant}
+Сумма: ₹${shoppingList.total.toLocaleString()}
+
+🛒 Товары:
+${itemsList}
+
+Конвертация: 1 USD = ${exchangeRate} IDR
+Стоимость в USD: ~$${(shoppingList.total / exchangeRate).toFixed(2)}
+
+Общий капитал: $${calculateCapital(ctx.from.id)}`);
+  
+  return;
+}
+
+// Если не список - обычный парсинг
+const parsed = parseTransaction(trimmedMessage);
+...
+
+РЕЗУЛЬТАТ:
+✅ Текстом: "Pepito: арбуз 22к, мыло 189к"
+✅ Многострочно: "Покупки:\n- товар 1000\n- товар 2000"
+✅ Голосом: "Купил в Pepito арбуз за 22 тысячи, мыло за 189 тысяч"
+✅ Фото чека: как раньше
+
+Все способы → товары в receipt_items → Price Comparison! 🔥
+
+---
