@@ -116,9 +116,8 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="flex flex-row items-center justify-between p-4 border-b">
+      <SidebarHeader className="p-4 border-b">
         <span className="text-lg font-bold">Budget Buddy</span>
-        <SidebarTrigger data-testid="button-sidebar-toggle" />
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -164,6 +163,14 @@ export function AppSidebar() {
           </Button>
         </div>
       </SidebarFooter>
+      
+      {/* Toggle button fixed on the right edge */}
+      <div className="absolute top-4 -right-3 z-50">
+        <SidebarTrigger 
+          data-testid="button-sidebar-toggle"
+          className="rounded-full shadow-lg bg-background border-2"
+        />
+      </div>
     </Sidebar>
   );
 }
