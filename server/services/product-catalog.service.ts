@@ -144,3 +144,54 @@ export async function categorizeProduct(
   //   return await categorizeWithAI(name, anthropicApiKey);
   // }
 }
+
+interface ReceiptItem {
+  name: string;
+  price: number;
+  quantity?: number;
+}
+
+// Обработать товары из чека
+export async function processReceiptItems(params: {
+  receiptItems: ReceiptItem[];
+  userId: number;
+  storeName: string;
+  purchaseDate: string; // YYYY-MM-DD
+  anthropicApiKey?: string;
+}): Promise<void> {
+  const { receiptItems, userId, storeName, purchaseDate, anthropicApiKey } = params;
+  
+  for (const item of receiptItems) {
+    try {
+      // 1. Категоризировать товар
+      const category = await categorizeProduct(item.name, anthropicApiKey);
+      
+      // 2. Найти или создать в каталоге
+      const productId = await findOrCreateProduct({
+        name: item.name,
+        userId,
+        category
+      });
+      
+      // 3. Увеличить счётчик покупок
+      await productCatalogRepository.incrementPurchaseCount(productId);
+      
+      // 4. Добавить цену в историю
+      await productPriceHistoryRepository.create({
+        productId,
+        storeName,
+        price: item.price.toString(),
+        currency: 'USD',
+        purchaseDate
+      });
+      
+      // 5. Обновить лучшую цену
+      await updateBestPrice(productId);
+      
+      console.log(`✅ Processed: ${item.name} → Product ID ${productId}`);
+    } catch (error) {
+      console.error(`❌ Failed to process item: ${item.name}`, error);
+      // Продолжаем обработку остальных товаров
+    }
+  }
+}
