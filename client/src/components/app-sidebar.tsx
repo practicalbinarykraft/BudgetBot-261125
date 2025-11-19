@@ -12,6 +12,7 @@ import {
   Sparkles,
   Settings,
   LogOut,
+  Package,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -100,6 +101,12 @@ export function AppSidebar() {
       title: t("nav.budgets"),
       url: "/budgets",
       icon: TrendingDown,
+    },
+    {
+      id: 'product_catalog',
+      title: t("nav.product_catalog"),
+      url: "/product-catalog",
+      icon: Package,
     },
     {
       id: 'ai_analysis',

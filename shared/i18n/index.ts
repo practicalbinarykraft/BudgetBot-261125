@@ -28,6 +28,7 @@ import { webPlannedIncomeTranslations } from './web-planned-income';
 import { webRecurringTranslations } from './web-recurring';
 import { webAnalysisTranslations } from './web-analysis';
 import { webAiToolsTranslations } from './web-ai-tools';
+import { webProductCatalogTranslations } from './web-product-catalog';
 
 // Export types
 export type { Language, Translation, Translations } from './types';
@@ -58,6 +59,7 @@ const allTranslations: Translations = {
   ...webRecurringTranslations,
   ...webAnalysisTranslations,
   ...webAiToolsTranslations,
+  ...webProductCatalogTranslations,
 };
 
 /**
