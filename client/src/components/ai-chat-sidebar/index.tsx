@@ -119,10 +119,27 @@ export function AIChatSidebar() {
     mutationFn: async (finalParams: Record<string, any>) => {
       if (!pendingConfirmation) throw new Error('No pending confirmation');
       
+      console.log('🔧 Confirming tool:', {
+        action: pendingConfirmation.action,
+        params: finalParams
+      });
+      
       const response = await apiRequest('POST', '/api/ai/confirm-tool', {
         action: pendingConfirmation.action,
         params: finalParams, // Use updated params from user
       });
+      
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+      
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('❌ Non-JSON response:', text.substring(0, 500));
+        throw new Error('Server returned non-JSON response');
+      }
+      
       return response.json();
     },
     onSuccess: () => {
