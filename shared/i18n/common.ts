@@ -5,6 +5,16 @@
 import { Translations } from './types';
 
 export const commonTranslations: Translations = {
+  // Common UI
+  'common.error': {
+    en: 'Error',
+    ru: 'Ошибка',
+  },
+  'common.loading': {
+    en: 'Loading...',
+    ru: 'Загрузка...',
+  },
+  
   // Language
   'language.current': {
     en: '🌐 *Current Language*',

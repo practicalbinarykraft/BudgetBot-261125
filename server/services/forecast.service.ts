@@ -49,13 +49,10 @@ export async function generateForecast(
     );
   }
 
-  // Try AI forecast with timeout
+  // Try AI forecast with AbortController-based timeout
   try {
     // Initialize Anthropic client with user's key
-    const client = new Anthropic({ 
-      apiKey,
-      timeout: 30000, // 30 second timeout
-    });
+    const client = new Anthropic({ apiKey });
 
     // Prepare prompt for Claude
     const prompt = buildForecastPrompt(
@@ -72,18 +69,33 @@ export async function generateForecast(
 
     console.log(`[Forecast] Generating ${daysAhead} days AI forecast, max_tokens: ${estimatedTokens}`);
 
-    const message = await client.messages.create({
-      model: "claude-sonnet-4-5-20250929",
-      max_tokens: estimatedTokens,
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-    });
+    // Create AbortController for request cancellation
+    const controller = new AbortController();
+    const timeoutMs = 30000; // 30 seconds
+    
+    // Set timeout to abort the request
+    const timeoutId = setTimeout(() => {
+      console.warn(`[Forecast] AI request timeout after ${timeoutMs}ms, aborting...`);
+      controller.abort();
+    }, timeoutMs);
 
-    console.log(`[Forecast] AI response received, stop_reason: ${message.stop_reason}`);
+    try {
+      const message = await client.messages.create({
+        model: "claude-sonnet-4-5-20250929",
+        max_tokens: estimatedTokens,
+        messages: [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+      }, {
+        signal: controller.signal as AbortSignal,
+      });
+
+      // Clear timeout on success
+      clearTimeout(timeoutId);
+      console.log(`[Forecast] AI response received, stop_reason: ${message.stop_reason}`);
 
     const content = message.content[0];
     if (content.type !== "text") {
@@ -141,9 +153,19 @@ export async function generateForecast(
       }
     }
     
-    return forecast as ForecastDataPoint[];
+      return forecast as ForecastDataPoint[];
+    } catch (innerError: any) {
+      // Clear timeout on error
+      clearTimeout(timeoutId);
+      throw innerError;
+    }
   } catch (error: any) {
-    console.error('[Forecast] AI forecast failed, falling back to simple forecast:', error.message);
+    const isTimeout = error.name === 'AbortError' || error.message?.includes('timeout');
+    if (isTimeout) {
+      console.warn('[Forecast] AI request timed out after 30s, using simple forecast');
+    } else {
+      console.error('[Forecast] AI forecast failed:', error.message);
+    }
     
     // Fallback to simple linear forecast
     return generateSimpleForecast(
