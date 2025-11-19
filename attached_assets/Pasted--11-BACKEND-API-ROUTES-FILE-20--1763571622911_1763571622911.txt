@@ -1,0 +1,82 @@
+📊 ШАГ 11: BACKEND API - ROUTES FILE (20 минут)
+═══════════════════════════════════════════════════════
+ЗАДАЧА 11.1: СОЗДАТЬ ROUTES ДЛЯ PRODUCT CATALOG
+═══════════════════════════════════════════════════════
+
+СОЗДАТЬ ФАЙЛ: server/routes/product-catalog.routes.ts
+
+import { Router } from 'express';
+import { productCatalogRepository } from '../repositories/product-catalog.repository';
+import { productPriceHistoryRepository } from '../repositories/product-price-history.repository';
+import { priceSearchReportsRepository } from '../repositories/price-search-reports.repository';
+
+const router = Router();
+
+// Middleware для проверки авторизации
+// (предполагаем что есть withAuth или requireAuth)
+import { requireAuth } from '../middleware/auth'; // adjust path
+
+// GET /api/product-catalog - Список товаров
+router.get('/', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const { search, category } = req.query;
+    
+    let products;
+    
+    if (search) {
+      products = await productCatalogRepository.search(
+        userId, 
+        search as string
+      );
+    } else if (category) {
+      products = await productCatalogRepository.findByCategory(
+        userId, 
+        category as string
+      );
+    } else {
+      products = await productCatalogRepository.findByUser(userId);
+    }
+    
+    res.json(products);
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    res.status(500).json({ error: 'Failed to fetch products' });
+  }
+});
+
+// GET /api/product-catalog/:id - Детали товара
+router.get('/:id', requireAuth, async (req, res) => {
+  try {
+    const productId = parseInt(req.params.id);
+    const userId = req.user!.id;
+    
+    const product = await productCatalogRepository.findById(productId);
+    
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    // Проверить что товар принадлежит пользователю
+    if (product.userId !== userId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    res.json(product);
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    res.status(500).json({ error: 'Failed to fetch product' });
+  }
+});
+
+export default router;
+
+СТРОК: ~70 ✅
+ОТВЕТСТВЕННОСТЬ: Базовые CRUD endpoints ✅
+
+═══════════════════════════════════════════════════════
+
+ОЖИДАЕМЫЙ РЕЗУЛЬТАТ:
+✅ GET /api/product-catalog (список)
+✅ GET /api/product-catalog/:id (детали)
+✅ Поиск и фильтрация работают
