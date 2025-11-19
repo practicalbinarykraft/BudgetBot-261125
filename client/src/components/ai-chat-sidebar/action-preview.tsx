@@ -20,9 +20,9 @@ export function ActionPreview({ action, params }: ActionPreviewProps) {
   
   const getTitle = () => {
     switch (action) {
-      case 'create_category': return t('analysis.action_create_category');
-      case 'add_transaction': return t('analysis.action_add_transaction');
-      case 'get_balance': return t('analysis.action_get_balance');
+      case 'create_category': return t('ai_tools.create_category');
+      case 'add_transaction': return t('ai_tools.add_transaction');
+      case 'get_balance': return t('ai_tools.get_balance');
       default: return action;
     }
   };
@@ -32,9 +32,9 @@ export function ActionPreview({ action, params }: ActionPreviewProps) {
   
   // Russian plural forms: 1 параметр, 2-4 параметра, 5+ параметров
   const getParamText = () => {
-    if (paramCount === 1) return t('analysis.parameter');
-    if (paramCount >= 2 && paramCount <= 4) return t('analysis.parameters_few');
-    return t('analysis.parameters');
+    if (paramCount === 1) return t('ai_tools.parameter_one');
+    if (paramCount >= 2 && paramCount <= 4) return t('ai_tools.parameter_few');
+    return t('ai_tools.parameter_many');
   };
   
   const paramText = getParamText();

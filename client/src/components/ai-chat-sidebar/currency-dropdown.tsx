@@ -27,7 +27,7 @@ export function CurrencyDropdown({ value, onChange, availableCurrencies }: Curre
   return (
     <div className="space-y-1.5">
       <span className="text-muted-foreground capitalize text-xs">
-        {t('common.currency')}:
+        {t('ai_tools.currency')}:
       </span>
       <Select 
         value={value || 'USD'} 
@@ -35,7 +35,7 @@ export function CurrencyDropdown({ value, onChange, availableCurrencies }: Curre
         data-testid="select-currency"
       >
         <SelectTrigger className="h-8 text-sm">
-          <SelectValue placeholder={t('common.currency')} />
+          <SelectValue placeholder={t('ai_tools.select_currency')} />
         </SelectTrigger>
         <SelectContent>
           {filteredCurrencies.map((curr) => (

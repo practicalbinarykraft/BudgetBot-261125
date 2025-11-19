@@ -26,12 +26,12 @@ export function ConfirmationButtons({
         {loading ? (
           <>
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            {t('analysis.executing')}
+            {t('ai_tools.execute')}...
           </>
         ) : (
           <>
             <Check className="w-4 h-4 mr-2" />
-            {t('analysis.execute')}
+            {t('ai_tools.execute')}
           </>
         )}
       </Button>
@@ -42,7 +42,7 @@ export function ConfirmationButtons({
         data-testid="button-cancel-action"
       >
         <X className="w-4 h-4 mr-2" />
-        {t('analysis.cancel')}
+        {t('ai_tools.cancel')}
       </Button>
     </div>
   );

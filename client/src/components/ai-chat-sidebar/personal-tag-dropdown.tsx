@@ -28,7 +28,7 @@ export function PersonalTagDropdown({ value, availableTags, onChange }: Personal
   return (
     <div className="space-y-1.5">
       <span className="text-muted-foreground capitalize text-xs">
-        {t('analysis.select_personal_tag')}:
+        {t('ai_tools.personal_tag')}:
       </span>
       <Select 
         value={value || 'none'} 
@@ -36,11 +36,11 @@ export function PersonalTagDropdown({ value, availableTags, onChange }: Personal
         data-testid="select-personal-tag"
       >
         <SelectTrigger className="h-8 text-sm">
-          <SelectValue placeholder={t('analysis.select_personal_tag')} />
+          <SelectValue placeholder={t('ai_tools.select_tag')} />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="none" data-testid="option-tag-none">
-            {t('analysis.no_personal_tag')}
+            {t('ai_tools.no_tag')}
           </SelectItem>
           {availableTags.map((tag) => (
             <SelectItem 

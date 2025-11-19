@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
 import type { AiChatMessage } from '@shared/schema';
+import { useTranslation } from '@/i18n/context';
 
 interface Category {
   id: number;
@@ -47,6 +48,7 @@ interface ChatResponse {
 }
 
 export function AIChatSidebar() {
+  const { t } = useTranslation();
   const { isOpen, close } = useChatSidebar();
   const [message, setMessage] = useState('');
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
@@ -153,15 +155,15 @@ export function AIChatSidebar() {
       
       setPendingConfirmation(null); // Only clear on success
       toast({
-        title: 'Action completed',
-        description: 'Your request has been executed',
+        title: t('ai_tools.action_completed'),
+        description: t('ai_tools.request_executed'),
       });
     },
     onError: (error: any) => {
       // Keep confirmation visible so user can retry
       toast({
-        title: 'Action failed',
-        description: error.message || 'Failed to execute action. You can try again.',
+        title: t('ai_tools.action_failed'),
+        description: error.message || t('ai_tools.failed_retry'),
         variant: 'destructive',
       });
     },
@@ -170,8 +172,8 @@ export function AIChatSidebar() {
   const handleCancelTool = () => {
     setPendingConfirmation(null);
     toast({
-      title: 'Action cancelled',
-      description: 'You cancelled the action',
+      title: t('ai_tools.action_cancelled'),
+      description: t('ai_tools.you_cancelled'),
     });
   };
 

@@ -26,6 +26,7 @@ import { webWishlistTranslations } from './web-wishlist';
 import { webPlannedTranslations } from './web-planned';
 import { webRecurringTranslations } from './web-recurring';
 import { webAnalysisTranslations } from './web-analysis';
+import { webAiToolsTranslations } from './web-ai-tools';
 
 // Export types
 export type { Language, Translation, Translations } from './types';
@@ -54,6 +55,7 @@ const allTranslations: Translations = {
   ...webPlannedTranslations,
   ...webRecurringTranslations,
   ...webAnalysisTranslations,
+  ...webAiToolsTranslations,
 };
 
 /**

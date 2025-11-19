@@ -7,6 +7,7 @@ import { CategoryDropdown } from './category-dropdown';
 import { CurrencyDropdown } from './currency-dropdown';
 import { PersonalTagDropdown } from './personal-tag-dropdown';
 import { EditableField } from './editable-field';
+import { useTranslation } from '@/i18n/context';
 
 interface Settings {
   currency?: string;
@@ -66,6 +67,7 @@ export function ConfirmationCard({
   onConfirm,
   onCancel
 }: ConfirmationCardProps) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   
   // Fetch user settings for exchange rates
@@ -209,7 +211,7 @@ export function ConfirmationCard({
             <>
               <div className="space-y-1.5">
                 <EditableField
-                  label="Amount"
+                  label={t('ai_tools.amount')}
                   type="number"
                   value={editableParams.amount || 0}
                   onChange={(val) => handleFieldChange('amount', val)}
@@ -229,7 +231,7 @@ export function ConfirmationCard({
               </div>
               
               <EditableField
-                label="Description"
+                label={t('ai_tools.description')}
                 value={editableParams.description || ''}
                 onChange={(val) => handleFieldChange('description', val)}
                 testId="input-description"

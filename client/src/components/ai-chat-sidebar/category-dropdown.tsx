@@ -35,7 +35,7 @@ export function CategoryDropdown({
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
         <span className="text-muted-foreground capitalize text-xs">
-          {t('common.category')}:
+          {t('ai_tools.category')}:
         </span>
         {mlSuggestion && (
           <Badge 
@@ -54,7 +54,7 @@ export function CategoryDropdown({
         data-testid="select-category"
       >
         <SelectTrigger className="h-8 text-sm">
-          <SelectValue placeholder={t('analysis.select_category')} />
+          <SelectValue placeholder={t('ai_tools.select_category')} />
         </SelectTrigger>
         <SelectContent>
           {availableCategories.map((cat) => (
