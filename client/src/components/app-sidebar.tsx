@@ -24,6 +24,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarFooter,
+  SidebarRail,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -160,6 +161,7 @@ export function AppSidebar() {
           </Button>
         </div>
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   );
 }
