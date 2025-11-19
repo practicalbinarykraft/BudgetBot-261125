@@ -33,6 +33,7 @@ import analyticsRouter from "./analytics.routes";
 import personalTagsRouter from "./personal-tags.routes";
 import migrationRouter from "./admin/migration.routes";
 import sortingRouter from "./sorting.routes";
+import productCatalogRouter from "./product-catalog.routes";
 
 export function registerRoutes(app: Express) {
   // Domain-specific routes
@@ -50,6 +51,7 @@ export function registerRoutes(app: Express) {
   app.use("/api/telegram", telegramRouter);
   app.use("/api/tags", personalTagsRouter);
   app.use("/api/sorting", sortingRouter);
+  app.use("/api/product-catalog", productCatalogRouter);
   
   // Stats and analytics (mounted on /api for /api/stats and /api/financial-health)
   app.use("/api", statsRouter);
