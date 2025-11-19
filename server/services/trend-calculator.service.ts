@@ -16,6 +16,12 @@ import {
   makeCumulativeFromBase,
   type TrendDataPoint 
 } from "../lib/charts/historical-data-helpers";
+import {
+  getRecurringForDate,
+  getPlannedIncomeForDate,
+  getPlannedExpenseForDate,
+  getDailyBudgetTotal,
+} from "./forecast-filters.service";
 
 export type { TrendDataPoint };
 
@@ -27,6 +33,10 @@ export interface TrendCalculationParams {
   historyDays: number;
   forecastDays: number;
   anthropicApiKey?: string;
+  includeRecurring?: boolean;
+  includePlannedIncome?: boolean;
+  includePlannedExpenses?: boolean;
+  includeBudgetLimits?: boolean;
 }
 
 /**
@@ -42,7 +52,16 @@ export interface TrendCalculationParams {
 export async function calculateTrend(
   params: TrendCalculationParams
 ): Promise<TrendDataPoint[]> {
-  const { userId, historyDays, forecastDays, anthropicApiKey } = params;
+  const { 
+    userId, 
+    historyDays, 
+    forecastDays, 
+    anthropicApiKey,
+    includeRecurring = true,
+    includePlannedIncome = true,
+    includePlannedExpenses = true,
+    includeBudgetLimits = false,
+  } = params;
 
   // ШАГ 1: Получить данные из базы
   const transactions = await storage.getTransactionsByUserId(userId);
@@ -91,6 +110,10 @@ export async function calculateTrend(
     currentCapital,
     capitalAtPeriodStart,
     historicalCumulative,
+    includeRecurring,
+    includePlannedIncome,
+    includePlannedExpenses,
+    includeBudgetLimits,
   });
 
   // ШАГ 5: Объединить историю + прогноз
@@ -107,6 +130,10 @@ async function generateAndProcessForecast(params: {
   currentCapital: number;
   capitalAtPeriodStart: number;
   historicalCumulative: TrendDataPoint[];
+  includeRecurring: boolean;
+  includePlannedIncome: boolean;
+  includePlannedExpenses: boolean;
+  includeBudgetLimits: boolean;
 }): Promise<TrendDataPoint[]> {
   const {
     userId,
@@ -115,6 +142,10 @@ async function generateAndProcessForecast(params: {
     currentCapital,
     capitalAtPeriodStart,
     historicalCumulative,
+    includeRecurring,
+    includePlannedIncome,
+    includePlannedExpenses,
+    includeBudgetLimits,
   } = params;
 
   if (!anthropicApiKey || forecastDays === 0) {
@@ -129,14 +160,47 @@ async function generateAndProcessForecast(params: {
       currentCapital
     );
 
-    let forecastData = forecast.map(f => ({
-      date: f.date,
-      income: f.predictedIncome,
-      expense: f.predictedExpense,
-      capital: f.predictedCapital,
-      isToday: false,
-      isForecast: true,
-    }));
+    // Apply filters to forecast data
+    const forecastDataWithFilters = await Promise.all(
+      forecast.map(async (f) => {
+        const date = new Date(f.date);
+        let income = f.predictedIncome;
+        let expense = f.predictedExpense;
+        
+        // Apply filters if enabled
+        if (includeRecurring) {
+          const recurring = await getRecurringForDate(userId, date);
+          income += recurring.income;
+          expense += recurring.expense;
+        }
+        
+        if (includePlannedIncome) {
+          const plannedIncome = await getPlannedIncomeForDate(userId, date);
+          income += plannedIncome;
+        }
+        
+        if (includePlannedExpenses) {
+          const plannedExpense = await getPlannedExpenseForDate(userId, date);
+          expense += plannedExpense;
+        }
+        
+        if (includeBudgetLimits) {
+          const budgetTotal = await getDailyBudgetTotal(userId, date);
+          expense += budgetTotal;
+        }
+        
+        return {
+          date: f.date,
+          income,
+          expense,
+          capital: f.predictedCapital,
+          isToday: false,
+          isForecast: true,
+        };
+      })
+    );
+    
+    let forecastData = forecastDataWithFilters;
 
     if (historicalCumulative.length > 0) {
       const lastHistorical = historicalCumulative[historicalCumulative.length - 1];

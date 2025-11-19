@@ -30,6 +30,10 @@ export interface TrendWithGoals {
 interface UseFinancialTrendOptions {
   historyDays?: number;
   forecastDays?: number;
+  includeRecurring?: boolean;
+  includePlannedIncome?: boolean;
+  includePlannedExpenses?: boolean;
+  includeBudgetLimits?: boolean;
 }
 
 /**
@@ -37,17 +41,37 @@ interface UseFinancialTrendOptions {
  * 
  * @param historyDays Number of historical days to fetch (default: 30)
  * @param forecastDays Number of forecast days to generate (default: 365)
+ * @param includeRecurring Include recurring transactions in forecast (default: true)
+ * @param includePlannedIncome Include planned income in forecast (default: true)
+ * @param includePlannedExpenses Include planned expenses in forecast (default: true)
+ * @param includeBudgetLimits Include budget limits in forecast (default: false)
  */
 export function useFinancialTrend({
   historyDays = 30,
   forecastDays = 365,
+  includeRecurring = true,
+  includePlannedIncome = true,
+  includePlannedExpenses = true,
+  includeBudgetLimits = false,
 }: UseFinancialTrendOptions = {}) {
   return useQuery<TrendWithGoals>({
-    queryKey: ["/api/analytics/trend", historyDays, forecastDays],
+    queryKey: [
+      "/api/analytics/trend", 
+      historyDays, 
+      forecastDays,
+      includeRecurring,
+      includePlannedIncome,
+      includePlannedExpenses,
+      includeBudgetLimits,
+    ],
     queryFn: async () => {
       const params = new URLSearchParams({
         historyDays: historyDays.toString(),
         forecastDays: forecastDays.toString(),
+        includeRecurring: includeRecurring.toString(),
+        includePlannedIncome: includePlannedIncome.toString(),
+        includePlannedExpenses: includePlannedExpenses.toString(),
+        includeBudgetLimits: includeBudgetLimits.toString(),
       });
       
       const res = await fetch(`/api/analytics/trend?${params}`);

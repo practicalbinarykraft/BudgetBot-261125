@@ -51,6 +51,10 @@ function getPeriodDates(period: string = 'month'): { startDate: string; endDate:
  * Query params:
  * - historyDays: number of historical days (default: 30)
  * - forecastDays: number of forecast days (default: 365)
+ * - includeRecurring: include recurring transactions in forecast (default: true)
+ * - includePlannedIncome: include planned income in forecast (default: true)
+ * - includePlannedExpenses: include planned expenses in forecast (default: true)
+ * - includeBudgetLimits: include budget limits in forecast (default: false)
  */
 router.get("/trend", withAuth(async (req, res) => {
   try {
@@ -59,6 +63,12 @@ router.get("/trend", withAuth(async (req, res) => {
     // ШАГ 1: Распарсить и валидировать параметры
     const historyDays = parseInt(req.query.historyDays as string) || 30;
     const forecastDays = parseInt(req.query.forecastDays as string) || 365;
+    
+    // ШАГ 1.5: Распарсить фильтры прогноза
+    const includeRecurring = req.query.includeRecurring !== 'false';
+    const includePlannedIncome = req.query.includePlannedIncome !== 'false';
+    const includePlannedExpenses = req.query.includePlannedExpenses !== 'false';
+    const includeBudgetLimits = req.query.includeBudgetLimits === 'true';
 
     // ШАГ 2: Получить API ключ пользователя для AI прогноза
     const settings = await storage.getSettingsByUserId(userId);
@@ -70,6 +80,10 @@ router.get("/trend", withAuth(async (req, res) => {
       historyDays,
       forecastDays,
       anthropicApiKey,
+      includeRecurring,
+      includePlannedIncome,
+      includePlannedExpenses,
+      includeBudgetLimits,
     });
 
     // ШАГ 4: Получить planned transaction goals с предсказаниями для timeline markers

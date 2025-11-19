@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceDot } from "recharts";
 import { useFinancialTrend } from "@/hooks/use-financial-trend";
 import { WishlistItemWithPrediction } from "@/types/goal-prediction";
@@ -17,6 +17,8 @@ import { ChartLegend } from "@/components/charts/chart-legend";
 import { GoalMarkersLayer } from "@/components/charts/goal-markers-layer";
 import { ChartLoadingState, ChartErrorState, ChartEmptyState } from "@/components/charts/chart-loading-states";
 import { useTranslation } from "@/i18n";
+import { ForecastFiltersCard, type ForecastFilters } from "@/components/charts/forecast-filters";
+import { CapitalWarning } from "@/components/charts/capital-warning";
 
 /**
  * Financial Trend Chart
@@ -33,10 +35,39 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
   const [hoveredGoal, setHoveredGoal] = useState<string | null>(null); // String only (all IDs normalized)
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [, setLocation] = useLocation();
+  
+  // Forecast filters with localStorage persistence
+  const [filters, setFilters] = useState<ForecastFilters>(() => {
+    const saved = localStorage.getItem('forecastFilters');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return {
+          includeRecurring: true,
+          includePlannedIncome: true,
+          includePlannedExpenses: true,
+          includeBudgetLimits: false,
+        };
+      }
+    }
+    return {
+      includeRecurring: true,
+      includePlannedIncome: true,
+      includePlannedExpenses: true,
+      includeBudgetLimits: false,
+    };
+  });
+  
+  // Save filters to localStorage when they change
+  useEffect(() => {
+    localStorage.setItem('forecastFilters', JSON.stringify(filters));
+  }, [filters]);
 
   const { data, isLoading, error } = useFinancialTrend({
     historyDays,
     forecastDays,
+    ...filters,
   });
 
   // Destructure trend data and goals
@@ -59,6 +90,9 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
 
   // Filter chart data for rendering: show only historical when forecastDays = 0
   const chartData = forecastDays > 0 ? trendData : historicalData;
+  
+  // Check if capital goes negative in forecast
+  const hasNegativeCapital = forecastData.some(d => d.capital < 0);
 
   return (
     <Card data-testid="card-financial-trend">
@@ -198,6 +232,15 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
           hasForecast={forecastDays > 0 && forecastData.length > 0}
           hasGoals={goals.length > 0}
         />
+        
+        {/* Forecast Filters */}
+        <ForecastFiltersCard
+          filters={filters}
+          onChange={setFilters}
+        />
+        
+        {/* Capital Warning */}
+        <CapitalWarning hasNegativeCapital={hasNegativeCapital} />
       </CardContent>
     </Card>
   );
