@@ -13,6 +13,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { useTranslation } from "@/i18n/context";
 import { Category, PersonalTag } from "@shared/schema";
 import { Plus } from "lucide-react";
 import { CategoryCreateDialog } from "@/components/categories/category-create-dialog";
@@ -39,17 +40,18 @@ interface TransactionResponse {
   mlConfidence: number;
 }
 
-const formSchema = insertTransactionSchema.extend({
-  amount: z.string().min(1, "Amount is required"),
-});
-
-type FormData = z.infer<typeof formSchema>;
-
 export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId }: AddTransactionDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const [showCreateCategory, setShowCreateCategory] = useState(false);
+
+  const formSchema = insertTransactionSchema.extend({
+    amount: z.string().min(1, t("transactions.amount_required")),
+  });
+
+  type FormData = z.infer<typeof formSchema>;
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
@@ -97,14 +99,17 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/unsorted"], exact: false });
       
       if (transaction.mlSuggested && transaction.category) {
+        const confidence = Math.round(transaction.mlConfidence * 100);
         toast({
-          title: "Smart Suggestion Applied",
-          description: `Category "${transaction.category}" auto-selected (${Math.round(transaction.mlConfidence * 100)}% confidence)`,
+          title: t("transactions.smart_suggestion_applied"),
+          description: t("transactions.category_auto_selected")
+            .replace("{category}", transaction.category)
+            .replace("{confidence}", String(confidence)),
         });
       } else {
         toast({
-          title: "Success",
-          description: "Transaction added successfully",
+          title: t("common.success"),
+          description: t("transactions.added_successfully"),
         });
       }
       
@@ -113,7 +118,7 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t("common.error_occurred"),
         description: error.message,
         variant: "destructive",
       });
@@ -128,7 +133,7 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Transaction</DialogTitle>
+          <DialogTitle>{t("transactions.add_transaction")}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -137,16 +142,16 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
               name="type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Type</FormLabel>
+                  <FormLabel>{t("common.type")}</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger data-testid="select-type">
-                        <SelectValue placeholder="Select type" />
+                        <SelectValue placeholder={t("transactions.select_type")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="income">Income</SelectItem>
-                      <SelectItem value="expense">Expense</SelectItem>
+                      <SelectItem value="income">{t("transactions.type.income")}</SelectItem>
+                      <SelectItem value="expense">{t("transactions.type.expense")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -160,7 +165,7 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
                 name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Amount</FormLabel>
+                    <FormLabel>{t("transactions.amount")}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -180,11 +185,11 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
                 name="currency"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Currency</FormLabel>
+                    <FormLabel>{t("transactions.currency")}</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
                       <FormControl>
                         <SelectTrigger data-testid="select-currency">
-                          <SelectValue placeholder="Currency" />
+                          <SelectValue placeholder={t("transactions.currency")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -204,9 +209,9 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>{t("transactions.description")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Coffee, groceries, etc." data-testid="input-description" {...field} />
+                    <Input placeholder={t("transactions.placeholder_description")} data-testid="input-description" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -218,11 +223,11 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
               name="category"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Category (Optional)</FormLabel>
+                  <FormLabel>{t("transactions.category_optional")}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value || ""}>
                     <FormControl>
                       <SelectTrigger data-testid="select-category">
-                        <SelectValue placeholder="Select category" />
+                        <SelectValue placeholder={t("transactions.select_category")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -242,7 +247,7 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
                         data-testid="button-create-category"
                       >
                         <Plus className="h-4 w-4" />
-                        Create new category
+                        {t("transactions.create_new_category")}
                       </button>
                     </SelectContent>
                   </Select>
@@ -256,7 +261,7 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
               name="personalTagId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tag (Optional)</FormLabel>
+                  <FormLabel>{t("transactions.tag_optional")}</FormLabel>
                   <FormControl>
                     <TagSelector
                       value={field.value ?? null}
@@ -273,7 +278,7 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
               name="date"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Date</FormLabel>
+                  <FormLabel>{t("transactions.date")}</FormLabel>
                   <FormControl>
                     <Input type="date" data-testid="input-date" {...field} />
                   </FormControl>
@@ -290,7 +295,7 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
                 className="flex-1"
                 data-testid="button-cancel"
               >
-                Cancel
+                {t("transactions.cancel")}
               </Button>
               <Button
                 type="submit"
@@ -298,7 +303,7 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
                 className="flex-1"
                 data-testid="button-submit-transaction"
               >
-                {createMutation.isPending ? "Adding..." : "Add Transaction"}
+                {createMutation.isPending ? t("transactions.adding") : t("transactions.add_transaction")}
               </Button>
             </div>
           </form>

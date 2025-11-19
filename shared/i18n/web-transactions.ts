@@ -197,4 +197,24 @@ export const webTransactionsTranslations: Translations = {
     en: 'Amount is required',
     ru: 'Требуется сумма',
   },
+  'transactions.create_new_category': {
+    en: 'Create new category',
+    ru: 'Создать новую категорию',
+  },
+  'transactions.adding': {
+    en: 'Adding...',
+    ru: 'Добавление...',
+  },
+  'transactions.added_successfully': {
+    en: 'Transaction added successfully',
+    ru: 'Транзакция успешно добавлена',
+  },
+  'transactions.smart_suggestion_applied': {
+    en: 'Smart Suggestion Applied',
+    ru: 'Применена умная подсказка',
+  },
+  'transactions.category_auto_selected': {
+    en: 'Category "{category}" auto-selected ({confidence}% confidence)',
+    ru: 'Категория "{category}" выбрана автоматически (уверенность {confidence}%)',
+  },
 };
