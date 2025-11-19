@@ -34,6 +34,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
   const { toast } = useToast();
   const [historyDays, setHistoryDays] = useState(30);
   const [forecastDays, setForecastDays] = useState(365);
+  const [useAI, setUseAI] = useState(false); // AI forecast opt-in (default: false)
   const [hoveredGoal, setHoveredGoal] = useState<string | null>(null); // String only (all IDs normalized)
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [, setLocation] = useLocation();
@@ -72,6 +73,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
   const { data, isLoading, isFetching, error } = useFinancialTrend({
     historyDays,
     forecastDays,
+    useAI,
     includeRecurringIncome: filters.includeRecurringIncome,
     includeRecurringExpense: filters.includeRecurringExpense,
     includePlannedIncome: filters.includePlannedIncome,
@@ -258,6 +260,8 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
         <ForecastFiltersCard
           filters={filters}
           onChange={setFilters}
+          useAI={useAI}
+          onUseAIChange={setUseAI}
           isLoading={isFetching}
         />
         

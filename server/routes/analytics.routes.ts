@@ -51,6 +51,7 @@ function getPeriodDates(period: string = 'month'): { startDate: string; endDate:
  * Query params:
  * - historyDays: number of historical days (default: 30)
  * - forecastDays: number of forecast days (default: 365)
+ * - useAI: use AI forecast (opt-in, default: false)
  * - includeRecurringIncome: include recurring income in forecast (default: true)
  * - includeRecurringExpense: include recurring expenses in forecast (default: true)
  * - includePlannedIncome: include planned income in forecast (default: true)
@@ -64,6 +65,7 @@ router.get("/trend", withAuth(async (req, res) => {
     // ШАГ 1: Распарсить и валидировать параметры
     const historyDays = parseInt(req.query.historyDays as string) || 30;
     const forecastDays = parseInt(req.query.forecastDays as string) || 365;
+    const useAI = req.query.useAI === 'true'; // Opt-in для AI прогноза
     
     // ШАГ 1.5: Распарсить фильтры прогноза
     const includeRecurringIncome = req.query.includeRecurringIncome !== 'false';
@@ -76,18 +78,21 @@ router.get("/trend", withAuth(async (req, res) => {
     const settings = await storage.getSettingsByUserId(userId);
     const anthropicApiKey = settings?.anthropicApiKey || undefined;
 
-    // ШАГ 3: Вызвать сервис для расчёта тренда
-    const trendData = await calculateTrend({
+    // ШАГ 3: Вызвать сервис для расчёта тренда (с metadata)
+    const result = await calculateTrend({
       userId,
       historyDays,
       forecastDays,
       anthropicApiKey,
+      useAI,
       includeRecurringIncome,
       includeRecurringExpense,
       includePlannedIncome,
       includePlannedExpenses,
       includeBudgetLimits,
     });
+    
+    const { trendData, metadata } = result;
 
     // ШАГ 4: Получить planned transaction goals с предсказаниями для timeline markers
     const allPlanned = await storage.getPlannedByUserId(userId);
@@ -131,10 +136,11 @@ router.get("/trend", withAuth(async (req, res) => {
       })
       .filter((item: any) => item.prediction?.monthsToAfford !== null); // Только доступные цели
 
-    // ШАГ 5: Вернуть тренд + цели
+    // ШАГ 5: Вернуть тренд + цели + metadata (already ISO string)
     res.json({
       trendData,
       goals,
+      metadata, // Already serialized to ISO string in forecast.service.ts
     });
   } catch (error: any) {
     console.error("Trend data error:", error);

@@ -26,6 +26,15 @@ import {
 
 export type { TrendDataPoint };
 
+export interface TrendWithMetadata {
+  trendData: TrendDataPoint[];
+  metadata: {
+    usedAI: boolean;
+    fromCache: boolean;
+    cacheExpiresAt: string | null; // ISO string for JSON serialization
+  };
+}
+
 /**
  * Параметры расчёта тренда
  */
@@ -34,6 +43,7 @@ export interface TrendCalculationParams {
   historyDays: number;
   forecastDays: number;
   anthropicApiKey?: string;
+  useAI?: boolean;
   includeRecurringIncome?: boolean;
   includeRecurringExpense?: boolean;
   includePlannedIncome?: boolean;
@@ -53,12 +63,13 @@ export interface TrendCalculationParams {
  */
 export async function calculateTrend(
   params: TrendCalculationParams
-): Promise<TrendDataPoint[]> {
+): Promise<TrendWithMetadata> {
   const { 
     userId, 
     historyDays, 
     forecastDays, 
     anthropicApiKey,
+    useAI = false,
     includeRecurringIncome = true,
     includeRecurringExpense = true,
     includePlannedIncome = true,
@@ -106,9 +117,10 @@ export async function calculateTrend(
   });
 
   // ШАГ 4: Получить прогноз от AI (если есть API ключ)
-  const forecastData = await generateAndProcessForecast({
+  const { forecastData, metadata } = await generateAndProcessForecast({
     userId,
     anthropicApiKey,
+    useAI,
     forecastDays,
     currentCapital,
     capitalAtPeriodStart,
@@ -120,16 +132,21 @@ export async function calculateTrend(
     includeBudgetLimits,
   });
 
-  // ШАГ 5: Объединить историю + прогноз
-  return [...historicalCumulative, ...forecastData];
+  // ШАГ 5: Объединить историю + прогноз и вернуть с metadata
+  return {
+    trendData: [...historicalCumulative, ...forecastData],
+    metadata,
+  };
 }
 
 /**
  * Генерация и обработка прогноза
+ * Возвращает forecast data + metadata (usedAI, fromCache, cacheExpiresAt)
  */
 async function generateAndProcessForecast(params: {
   userId: number;
   anthropicApiKey?: string;
+  useAI?: boolean;
   forecastDays: number;
   currentCapital: number;
   capitalAtPeriodStart: number;
@@ -139,10 +156,18 @@ async function generateAndProcessForecast(params: {
   includePlannedIncome: boolean;
   includePlannedExpenses: boolean;
   includeBudgetLimits: boolean;
-}): Promise<TrendDataPoint[]> {
+}): Promise<{
+  forecastData: TrendDataPoint[];
+  metadata: {
+    usedAI: boolean;
+    fromCache: boolean;
+    cacheExpiresAt: string | null; // ISO string for JSON serialization
+  };
+}> {
   const {
     userId,
     anthropicApiKey,
+    useAI = false,
     forecastDays,
     currentCapital,
     capitalAtPeriodStart,
@@ -154,21 +179,37 @@ async function generateAndProcessForecast(params: {
     includeBudgetLimits,
   } = params;
 
-  if (!anthropicApiKey || forecastDays === 0) {
-    return [];
+  if (forecastDays === 0) {
+    return {
+      forecastData: [],
+      metadata: {
+        usedAI: false,
+        fromCache: false,
+        cacheExpiresAt: null, // string | null
+      },
+    };
   }
 
   try {
-    const forecast = await generateForecast(
+    const result = await generateForecast(
       userId,
-      anthropicApiKey,
+      anthropicApiKey || '',
       forecastDays,
-      currentCapital
+      currentCapital,
+      useAI,
+      // Передаем фильтры для правильного cache key
+      {
+        includeRecurringIncome,
+        includeRecurringExpense,
+        includePlannedIncome,
+        includePlannedExpenses,
+        includeBudgetLimits,
+      }
     );
 
     // Apply filters to forecast data
     const forecastDataWithFilters = await Promise.all(
-      forecast.map(async (f) => {
+      result.forecast.map(async (f) => {
         const date = new Date(f.date);
         let income = f.predictedIncome;
         let expense = f.predictedExpense;
@@ -219,20 +260,30 @@ async function generateAndProcessForecast(params: {
         lastHistorical.income,
         lastHistorical.expense
       );
-      forecastData.forEach(point => {
+      forecastData.forEach((point: TrendDataPoint) => {
         point.capital = capitalAtPeriodStart + point.income - point.expense;
       });
     } else {
       forecastData = makeCumulativeFromBase(forecastData, 0, 0);
-      forecastData.forEach(point => {
+      forecastData.forEach((point: TrendDataPoint) => {
         point.capital = currentCapital + point.income - point.expense;
       });
     }
 
-    return forecastData;
+    return {
+      forecastData,
+      metadata: result.metadata,
+    };
   } catch (error: any) {
     console.error("Forecast generation failed:", error.message);
-    return [];
+    return {
+      forecastData: [],
+      metadata: {
+        usedAI: false,
+        fromCache: false,
+        cacheExpiresAt: null, // string | null
+      },
+    };
   }
 }
 

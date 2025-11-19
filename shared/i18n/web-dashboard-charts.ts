@@ -93,6 +93,54 @@ export const webDashboardChartsTranslations: Translations = {
     ru: 'Обновить график',
   },
   
+  // AI Forecast Toggle
+  'dashboard.ai_forecast_toggle': {
+    en: 'AI Forecast',
+    ru: 'AI Прогноз',
+  },
+  'dashboard.ai_forecast_enabled': {
+    en: 'AI forecast active',
+    ru: 'AI прогноз активен',
+  },
+  'dashboard.ai_forecast_disabled': {
+    en: 'Linear forecast',
+    ru: 'Линейный прогноз',
+  },
+  'dashboard.ai_forecast_from_cache': {
+    en: 'from cache (free)',
+    ru: 'из кеша (бесплатно)',
+  },
+  'dashboard.ai_forecast_cache_expires': {
+    en: 'Cache expires',
+    ru: 'Кеш истекает',
+  },
+  
+  // AI Warning Dialog
+  'dashboard.ai_warning_title': {
+    en: 'Enable AI Forecast?',
+    ru: 'Включить AI прогноз?',
+  },
+  'dashboard.ai_warning_description': {
+    en: 'AI forecast analyzes your spending patterns and trends for more accurate predictions.',
+    ru: 'AI прогноз анализирует паттерны ваших трат и тренды для более точных предсказаний.',
+  },
+  'dashboard.ai_warning_cost': {
+    en: 'This will use your Anthropic API key and cost approximately $0.15-0.30 per request.',
+    ru: 'Это использует ваш Anthropic API ключ и стоит примерно $0.15-0.30 за запрос.',
+  },
+  'dashboard.ai_warning_cache': {
+    en: 'Results are cached for 12 hours, so repeated requests are free during that time.',
+    ru: 'Результаты кешируются на 12 часов, повторные запросы в этот период бесплатны.',
+  },
+  'dashboard.ai_warning_confirm': {
+    en: 'Generate AI Forecast',
+    ru: 'Сгенерировать AI прогноз',
+  },
+  'dashboard.ai_warning_cancel': {
+    en: 'Keep linear forecast',
+    ru: 'Оставить линейный прогноз',
+  },
+  
   // Budget Warning
   'dashboard.budget_warning_title': {
     en: 'Warning: Risk of insufficient funds',

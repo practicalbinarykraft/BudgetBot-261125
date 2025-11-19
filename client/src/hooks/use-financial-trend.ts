@@ -30,6 +30,7 @@ export interface TrendWithGoals {
 interface UseFinancialTrendOptions {
   historyDays?: number;
   forecastDays?: number;
+  useAI?: boolean;
   includeRecurringIncome?: boolean;
   includeRecurringExpense?: boolean;
   includePlannedIncome?: boolean;
@@ -42,6 +43,7 @@ interface UseFinancialTrendOptions {
  * 
  * @param historyDays Number of historical days to fetch (default: 30)
  * @param forecastDays Number of forecast days to generate (default: 365)
+ * @param useAI Use AI forecast (opt-in, default: false)
  * @param includeRecurringIncome Include recurring income in forecast (default: true)
  * @param includeRecurringExpense Include recurring expenses in forecast (default: true)
  * @param includePlannedIncome Include planned income in forecast (default: true)
@@ -51,6 +53,7 @@ interface UseFinancialTrendOptions {
 export function useFinancialTrend({
   historyDays = 30,
   forecastDays = 365,
+  useAI = false,
   includeRecurringIncome = true,
   includeRecurringExpense = true,
   includePlannedIncome = true,
@@ -61,6 +64,7 @@ export function useFinancialTrend({
     "/api/analytics/trend", 
     historyDays, 
     forecastDays,
+    useAI,
     includeRecurringIncome,
     includeRecurringExpense,
     includePlannedIncome,
@@ -76,6 +80,7 @@ export function useFinancialTrend({
       const params = new URLSearchParams({
         historyDays: historyDays.toString(),
         forecastDays: forecastDays.toString(),
+        useAI: useAI.toString(),
         includeRecurringIncome: includeRecurringIncome.toString(),
         includeRecurringExpense: includeRecurringExpense.toString(),
         includePlannedIncome: includePlannedIncome.toString(),

@@ -4,7 +4,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTranslation } from "@/i18n";
-import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, AlertTriangle } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, AlertTriangle, Sparkles } from "lucide-react";
+import { AiForecastWarning } from "@/components/dialogs/ai-forecast-warning";
 
 export interface ForecastFilters {
   includeRecurringIncome: boolean;
@@ -17,11 +18,21 @@ export interface ForecastFilters {
 interface ForecastFiltersProps {
   filters: ForecastFilters;
   onChange: (filters: ForecastFilters) => void;
+  useAI?: boolean;
+  onUseAIChange?: (useAI: boolean) => void;
   isLoading?: boolean;
 }
 
-export function ForecastFiltersCard({ filters, onChange, isLoading = false }: ForecastFiltersProps) {
+export function ForecastFiltersCard({ 
+  filters, 
+  onChange, 
+  useAI = false,
+  onUseAIChange,
+  isLoading = false 
+}: ForecastFiltersProps) {
   const { t } = useTranslation();
+  const [showAIWarning, setShowAIWarning] = useState(false);
+  
   // Ensure all filter values are boolean (prevent uncontrolled->controlled warning)
   const [pendingFilters, setPendingFilters] = useState<ForecastFilters>(() => ({
     includeRecurringIncome: Boolean(filters.includeRecurringIncome),
@@ -95,6 +106,20 @@ export function ForecastFiltersCard({ filters, onChange, isLoading = false }: Fo
     onChange(pendingFilters);
   };
 
+  const handleAIToggle = () => {
+    if (!useAI) {
+      // Turning ON: show warning
+      setShowAIWarning(true);
+    } else {
+      // Turning OFF: no warning needed
+      onUseAIChange?.(false);
+    }
+  };
+
+  const handleConfirmAI = () => {
+    onUseAIChange?.(true);
+  };
+
   const renderFilterOption = (option: any) => {
     const Icon = option.icon;
     return (
@@ -123,30 +148,51 @@ export function ForecastFiltersCard({ filters, onChange, isLoading = false }: Fo
   };
 
   return (
-    <Card className="mt-4">
-      <CardHeader>
-        <CardTitle className="text-sm font-semibold">
-          {t('dashboard.forecast_filters_title')}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="space-y-3">
-            {incomeFilters.map(renderFilterOption)}
+    <>
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle className="text-sm font-semibold flex items-center justify-between">
+            <span>{t('dashboard.forecast_filters_title')}</span>
+            {onUseAIChange && (
+              <Button
+                variant={useAI ? "default" : "outline"}
+                size="sm"
+                onClick={handleAIToggle}
+                disabled={isLoading}
+                data-testid="button-toggle-ai-forecast"
+                className="gap-2"
+              >
+                <Sparkles className="w-4 h-4" />
+                {useAI ? t('dashboard.ai_forecast_enabled') : t('dashboard.ai_forecast_disabled')}
+              </Button>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="space-y-3">
+              {incomeFilters.map(renderFilterOption)}
+            </div>
+            <div className="space-y-3">
+              {expenseFilters.map(renderFilterOption)}
+            </div>
           </div>
-          <div className="space-y-3">
-            {expenseFilters.map(renderFilterOption)}
-          </div>
-        </div>
-        <Button 
-          onClick={handleApply} 
-          className="w-full"
-          disabled={isLoading}
-          data-testid="button-apply-filters"
-        >
-          {isLoading ? t('common.loading') : t('dashboard.filter_apply_button')}
-        </Button>
-      </CardContent>
-    </Card>
+          <Button 
+            onClick={handleApply} 
+            className="w-full"
+            disabled={isLoading}
+            data-testid="button-apply-filters"
+          >
+            {isLoading ? t('common.loading') : t('dashboard.filter_apply_button')}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <AiForecastWarning
+        open={showAIWarning}
+        onOpenChange={setShowAIWarning}
+        onConfirm={handleConfirmAI}
+      />
+    </>
   );
 }

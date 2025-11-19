@@ -5,6 +5,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { storage } from "../storage";
 import type { Transaction, Recurring } from "@shared/schema";
+import {
+  getAiForecastFromCache,
+  setAiForecastCache,
+} from "./ai-forecast-cache.service";
 
 interface ForecastDataPoint {
   date: string;
@@ -13,19 +17,38 @@ interface ForecastDataPoint {
   predictedCapital: number;
 }
 
+export interface ForecastResult {
+  forecast: ForecastDataPoint[];
+  metadata: {
+    usedAI: boolean;
+    fromCache: boolean;
+    cacheExpiresAt: string | null; // ISO string for JSON serialization
+  };
+}
+
 /**
- * Generate financial forecast using AI
+ * Generate financial forecast
  * @param userId User ID
  * @param apiKey User's Anthropic API key (BYOK)
  * @param daysAhead Number of days to forecast
  * @param currentCapital Current total capital/net worth
+ * @param useAI Whether to use AI forecast (opt-in, default: false)
+ * @param filters Forecast filters (for cache key)
  */
 export async function generateForecast(
   userId: number,
   apiKey: string,
   daysAhead: number,
-  currentCapital: number
-): Promise<ForecastDataPoint[]> {
+  currentCapital: number,
+  useAI: boolean = false,
+  filters?: {
+    includeRecurringIncome?: boolean;
+    includeRecurringExpense?: boolean;
+    includePlannedIncome?: boolean;
+    includePlannedExpenses?: boolean;
+    includeBudgetLimits?: boolean;
+  }
+): Promise<ForecastResult> {
   // Get historical data (last 90 days)
   const historicalDays = 90;
   const historicalTransactions = await getHistoricalTransactions(userId, historicalDays);
@@ -37,16 +60,46 @@ export async function generateForecast(
   // Calculate historical averages
   const stats = calculateHistoricalStats(historicalTransactions);
 
-  // If no API key, use simple forecast immediately
-  if (!apiKey) {
-    console.warn('[Forecast] No API key provided, using simple linear forecast');
-    return generateSimpleForecast(
+  // If useAI=false or no API key, use simple forecast immediately
+  if (!useAI || !apiKey) {
+    const reason = !useAI ? 'AI forecast not requested (opt-in)' : 'No API key provided';
+    console.log(`[Forecast] ${reason}, using simple linear forecast`);
+    const forecast = generateSimpleForecast(
       daysAhead,
       stats.avgDailyIncome,
       stats.avgDailyExpense,
       currentCapital,
       activeRecurring
     );
+    return {
+      forecast,
+      metadata: {
+        usedAI: false,
+        fromCache: false,
+        cacheExpiresAt: null,
+      },
+    };
+  }
+
+  // Check cache first (before making expensive API call)
+  const cached = getAiForecastFromCache({ 
+    userId, 
+    historyDays: historicalDays, 
+    forecastDays: daysAhead,
+    useAI, // Include useAI in cache key
+    ...filters, // Include filters in cache key
+  });
+  if (cached) {
+    console.log(`[Forecast] Using cached AI forecast (expires: ${cached.expiresAt.toISOString()})`);
+    const forecast = buildForecastFromCache(cached, currentCapital);
+    return {
+      forecast,
+      metadata: {
+        usedAI: true,
+        fromCache: true,
+        cacheExpiresAt: cached.expiresAt.toISOString(), // Convert Date to ISO string
+      },
+    };
   }
 
   // Try AI forecast with AbortController-based timeout
@@ -153,7 +206,33 @@ export async function generateForecast(
       }
     }
     
-      return forecast as ForecastDataPoint[];
+    // Save to cache before returning (with capital + baseCapital for offset calculation)
+    const aiData = {
+      dailyIncome: forecast.map(f => f.predictedIncome),
+      dailyExpense: forecast.map(f => f.predictedExpense),
+      dailyCapital: forecast.map(f => f.predictedCapital),
+      baseCapital: currentCapital, // Save current capital for offset calculation
+    };
+    setAiForecastCache(
+      { 
+        userId, 
+        historyDays: historicalDays, 
+        forecastDays: daysAhead,
+        useAI, // Include useAI in cache key
+        ...filters, // Include filters in cache key
+      },
+      aiData
+    );
+
+    const cacheExpiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000); // 12 hours
+    return {
+      forecast: forecast as ForecastDataPoint[],
+      metadata: {
+        usedAI: true,
+        fromCache: false,
+        cacheExpiresAt: cacheExpiresAt.toISOString(), // Convert Date to ISO string
+      },
+    };
     } catch (innerError: any) {
       // Clear timeout on error
       clearTimeout(timeoutId);
@@ -168,13 +247,21 @@ export async function generateForecast(
     }
     
     // Fallback to simple linear forecast
-    return generateSimpleForecast(
+    const forecast = generateSimpleForecast(
       daysAhead,
       stats.avgDailyIncome,
       stats.avgDailyExpense,
       currentCapital,
       activeRecurring
     );
+    return {
+      forecast,
+      metadata: {
+        usedAI: false,
+        fromCache: false,
+        cacheExpiresAt: null,
+      },
+    };
   }
 }
 
@@ -319,6 +406,54 @@ function generateSimpleForecast(
       date: dateStr,
       predictedIncome: dailyIncome,
       predictedExpense: dailyExpense,
+      predictedCapital: runningCapital,
+    });
+  }
+
+  return forecast;
+}
+
+/**
+ * Build forecast from cached AI data
+ * IMPORTANT: Recalculates capital from currentCapital using cached income/expense
+ * to ensure continuity with historical data regardless of base capital changes.
+ * 
+ * Why not use cached capital directly:
+ * - If user makes transactions after caching, currentCapital changes
+ * - If user makes historical transactions, capitalAtPeriodStart changes
+ * - Simple offset doesn't account for these changes → discontinuity
+ * 
+ * Solution: Recalculate capital from currentCapital as running sum of income - expense
+ * Note: May deviate slightly from AI's capital if AI used non-linear patterns,
+ * but ensures smooth continuity with historical data.
+ */
+function buildForecastFromCache(
+  cached: {
+    dailyIncome: number[];
+    dailyExpense: number[];
+    dailyCapital: number[]; // Not used, kept for reference
+    baseCapital: number; // Not used
+    expiresAt: Date;
+  },
+  currentCapital: number
+): ForecastDataPoint[] {
+  const forecast: ForecastDataPoint[] = [];
+  const today = new Date();
+  let runningCapital = currentCapital; // Start from current capital
+
+  for (let i = 0; i < cached.dailyIncome.length; i++) {
+    const forecastDate = new Date(today);
+    forecastDate.setDate(today.getDate() + i + 1);
+    const dateStr = forecastDate.toISOString().split('T')[0];
+
+    const income = cached.dailyIncome[i] || 0;
+    const expense = cached.dailyExpense[i] || 0;
+    runningCapital = runningCapital + income - expense; // Recalculate capital
+
+    forecast.push({
+      date: dateStr,
+      predictedIncome: income,
+      predictedExpense: expense,
       predictedCapital: runningCapital,
     });
   }
