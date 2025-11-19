@@ -1,7 +1,7 @@
 import { useParams, Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from '@/i18n/context';
-import { ArrowLeft, Search, TrendingDown, ShoppingBag, Package } from 'lucide-react';
+import { ArrowLeft, Search, TrendingDown, ShoppingBag, Package, Tag, Weight } from 'lucide-react';
 import { useState } from 'react';
 import { PriceHistoryChart } from '@/components/product-catalog/price-history-chart';
 import { PriceSearchModal } from '@/components/product-catalog/price-search-modal';
@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ProductCatalog } from '@shared/schemas/product-catalog';
+import { getCurrencySymbol } from '@/lib/currency-utils';
 
 interface PriceHistoryEntry {
   id: number;
@@ -34,24 +35,21 @@ export default function ProductDetailPage() {
   const { t } = useTranslation();
   const [showSearchModal, setShowSearchModal] = useState(false);
 
+  const { data: settings } = useQuery<{ currency?: string }>({
+    queryKey: ['/api/settings'],
+  });
+
+  const currency = settings?.currency || 'USD';
+  const currencySymbol = getCurrencySymbol(currency);
+
   const { data: product, isLoading: productLoading } = useQuery<ProductCatalog>({
     queryKey: ['/api/product-catalog', id],
-    queryFn: async () => {
-      const res = await fetch(`/api/product-catalog/${id}`, { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch product');
-      return res.json();
-    },
     enabled: !!id,
   });
 
   const { data: priceData } = useQuery<PriceHistoryData>({
     queryKey: ['/api/product-catalog', id, 'price-history'],
-    queryFn: async () => {
-      const res = await fetch(`/api/product-catalog/${id}/price-history`, { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch price history');
-      return res.json();
-    },
-    enabled: !!id,
+    enabled: !!id && !!product,
   });
 
   if (productLoading) {
@@ -99,9 +97,24 @@ export default function ProductDetailPage() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2" data-testid="text-product-name">{product.name}</h1>
         <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-          {product.category && <span data-testid="text-category">📦 {product.category}</span>}
-          {product.brand && <span data-testid="text-brand">🏷️ {product.brand}</span>}
-          {product.weight && <span data-testid="text-weight">⚖️ {product.weight}</span>}
+          {product.category && (
+            <span className="flex items-center gap-1" data-testid="text-category">
+              <Package className="w-4 h-4" />
+              {product.category}
+            </span>
+          )}
+          {product.brand && (
+            <span className="flex items-center gap-1" data-testid="text-brand">
+              <Tag className="w-4 h-4" />
+              {product.brand}
+            </span>
+          )}
+          {product.weight && (
+            <span className="flex items-center gap-1" data-testid="text-weight">
+              <Weight className="w-4 h-4" />
+              {product.weight}
+            </span>
+          )}
         </div>
       </div>
 
@@ -125,7 +138,7 @@ export default function ProductDetailPage() {
               <span className="text-sm">{t('productDetail.bestPrice')}</span>
             </div>
             <p className="text-2xl font-bold text-green-700" data-testid="text-best-price">
-              ${parseFloat(product.bestPrice || '0').toFixed(2)}
+              {currencySymbol}{parseFloat(product.bestPrice || '0').toFixed(2)}
             </p>
             {product.bestStore && (
               <p className="text-xs text-muted-foreground mt-1" data-testid="text-best-store">
@@ -142,7 +155,7 @@ export default function ProductDetailPage() {
               <span className="text-sm">{t('productDetail.averagePrice')}</span>
             </div>
             <p className="text-2xl font-bold" data-testid="text-average-price">
-              ${parseFloat(product.averagePrice || '0').toFixed(2)}
+              {currencySymbol}{parseFloat(product.averagePrice || '0').toFixed(2)}
             </p>
           </CardContent>
         </Card>
@@ -185,10 +198,10 @@ export default function ProductDetailPage() {
                     </div>
                     <div className="flex gap-4 text-sm">
                       <span className="text-green-600 font-semibold">
-                        {t('productDetail.min')}: ${minPrice.toFixed(2)}
+                        {t('productDetail.min')}: {currencySymbol}{minPrice.toFixed(2)}
                       </span>
                       <span className="text-muted-foreground">
-                        {t('productDetail.avg')}: ${avgPrice.toFixed(2)}
+                        {t('productDetail.avg')}: {currencySymbol}{avgPrice.toFixed(2)}
                       </span>
                     </div>
                   </CardContent>
@@ -203,6 +216,7 @@ export default function ProductDetailPage() {
         <PriceSearchModal
           productId={parseInt(id!)}
           productName={product.name}
+          currency={currency}
           onClose={() => setShowSearchModal(false)}
         />
       )}

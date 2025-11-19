@@ -7,6 +7,7 @@ import { Loader2, Store, TrendingDown, ExternalLink } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { getCurrencySymbol } from '@/lib/currency-utils';
 
 interface PriceSearchResult {
   storeName: string;
@@ -18,12 +19,14 @@ interface PriceSearchResult {
 interface PriceSearchModalProps {
   productId: number;
   productName: string;
+  currency: string;
   onClose: () => void;
 }
 
-export function PriceSearchModal({ productId, productName, onClose }: PriceSearchModalProps) {
+export function PriceSearchModal({ productId, productName, currency, onClose }: PriceSearchModalProps) {
   const { t } = useTranslation();
   const [results, setResults] = useState<PriceSearchResult[]>([]);
+  const currencySymbol = getCurrencySymbol(currency);
 
   const searchMutation = useMutation({
     mutationFn: async () => {
@@ -86,12 +89,12 @@ export function PriceSearchModal({ productId, productName, onClose }: PriceSearc
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-2xl font-bold" data-testid={`text-price-${index}`}>
-                            ${result.price.toFixed(2)}
+                            {currencySymbol}{result.price.toFixed(2)}
                           </span>
                           {result.savings && result.savings > 0 && (
                             <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                               <TrendingDown className="w-3 h-3 mr-1" />
-                              {t('productDetail.save')} ${result.savings.toFixed(2)}
+                              {t('productDetail.save')} {currencySymbol}{result.savings.toFixed(2)}
                             </Badge>
                           )}
                         </div>

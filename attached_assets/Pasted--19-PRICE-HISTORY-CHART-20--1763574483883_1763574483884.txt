@@ -1,0 +1,99 @@
+📊 ШАГ 19: PRICE HISTORY CHART (20 минут)
+═══════════════════════════════════════════════════════
+ЗАДАЧА 19.1: СОЗДАТЬ ГРАФИК ИСТОРИИ ЦЕН
+═══════════════════════════════════════════════════════
+
+СОЗДАТЬ ФАЙЛ: client/src/components/price-history-chart.tsx
+
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useTranslation } from 'react-i18next';
+
+interface PriceHistory {
+  id: number;
+  storeName: string;
+  price: string;
+  purchaseDate: string;
+}
+
+interface Props {
+  data: PriceHistory[];
+}
+
+export function PriceHistoryChart({ data }: Props) {
+  const { t } = useTranslation();
+  
+  // Группировать по датам для графика
+  const chartData = data
+    .map(item => ({
+      date: item.purchaseDate,
+      price: parseFloat(item.price),
+      store: item.storeName
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  
+  // Получить уникальные магазины
+  const stores = Array.from(new Set(data.map(d => d.storeName)));
+  
+  // Цвета для магазинов
+  const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'];
+  
+  return (
+    <div className="p-4 bg-white border rounded-lg">
+      <ResponsiveContainer width="100%" height={300}>
+        <LineChart data={chartData}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis 
+            dataKey="date" 
+            tick={{ fontSize: 12 }}
+            tickFormatter={(date) => new Date(date).toLocaleDateString('ru-RU', { 
+              month: 'short', 
+              day: 'numeric' 
+            })}
+          />
+          <YAxis 
+            tick={{ fontSize: 12 }}
+            tickFormatter={(value) => `$${value.toFixed(2)}`}
+          />
+          <Tooltip 
+            formatter={(value: number) => `$${value.toFixed(2)}`}
+            labelFormatter={(date) => new Date(date).toLocaleDateString('ru-RU')}
+          />
+          <Legend />
+          <Line 
+            type="monotone" 
+            dataKey="price" 
+            stroke={colors[0]}
+            strokeWidth={2}
+            dot={{ r: 4 }}
+            name={t('priceChart.price', 'Цена')}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+      
+      {/* Легенда по магазинам */}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {stores.map((store, index) => (
+          <div key={store} className="flex items-center gap-2 text-sm">
+            <div 
+              className="w-3 h-3 rounded-full" 
+              style={{ backgroundColor: colors[index % colors.length] }}
+            />
+            <span className="text-gray-700">{store}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+СТРОК: ~75 ✅
+ОТВЕТСТВЕННОСТЬ: График цен ✅
+
+═══════════════════════════════════════════════════════
+
+ОЖИДАЕМЫЙ РЕЗУЛЬТАТ:
+✅ Line chart с ценами
+✅ Ось X: даты
+✅ Ось Y: цены
+✅ Tooltip с деталями
+✅ Легенда магазинов
