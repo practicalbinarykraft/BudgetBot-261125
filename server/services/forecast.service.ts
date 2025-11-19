@@ -64,12 +64,16 @@ export async function generateForecast(
   if (!useAI || !apiKey) {
     const reason = !useAI ? 'AI forecast not requested (opt-in)' : 'No API key provided';
     console.log(`[Forecast] ${reason}, using simple linear forecast`);
+    
+    // Check if user has any recurring income sources
+    const hasRecurringIncome = activeRecurring.some(r => r.type === 'income');
+    
     const forecast = generateSimpleForecast(
       daysAhead,
       stats.avgDailyIncome,
       stats.avgDailyExpense,
       currentCapital,
-      activeRecurring
+      hasRecurringIncome
     );
     return {
       forecast,
@@ -247,12 +251,13 @@ export async function generateForecast(
     }
     
     // Fallback to simple linear forecast
+    const hasRecurringIncome = activeRecurring.some(r => r.type === 'income');
     const forecast = generateSimpleForecast(
       daysAhead,
       stats.avgDailyIncome,
       stats.avgDailyExpense,
       currentCapital,
-      activeRecurring
+      hasRecurringIncome
     );
     return {
       forecast,
@@ -365,7 +370,8 @@ Start from tomorrow and forecast ${daysAhead} days ahead. Return pure JSON array
 
 /**
  * Fallback: Simple linear forecast without AI
- * Returns BASE forecast using historical averages ONLY
+ * Returns BASE forecast using historical expense averages
+ * Income baseline is only used when user has recurring income sources
  * Filters (recurring, planned, budget) are applied separately in trend-calculator
  */
 function generateSimpleForecast(
@@ -373,7 +379,7 @@ function generateSimpleForecast(
   avgIncome: number,
   avgExpense: number,
   currentCapital: number,
-  recurring: Recurring[] // Not used anymore, kept for compatibility
+  hasRecurringIncome: boolean
 ): ForecastDataPoint[] {
   const forecast: ForecastDataPoint[] = [];
   let runningCapital = currentCapital;
@@ -385,9 +391,10 @@ function generateSimpleForecast(
     forecastDate.setDate(today.getDate() + i);
     const dateStr = forecastDate.toISOString().split('T')[0];
 
-    // Use ONLY historical averages as base
-    // Recurring, planned, budget limits are applied in trend-calculator.service.ts
-    const dailyIncome = avgIncome;
+    // Use historical expense average as baseline
+    // For income: only use historical average if user has recurring income sources
+    // Otherwise income stays flat (0) until recurring/planned filters add income
+    const dailyIncome = hasRecurringIncome ? avgIncome : 0;
     const dailyExpense = avgExpense;
     runningCapital = runningCapital + dailyIncome - dailyExpense;
 
