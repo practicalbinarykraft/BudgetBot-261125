@@ -1,0 +1,644 @@
+смотри, у нас есть запланированные расходы, но нет запланированных разовых доходов. Если например у человека нет постоянного источника дохода, есть только горизонт планирования на месяц-два, он допустим фрилансер, то он не сможет создать финансовый план. Важно чтобы эти разовые доходы учитывались в построении графиков и в ИИ тулсах. Закрыл сделку фрилансер, написал боту "ожидаю оплату 1000$ 22 ноября" тогда ИИ должен создать запланированный входящий платеж, если все ок то пользователь нажимает подтвердить. В графике финансовых трендов будет фигурировать эта транзакция и пунктирный зеленый график вырастет. Но при этом в графике так же должны сохраняться все текущие функции. Например если есть постоянные повторяющиеся платежи (коммуналка, аренда, еда) то график будет выстраиваться из сопоставления разовых входящих платежей и повторяющихся расходов. Понимаешь?
+
+Продумай детально всё что я расписал чтобы передать ТЗ реплиту
+
+Show more
+💡 ОТЛИЧНАЯ ИДЕЯ! ПРОДУМЫВАЮ ДЕТАЛЬНО
+🎯 СУТЬ ПРОБЛЕМЫ
+СЕЙЧАС:
+├─ Запланированные РАСХОДЫ ✅
+│  └─ Future purchases (покупки)
+│
+└─ Запланированные ДОХОДЫ ❌
+   └─ НЕТ!
+
+ПРОБЛЕМА:
+Фрилансер не может планировать финансы:
+- Нет постоянной зарплаты
+- Доход = разовые проекты
+- Каждый проект в разную дату
+- График не учитывает будущие доходы
+🎨 НОВАЯ ФИЧА: PLANNED INCOME
+1. ЧТО ДОБАВЛЯЕМ
+СУЩНОСТЬ: Planned Income
+(Запланированные разовые доходы)
+
+ПРИМЕРЫ:
+├─ "Оплата от клиента за сайт - 1000$ - 22 ноября"
+├─ "Фриланс проект завершён - 500€ - 5 декабря"
+├─ "Возврат долга от друга - 200$ - 15 декабря"
+└─ "Бонус от работы - 300$ - 1 января"
+
+ОТЛИЧИЕ ОТ RECURRING:
+Recurring = повторяющиеся (зарплата каждый месяц)
+Planned = разовые (один раз в конкретную дату)
+2. СХЕМА БД
+typescript
+// shared/schema.ts
+
+export const plannedIncome = pgTable('planned_income', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Основные поля
+  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
+  currency: varchar('currency', { length: 3 }).default('USD'),
+  description: text('description').notNull(),
+  category: text('category'), // Категория дохода (опционально)
+  
+  // Дата
+  expectedDate: text('expected_date').notNull(), // YYYY-MM-DD
+  
+  // Статус
+  status: text('status').default('pending'), // 'pending', 'received', 'cancelled'
+  
+  // Связь с реальной транзакцией (когда получили деньги)
+  transactionId: integer('transaction_id').references(() => dailyTransactions.id),
+  receivedAt: timestamp('received_at'),
+  
+  // Метаданные
+  source: text('source').default('manual'), // 'manual', 'ai', 'telegram'
+  notes: text('notes'),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+});
+
+export type PlannedIncome = typeof plannedIncome.$inferSelect;
+export type InsertPlannedIncome = typeof plannedIncome.$inferInsert;
+```
+
+---
+
+### **3. UI КОМПОНЕНТЫ**
+```
+НОВАЯ СТРАНИЦА: /planned-income
+
+Layout:
+┌─────────────────────────────────────┐
+│ Запланированные доходы              │
+│                                     │
+│ [Всего ожидается: $2,500]           │
+│                                     │
+│ ┌─────────────────────────────┐     │
+│ │ 22 ноября - $1,000         │     │
+│ │ Оплата за сайт             │     │
+│ │ [Получено] [Отменить]      │     │
+│ └─────────────────────────────┘     │
+│                                     │
+│ ┌─────────────────────────────┐     │
+│ │ 5 декабря - 500€           │     │
+│ │ Фриланс проект             │     │
+│ │ [Получено] [Отменить]      │     │
+│ └─────────────────────────────┘     │
+│                                     │
+│ [+ Добавить доход]                  │
+└─────────────────────────────────────┘
+
+ФИЛЬТРЫ:
+├─ Все
+├─ Ожидаемые (status=pending)
+├─ Полученные (status=received)
+└─ Отменённые (status=cancelled)
+
+СОРТИРОВКА:
+└─ По дате (от ближайших к дальним)
+4. AI TOOL: CREATE_PLANNED_INCOME
+typescript
+// server/ai/tools.ts
+
+{
+  name: 'create_planned_income',
+  description: 'Create a planned one-time income with expected date',
+  requiresConfirmation: true, // WRITE операция
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      amount: { 
+        type: 'number', 
+        description: 'Expected income amount' 
+      },
+      description: { 
+        type: 'string', 
+        description: 'Income description (e.g., "Payment from client for website")' 
+      },
+      expectedDate: { 
+        type: 'string', 
+        description: 'Expected date in YYYY-MM-DD format or natural language (e.g., "22 ноября", "next Friday")' 
+      },
+      currency: { 
+        type: 'string', 
+        description: 'Currency code (USD, EUR, RUB, etc). Optional, defaults to user settings.' 
+      },
+      category: { 
+        type: 'string', 
+        description: 'Income category. Optional.' 
+      }
+    },
+    required: ['amount', 'description', 'expectedDate']
+  }
+}
+
+// server/ai/handlers/planned-income-handler.ts
+
+export async function handleCreatePlannedIncome(
+  userId: number,
+  params: {
+    amount: number;
+    description: string;
+    expectedDate: string;
+    currency?: string;
+    category?: string;
+  }
+): Promise<ToolResult> {
+  try {
+    // Парсинг даты (если natural language)
+    const parsedDate = parseNaturalDate(params.expectedDate);
+    
+    // Валидация: дата в будущем?
+    if (new Date(parsedDate) < new Date()) {
+      return {
+        success: false,
+        error: 'Expected date must be in the future'
+      };
+    }
+    
+    // Создать planned income
+    const plannedIncome = await repositories.plannedIncome.create({
+      userId,
+      amount: params.amount,
+      description: params.description,
+      expectedDate: parsedDate,
+      currency: params.currency || 'USD',
+      category: params.category,
+      status: 'pending',
+      source: 'ai'
+    });
+    
+    return {
+      success: true,
+      data: {
+        id: plannedIncome.id,
+        amount: plannedIncome.amount,
+        description: plannedIncome.description,
+        expectedDate: plannedIncome.expectedDate
+      }
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+// Helper: парсинг natural language дат
+function parseNaturalDate(input: string): string {
+  // "22 ноября" → "2025-11-22"
+  // "next Friday" → "2025-11-29"
+  // "в следующий понедельник" → "2025-11-25"
+  
+  // Можно использовать библиотеку chrono-node
+  // или написать простой парсер
+  
+  // Пример:
+  const ruMonths = {
+    'января': 1, 'февраля': 2, 'марта': 3,
+    'апреля': 4, 'мая': 5, 'июня': 6,
+    'июля': 7, 'августа': 8, 'сентября': 9,
+    'октября': 10, 'ноября': 11, 'декабря': 12
+  };
+  
+  const match = input.match(/(\d+)\s+(января|февраля|марта|...)/i);
+  if (match) {
+    const day = parseInt(match[1]);
+    const month = ruMonths[match[2].toLowerCase()];
+    const year = new Date().getFullYear();
+    return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+  }
+  
+  // Если уже в формате YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(input)) {
+    return input;
+  }
+  
+  throw new Error('Invalid date format');
+}
+5. ИНТЕГРАЦИЯ В ГРАФИКИ
+typescript
+// server/services/trend-calculator.service.ts
+
+export async function calculateTrendWithPlannedIncome(params: {
+  userId: number;
+  historyDays: number;
+  forecastDays: number;
+}) {
+  // 1. Получить историю транзакций (как сейчас)
+  const transactions = await getTransactions(...);
+  
+  // 2. Получить recurring транзакции (как сейчас)
+  const recurring = await getRecurringTransactions(userId);
+  
+  // 3. НОВОЕ: Получить planned income
+  const plannedIncomes = await repositories.plannedIncome.findByUser(userId, {
+    status: 'pending'
+  });
+  
+  // 4. НОВОЕ: Получить planned expenses (future purchases)
+  const plannedExpenses = await repositories.futurePurchases.findByUser(userId, {
+    status: 'planned'
+  });
+  
+  // 5. Построить forecast с учётом всех планов
+  const forecast = [];
+  
+  for (let day = 0; day < forecastDays; day++) {
+    const date = addDays(new Date(), day);
+    
+    // Базовый тренд (из истории)
+    let income = calculateAverageIncome(transactions);
+    let expense = calculateAverageExpense(transactions);
+    
+    // Добавить recurring
+    const recurringForDay = getRecurringForDate(recurring, date);
+    income += recurringForDay.income;
+    expense += recurringForDay.expense;
+    
+    // НОВОЕ: Добавить planned income на эту дату
+    const plannedForDay = plannedIncomes.filter(p => 
+      isSameDay(new Date(p.expectedDate), date)
+    );
+    income += plannedForDay.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+    
+    // НОВОЕ: Добавить planned expenses на эту дату
+    const expensesForDay = plannedExpenses.filter(p => 
+      isSameDay(new Date(p.targetDate), date)
+    );
+    expense += expensesForDay.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+    
+    // Рассчитать капитал
+    const netChange = income - expense;
+    const capital = (forecast[day - 1]?.capital || currentCapital) + netChange;
+    
+    forecast.push({
+      date: formatDate(date),
+      income,
+      expense,
+      capital,
+      
+      // НОВОЕ: Метаданные для UI
+      hasPlannedIncome: plannedForDay.length > 0,
+      hasPlannedExpense: expensesForDay.length > 0,
+      plannedIncomeItems: plannedForDay,
+      plannedExpenseItems: expensesForDay
+    });
+  }
+  
+  return forecast;
+}
+6. ОБНОВЛЕНИЕ ГРАФИКА
+typescript
+// client/src/components/capital-growth-chart.tsx
+
+// Линии графика:
+// 1. Основной тренд (сплошная синяя) - как сейчас
+// 2. Recurring тренд (пунктир серый) - как сейчас
+// 3. НОВОЕ: Planned income (пунктир зелёный)
+// 4. НОВОЕ: Planned expenses (пунктир красный)
+// 5. НОВОЕ: Combined forecast (пунктир фиолетовый)
+
+const chartData = forecast.map(day => ({
+  date: day.date,
+  capital: day.capital,
+  
+  // НОВОЕ: Отдельные линии для планов
+  capitalWithPlannedIncome: day.capital + day.plannedIncomeTotal,
+  capitalWithPlannedExpenses: day.capital - day.plannedExpenseTotal,
+  capitalCombined: day.capital + day.plannedIncomeTotal - day.plannedExpenseTotal
+}));
+
+<LineChart data={chartData}>
+  {/* Основной тренд */}
+  <Line 
+    type="monotone" 
+    dataKey="capital" 
+    stroke="#3b82f6" 
+    strokeWidth={2}
+  />
+  
+  {/* НОВОЕ: Planned income */}
+  <Line 
+    type="monotone" 
+    dataKey="capitalWithPlannedIncome" 
+    stroke="#10b981" 
+    strokeWidth={2}
+    strokeDasharray="5 5"
+  />
+  
+  {/* НОВОЕ: Planned expenses */}
+  <Line 
+    type="monotone" 
+    dataKey="capitalWithPlannedExpenses" 
+    stroke="#ef4444" 
+    strokeWidth={2}
+    strokeDasharray="5 5"
+  />
+  
+  {/* НОВОЕ: Combined forecast */}
+  <Line 
+    type="monotone" 
+    dataKey="capitalCombined" 
+    stroke="#8b5cf6" 
+    strokeWidth={3}
+    strokeDasharray="10 5"
+  />
+</LineChart>
+
+// Легенда:
+<div className="flex gap-4 text-sm">
+  <div>
+    <span className="inline-block w-4 h-0.5 bg-blue-500" /> 
+    Текущий тренд
+  </div>
+  <div>
+    <span className="inline-block w-4 h-0.5 bg-green-500" 
+          style={{ borderTop: '2px dashed' }} /> 
+    С планируемыми доходами
+  </div>
+  <div>
+    <span className="inline-block w-4 h-0.5 bg-red-500" 
+          style={{ borderTop: '2px dashed' }} /> 
+    С планируемыми расходами
+  </div>
+  <div>
+    <span className="inline-block w-4 h-0.5 bg-purple-500" 
+          style={{ borderTop: '2px dashed' }} /> 
+    Полный прогноз
+  </div>
+</div>
+7. МАРКЕРЫ НА ГРАФИКЕ
+typescript
+// Показать точки на графике где ожидаются planned income/expenses
+
+<ComposedChart>
+  {/* ... линии как выше ... */}
+  
+  {/* НОВОЕ: Маркеры planned income */}
+  <Scatter 
+    data={plannedIncomeMarkers} 
+    fill="#10b981"
+    shape="circle"
+  >
+    <Tooltip content={<PlannedIncomeTooltip />} />
+  </Scatter>
+  
+  {/* НОВОЕ: Маркеры planned expenses */}
+  <Scatter 
+    data={plannedExpenseMarkers} 
+    fill="#ef4444"
+    shape="triangle"
+  >
+    <Tooltip content={<PlannedExpenseTooltip />} />
+  </Scatter>
+</ComposedChart>
+
+// Tooltip:
+function PlannedIncomeTooltip({ payload }) {
+  if (!payload?.length) return null;
+  
+  const item = payload[0].payload;
+  
+  return (
+    <div className="bg-white p-3 rounded shadow-lg border">
+      <p className="text-sm font-medium text-green-600">
+        💰 Планируемый доход
+      </p>
+      <p className="text-xs">{item.description}</p>
+      <p className="text-sm font-bold">${item.amount}</p>
+      <p className="text-xs text-gray-500">{item.date}</p>
+    </div>
+  );
+}
+8. КНОПКА "ПОЛУЧИЛ ДЕНЬГИ"
+typescript
+// Когда фрилансер получил оплату:
+
+async function markAsReceived(plannedIncomeId: number) {
+  // 1. Создать реальную транзакцию
+  const plannedIncome = await getPlannedIncome(plannedIncomeId);
+  
+  const transaction = await repositories.transactions.create({
+    userId: plannedIncome.userId,
+    amount: plannedIncome.amount,
+    description: plannedIncome.description,
+    category: plannedIncome.category,
+    type: 'income',
+    date: new Date().toISOString().split('T')[0],
+    source: 'planned_income'
+  });
+  
+  // 2. Обновить planned income статус
+  await repositories.plannedIncome.update(plannedIncomeId, {
+    status: 'received',
+    transactionId: transaction.id,
+    receivedAt: new Date()
+  });
+  
+  // 3. Пересчитать график
+  await recalculateTrend(plannedIncome.userId);
+}
+
+// UI:
+<button
+  onClick={() => markAsReceived(item.id)}
+  className="px-3 py-1 bg-green-500 text-white rounded"
+>
+  ✅ Получил деньги
+</button>
+```
+
+---
+
+## 📋 ПОЛНОЕ ТЗ ДЛЯ REPLIT
+```
+ЗАДАЧА: ДОБАВИТЬ PLANNED INCOME (ЗАПЛАНИРОВАННЫЕ РАЗОВЫЕ ДОХОДЫ)
+
+КОНТЕКСТ:
+Фрилансеры не имеют постоянного дохода. Каждый проект = разовый платёж в 
+конкретную дату. Нужно добавить возможность планировать будущие доходы и 
+учитывать их в финансовых графиках.
+
+ПРИМЕР USE CASE:
+User (фрилансер): "Ожидаю оплату 1000$ 22 ноября за сайт"
+AI: [Карточка подтверждения]
+    - Amount: 1000
+    - Description: "Оплата за сайт"
+    - Expected Date: 2025-11-22
+    - [Execute] [Cancel]
+User: [Execute]
+AI: "✅ Запланированный доход добавлен!"
+
+График обновляется:
+- Зелёная пунктирная линия показывает прогноз С учётом этого дохода
+- На 22 ноября на графике появляется маркер 💰
+- Прогноз учитывает как planned income, так и recurring expenses
+
+ЧТО НУЖНО СДЕЛАТЬ:
+
+1. БАЗА ДАННЫХ (20 минут):
+   
+   Создать таблицу planned_income:
+   - id (serial)
+   - userId (FK users)
+   - amount (decimal)
+   - currency (varchar, default 'USD')
+   - description (text)
+   - category (text, optional)
+   - expectedDate (text, YYYY-MM-DD)
+   - status (text: 'pending', 'received', 'cancelled')
+   - transactionId (FK dailyTransactions, optional)
+   - receivedAt (timestamp, optional)
+   - source (text: 'manual', 'ai', 'telegram')
+   - notes (text, optional)
+   - createdAt, updatedAt (timestamps)
+
+2. REPOSITORY (30 минут):
+   
+   Создать server/repositories/planned-income.repository.ts:
+   - findByUser(userId, filters?)
+   - create(data)
+   - update(id, data)
+   - delete(id)
+   - markAsReceived(id) - создаёт транзакцию и меняет status
+
+3. AI TOOL (40 минут):
+   
+   Добавить tool 'create_planned_income':
+   - Параметры: amount, description, expectedDate, currency?, category?
+   - requiresConfirmation: true
+   - Handler: server/ai/handlers/planned-income-handler.ts
+   
+   Функции:
+   - handleCreatePlannedIncome(userId, params)
+   - parseNaturalDate(input) - парсит "22 ноября" → "2025-11-22"
+   
+   Примеры фраз для AI:
+   - "Ожидаю оплату 1000$ 22 ноября"
+   - "Получу деньги 500€ в следующую пятницу"
+   - "Клиент заплатит 2000 рублей 5 декабря"
+
+4. ИНТЕГРАЦИЯ В TREND CALCULATOR (1 час):
+   
+   Обновить server/services/trend-calculator.service.ts:
+   - Загружать plannedIncome (status='pending')
+   - Добавлять в forecast на соответствующие даты
+   - Возвращать метаданные (hasPlannedIncome, plannedIncomeItems)
+   
+   Формула прогноза:
+   capitalCombined = baseCapital 
+                   + recurringIncome 
+                   + plannedIncome 
+                   - recurringExpenses 
+                   - plannedExpenses
+
+5. UI: ГРАФИК (1 час):
+   
+   Обновить client/src/components/capital-growth-chart.tsx:
+   - Добавить линию "С планируемыми доходами" (зелёная пунктир)
+   - Добавить линию "Полный прогноз" (фиолетовая пунктир)
+   - Добавить Scatter маркеры на даты planned income
+   - Добавить Tooltip с деталями
+   - Добавить легенду
+
+6. UI: СТРАНИЦА PLANNED INCOME (1 час):
+   
+   Создать client/src/pages/planned-income.tsx:
+   - Список planned income (сортировка по дате)
+   - Фильтры: Все, Ожидаемые, Полученные, Отменённые
+   - Кнопка [+ Добавить доход]
+   - Карточки с кнопками:
+     * [✅ Получил деньги] - markAsReceived()
+     * [❌ Отменить] - status='cancelled'
+   
+   UI каждой карточки:
+   ┌─────────────────────────────────┐
+   │ 💰 22 ноября - $1,000           │
+   │ Оплата за сайт                  │
+   │ [✅ Получил] [❌ Отменить]      │
+   └─────────────────────────────────┘
+
+7. MENU (5 минут):
+   
+   Добавить в sidebar:
+   ├─ ... существующие пункты
+   ├─ 💰 Запланированные доходы  ← НОВОЕ
+   └─ ...
+
+8. I18N (20 минут):
+   
+   Добавить переводы:
+   en.json:
+   "plannedIncome": {
+     "title": "Planned Income",
+     "addIncome": "Add Income",
+     "expectedTotal": "Total expected",
+     "markReceived": "Mark as Received",
+     "cancel": "Cancel",
+     "received": "Received",
+     "pending": "Pending",
+     "cancelled": "Cancelled"
+   }
+   
+   ru.json:
+   "plannedIncome": {
+     "title": "Запланированные доходы",
+     "addIncome": "Добавить доход",
+     "expectedTotal": "Всего ожидается",
+     "markReceived": "Получил деньги",
+     "cancel": "Отменить",
+     "received": "Получено",
+     "pending": "Ожидается",
+     "cancelled": "Отменено"
+   }
+
+ТРЕБОВАНИЯ:
+- Все файлы <200 строк (Junior-Friendly)
+- Использовать repositories (не прямые SQL запросы)
+- TypeScript strict
+- i18n для всех текстов
+- Адаптивный UI
+
+ТЕСТЫ:
+1. Создать planned income через AI: "Ожидаю 1000$ 22 ноября"
+2. Проверить что появился на графике (зелёная линия, маркер)
+3. Нажать [Получил деньги] → создаётся транзакция
+4. Проверить что график обновился (маркер исчез, капитал вырос)
+
+ИТОГО: ~4 часа работы
+РЕЗУЛЬТАТ: Фрилансеры могут планировать доходы + AI tool
+```
+
+---
+
+## 🎯 ИТОГО
+```
+НОВАЯ ФИЧА: PLANNED INCOME
+
+ФАЙЛЫ (8 новых файлов, ~1200 строк):
+├─ Schema: planned_income table
+├─ Repository: planned-income.repository.ts (~150 строк)
+├─ AI Handler: planned-income-handler.ts (~100 строк)
+├─ Service: обновить trend-calculator (~100 строк добавить)
+├─ Page: planned-income.tsx (~200 строк)
+├─ Chart: capital-growth-chart.tsx (~150 строк добавить)
+├─ Tooltip: planned-income-tooltip.tsx (~50 строк)
+└─ i18n: translations (~50 строк)
+
+ВРЕМЯ: ~4 часа
+
+РЕЗУЛЬТАТ:
+✅ Фрилансеры могут планировать доходы
+✅ AI создаёт planned income
+✅ График учитывает будущие доходы
+✅ Маркеры на графике
+✅ Кнопка "Получил деньги" → создаёт транзакцию

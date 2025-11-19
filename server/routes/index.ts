@@ -20,6 +20,7 @@ import categoriesRouter from "./categories.routes";
 import recurringRouter from "./recurring.routes";
 import wishlistRouter from "./wishlist.routes";
 import plannedRouter from "./planned.routes";
+import plannedIncomeRouter from "./planned-income.routes";
 import budgetsRouter from "./budgets.routes";
 import limitsRouter from "./limits.routes";
 import settingsRouter from "./settings.routes";
@@ -41,6 +42,7 @@ export function registerRoutes(app: Express) {
   app.use("/api/recurring", recurringRouter);
   app.use("/api/wishlist", wishlistRouter);
   app.use("/api/planned", plannedRouter);
+  app.use("/api/planned-income", plannedIncomeRouter);
   app.use("/api/budgets", budgetsRouter);
   app.use("/api/limits", limitsRouter);
   app.use("/api/settings", settingsRouter);

@@ -129,6 +129,36 @@ export const plannedTransactions = pgTable("planned_transactions", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Planned Income table (one-time expected income)
+export const plannedIncome = pgTable("planned_income", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Basic fields
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").default("USD"),
+  amountUsd: decimal("amount_usd", { precision: 10, scale: 2 }).notNull(),
+  description: text("description").notNull(),
+  categoryId: integer("category_id").references(() => categories.id, { onDelete: "set null" }),
+  
+  // Expected date
+  expectedDate: date("expected_date").notNull(),
+  
+  // Status tracking
+  status: text("status").default("pending"), // 'pending' | 'received' | 'cancelled'
+  
+  // Link to actual transaction when received
+  transactionId: integer("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
+  receivedAt: timestamp("received_at"),
+  
+  // Metadata
+  source: text("source").default("manual"), // 'manual' | 'ai' | 'telegram'
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Settings table
 export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
@@ -521,6 +551,24 @@ export const insertPlannedTransactionSchema = createInsertSchema(plannedTransact
   updatedAt: true 
 });
 
+export const insertPlannedIncomeSchema = createInsertSchema(plannedIncome, {
+  amount: z.string().regex(/^\d+(\.\d{1,2})?$/),
+  amountUsd: z.string().regex(/^\d+(\.\d{1,2})?$/),
+  expectedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
+  currency: z.string().optional(),
+  categoryId: z.number().optional(),
+  source: z.enum(["manual", "ai", "telegram"]).optional(),
+  status: z.enum(["pending", "received", "cancelled"]).optional(),
+  notes: z.string().optional(),
+}).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+  updatedAt: true,
+  receivedAt: true,
+  transactionId: true,
+});
+
 const VALID_TIMEZONES = [
   "UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
   "America/Phoenix", "America/Toronto", "America/Mexico_City", "America/Sao_Paulo",
@@ -650,6 +698,9 @@ export type WishlistItem = typeof wishlist.$inferSelect;
 
 export type InsertPlannedTransaction = z.infer<typeof insertPlannedTransactionSchema>;
 export type PlannedTransaction = typeof plannedTransactions.$inferSelect;
+
+export type InsertPlannedIncome = z.infer<typeof insertPlannedIncomeSchema>;
+export type PlannedIncome = typeof plannedIncome.$inferSelect;
 
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;

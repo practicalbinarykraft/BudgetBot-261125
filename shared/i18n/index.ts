@@ -24,6 +24,7 @@ import { webBudgetsTranslations } from './web-budgets';
 import { webTagsTranslations } from './web-tags';
 import { webWishlistTranslations } from './web-wishlist';
 import { webPlannedTranslations } from './web-planned';
+import { webPlannedIncomeTranslations } from './web-planned-income';
 import { webRecurringTranslations } from './web-recurring';
 import { webAnalysisTranslations } from './web-analysis';
 import { webAiToolsTranslations } from './web-ai-tools';
@@ -53,6 +54,7 @@ const allTranslations: Translations = {
   ...webTagsTranslations,
   ...webWishlistTranslations,
   ...webPlannedTranslations,
+  ...webPlannedIncomeTranslations,
   ...webRecurringTranslations,
   ...webAnalysisTranslations,
   ...webAiToolsTranslations,

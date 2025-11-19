@@ -14,6 +14,8 @@ import {
   InsertWishlist,
   PlannedTransaction,
   InsertPlannedTransaction,
+  PlannedIncome,
+  InsertPlannedIncome,
   Settings,
   InsertSettings,
   Budget,
@@ -75,6 +77,13 @@ export interface IStorage {
   updatePlanned(id: number, planned: Partial<InsertPlannedTransaction>): Promise<PlannedTransaction>;
   deletePlanned(id: number): Promise<void>;
   
+  // Planned Income
+  getPlannedIncomeByUserId(userId: number, filters?: { status?: string }): Promise<PlannedIncome[]>;
+  getPlannedIncomeById(id: number): Promise<PlannedIncome | null>;
+  createPlannedIncome(income: OwnedInsert<InsertPlannedIncome>): Promise<PlannedIncome>;
+  updatePlannedIncome(id: number, income: Partial<InsertPlannedIncome>): Promise<PlannedIncome>;
+  deletePlannedIncome(id: number): Promise<void>;
+  
   // Settings
   getSettingsByUserId(userId: number): Promise<Settings | null>;
   createSettings(settings: InsertSettings): Promise<Settings>;
@@ -102,6 +111,7 @@ import {
   recurring, 
   wishlist, 
   plannedTransactions,
+  plannedIncome,
   settings,
   budgets,
   aiChatMessages
@@ -301,6 +311,52 @@ export class DatabaseStorage implements IStorage {
 
   async deletePlanned(id: number): Promise<void> {
     await db.delete(plannedTransactions).where(eq(plannedTransactions.id, id));
+  }
+
+  // Planned Income
+  async getPlannedIncomeByUserId(userId: number, filters?: { status?: string }): Promise<PlannedIncome[]> {
+    if (filters?.status) {
+      return db.select()
+        .from(plannedIncome)
+        .where(and(
+          eq(plannedIncome.userId, userId),
+          eq(plannedIncome.status, filters.status)
+        ))
+        .orderBy(asc(plannedIncome.expectedDate));
+    }
+    return db.select()
+      .from(plannedIncome)
+      .where(eq(plannedIncome.userId, userId))
+      .orderBy(asc(plannedIncome.expectedDate));
+  }
+
+  async getPlannedIncomeById(id: number): Promise<PlannedIncome | null> {
+    const result = await db.select().from(plannedIncome).where(eq(plannedIncome.id, id)).limit(1);
+    return result[0] || null;
+  }
+
+  async createPlannedIncome(incomeData: OwnedInsert<InsertPlannedIncome>): Promise<PlannedIncome> {
+    const result = await db.insert(plannedIncome).values(incomeData as any).returning();
+    return result[0];
+  }
+
+  async updatePlannedIncome(id: number, incomeData: Partial<InsertPlannedIncome>): Promise<PlannedIncome> {
+    const result = await db.update(plannedIncome).set({
+      ...incomeData,
+      updatedAt: new Date()
+    }).where(eq(plannedIncome.id, id)).returning();
+    
+    if (!result[0]) {
+      throw new Error("Planned income not found or update failed");
+    }
+    return result[0];
+  }
+
+  async deletePlannedIncome(id: number): Promise<void> {
+    const result = await db.delete(plannedIncome).where(eq(plannedIncome.id, id)).returning();
+    if (!result[0]) {
+      throw new Error("Planned income not found or delete failed");
+    }
   }
 
   // Settings
