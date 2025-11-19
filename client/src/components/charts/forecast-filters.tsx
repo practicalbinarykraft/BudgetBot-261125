@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,11 @@ interface ForecastFiltersProps {
 export function ForecastFiltersCard({ filters, onChange }: ForecastFiltersProps) {
   const { t } = useTranslation();
   const [pendingFilters, setPendingFilters] = useState<ForecastFilters>(filters);
+
+  // Sync pending state when parent filters change (e.g., after Apply or localStorage restore)
+  useEffect(() => {
+    setPendingFilters(filters);
+  }, [filters]);
 
   const incomeFilters = [
     {
