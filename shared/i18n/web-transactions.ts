@@ -193,4 +193,8 @@ export const webTransactionsTranslations: Translations = {
     en: 'Coffee, groceries, etc.',
     ru: 'Кофе, продукты и т.д.',
   },
+  'transactions.amount_required': {
+    en: 'Amount is required',
+    ru: 'Требуется сумма',
+  },
 };

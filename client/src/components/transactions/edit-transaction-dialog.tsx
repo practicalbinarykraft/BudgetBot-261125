@@ -31,16 +31,16 @@ interface EditTransactionDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const formSchema = insertTransactionSchema.extend({
-  amount: z.string().min(1, "Amount is required"),
-});
-
-type FormData = z.infer<typeof formSchema>;
-
 export function EditTransactionDialog({ transaction, open, onOpenChange }: EditTransactionDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
+
+  const formSchema = insertTransactionSchema.extend({
+    amount: z.string().min(1, t("transactions.amount_required")),
+  });
+
+  type FormData = z.infer<typeof formSchema>;
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
