@@ -38,7 +38,6 @@ export function AppSidebar() {
   const [location] = useLocation();
   const { user, logoutMutation } = useAuth();
   const { t } = useTranslation();
-  const { state } = useSidebar();
   
   const menuItems = [
     {
@@ -118,11 +117,11 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="p-4 border-b">
-        <span className="text-lg font-bold">Budget Buddy</span>
-      </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
+          <SidebarGroupLabel className="text-lg font-bold mb-2">
+            Budget Buddy
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
@@ -165,19 +164,6 @@ export function AppSidebar() {
           </Button>
         </div>
       </SidebarFooter>
-      
-      {/* Toggle button fixed on the right edge - moves when sidebar collapses */}
-      <div 
-        className="absolute top-4 z-50 transition-all duration-200"
-        style={{
-          right: state === 'collapsed' ? '-48px' : '-12px'
-        }}
-      >
-        <SidebarTrigger 
-          data-testid="button-sidebar-toggle"
-          className="rounded-full shadow-lg bg-background border-2"
-        />
-      </div>
     </Sidebar>
   );
 }
