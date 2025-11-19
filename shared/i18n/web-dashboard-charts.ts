@@ -48,13 +48,21 @@ export const webDashboardChartsTranslations: Translations = {
     en: 'Include in forecast:',
     ru: 'Включить в прогноз:',
   },
-  'dashboard.filter_recurring': {
-    en: 'Recurring transactions',
-    ru: 'Повторяющиеся транзакции',
+  'dashboard.filter_recurring_income': {
+    en: 'Recurring income',
+    ru: 'Повторяющиеся доходы',
   },
-  'dashboard.filter_recurring_desc': {
-    en: 'Automatic income and expenses',
-    ru: 'Автоматические доходы и расходы',
+  'dashboard.filter_recurring_income_desc': {
+    en: 'Automatic income',
+    ru: 'Автоматические доходы',
+  },
+  'dashboard.filter_recurring_expense': {
+    en: 'Recurring expenses',
+    ru: 'Повторяющиеся расходы',
+  },
+  'dashboard.filter_recurring_expense_desc': {
+    en: 'Automatic expenses',
+    ru: 'Автоматические расходы',
   },
   'dashboard.filter_planned_income': {
     en: 'Planned income',
@@ -73,12 +81,16 @@ export const webDashboardChartsTranslations: Translations = {
     ru: 'Крупные покупки и платежи',
   },
   'dashboard.filter_budget_limits': {
-    en: 'Budget limits (max expenses)',
-    ru: 'Бюджетные лимиты (макс. расходы)',
+    en: 'Budget limits',
+    ru: 'Бюджетные лимиты',
   },
   'dashboard.filter_budget_limits_desc': {
     en: 'Worst case scenario',
     ru: 'Худший сценарий',
+  },
+  'dashboard.filter_apply_button': {
+    en: 'Update chart',
+    ru: 'Обновить график',
   },
   
   // Budget Warning
