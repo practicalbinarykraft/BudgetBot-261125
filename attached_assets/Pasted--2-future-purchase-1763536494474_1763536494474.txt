@@ -1,0 +1,319 @@
+🎨 ДИЗАЙН РЕШЕНИЕ: 2 ВАРИАНТА
+
+🤔 АНАЛИЗ ПРОБЛЕМЫ
+ЧТО СЕЙЧАС:
+├─ 📅 Запланированные (future purchases - расходы)
+└─ 💰 Планируемые доходы (planned income - доходы)
+
+ПРОБЛЕМА:
+├─ Две отдельные страницы (зачем?)
+├─ Разная верстка (непрофессионально)
+├─ Запутанные названия
+└─ Непонятно где что
+
+✅ ВАРИАНТ 1: ОБЪЕДИНИТЬ В ОДНУ СТРАНИЦУ (РЕКОМЕНДУЮ!)
+ОДНА СТРАНИЦА: /planned (Планирование)
+
+Layout:
+┌─────────────────────────────────────────────┐
+│ Финансовое планирование                      │
+│                                             │
+│ Tabs:                                       │
+│ [💸 Расходы] [💰 Доходы] [📊 Все вместе]    │
+│                                             │
+│ ┌─── TAB: Расходы ───────────────────────┐  │
+│ │ 0 Всего запланировано - $0.00          │  │
+│ │                                         │  │
+│ │ [Все] [Запланированные] [Завершённые]  │  │
+│ │                                         │  │
+│ │ 📅 Пока нет запланированных покупок     │  │
+│ │ [+ Добавить план]                       │  │
+│ └─────────────────────────────────────────┘  │
+│                                             │
+│ ┌─── TAB: Доходы ────────────────────────┐  │
+│ │ 0 Всего ожидается - $0.00              │  │
+│ │                                         │  │
+│ │ [Все] [Ожидаемые] [Полученные]         │  │
+│ │                                         │  │
+│ │ 💰 Запланированные доходы не найдены    │  │
+│ │ [+ Добавить доход]                      │  │
+│ └─────────────────────────────────────────┘  │
+│                                             │
+│ ┌─── TAB: Все вместе ────────────────────┐  │
+│ │ Timeline view:                          │  │
+│ │                                         │  │
+│ │ 22 ноября                               │  │
+│ │ ├─ 💰 +$1,000 (Оплата за сайт)          │  │
+│ │ └─ 💸 -$500 (Новый MacBook)             │  │
+│ │                                         │  │
+│ │ 5 декабря                               │  │
+│ │ └─ 💰 +500€ (Фриланс проект)            │  │
+│ │                                         │  │
+│ │ Net: +$500 📈                            │  │
+│ └─────────────────────────────────────────┘  │
+└─────────────────────────────────────────────┘
+
+SIDEBAR:
+├─ ... другие пункты
+├─ 📊 Планирование  ← ОДНА КНОПКА
+└─ ...
+
+ПРЕИМУЩЕСТВА:
+✅ Все в одном месте
+✅ Видишь полную картину (доходы vs расходы)
+✅ Tab "Все вместе" = timeline с балансом
+✅ Единая верстка
+✅ Меньше кликов
+
+НЕДОСТАТКИ:
+⚠️ Нужно переделать UI
+
+🔄 ВАРИАНТ 2: ДВЕ СТРАНИЦЫ, НО ПРАВИЛЬНО (ПРОЩЕ)
+ДВЕ ОТДЕЛЬНЫЕ СТРАНИЦЫ:
+
+1. /planned-expenses (Планируемые расходы)
+2. /planned-income (Планируемые доходы)
+
+SIDEBAR:
+├─ ... другие пункты
+├─ 💸 Планируемые расходы
+├─ 💰 Планируемые доходы
+└─ ...
+
+ПЕРЕИМЕНОВАТЬ:
+Было:
+├─ Запланированные (что?)
+└─ Планируемые доходы (OK)
+
+Стало:
+├─ 💸 Планируемые расходы (ясно!)
+└─ 💰 Планируемые доходы (ясно!)
+
+ИСПРАВИТЬ ВЕРСТКУ:
+Сделать ОДИНАКОВУЮ для обеих страниц:
+- Одинаковые отступы (padding: 24px)
+- Одинаковые заголовки (text-2xl font-bold)
+- Одинаковые кнопки [+ Добавить]
+- Одинаковые empty states
+
+ПРЕИМУЩЕСТВА:
+✅ Не нужно переделывать (только переименовать)
+✅ Простор для проработки каждой страницы
+✅ Легко найти (понятные названия)
+
+НЕДОСТАТКИ:
+⚠️ Два пункта в меню (чуть больше)
+⚠️ Не видно полной картины сразу
+
+🎯 МОЯ РЕКОМЕНДАЦИЯ
+ВЫБИРАЮ: ВАРИАНТ 2 (ДВЕ СТРАНИЦЫ)
+
+ПОЧЕМУ:
+1. БЫСТРО (1 час работы):
+   ├─ Переименовать в sidebar
+   ├─ Исправить верстку (одинаковые отступы)
+   └─ Готово!
+
+2. ГИБКОСТЬ:
+   ├─ Каждая страница = свой контекст
+   ├─ Можно добавить уникальные фичи
+   └─ Расходы: категории, приоритеты
+   └─ Доходы: источники, recurring vs one-time
+
+3. UX:
+   ├─ Понятные названия (сразу ясно куда идти)
+   ├─ Не перегружено (фокус на одном типе)
+   └─ Можно добавить quick actions
+
+ВАРИАНТ 1 - для будущего:
+Когда будет много данных, можно добавить
+страницу "Финансовый план" которая покажет
+timeline с доходами и расходами вместе.
+Но сейчас - рано.
+
+📋 КОНКРЕТНОЕ ТЗ (ВАРИАНТ 2)
+ЗАДАЧА: ИСПРАВИТЬ PLANNED INCOME/EXPENSES UI
+
+1. ПЕРЕИМЕНОВАТЬ В SIDEBAR (5 минут):
+
+client/src/components/sidebar.tsx:
+
+Было:
+- "Запланированные" → /planned
+- "Планируемые доходы" → /planned-income
+
+Стало:
+- "💸 Планируемые расходы" → /planned-expenses
+- "💰 Планируемые доходы" → /planned-income
+
+En:
+- "💸 Planned Expenses"
+- "💰 Planned Income"
+
+2. ПЕРЕИМЕНОВАТЬ ROUTES (5 минут):
+
+client/src/App.tsx:
+<Route path="/planned-expenses" component={PlannedExpenses} />
+<Route path="/planned-income" component={PlannedIncome} />
+
+3. СОЗДАТЬ ЕДИНЫЙ LAYOUT COMPONENT (30 минут):
+
+client/src/components/planned-layout.tsx:
+
+interface PlannedLayoutProps {
+  title: string;
+  subtitle: string;
+  icon: string;
+  emptyIcon: string;
+  emptyTitle: string;
+  emptySubtitle: string;
+  addButtonText: string;
+  onAdd: () => void;
+  totalLabel: string;
+  totalAmount: string;
+  tabs: { label: string; value: string; count: number }[];
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+  children: React.ReactNode;
+}
+
+export function PlannedLayout(props: PlannedLayoutProps) {
+  return (
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <span>{props.icon}</span>
+            {props.title}
+          </h1>
+          <p className="text-sm text-gray-600 mt-1">
+            {props.subtitle}
+          </p>
+        </div>
+        <button 
+          onClick={props.onAdd}
+          className="px-4 py-2 bg-blue-500 text-white rounded-lg"
+        >
+          ➕ {props.addButtonText}
+        </button>
+      </div>
+
+      {/* Stats */}
+      <div className="p-4 bg-gray-50 rounded-lg">
+        <p className="text-sm text-gray-600">{props.totalLabel}</p>
+        <p className="text-2xl font-bold">{props.totalAmount}</p>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 border-b">
+        {props.tabs.map(tab => (
+          <button
+            key={tab.value}
+            onClick={() => props.onTabChange(tab.value)}
+            className={`px-4 py-2 ${
+              props.activeTab === tab.value
+                ? 'border-b-2 border-blue-500 font-medium'
+                : 'text-gray-600'
+            }`}
+          >
+            {tab.label} ({tab.count})
+          </button>
+        ))}
+      </div>
+
+      {/* Content or Empty State */}
+      {props.children || (
+        <div className="text-center py-16">
+          <div className="text-6xl mb-4">{props.emptyIcon}</div>
+          <h3 className="text-lg font-semibold mb-2">
+            {props.emptyTitle}
+          </h3>
+          <p className="text-sm text-gray-600 mb-6">
+            {props.emptySubtitle}
+          </p>
+          <button
+            onClick={props.onAdd}
+            className="px-6 py-3 bg-blue-500 text-white rounded-lg"
+          >
+            ➕ {props.addButtonText}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+4. ИСПОЛЬЗОВАТЬ В ОБЕИХ СТРАНИЦАХ (20 минут):
+
+// planned-expenses.tsx
+<PlannedLayout
+  title={t('plannedExpenses.title')}
+  subtitle={t('plannedExpenses.subtitle')}
+  icon="💸"
+  emptyIcon="📅"
+  emptyTitle={t('plannedExpenses.emptyTitle')}
+  emptySubtitle={t('plannedExpenses.emptySubtitle')}
+  addButtonText={t('plannedExpenses.addButton')}
+  onAdd={() => setShowAddDialog(true)}
+  totalLabel={t('plannedExpenses.totalLabel')}
+  totalAmount={formatCurrency(totalExpenses)}
+  tabs={[
+    { label: t('common.all'), value: 'all', count: allCount },
+    { label: t('plannedExpenses.planned'), value: 'planned', count: plannedCount },
+    { label: t('plannedExpenses.completed'), value: 'completed', count: completedCount }
+  ]}
+  activeTab={activeTab}
+  onTabChange={setActiveTab}
+>
+  {items.map(item => (
+    <ExpenseCard key={item.id} item={item} />
+  ))}
+</PlannedLayout>
+
+// planned-income.tsx
+<PlannedLayout
+  title={t('plannedIncome.title')}
+  subtitle={t('plannedIncome.subtitle')}
+  icon="💰"
+  emptyIcon="💰"
+  emptyTitle={t('plannedIncome.emptyTitle')}
+  emptySubtitle={t('plannedIncome.emptySubtitle')}
+  addButtonText={t('plannedIncome.addButton')}
+  onAdd={() => setShowAddDialog(true)}
+  totalLabel={t('plannedIncome.totalLabel')}
+  totalAmount={formatCurrency(totalIncome)}
+  tabs={[...]}
+  activeTab={activeTab}
+  onTabChange={setActiveTab}
+>
+  {items.map(item => (
+    <IncomeCard key={item.id} item={item} />
+  ))}
+</PlannedLayout>
+
+РЕЗУЛЬТАТ:
+✅ Одинаковая верстка
+✅ Одинаковые отступы
+✅ Одинаковые empty states
+✅ DRY (Don't Repeat Yourself)
+✅ Легко поддерживать
+
+🎯 ИТОГО
+РЕКОМЕНДУЮ: ВАРИАНТ 2 (ДВЕ СТРАНИЦЫ С ОБЩИМ LAYOUT)
+
+ЗАДАЧА ДЛЯ REPLIT (1 ЧАС):
+1. Переименовать в sidebar (💸 Планируемые расходы, 💰 Планируемые доходы)
+2. Создать PlannedLayout компонент
+3. Использовать в обеих страницах
+4. Добавить i18n переводы
+
+РЕЗУЛЬТАТ:
+✅ Понятные названия
+✅ Единая верстка
+✅ Профессионально
+✅ Просто поддерживать
+
+В БУДУЩЕМ (опционально):
+Можно добавить 3-ю страницу "📊 Финансовый план"
+где показывать timeline с доходами и расходами вместе.
