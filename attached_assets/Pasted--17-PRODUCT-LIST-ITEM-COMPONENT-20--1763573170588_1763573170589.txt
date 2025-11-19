@@ -1,0 +1,97 @@
+📊 ШАГ 17: PRODUCT LIST ITEM COMPONENT (20 минут)
+═══════════════════════════════════════════════════════
+ЗАДАЧА 17.1: СОЗДАТЬ КОМПОНЕНТ СТРОКИ ТОВАРА
+═══════════════════════════════════════════════════════
+
+СОЗДАТЬ ФАЙЛ: client/src/components/product-list-item.tsx
+
+import { useNavigate } from 'wouter';
+import { useTranslation } from 'react-i18next';
+import { ChevronRight, TrendingDown, ShoppingBag } from 'lucide-react';
+
+interface Product {
+  id: number;
+  name: string;
+  category: string;
+  purchaseCount: number;
+  bestPrice: string;
+  bestStore: string;
+  lastPurchaseDate: string;
+}
+
+interface Props {
+  product: Product;
+}
+
+export function ProductListItem({ product }: Props) {
+  const { t } = useTranslation();
+  const [, navigate] = useNavigate();
+  
+  const handleClick = () => {
+    navigate(`/product-catalog/${product.id}`);
+  };
+  
+  return (
+    <div
+      onClick={handleClick}
+      className="p-4 bg-white border rounded-lg hover:shadow-md transition cursor-pointer"
+    >
+      <div className="flex items-start justify-between gap-4">
+        {/* Левая часть: название и инфо */}
+        <div className="flex-1 min-w-0">
+          {/* Название товара */}
+          <h3 className="font-semibold text-lg mb-1 truncate">
+            {product.name}
+          </h3>
+          
+          {/* Категория */}
+          {product.category && (
+            <p className="text-sm text-gray-500 mb-2">
+              {product.category}
+            </p>
+          )}
+          
+          {/* Статистика и цена */}
+          <div className="flex flex-wrap items-center gap-4 text-sm">
+            {/* Куплено раз */}
+            <div className="flex items-center gap-1 text-gray-600">
+              <ShoppingBag className="w-4 h-4" />
+              <span>
+                {t('productCatalog.purchased', 'Куплено')}: {product.purchaseCount} {t('productCatalog.times', 'раз')}
+              </span>
+            </div>
+            
+            {/* Лучшая цена */}
+            {product.bestPrice && (
+              <div className="flex items-center gap-1">
+                <TrendingDown className="w-4 h-4 text-green-600" />
+                <span className="font-semibold text-green-700">
+                  ${parseFloat(product.bestPrice).toFixed(2)}
+                </span>
+                {product.bestStore && (
+                  <span className="text-gray-500">
+                    · {product.bestStore}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Правая часть: стрелка */}
+        <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+      </div>
+    </div>
+  );
+}
+
+СТРОК: ~85 ✅
+ОТВЕТСТВЕННОСТЬ: Один товар в списке ✅
+
+═══════════════════════════════════════════════════════
+
+ОЖИДАЕМЫЙ РЕЗУЛЬТАТ:
+✅ Компактная строка товара
+✅ Название, категория, статистика
+✅ Hover эффект
+✅ Клик открывает детали
