@@ -17,9 +17,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CalibrationDialog } from "@/components/wallets/calibration-dialog";
+import { useTranslation } from "@/i18n/context";
 
 const formSchema = insertWalletSchema.extend({
-  balance: z.string().min(1, "Balance is required"),
+  balance: z.string().min(1),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -36,6 +37,7 @@ export default function WalletsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   const { data: wallets = [], isLoading } = useQuery<Wallet[]>({
     queryKey: ["/api/wallets"],
@@ -60,15 +62,15 @@ export default function WalletsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wallets"] });
       toast({
-        title: "Success",
-        description: "Wallet added successfully",
+        title: t("common.success"),
+        description: t("wallets.added_successfully"),
       });
       form.reset();
       setShowAddDialog(false);
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t("common.error"),
         description: error.message,
         variant: "destructive",
       });
@@ -101,8 +103,8 @@ export default function WalletsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Wallets</h1>
-          <p className="text-muted-foreground">Manage your accounts and balances</p>
+          <h1 className="text-3xl font-bold">{t("wallets.title")}</h1>
+          <p className="text-muted-foreground">{t("wallets.manage")}</p>
         </div>
         <div className="flex gap-2">
           <Button 
@@ -111,18 +113,18 @@ export default function WalletsPage() {
             data-testid="button-calibrate-wallets"
           >
             <Settings2 className="h-4 w-4 mr-2" />
-            Calibrate
+            {t("wallets.calibrate")}
           </Button>
           <Button onClick={() => setShowAddDialog(true)} data-testid="button-add-wallet">
             <Plus className="h-4 w-4 mr-2" />
-            Add Wallet
+            {t("wallets.add_wallet")}
           </Button>
         </div>
       </div>
 
       <Card className="border-l-4 border-l-primary">
         <CardHeader>
-          <CardTitle className="text-xl">Total Net Worth</CardTitle>
+          <CardTitle className="text-xl">{t("wallets.total_net_worth")}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-3xl font-mono font-bold" data-testid="total-balance">
@@ -164,8 +166,8 @@ export default function WalletsPage() {
           <Card className="col-span-full">
             <CardContent className="text-center py-12">
               <WalletIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No wallets yet</p>
-              <p className="text-sm text-muted-foreground mt-1">Add your first wallet to start tracking balances</p>
+              <p className="text-muted-foreground">{t("wallets.no_wallets")}</p>
+              <p className="text-sm text-muted-foreground mt-1">{t("wallets.add_first")}</p>
             </CardContent>
           </Card>
         )}
@@ -174,7 +176,7 @@ export default function WalletsPage() {
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Wallet</DialogTitle>
+            <DialogTitle>{t("wallets.add_wallet_dialog")}</DialogTitle>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -183,7 +185,7 @@ export default function WalletsPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Wallet Name</FormLabel>
+                    <FormLabel>{t("wallets.name")}</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g. My Bank Account" data-testid="input-wallet-name" {...field} />
                     </FormControl>
@@ -197,17 +199,17 @@ export default function WalletsPage() {
                 name="type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Type</FormLabel>
+                    <FormLabel>{t("wallets.type")}</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger data-testid="select-wallet-type">
-                          <SelectValue placeholder="Select type" />
+                          <SelectValue placeholder={t("wallets.select_type")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="card">Card</SelectItem>
-                        <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="crypto">Crypto</SelectItem>
+                        <SelectItem value="card">{t("wallets.type_card")}</SelectItem>
+                        <SelectItem value="cash">{t("wallets.type_cash")}</SelectItem>
+                        <SelectItem value="crypto">{t("wallets.type_crypto")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -221,7 +223,7 @@ export default function WalletsPage() {
                   name="balance"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Balance</FormLabel>
+                      <FormLabel>{t("wallets.balance")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -241,11 +243,11 @@ export default function WalletsPage() {
                   name="currency"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Currency</FormLabel>
+                      <FormLabel>{t("wallets.currency")}</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
                         <FormControl>
                           <SelectTrigger data-testid="select-wallet-currency">
-                            <SelectValue placeholder="Currency" />
+                            <SelectValue placeholder={t("wallets.currency")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -268,7 +270,7 @@ export default function WalletsPage() {
                   className="flex-1"
                   data-testid="button-cancel-wallet"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   type="submit"
@@ -276,7 +278,7 @@ export default function WalletsPage() {
                   className="flex-1"
                   data-testid="button-submit-wallet"
                 >
-                  {createMutation.isPending ? "Adding..." : "Add Wallet"}
+                  {createMutation.isPending ? t("wallets.adding") : t("wallets.add_wallet")}
                 </Button>
               </div>
             </form>

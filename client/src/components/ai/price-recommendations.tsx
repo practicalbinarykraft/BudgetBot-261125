@@ -1,6 +1,7 @@
 import { TrendingDown, Store, DollarSign } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "@/i18n/context";
 
 export interface PriceRecommendation {
   itemName: string;
@@ -30,21 +31,23 @@ export function PriceRecommendations({
   aiInsights,
   isLoadingInsights
 }: PriceRecommendationsProps) {
+  const { t } = useTranslation();
+  
   if (recommendations.length === 0) {
     return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingDown className="w-5 h-5" />
-            Price Comparisons
+            {t("analysis.price_comparisons")}
           </CardTitle>
           <CardDescription>
-            Scan receipts from different merchants to discover price differences
+            {t("analysis.scan_receipts_description")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground text-center py-8" data-testid="empty-state-message">
-            No price comparisons available yet. Keep scanning receipts!
+            {t("analysis.no_price_comparisons")}
           </p>
         </CardContent>
       </Card>
@@ -57,19 +60,19 @@ export function PriceRecommendations({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <DollarSign className="w-5 h-5" />
-            Savings Overview
+            {t("analysis.savings_overview")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-4">
             <div data-testid="total-savings">
-              <p className="text-sm text-muted-foreground">Total Potential Savings</p>
+              <p className="text-sm text-muted-foreground">{t("analysis.total_potential_savings")}</p>
               <p className="text-2xl font-bold">
                 {totalPotentialSavings.toFixed(2)} {currency}
               </p>
             </div>
             <div data-testid="avg-savings-percent">
-              <p className="text-sm text-muted-foreground">Average Savings</p>
+              <p className="text-sm text-muted-foreground">{t("analysis.average_savings")}</p>
               <p className="text-2xl font-bold">
                 {averageSavingsPercent.toFixed(1)}%
               </p>
@@ -81,7 +84,7 @@ export function PriceRecommendations({
       {aiInsights && (
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
-            <CardTitle className="text-base">AI Shopping Tips</CardTitle>
+            <CardTitle className="text-base">{t("analysis.ai_shopping_tips")}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm whitespace-pre-line" data-testid="ai-insights">
@@ -95,7 +98,7 @@ export function PriceRecommendations({
         <Card className="border-primary/20 bg-primary/5">
           <CardContent className="py-4">
             <p className="text-sm text-muted-foreground animate-pulse" data-testid="loading-insights-message">
-              Generating AI shopping tips...
+              {t("analysis.generating_ai_tips")}
             </p>
           </CardContent>
         </Card>
@@ -105,10 +108,10 @@ export function PriceRecommendations({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingDown className="w-5 h-5" />
-            Price Recommendations
+            {t("analysis.price_recommendations")}
           </CardTitle>
           <CardDescription>
-            Found {recommendations.length} items with better prices elsewhere
+            {t("analysis.found_items_better_prices").replace("{count}", recommendations.length.toString())}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -134,7 +137,7 @@ export function PriceRecommendations({
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
                     <Badge variant="default" data-testid={`savings-${index}`}>
-                      Save {rec.savings.toFixed(2)} ({rec.savingsPercent.toFixed(1)}%)
+                      {t("analysis.save")} {rec.savings.toFixed(2)} ({rec.savingsPercent.toFixed(1)}%)
                     </Badge>
                     <div className="text-sm text-muted-foreground text-right">
                       <div className="flex items-center gap-1">

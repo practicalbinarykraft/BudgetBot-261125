@@ -7,6 +7,7 @@ import { PriceRecommendations } from "@/components/ai/price-recommendations";
 import { ReceiptScanner } from "@/components/ai/receipt-scanner";
 import { SpendingAnalysisCard } from "@/components/ai/spending-analysis-card";
 import { AIChat } from "@/components/ai/ai-chat";
+import { useTranslation } from "@/i18n/context";
 
 interface FinancialHealthScore {
   score: number;
@@ -35,6 +36,7 @@ interface PriceRecommendationsResponse {
 }
 
 export default function AIAnalysisPage() {
+  const { t } = useTranslation();
   const { data: healthScore, isLoading: isLoadingHealth } = useQuery<FinancialHealthScore>({
     queryKey: ["/api/financial-health"],
   });
@@ -46,8 +48,8 @@ export default function AIAnalysisPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">AI Analysis</h1>
-        <p className="text-muted-foreground">Get AI-powered insights about your finances</p>
+        <h1 className="text-3xl font-bold">{t("analysis.title")}</h1>
+        <p className="text-muted-foreground">{t("analysis.insights")}</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -57,7 +59,7 @@ export default function AIAnalysisPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-green-600" />
-              Financial Health Score
+              {t("analysis.financial_health")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -85,7 +87,7 @@ export default function AIAnalysisPage() {
               </>
             ) : (
               <div className="text-sm text-muted-foreground">
-                No data available yet. Add some transactions to see your score.
+                {t("analysis.no_data")}
               </div>
             )}
           </CardContent>
@@ -99,7 +101,7 @@ export default function AIAnalysisPage() {
       <Accordion type="single" collapsible className="w-full" data-testid="accordion-price-recommendations">
         <AccordionItem value="price-recommendations">
           <AccordionTrigger data-testid="accordion-trigger-price-recommendations">
-            Price Recommendations
+            {t("analysis.price_recommendations")}
           </AccordionTrigger>
           <AccordionContent>
             {isLoadingRecommendations ? (
@@ -117,7 +119,7 @@ export default function AIAnalysisPage() {
               />
             ) : (
               <p className="text-sm text-muted-foreground" data-testid="empty-price-recommendations">
-                No price data available yet. Scan more receipts to discover savings!
+                {t("analysis.no_price_data")}
               </p>
             )}
           </AccordionContent>

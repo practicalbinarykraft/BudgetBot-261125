@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "@/i18n/context";
 
 type FormData = z.infer<typeof insertCategorySchema>;
 
@@ -25,6 +26,7 @@ export default function CategoriesPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   const { data: categories = [], isLoading } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
@@ -49,15 +51,15 @@ export default function CategoriesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       toast({
-        title: "Success",
-        description: "Category added successfully",
+        title: t("common.success"),
+        description: t("categories.added_successfully"),
       });
       form.reset();
       setShowAddDialog(false);
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t("common.error_occurred"),
         description: error.message,
         variant: "destructive",
       });
@@ -74,13 +76,13 @@ export default function CategoriesPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       queryClient.invalidateQueries({ queryKey: ["/api/budgets"] });
       toast({
-        title: "Success",
-        description: "Category deleted successfully",
+        title: t("common.success"),
+        description: t("categories.deleted_successfully"),
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t("common.error_occurred"),
         description: error.message,
         variant: "destructive",
       });
@@ -111,18 +113,18 @@ export default function CategoriesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Categories</h1>
-          <p className="text-muted-foreground">Organize your transactions</p>
+          <h1 className="text-3xl font-bold">{t("categories.title")}</h1>
+          <p className="text-muted-foreground">{t("categories.organize")}</p>
         </div>
         <Button onClick={() => setShowAddDialog(true)} data-testid="button-add-category">
           <Plus className="h-4 w-4 mr-2" />
-          Add Category
+          {t("categories.add_category")}
         </Button>
       </div>
 
       <div className="space-y-6">
         <div>
-          <h2 className="text-xl font-semibold mb-4">Income Categories</h2>
+          <h2 className="text-xl font-semibold mb-4">{t("categories.income_categories")}</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {incomeCategories.map((category) => (
               <Card key={category.id} className="hover-elevate" data-testid={`category-${category.id}`}>
@@ -136,7 +138,7 @@ export default function CategoriesPage() {
                     </div>
                     <div>
                       <p className="font-medium">{category.name}</p>
-                      <Badge variant="secondary" className="text-xs mt-1">Income</Badge>
+                      <Badge variant="secondary" className="text-xs mt-1">{t("categories.type_income")}</Badge>
                     </div>
                   </div>
                   <Button
@@ -154,14 +156,14 @@ export default function CategoriesPage() {
           {incomeCategories.length === 0 && (
             <Card>
               <CardContent className="text-center py-8 text-muted-foreground">
-                <p>No income categories yet</p>
+                <p>{t("categories.no_income")}</p>
               </CardContent>
             </Card>
           )}
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold mb-4">Expense Categories</h2>
+          <h2 className="text-xl font-semibold mb-4">{t("categories.expense_categories")}</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {expenseCategories.map((category) => (
               <Card key={category.id} className="hover-elevate" data-testid={`category-${category.id}`}>
@@ -175,7 +177,7 @@ export default function CategoriesPage() {
                     </div>
                     <div>
                       <p className="font-medium">{category.name}</p>
-                      <Badge variant="secondary" className="text-xs mt-1">Expense</Badge>
+                      <Badge variant="secondary" className="text-xs mt-1">{t("categories.type_expense")}</Badge>
                     </div>
                   </div>
                   <Button
@@ -193,7 +195,7 @@ export default function CategoriesPage() {
           {expenseCategories.length === 0 && (
             <Card>
               <CardContent className="text-center py-8 text-muted-foreground">
-                <p>No expense categories yet</p>
+                <p>{t("categories.no_expense")}</p>
               </CardContent>
             </Card>
           )}
@@ -203,7 +205,7 @@ export default function CategoriesPage() {
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Category</DialogTitle>
+            <DialogTitle>{t("categories.add_category_dialog")}</DialogTitle>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -212,7 +214,7 @@ export default function CategoriesPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Category Name</FormLabel>
+                    <FormLabel>{t("categories.name")}</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g. Groceries, Salary" data-testid="input-category-name" {...field} />
                     </FormControl>
@@ -226,16 +228,16 @@ export default function CategoriesPage() {
                 name="type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Type</FormLabel>
+                    <FormLabel>{t("categories.type")}</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger data-testid="select-category-type">
-                          <SelectValue placeholder="Select type" />
+                          <SelectValue placeholder={t("categories.select_type")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="income">Income</SelectItem>
-                        <SelectItem value="expense">Expense</SelectItem>
+                        <SelectItem value="income">{t("categories.type_income")}</SelectItem>
+                        <SelectItem value="expense">{t("categories.type_expense")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -248,7 +250,7 @@ export default function CategoriesPage() {
                 name="color"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Color</FormLabel>
+                    <FormLabel>{t("categories.color")}</FormLabel>
                     <FormControl>
                       <Input type="color" data-testid="input-category-color" {...field} value={field.value ?? undefined} />
                     </FormControl>
@@ -265,7 +267,7 @@ export default function CategoriesPage() {
                   className="flex-1"
                   data-testid="button-cancel-category"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   type="submit"
@@ -273,7 +275,7 @@ export default function CategoriesPage() {
                   className="flex-1"
                   data-testid="button-submit-category"
                 >
-                  {createMutation.isPending ? "Adding..." : "Add Category"}
+                  {createMutation.isPending ? t("categories.adding") : t("categories.add_category")}
                 </Button>
               </div>
             </form>

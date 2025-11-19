@@ -18,6 +18,7 @@ import { BudgetCard } from "@/components/budgets/BudgetCard";
 import { BudgetFormDialog } from "@/components/budgets/BudgetFormDialog";
 import { BudgetEmptyState } from "@/components/budgets/BudgetEmptyState";
 import { LimitsProgress } from "@/components/budget/limits-progress";
+import { useTranslation } from "@/i18n/context";
 
 type FormData = z.infer<typeof insertBudgetSchema>;
 
@@ -26,6 +27,7 @@ export default function BudgetsPage() {
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   const { data: budgets = [], isLoading: budgetsLoading } = useQuery<Budget[]>({
     queryKey: ["/api/budgets"],
@@ -60,8 +62,8 @@ export default function BudgetsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/budgets"] });
       toast({
-        title: "Success",
-        description: "Budget created successfully",
+        title: t("common.success"),
+        description: t("budgets.created_successfully"),
       });
       // Reset form to default values (userId removed)
       form.reset({
@@ -74,7 +76,7 @@ export default function BudgetsPage() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t("common.error_occurred"),
         description: error.message,
         variant: "destructive",
       });
@@ -89,15 +91,15 @@ export default function BudgetsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/budgets"] });
       toast({
-        title: "Success",
-        description: "Budget updated successfully",
+        title: t("common.success"),
+        description: t("budgets.updated_successfully"),
       });
       setEditingBudget(null);
       setShowAddDialog(false);
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t("common.error_occurred"),
         description: error.message,
         variant: "destructive",
       });
@@ -111,13 +113,13 @@ export default function BudgetsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/budgets"] });
       toast({
-        title: "Success",
-        description: "Budget deleted successfully",
+        title: t("common.success"),
+        description: t("budgets.deleted_successfully"),
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t("common.error_occurred"),
         description: error.message,
         variant: "destructive",
       });
@@ -181,12 +183,12 @@ export default function BudgetsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-3xl font-bold">Budgets</h1>
-          <p className="text-muted-foreground">Track your spending limits</p>
+          <h1 className="text-3xl font-bold">{t("budgets.title")}</h1>
+          <p className="text-muted-foreground">{t("budgets.manage")}</p>
         </div>
         <Button onClick={handleAddNew} data-testid="button-add-budget">
           <Plus className="h-4 w-4 mr-2" />
-          Add Budget
+          {t("budgets.add_budget")}
         </Button>
       </div>
 

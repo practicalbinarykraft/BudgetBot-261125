@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sortWishlist } from "@/lib/wishlist-utils";
+import { useTranslation } from "@/i18n/context";
 
 export default function WishlistPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -23,6 +24,7 @@ export default function WishlistPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   const { data: wishlist = [], isLoading } = useQuery<WishlistItemWithPrediction[]>({
     queryKey: ["/api/wishlist"],
@@ -42,14 +44,14 @@ export default function WishlistPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
       toast({
-        title: "Success",
-        description: "Item added to wishlist",
+        title: t("common.success"),
+        description: t("wishlist.added_successfully"),
       });
       setShowAddDialog(false);
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t("common.error_occurred"),
         description: error.message,
         variant: "destructive",
       });
@@ -63,13 +65,13 @@ export default function WishlistPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
       toast({
-        title: "Success",
-        description: "Item removed from wishlist",
+        title: t("common.success"),
+        description: t("wishlist.removed_successfully"),
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t("common.error_occurred"),
         description: error.message,
         variant: "destructive",
       });
@@ -86,7 +88,7 @@ export default function WishlistPage() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t("common.error_occurred"),
         description: error.message,
         variant: "destructive",
       });
@@ -111,14 +113,14 @@ export default function WishlistPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/planned"] });
       toast({
-        title: "Success",
-        description: "Purchase scheduled successfully",
+        title: t("common.success"),
+        description: t("wishlist.scheduled_successfully"),
       });
       setScheduleItem(null);
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t("common.error_occurred"),
         description: error.message,
         variant: "destructive",
       });
@@ -168,12 +170,12 @@ export default function WishlistPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Wishlist</h1>
-          <p className="text-muted-foreground">Plan your future purchases</p>
+          <h1 className="text-3xl font-bold">{t("wishlist.title")}</h1>
+          <p className="text-muted-foreground">{t("wishlist.plan")}</p>
         </div>
         <Button onClick={() => setShowAddDialog(true)} data-testid="button-add-wishlist">
           <Plus className="h-4 w-4 mr-2" />
-          Add Item
+          {t("wishlist.add_item")}
         </Button>
       </div>
 

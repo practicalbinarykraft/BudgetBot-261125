@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Camera, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/i18n/context";
 
 interface ReceiptScannerProps {
   onSuccess?: (result: any) => void;
@@ -14,6 +15,7 @@ export function ReceiptScanner({ onSuccess }: ReceiptScannerProps) {
   const [uploadResult, setUploadResult] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -40,15 +42,19 @@ export function ReceiptScanner({ onSuccess }: ReceiptScannerProps) {
     onSuccess: (data) => {
       setUploadResult(data);
       const merchant = data.receipt?.merchant || 'receipt';
+      const count = data.itemsCount || 0;
+      const description = t("analysis.found_items_from")
+        .replace("{count}", count.toString())
+        .replace("{merchant}", merchant);
       toast({
-        title: "Receipt scanned successfully!",
-        description: `Found ${data.itemsCount || 0} items from ${merchant}`,
+        title: t("analysis.receipt_scanned_successfully"),
+        description,
       });
       onSuccess?.(data);
     },
     onError: (error: any) => {
       toast({
-        title: "Failed to scan receipt",
+        title: t("analysis.failed_to_scan_receipt"),
         description: error.message,
         variant: "destructive",
       });
@@ -77,10 +83,10 @@ export function ReceiptScanner({ onSuccess }: ReceiptScannerProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Camera className="h-5 w-5" />
-          Receipt OCR Scanner
+          {t("analysis.receipt_scanner")}
         </CardTitle>
         <CardDescription>
-          Upload a receipt to automatically extract items and prices
+          {t("analysis.upload_receipt_description")}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -102,12 +108,12 @@ export function ReceiptScanner({ onSuccess }: ReceiptScannerProps) {
             {uploadMutation.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Scanning...
+                {t("analysis.scanning")}
               </>
             ) : (
               <>
                 <Camera className="mr-2 h-4 w-4" />
-                Upload Receipt
+                {t("analysis.upload_receipt")}
               </>
             )}
           </Button>
@@ -116,17 +122,19 @@ export function ReceiptScanner({ onSuccess }: ReceiptScannerProps) {
             <div className="mt-4 space-y-3">
               <div className="p-4 bg-green-50 dark:bg-green-950 rounded-lg" data-testid="receipt-result">
                 <p className="text-sm font-medium text-green-900 dark:text-green-100">
-                  ✓ Receipt scanned successfully!
+                  ✓ {t("analysis.receipt_scanned_successfully")}
                 </p>
                 <p className="text-xs text-green-700 dark:text-green-300 mt-1">
-                  Found {uploadResult.itemsCount || 0} items from {uploadResult.receipt?.merchant || 'receipt'}
+                  {t("analysis.found_items_from")
+                    .replace("{count}", (uploadResult.itemsCount || 0).toString())
+                    .replace("{merchant}", uploadResult.receipt?.merchant || 'receipt')}
                 </p>
               </div>
 
               {uploadResult.receipt?.items && uploadResult.receipt.items.length > 0 && (
                 <div className="border rounded-lg overflow-hidden">
                   <div className="bg-muted px-4 py-2">
-                    <p className="text-sm font-medium">Extracted Items</p>
+                    <p className="text-sm font-medium">{t("analysis.extracted_items")}</p>
                   </div>
                   <div className="divide-y" data-testid="receipt-items-list">
                     {uploadResult.receipt.items.map((item: any, index: number) => (
@@ -134,10 +142,10 @@ export function ReceiptScanner({ onSuccess }: ReceiptScannerProps) {
                         <div className="flex justify-between items-start gap-4">
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">
-                              {item.name || 'Unknown item'}
+                              {item.name || t("analysis.unknown_item")}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              Qty: {item.quantity || 1}
+                              {t("analysis.qty")}: {item.quantity || 1}
                             </p>
                           </div>
                           <div className="text-right flex-shrink-0">
@@ -155,7 +163,7 @@ export function ReceiptScanner({ onSuccess }: ReceiptScannerProps) {
                   {uploadResult.receipt.total && (
                     <div className="bg-muted px-4 py-2 border-t">
                       <div className="flex justify-between text-sm font-medium">
-                        <span>Total</span>
+                        <span>{t("analysis.total")}</span>
                         <span>{uploadResult.receipt.total}</span>
                       </div>
                     </div>

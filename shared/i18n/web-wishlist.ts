@@ -14,4 +14,11 @@ export const webWishlistTranslations: Translations = {
   "wishlist.sort_price_high": { en: "Price: High to Low", ru: "Цена: по убыванию" },
   "wishlist.sort_date": { en: "Date Added", ru: "Дата добавления" },
   "wishlist.sort_affordable": { en: "Affordable First", ru: "Доступные первыми" },
+  
+  // Schedule Purchase Dialog
+  "wishlist.schedule_purchase": { en: "Schedule Purchase", ru: "Запланировать покупку" },
+  "wishlist.item": { en: "Item", ru: "Товар" },
+  "wishlist.amount": { en: "Amount", ru: "Сумма" },
+  "wishlist.target_date": { en: "Target Date", ru: "Целевая дата" },
+  "wishlist.schedule": { en: "Schedule", ru: "Запланировать" },
 };

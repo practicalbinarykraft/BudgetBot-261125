@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseISO, isToday, isTomorrow, differenceInDays, startOfWeek, endOfWeek, isPast } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTranslation } from "@/i18n/context";
 
 type GroupedPlanned = {
   overdue: PlannedTransaction[];
@@ -61,6 +62,7 @@ export default function PlannedPage() {
   const [activeTab, setActiveTab] = useState<"all" | "planned" | "completed">("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   const { data: allPlanned = [], isLoading } = useQuery<PlannedTransaction[]>({
     queryKey: ["/api/planned"],
@@ -80,7 +82,7 @@ export default function PlannedPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/planned"] });
-      toast({ title: "Success", description: "Planned transaction removed" });
+      toast({ title: t("common.success"), description: t("planned.removed_successfully") });
     },
   });
 
@@ -93,10 +95,10 @@ export default function PlannedPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/planned"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/wallets"] });
-      toast({ title: "Success", description: "Purchase completed and transaction created" });
+      toast({ title: t("common.success"), description: t("planned.completed_successfully") });
     },
     onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: t("common.error_occurred"), description: error.message, variant: "destructive" });
     },
   });
 
@@ -107,7 +109,7 @@ export default function PlannedPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/planned"] });
-      toast({ title: "Success", description: "Planned transaction cancelled" });
+      toast({ title: t("common.success"), description: t("planned.cancelled_successfully") });
     },
   });
 
@@ -119,11 +121,11 @@ export default function PlannedPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/planned"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/predictions"] });
-      toast({ title: "Success", description: "Planned purchase added" });
+      toast({ title: t("common.success"), description: t("planned.added_successfully") });
       setShowAddDialog(false);
     },
     onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: t("common.error_occurred"), description: error.message, variant: "destructive" });
     },
   });
 
@@ -173,41 +175,41 @@ export default function PlannedPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Planned Purchases</h1>
+          <h1 className="text-3xl font-bold">{t("planned.title")}</h1>
           <p className="text-muted-foreground">
-            {totalPlanned} items planned · ${totalAmount.toFixed(2)} total
+            {totalPlanned} {t("planned.total_planned")} · ${totalAmount.toFixed(2)} {t("planned.total_amount")}
           </p>
         </div>
         <Button onClick={() => setShowAddDialog(true)} data-testid="button-add-planned">
           <Plus className="h-4 w-4 mr-2" />
-          Add Plan
+          {t("planned.add_planned")}
         </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
         <TabsList>
-          <TabsTrigger value="all" data-testid="tab-all">All</TabsTrigger>
-          <TabsTrigger value="planned" data-testid="tab-planned">Planned</TabsTrigger>
-          <TabsTrigger value="completed" data-testid="tab-completed">Completed</TabsTrigger>
+          <TabsTrigger value="all" data-testid="tab-all">{t("planned.tab_all")}</TabsTrigger>
+          <TabsTrigger value="planned" data-testid="tab-planned">{t("planned.tab_planned")}</TabsTrigger>
+          <TabsTrigger value="completed" data-testid="tab-completed">{t("planned.tab_completed")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="space-y-6 mt-6">
           {filteredPlanned.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">No planned purchases</h3>
+              <h3 className="text-lg font-medium">{t("planned.no_items")}</h3>
               <p className="text-sm text-muted-foreground">
-                Schedule purchases from your wishlist or create new ones
+                {t("planned.add_first")}
               </p>
             </div>
           ) : (
             <>
-              {renderGroup("Overdue", groupedPlanned.overdue, groupedPlanned.overdue.length)}
-              {renderGroup("Today", groupedPlanned.today, groupedPlanned.today.length)}
-              {renderGroup("Tomorrow", groupedPlanned.tomorrow, groupedPlanned.tomorrow.length)}
-              {renderGroup("This Week", groupedPlanned.thisWeek, groupedPlanned.thisWeek.length)}
-              {renderGroup("Next Week", groupedPlanned.nextWeek, groupedPlanned.nextWeek.length)}
-              {renderGroup("Later", groupedPlanned.later, groupedPlanned.later.length)}
+              {renderGroup(t("planned.overdue"), groupedPlanned.overdue, groupedPlanned.overdue.length)}
+              {renderGroup(t("planned.today"), groupedPlanned.today, groupedPlanned.today.length)}
+              {renderGroup(t("planned.tomorrow"), groupedPlanned.tomorrow, groupedPlanned.tomorrow.length)}
+              {renderGroup(t("planned.this_week"), groupedPlanned.thisWeek, groupedPlanned.thisWeek.length)}
+              {renderGroup(t("planned.next_week"), groupedPlanned.nextWeek, groupedPlanned.nextWeek.length)}
+              {renderGroup(t("planned.later"), groupedPlanned.later, groupedPlanned.later.length)}
             </>
           )}
         </TabsContent>

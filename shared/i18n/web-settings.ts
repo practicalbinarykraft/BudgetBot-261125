@@ -137,14 +137,6 @@ export const webSettingsTranslations: Translations = {
     en: 'Select language',
     ru: 'Выберите язык',
   },
-  'settings.language.english': {
-    en: 'English',
-    ru: 'Английский',
-  },
-  'settings.language.russian': {
-    en: 'Russian',
-    ru: 'Русский',
-  },
   'settings.receive_alerts': {
     en: 'Receive spending alerts via Telegram',
     ru: 'Получать уведомления о расходах в Telegram',

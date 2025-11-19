@@ -21,9 +21,10 @@ import { Badge } from "@/components/ui/badge";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "@/i18n/context";
 
 const formSchema = insertRecurringSchema.extend({
-  amount: z.string().min(1, "Amount is required"),
+  amount: z.string().min(1),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -33,6 +34,7 @@ export default function RecurringPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   const { data: recurring = [], isLoading } = useQuery<Recurring[]>({
     queryKey: ["/api/recurring"],
@@ -62,15 +64,15 @@ export default function RecurringPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/recurring"] });
       toast({
-        title: "Success",
-        description: "Recurring payment added successfully",
+        title: t("common.success"),
+        description: t("recurring.added_successfully"),
       });
       form.reset();
       setShowAddDialog(false);
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t("common.error_occurred"),
         description: error.message,
         variant: "destructive",
       });
@@ -84,13 +86,13 @@ export default function RecurringPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/recurring"] });
       toast({
-        title: "Success",
-        description: "Recurring payment deleted successfully",
+        title: t("common.success"),
+        description: t("recurring.deleted_successfully"),
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t("common.error_occurred"),
         description: error.message,
         variant: "destructive",
       });
@@ -114,12 +116,12 @@ export default function RecurringPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Recurring Payments</h1>
-          <p className="text-muted-foreground">Manage subscriptions and regular payments</p>
+          <h1 className="text-3xl font-bold">{t("recurring.title")}</h1>
+          <p className="text-muted-foreground">{t("recurring.manage")}</p>
         </div>
         <Button onClick={() => setShowAddDialog(true)} data-testid="button-add-recurring">
           <Plus className="h-4 w-4 mr-2" />
-          Add Recurring
+          {t("recurring.add_recurring")}
         </Button>
       </div>
 
@@ -144,7 +146,7 @@ export default function RecurringPage() {
                       )}
                       <p className="text-sm text-muted-foreground">
                         {/* ⏰ parseISO prevents timezone bugs */}
-                        Next: {format(parseISO(item.nextDate), "MMM dd, yyyy")}
+                        {t("recurring.next")} {format(parseISO(item.nextDate), "MMM dd, yyyy")}
                       </p>
                     </div>
                   </div>
@@ -174,7 +176,7 @@ export default function RecurringPage() {
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Recurring Payment</DialogTitle>
+            <DialogTitle>{t("recurring.add_dialog")}</DialogTitle>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -183,7 +185,7 @@ export default function RecurringPage() {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>{t("recurring.description")}</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g. Netflix subscription" data-testid="input-recurring-description" {...field} />
                     </FormControl>
@@ -197,16 +199,16 @@ export default function RecurringPage() {
                 name="type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Type</FormLabel>
+                    <FormLabel>{t("recurring.type")}</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger data-testid="select-recurring-type">
-                          <SelectValue placeholder="Select type" />
+                          <SelectValue placeholder={t("recurring.select_type")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="income">Income</SelectItem>
-                        <SelectItem value="expense">Expense</SelectItem>
+                        <SelectItem value="income">{t("recurring.type_income")}</SelectItem>
+                        <SelectItem value="expense">{t("recurring.type_expense")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -219,7 +221,7 @@ export default function RecurringPage() {
                 name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Amount</FormLabel>
+                    <FormLabel>{t("recurring.amount")}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -239,17 +241,17 @@ export default function RecurringPage() {
                 name="frequency"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Frequency</FormLabel>
+                    <FormLabel>{t("recurring.frequency")}</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger data-testid="select-recurring-frequency">
-                          <SelectValue placeholder="Select frequency" />
+                          <SelectValue placeholder={t("recurring.select_frequency")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="weekly">Weekly</SelectItem>
-                        <SelectItem value="monthly">Monthly</SelectItem>
-                        <SelectItem value="yearly">Yearly</SelectItem>
+                        <SelectItem value="weekly">{t("recurring.frequency_weekly")}</SelectItem>
+                        <SelectItem value="monthly">{t("recurring.frequency_monthly")}</SelectItem>
+                        <SelectItem value="yearly">{t("recurring.frequency_yearly")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -262,7 +264,7 @@ export default function RecurringPage() {
                 name="nextDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Next Payment Date</FormLabel>
+                    <FormLabel>{t("recurring.next_date")}</FormLabel>
                     <FormControl>
                       <Input type="date" data-testid="input-recurring-date" {...field} />
                     </FormControl>
@@ -279,7 +281,7 @@ export default function RecurringPage() {
                   className="flex-1"
                   data-testid="button-cancel-recurring"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   type="submit"
@@ -287,7 +289,7 @@ export default function RecurringPage() {
                   className="flex-1"
                   data-testid="button-submit-recurring"
                 >
-                  {createMutation.isPending ? "Adding..." : "Add Payment"}
+                  {createMutation.isPending ? t("recurring.adding") : t("recurring.add_recurring")}
                 </Button>
               </div>
             </form>

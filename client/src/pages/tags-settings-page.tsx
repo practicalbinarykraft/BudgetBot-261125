@@ -18,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useTranslation } from '@/i18n/context';
 
 export default function TagsSettingsPage() {
   const { toast } = useToast();
@@ -26,6 +27,7 @@ export default function TagsSettingsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTag, setEditingTag] = useState<PersonalTag | null>(null);
   const [deletingTag, setDeletingTag] = useState<PersonalTag | null>(null);
+  const { t } = useTranslation();
   
   const { data: tags = [], isLoading } = useQuery<PersonalTag[]>({
     queryKey: ['/api/tags'],
@@ -57,7 +59,7 @@ export default function TagsSettingsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tags'] });
-      toast({ description: 'Tag deleted successfully' });
+      toast({ description: t('tags.deleted_successfully') });
       setDeletingTag(null);
     },
     onError: (error: any) => {
@@ -99,10 +101,10 @@ export default function TagsSettingsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold" data-testid="heading-tags-settings">
-            Personal Tags
+            {t('tags.title')}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Organize transactions by person or group
+            {t('tags.organize')}
           </p>
         </div>
         
@@ -111,14 +113,14 @@ export default function TagsSettingsPage() {
           data-testid="button-create-tag"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Create Tag
+          {t('tags.create_tag')}
         </Button>
       </div>
       
       {tags.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-64 text-center">
           <p className="text-muted-foreground mb-4">
-            No tags yet. Create your first tag to start organizing transactions.
+            {t('tags.no_tags')}
           </p>
           <Button 
             variant="outline" 
@@ -126,7 +128,7 @@ export default function TagsSettingsPage() {
             data-testid="button-create-first-tag"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Create First Tag
+            {t('tags.create_first_tag')}
           </Button>
         </div>
       ) : (
@@ -154,22 +156,22 @@ export default function TagsSettingsPage() {
       <AlertDialog open={!!deletingTag} onOpenChange={() => setDeletingTag(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Tag</AlertDialogTitle>
+            <AlertDialogTitle>{t('tags.delete_tag')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{deletingTag?.name}"?
-              This will remove the tag from all transactions, but transactions will not be deleted.
+              {t('tags.delete_confirm')} "{deletingTag?.name}"?
+              {t('tags.delete_description')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel data-testid="button-cancel-delete">
-              Cancel
+              {t('common.cancel')}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deletingTag && deleteMutation.mutate(deletingTag.id)}
               disabled={deleteMutation.isPending}
               data-testid="button-confirm-delete"
             >
-              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+              {deleteMutation.isPending ? t('tags.deleting') : t('tags.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

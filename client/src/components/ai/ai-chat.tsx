@@ -11,6 +11,7 @@ import { ChatMessage } from "./chat-message";
 import { TypingIndicator } from "./typing-indicator";
 import { QuickActions } from "./quick-actions";
 import type { AiChatMessage } from "@shared/schema";
+import { useTranslation } from "@/i18n/context";
 
 interface ChatResponse {
   success: boolean;
@@ -25,6 +26,7 @@ export function AIChat() {
   const [message, setMessage] = useState("");
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation();
 
   const { data: messages = [], isLoading } = useQuery<AiChatMessage[]>({
     queryKey: ["/api/ai/chat/history"],
@@ -45,8 +47,8 @@ export function AIChat() {
     },
     onError: (error: any) => {
       toast({
-        title: "Chat Error",
-        description: error.message || "Failed to send message. Please try again.",
+        title: t("analysis.chat_error"),
+        description: error.message || t("analysis.failed_to_send_message"),
         variant: "destructive"
       });
     }
@@ -81,7 +83,7 @@ export function AIChat() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MessageCircle className="h-5 w-5 text-primary" />
-          AI Financial Advisor
+          {t("analysis.ai_financial_advisor")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -96,7 +98,7 @@ export function AIChat() {
             </div>
           ) : messages.length === 0 ? (
             <div className="text-center text-muted-foreground py-8" data-testid="empty-chat-messages">
-              <p>No messages yet. Ask me anything about your finances!</p>
+              <p>{t("analysis.no_messages_yet")}</p>
             </div>
           ) : (
             messages.map((msg, idx) => (
@@ -120,7 +122,7 @@ export function AIChat() {
 
         <div className="flex gap-2">
           <Textarea
-            placeholder="Ask about your spending, budgets, or savings..."
+            placeholder={t("analysis.ask_about_spending")}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyPress}

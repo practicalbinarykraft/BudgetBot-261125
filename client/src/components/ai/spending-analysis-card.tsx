@@ -3,10 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles } from "lucide-react";
+import { useTranslation } from "@/i18n/context";
 
 export function SpendingAnalysisCard() {
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const { t } = useTranslation();
 
   const handleAnalyze = async () => {
     setIsAnalyzing(true);
@@ -40,12 +42,12 @@ export function SpendingAnalysisCard() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            Spending Analysis
+            {t("analysis.spending_analysis")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Button onClick={handleAnalyze} disabled={isAnalyzing} data-testid="button-analyze">
-            {isAnalyzing ? "Analyzing..." : "Analyze My Spending"}
+            {isAnalyzing ? t("analysis.analyzing") : t("analysis.analyze_my_spending")}
           </Button>
         </CardContent>
       </Card>
@@ -53,14 +55,14 @@ export function SpendingAnalysisCard() {
       {analysis && (
         <Card>
           <CardHeader>
-            <CardTitle>AI Insights</CardTitle>
+            <CardTitle>{t("analysis.ai_insights")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4" data-testid="ai-insights">
               <pre className="whitespace-pre-wrap text-sm leading-relaxed">{analysis}</pre>
               <div className="flex gap-2">
-                <Badge variant="secondary">Powered by Claude</Badge>
-                <Badge variant="outline">Last updated: Just now</Badge>
+                <Badge variant="secondary">{t("analysis.powered_by_claude")}</Badge>
+                <Badge variant="outline">{t("analysis.last_updated_now")}</Badge>
               </div>
             </div>
           </CardContent>

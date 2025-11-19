@@ -22,4 +22,8 @@ export const webRecurringTranslations: Translations = {
   "recurring.frequency_monthly": { en: "Monthly", ru: "Ежемесячно" },
   "recurring.frequency_yearly": { en: "Yearly", ru: "Ежегодно" },
   "recurring.next": { en: "Next:", ru: "След.:" },
+  "recurring.type_income": { en: "Income", ru: "Доход" },
+  "recurring.type_expense": { en: "Expense", ru: "Расход" },
+  "recurring.select_type": { en: "Select type", ru: "Выберите тип" },
+  "recurring.select_frequency": { en: "Select frequency", ru: "Выберите частоту" },
 };
