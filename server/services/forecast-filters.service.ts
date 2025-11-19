@@ -178,17 +178,16 @@ export async function getPlannedExpenseForDate(
   userId: number,
   date: Date
 ): Promise<number> {
-  const wishlist = await storage.getWishlistByUserId(userId);
+  const planned = await storage.getPlannedByUserId(userId);
   
   const dateStr = date.toISOString().split('T')[0];
   
-  return wishlist
-    .filter((p: any) => 
-      p.targetDate !== null &&
-      p.targetDate === dateStr &&
-      !p.isPurchased
+  return planned
+    .filter(p => 
+      p.status === 'planned' &&
+      p.targetDate === dateStr
     )
-    .reduce((sum: number, p: any) => sum + parseFloat(p.amount as unknown as string), 0);
+    .reduce((sum, p) => sum + parseFloat(p.amount as unknown as string), 0);
 }
 
 /**
