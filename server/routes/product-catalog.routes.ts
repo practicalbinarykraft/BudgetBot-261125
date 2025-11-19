@@ -35,6 +35,53 @@ router.get('/', withAuth(async (req, res) => {
   }
 }));
 
+// GET /api/product-catalog/:id/price-history - История цен
+router.get('/:id/price-history', withAuth(async (req, res) => {
+  try {
+    const productId = parseInt(req.params.id);
+    const userId = req.user.id;
+    
+    // Проверить что товар принадлежит пользователю
+    const product = await productCatalogRepository.findById(productId);
+    
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    if (product.userId !== userId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    // Получить историю цен
+    const priceHistory = await productPriceHistoryRepository.findByProduct(productId);
+    
+    // Группировать по магазинам
+    const byStore: Record<string, any[]> = {};
+    
+    for (const price of priceHistory) {
+      if (!byStore[price.storeName]) {
+        byStore[price.storeName] = [];
+      }
+      byStore[price.storeName].push(price);
+    }
+    
+    res.json({
+      product,
+      priceHistory,
+      byStore,
+      statistics: {
+        totalPurchases: priceHistory.length,
+        averagePrice: product.averagePrice,
+        bestPrice: product.bestPrice,
+        bestStore: product.bestStore
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching price history:', error);
+    res.status(500).json({ error: 'Failed to fetch price history' });
+  }
+}));
+
 // GET /api/product-catalog/:id - Детали товара
 router.get('/:id', withAuth(async (req, res) => {
   try {
