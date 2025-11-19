@@ -112,11 +112,13 @@ export async function generateForecast(
     const client = new Anthropic({ apiKey });
 
     // Prepare prompt for Claude
+    const hasRecurringIncome = activeRecurring.some(r => r.type === 'income');
     const prompt = buildForecastPrompt(
       stats,
       activeRecurring,
       daysAhead,
-      currentCapital
+      currentCapital,
+      hasRecurringIncome
     );
 
     // Calculate required tokens based on forecast length
@@ -320,7 +322,8 @@ function buildForecastPrompt(
   stats: ReturnType<typeof calculateHistoricalStats>,
   recurring: Recurring[],
   daysAhead: number,
-  currentCapital: number
+  currentCapital: number,
+  hasRecurringIncome: boolean
 ): string {
   const recurringInfo = recurring.map(r => ({
     type: r.type,
@@ -329,6 +332,15 @@ function buildForecastPrompt(
     frequency: r.frequency,
     nextDate: r.nextDate,
   }));
+
+  const incomeInstructions = hasRecurringIncome
+    ? `**Income Forecast Rules:**
+- Use historical income average ($${stats.avgDailyIncome.toFixed(2)}/day) as baseline for daily income
+- Add recurring income payments based on their frequency and schedule`
+    : `**Income Forecast Rules:**
+- IGNORE historical income averages - user has no active recurring income sources
+- Predicted income should be 0 for all days UNLESS a specific recurring income payment occurs
+- Historical income data is provided for context only - do NOT use it as baseline`;
 
   return `You are a financial forecasting AI. Generate a ${daysAhead}-day financial forecast based on the following data:
 
@@ -345,14 +357,19 @@ ${JSON.stringify(recurringInfo, null, 2)}
 
 **Current Capital:** $${currentCapital.toFixed(2)}
 
+${incomeInstructions}
+
+**Expense Forecast Rules:**
+- Use historical expense average ($${stats.avgDailyExpense.toFixed(2)}/day) as baseline
+- Add recurring expense payments based on their frequency and schedule
+
 **Task:**
 Generate a ${daysAhead}-day forecast with daily predictions for income, expenses, and capital (net worth).
 
 **Important Rules:**
-1. Account for recurring payments based on their frequency
-2. Use historical averages as baseline
-3. Capital = Previous Day Capital + Income - Expenses
-4. Return ONLY a JSON array, no explanations
+1. Follow the Income and Expense Forecast Rules above strictly
+2. Capital = Previous Day Capital + Income - Expenses
+3. Return ONLY a JSON array, no explanations
 
 **Expected Format:**
 [
