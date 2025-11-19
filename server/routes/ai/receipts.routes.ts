@@ -68,6 +68,26 @@ router.post("/receipt-with-items", withAuth(async (req, res) => {
       await receiptItemsRepository.createBulk(items);
     }
     
+    // Обработать товары для Product Catalog
+    try {
+      await processReceiptItems({
+        receiptItems: parsed.items.map(item => ({
+          name: item.name,
+          price: item.totalPrice,
+          quantity: item.quantity || 1
+        })),
+        userId,
+        storeName: parsed.merchant || 'Unknown Store',
+        purchaseDate: parsed.date,
+        anthropicApiKey
+      });
+      
+      console.log('✅ Product catalog updated from receipt');
+    } catch (error) {
+      console.error('❌ Failed to update product catalog:', error);
+      // Не прерываем обработку чека, просто логируем
+    }
+    
     res.json({
       success: true,
       receipt: parsed,
