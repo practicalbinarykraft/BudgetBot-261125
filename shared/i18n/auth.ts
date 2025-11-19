@@ -58,4 +58,41 @@ export const authTranslations: Translations = {
     en: '❌ *Not Connected*\n\nYou are not connected to Budget Buddy yet.\n\nTo connect:\n1. Open Budget Buddy web app\n2. Go to Settings\n3. Generate verification code\n4. Send `/verify <code>` here',
     ru: '❌ *Не подключено*\n\nВы еще не подключены к Budget Buddy.\n\nЧтобы подключиться:\n1. Откройте веб-приложение Budget Buddy\n2. Перейдите в Настройки\n3. Сгенерируйте код верификации\n4. Отправьте `/verify <код>` сюда',
   },
+
+  // Web Auth Page
+  'auth.app_title': { en: 'Budget Buddy', ru: 'Budget Buddy' },
+  'auth.app_description': { en: 'Manage your personal finances with ease', ru: 'Управляйте личными финансами легко' },
+
+  // Tabs
+  'auth.login': { en: 'Login', ru: 'Вход' },
+  'auth.register': { en: 'Register', ru: 'Регистрация' },
+
+  // Login Form
+  'auth.welcome_back': { en: 'Welcome back', ru: 'С возвращением' },
+  'auth.login_description': { en: 'Enter your credentials to access your account', ru: 'Введите данные для входа в аккаунт' },
+  'auth.email': { en: 'Email', ru: 'Email' },
+  'auth.email_placeholder': { en: 'you@example.com', ru: 'your@example.com' },
+  'auth.password': { en: 'Password', ru: 'Пароль' },
+  'auth.password_placeholder': { en: '••••••••', ru: '••••••••' },
+  'auth.login_button': { en: 'Login', ru: 'Войти' },
+
+  // Register Form
+  'auth.create_account': { en: 'Create account', ru: 'Создать аккаунт' },
+  'auth.register_description': { en: 'Get started with Budget Buddy today', ru: 'Начните использовать Budget Buddy' },
+  'auth.name': { en: 'Name', ru: 'Имя' },
+  'auth.name_placeholder': { en: 'Your name', ru: 'Ваше имя' },
+  'auth.register_button': { en: 'Register', ru: 'Зарегистрироваться' },
+
+  // Validation Messages
+  'auth.invalid_email': { en: 'Invalid email address', ru: 'Неверный email адрес' },
+  'auth.password_min_length': { en: 'Password must be at least 6 characters', ru: 'Пароль должен быть не менее 6 символов' },
+  'auth.name_required': { en: 'Name is required', ru: 'Имя обязательно' },
+
+  // Hero Section
+  'auth.hero_title': { en: 'Your Financial Journey Starts Here', ru: 'Ваш финансовый путь начинается здесь' },
+  'auth.hero_subtitle': { en: 'Take control of your finances with intelligent tracking and insights', ru: 'Управляйте финансами с интеллектуальным трекингом и аналитикой' },
+  'auth.feature_tracking': { en: 'Smart Expense Tracking', ru: 'Умный учёт расходов' },
+  'auth.feature_ai': { en: 'AI-Powered Insights', ru: 'AI-аналитика' },
+  'auth.feature_goals': { en: 'Financial Goal Planning', ru: 'Планирование целей' },
+  'auth.feature_secure': { en: 'Bank-Level Security', ru: 'Банковская безопасность' },
 };
