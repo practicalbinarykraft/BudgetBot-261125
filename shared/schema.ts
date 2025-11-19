@@ -747,3 +747,8 @@ export interface TrainingStats {
 // 🔐 Helper type for storage layer: public insert schemas omit userId for security,
 // but storage needs userId from authenticated session
 export type OwnedInsert<T> = T & { userId: number };
+
+// ========================================
+// PRODUCT CATALOG SCHEMAS (Modular)
+// ========================================
+export * from "./schemas/product-catalog";
