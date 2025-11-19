@@ -27,6 +27,7 @@ import {
   SidebarRail,
   SidebarHeader,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ export function AppSidebar() {
   const [location] = useLocation();
   const { user, logoutMutation } = useAuth();
   const { t } = useTranslation();
+  const { state } = useSidebar();
   
   const menuItems = [
     {
@@ -164,8 +166,13 @@ export function AppSidebar() {
         </div>
       </SidebarFooter>
       
-      {/* Toggle button fixed on the right edge */}
-      <div className="absolute top-4 -right-3 z-50">
+      {/* Toggle button fixed on the right edge - moves when sidebar collapses */}
+      <div 
+        className="absolute top-4 z-50 transition-all duration-200"
+        style={{
+          right: state === 'collapsed' ? '-48px' : '-12px'
+        }}
+      >
         <SidebarTrigger 
           data-testid="button-sidebar-toggle"
           className="rounded-full shadow-lg bg-background border-2"
