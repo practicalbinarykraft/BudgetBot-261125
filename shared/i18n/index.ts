@@ -18,6 +18,14 @@ import { webDashboardChartsTranslations } from './web-dashboard-charts';
 import { webTransactionsTranslations } from './web-transactions';
 import { webSettingsTranslations } from './web-settings';
 import { webSettingsOptionsTranslations } from './web-settings-options';
+import { webWalletsTranslations } from './web-wallets';
+import { webCategoriesTranslations } from './web-categories';
+import { webBudgetsTranslations } from './web-budgets';
+import { webTagsTranslations } from './web-tags';
+import { webWishlistTranslations } from './web-wishlist';
+import { webPlannedTranslations } from './web-planned';
+import { webRecurringTranslations } from './web-recurring';
+import { webAnalysisTranslations } from './web-analysis';
 
 // Export types
 export type { Language, Translation, Translations } from './types';
@@ -38,6 +46,14 @@ const allTranslations: Translations = {
   ...webTransactionsTranslations,
   ...webSettingsTranslations,
   ...webSettingsOptionsTranslations,
+  ...webWalletsTranslations,
+  ...webCategoriesTranslations,
+  ...webBudgetsTranslations,
+  ...webTagsTranslations,
+  ...webWishlistTranslations,
+  ...webPlannedTranslations,
+  ...webRecurringTranslations,
+  ...webAnalysisTranslations,
 };
 
 /**

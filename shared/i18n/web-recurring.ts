@@ -1,0 +1,25 @@
+import { Translations } from "./types";
+
+export const webRecurringTranslations: Translations = {
+  "recurring.title": { en: "Recurring Payments", ru: "Повторяющиеся платежи" },
+  "recurring.manage": { en: "Manage subscriptions and regular payments", ru: "Управляйте подписками и регулярными платежами" },
+  "recurring.add_recurring": { en: "Add Recurring", ru: "Добавить повторяющийся" },
+  "recurring.no_items": { en: "No recurring payments yet", ru: "Пока нет повторяющихся платежей" },
+  "recurring.add_first": { en: "Add your first recurring payment to track subscriptions", ru: "Добавьте первый повторяющийся платеж для отслеживания подписок" },
+  "recurring.added_successfully": { en: "Recurring payment added successfully", ru: "Повторяющийся платеж успешно добавлен" },
+  "recurring.deleted_successfully": { en: "Recurring payment deleted successfully", ru: "Повторяющийся платеж успешно удален" },
+  "recurring.add_dialog": { en: "Add Recurring Payment", ru: "Добавить повторяющийся платеж" },
+  "recurring.type": { en: "Type", ru: "Тип" },
+  "recurring.amount": { en: "Amount", ru: "Сумма" },
+  "recurring.description": { en: "Description", ru: "Описание" },
+  "recurring.category": { en: "Category", ru: "Категория" },
+  "recurring.frequency": { en: "Frequency", ru: "Частота" },
+  "recurring.next_date": { en: "Next Date", ru: "Следующая дата" },
+  "recurring.currency": { en: "Currency", ru: "Валюта" },
+  "recurring.adding": { en: "Adding...", ru: "Добавление..." },
+  "recurring.frequency_daily": { en: "Daily", ru: "Ежедневно" },
+  "recurring.frequency_weekly": { en: "Weekly", ru: "Еженедельно" },
+  "recurring.frequency_monthly": { en: "Monthly", ru: "Ежемесячно" },
+  "recurring.frequency_yearly": { en: "Yearly", ru: "Ежегодно" },
+  "recurring.next": { en: "Next:", ru: "След.:" },
+};

@@ -1,0 +1,25 @@
+import { Translations } from "./types";
+
+export const webBudgetsTranslations: Translations = {
+  "budgets.title": { en: "Budgets", ru: "Бюджеты" },
+  "budgets.manage": { en: "Set spending limits for categories", ru: "Установите лимиты расходов по категориям" },
+  "budgets.add_budget": { en: "Add Budget", ru: "Добавить бюджет" },
+  "budgets.no_budgets": { en: "No budgets yet", ru: "Пока нет бюджетов" },
+  "budgets.create_first": { en: "Create your first budget to track spending", ru: "Создайте первый бюджет для отслеживания расходов" },
+  "budgets.created_successfully": { en: "Budget created successfully", ru: "Бюджет успешно создан" },
+  "budgets.updated_successfully": { en: "Budget updated successfully", ru: "Бюджет успешно обновлен" },
+  "budgets.deleted_successfully": { en: "Budget deleted successfully", ru: "Бюджет успешно удален" },
+  "budgets.add_budget_dialog": { en: "Add Budget", ru: "Добавить бюджет" },
+  "budgets.edit_budget_dialog": { en: "Edit Budget", ru: "Редактировать бюджет" },
+  "budgets.category": { en: "Category", ru: "Категория" },
+  "budgets.limit_amount": { en: "Limit Amount", ru: "Лимит суммы" },
+  "budgets.period": { en: "Period", ru: "Период" },
+  "budgets.start_date": { en: "Start Date", ru: "Дата начала" },
+  "budgets.creating": { en: "Creating...", ru: "Создание..." },
+  "budgets.updating": { en: "Updating...", ru: "Обновление..." },
+  "budgets.period_week": { en: "Week", ru: "Неделя" },
+  "budgets.period_month": { en: "Month", ru: "Месяц" },
+  "budgets.period_year": { en: "Year", ru: "Год" },
+  "budgets.select_category": { en: "Select category", ru: "Выберите категорию" },
+  "budgets.select_period": { en: "Select period", ru: "Выберите период" },
+};
