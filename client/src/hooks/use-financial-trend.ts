@@ -57,17 +57,21 @@ export function useFinancialTrend({
   includePlannedExpenses = true,
   includeBudgetLimits = false,
 }: UseFinancialTrendOptions = {}) {
+  const queryKey = [
+    "/api/analytics/trend", 
+    historyDays, 
+    forecastDays,
+    includeRecurringIncome,
+    includeRecurringExpense,
+    includePlannedIncome,
+    includePlannedExpenses,
+    includeBudgetLimits,
+  ];
+
+  console.log('[useFinancialTrend] Query key:', queryKey);
+
   return useQuery<TrendWithGoals>({
-    queryKey: [
-      "/api/analytics/trend", 
-      historyDays, 
-      forecastDays,
-      includeRecurringIncome,
-      includeRecurringExpense,
-      includePlannedIncome,
-      includePlannedExpenses,
-      includeBudgetLimits,
-    ],
+    queryKey,
     queryFn: async () => {
       const params = new URLSearchParams({
         historyDays: historyDays.toString(),
@@ -78,6 +82,8 @@ export function useFinancialTrend({
         includePlannedExpenses: includePlannedExpenses.toString(),
         includeBudgetLimits: includeBudgetLimits.toString(),
       });
+      
+      console.log('[useFinancialTrend] Fetching with params:', params.toString());
       
       const res = await fetch(`/api/analytics/trend?${params}`, {
         cache: 'no-store',
@@ -93,5 +99,7 @@ export function useFinancialTrend({
     placeholderData: (prev) => prev,
     // Consider data immediately stale to allow refetch on param change
     staleTime: 0,
+    // Force refetch when query key changes
+    refetchOnMount: 'always',
   });
 }

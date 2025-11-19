@@ -69,7 +69,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
     localStorage.setItem('forecastFilters', JSON.stringify(filters));
   }, [filters]);
 
-  const { data, isLoading, error } = useFinancialTrend({
+  const { data, isLoading, isFetching, error } = useFinancialTrend({
     historyDays,
     forecastDays,
     includeRecurringIncome: filters.includeRecurringIncome,
@@ -258,7 +258,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
         <ForecastFiltersCard
           filters={filters}
           onChange={setFilters}
-          isLoading={isLoading}
+          isLoading={isFetching}
         />
         
         {/* Capital Warning */}
