@@ -1,0 +1,87 @@
+📊 ШАГ 14: PRICE SEARCH SERVICE - ЗАГЛУШКА (15 минут)
+═══════════════════════════════════════════════════════
+ЗАДАЧА 14.1: СОЗДАТЬ ЗАГЛУШКУ ДЛЯ AI ПОИСКА ЦЕН
+═══════════════════════════════════════════════════════
+
+СОЗДАТЬ ФАЙЛ: server/services/price-search.service.ts
+
+import { priceSearchReportsRepository } from '../repositories/price-search-reports.repository';
+import { productCatalogRepository } from '../repositories/product-catalog.repository';
+
+interface SearchResult {
+  store: string;
+  price: number;
+  url: string;
+  availability: string;
+}
+
+// AI поиск цен (пока заглушка)
+export async function searchBestPrice(params: {
+  productId: number;
+  userApiKey?: string;
+}): Promise<number> {
+  const { productId, userApiKey } = params;
+  
+  const product = await productCatalogRepository.findById(productId);
+  
+  if (!product) {
+    throw new Error('Product not found');
+  }
+  
+  // Создать отчёт со статусом pending
+  const report = await priceSearchReportsRepository.create({
+    productId,
+    userId: product.userId,
+    status: 'pending',
+    searchQuery: product.name,
+    searchMethod: 'ai',
+    currentPrice: product.bestPrice || '0'
+  });
+  
+  // TODO: В шаге 15 добавим реальный AI поиск
+  // Пока возвращаем mock данные
+  const mockResults: SearchResult[] = [
+    {
+      store: 'Озон',
+      price: parseFloat(product.bestPrice || '100') * 0.9,
+      url: 'https://ozon.ru',
+      availability: 'В наличии'
+    },
+    {
+      store: 'Wildberries',
+      price: parseFloat(product.bestPrice || '100') * 0.95,
+      url: 'https://wildberries.ru',
+      availability: 'В наличии'
+    }
+  ];
+  
+  // Найти лучшую цену
+  const best = mockResults.reduce((min, r) => 
+    r.price < min.price ? r : min
+  );
+  
+  // Обновить отчёт
+  await priceSearchReportsRepository.update(report.id, {
+    status: 'completed',
+    results: mockResults,
+    bestPrice: best.price.toString(),
+    bestStore: best.store,
+    bestUrl: best.url,
+    savings: (parseFloat(product.bestPrice || '0') - best.price).toString(),
+    savingsPercent: (
+      ((parseFloat(product.bestPrice || '0') - best.price) / 
+       parseFloat(product.bestPrice || '1')) * 100
+    ).toString()
+  });
+  
+  return report.id;
+}
+
+СТРОК: ~80 ✅
+
+═══════════════════════════════════════════════════════
+
+ОЖИДАЕМЫЙ РЕЗУЛЬТАТ:
+✅ Mock поиск работает
+✅ Создаёт отчёт
+✅ Готово к замене на реальный AI
