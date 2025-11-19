@@ -173,6 +173,14 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                 />
               )}
 
+              {/* Zero baseline horizontal line */}
+              <ReferenceLine
+                y={0}
+                stroke="hsl(var(--foreground))"
+                strokeDasharray="3 3"
+                strokeOpacity={0.5}
+              />
+
               {/* Income Line */}
               <Line
                 data={chartData}
