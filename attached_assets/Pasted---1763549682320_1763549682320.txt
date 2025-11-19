@@ -1,0 +1,302 @@
+🎯 ПРАВИЛЬНОЕ ПОНИМАНИЕ
+СЕЙЧАС НА ГРАФИКЕ:
+├─ 🟢 Зелёная: Доходы (сплошная)
+├─ 🔴 Красная: Расходы (сплошная)
+├─ 🔵 Синяя сплошная: Капитал (факт)
+└─ 🔵 Синяя пунктир: Капитал (прогноз)
+
+КОЛИЧЕСТВО ЛИНИЙ НЕ МЕНЯЕТСЯ!
+
+ЧТО МЕНЯЕТСЯ:
+Галочки влияют на РАСЧЁТ красной и синей линий:
+
+☐ Повторяющиеся
+   → Если ☑: расходы += recurring expenses
+   → Красная линия выше
+   → Синяя линия ниже
+
+☐ Запланированные расходы  
+   → Если ☑: расходы += planned expenses
+   → Красная линия выше
+   → Синяя линия ниже
+
+☐ Запланированные доходы
+   → Если ☑: доходы += planned income
+   → Зелёная линия выше
+   → Синяя линия выше
+
+☐ Бюджетные лимиты
+   → Если ☑: расходы += budget limits
+   → Красная линия СИЛЬНО выше
+   → Синяя линия СИЛЬНО ниже (может в минус!)
+
+📊 ВИЗУАЛЬНО
+БЕЗ ГАЛОЧЕК (ТОЛЬКО БАЗОВЫЙ ТРЕНД):
+$
+10k ─────╱──────  🟢 Доходы
+         ╱
+ 5k ────╱─────    🔵 Капитал
+       ╱
+ 0k ──────────    🔴 Расходы (минимум)
+
+☑ ПОВТОРЯЮЩИЕСЯ:
+$
+10k ─────╱──────  🟢 Доходы (не изменился)
+         ╱
+ 5k ────╱─────    🔵 Капитал (слегка ниже)
+       ╱
+ 0k ───────────   🔴 Расходы (выше - добавились recurring)
+     ████████
+
+☑ ПОВТОРЯЮЩИЕСЯ + ☑ ЗАПЛАНИРОВАННЫЕ РАСХОДЫ:
+$
+10k ─────╱──────  🟢 Доходы
+         ╱
+ 3k ────╱──────   🔵 Капитал (ещё ниже)
+       ╱
+ 0k ────────────  🔴 Расходы (ещё выше)
+     ██████████
+
+☑ ВСЁ + ☑ БЮДЖЕТНЫЕ ЛИМИТЫ:
+$
+10k ─────╱──────  🟢 Доходы
+         ╱
+ 0k ────╱────────────────────────
+       ╱
+-5k ──╱──────────  🔵 Капитал (УШЁЛ В МИНУС! ⚠️)
+
+ 0k ────────────────
+     ███████████████  🔴 Расходы (МАКСИМУМ!)
+
+📋 ПРАВИЛЬНОЕ ТЗ
+ЗАДАЧА: ДИНАМИЧЕСКИЙ РАСЧЁТ ПРОГНОЗА С ФИЛЬТРАМИ
+
+СУТЬ: 
+Галочки под графиком влияют на РАСЧЁТ линий доходов/расходов/капитала.
+Количество линий НЕ меняется (всегда 4 линии).
+
+ЧТО СДЕЛАТЬ:
+
+1. BACKEND (1 час):
+   
+   GET /api/analytics/trend?includeRecurring=true&includePlannedIncome=true&...
+   
+   Логика:
+   
+   for each day in forecast:
+     // Базовый тренд
+     let income = baseIncome;
+     let expense = baseExpense;
+     
+     // Если галочка "Повторяющиеся"
+     if (includeRecurring) {
+       income += getRecurringIncome(date);
+       expense += getRecurringExpense(date);
+     }
+     
+     // Если галочка "Запланированные доходы"
+     if (includePlannedIncome) {
+       income += getPlannedIncome(date);
+     }
+     
+     // Если галочка "Запланированные расходы"
+     if (includePlannedExpenses) {
+       expense += getPlannedExpense(date);
+     }
+     
+     // Если галочка "Бюджетные лимиты"
+     if (includeBudgetLimits) {
+       expense += getDailyBudgetTotal(date);
+     }
+     
+     // Рассчитать капитал
+     capital = prevCapital + (income - expense);
+     
+     forecast.push({
+       date,
+       income,    // ← одно значение (с учётом галочек)
+       expense,   // ← одно значение (с учётом галочек)
+       capital    // ← одно значение (с учётом галочек)
+     });
+
+2. FRONTEND (1.5 часа):
+   
+   Состояние:
+   const [filters, setFilters] = useState({
+     includeRecurring: true,
+     includePlannedIncome: true,
+     includePlannedExpenses: true,
+     includeBudgetLimits: false
+   });
+   
+   При изменении галочки:
+   - Обновить state
+   - Query автоматически перезагрузится (TanStack Query)
+   - График плавно обновится
+   
+   График:
+   <LineChart data={forecast}>
+     {/* Доходы - ОДНА линия */}
+     <Line dataKey="income" stroke="#10b981" />
+     
+     {/* Расходы - ОДНА линия */}
+     <Line dataKey="expense" stroke="#ef4444" />
+     
+     {/* Капитал факт - ОДНА линия */}
+     <Line dataKey="capitalActual" stroke="#3b82f6" />
+     
+     {/* Капитал прогноз - ОДНА линия (пунктир) */}
+     <Line 
+       dataKey="capital" 
+       stroke="#3b82f6" 
+       strokeDasharray="5 5"
+     />
+   </LineChart>
+   
+   ВСЕГО: 4 ЛИНИИ (не меняется!)
+
+3. ФИЛЬТРЫ ПОД ГРАФИКОМ:
+   
+   <div className="p-4 bg-gray-50 rounded-lg">
+     <h3 className="text-sm font-semibold mb-3">
+       Включить в расчёт прогноза:
+     </h3>
+     
+     <div className="space-y-2">
+       <label className="flex items-center gap-2 cursor-pointer">
+         <input
+           type="checkbox"
+           checked={filters.includeRecurring}
+           onChange={(e) => setFilters({
+             ...filters, 
+             includeRecurring: e.target.checked
+           })}
+         />
+         <span className="text-sm">Повторяющиеся транзакции</span>
+       </label>
+       
+       <label className="flex items-center gap-2 cursor-pointer">
+         <input
+           type="checkbox"
+           checked={filters.includePlannedIncome}
+           onChange={(e) => setFilters({
+             ...filters, 
+             includePlannedIncome: e.target.checked
+           })}
+         />
+         <span className="text-sm">💰 Запланированные доходы</span>
+       </label>
+       
+       <label className="flex items-center gap-2 cursor-pointer">
+         <input
+           type="checkbox"
+           checked={filters.includePlannedExpenses}
+           onChange={(e) => setFilters({
+             ...filters, 
+             includePlannedExpenses: e.target.checked
+           })}
+         />
+         <span className="text-sm">💸 Запланированные расходы</span>
+       </label>
+       
+       <label className="flex items-center gap-2 cursor-pointer">
+         <input
+           type="checkbox"
+           checked={filters.includeBudgetLimits}
+           onChange={(e) => setFilters({
+             ...filters, 
+             includeBudgetLimits: e.target.checked
+           })}
+         />
+         <span className="text-sm flex items-center gap-2">
+           ⚠️ Бюджетные лимиты
+           <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded">
+             max
+           </span>
+         </span>
+       </label>
+     </div>
+   </div>
+
+4. WARNING (если капитал уходит в минус):
+   
+   {forecast.some(d => d.capital < 0) && (
+     <div className="p-4 bg-orange-50 border-2 border-orange-500 rounded-lg">
+       ⚠️ <strong>Внимание:</strong> При текущих настройках 
+       ваш капитал уйдёт в минус. Снизьте расходы или увеличьте доходы.
+     </div>
+   )}
+
+5. СОХРАНИТЬ ВЫБОР:
+   
+   // Сохранить в localStorage
+   useEffect(() => {
+     localStorage.setItem('forecastFilters', JSON.stringify(filters));
+   }, [filters]);
+   
+   // Восстановить при загрузке
+   const savedFilters = localStorage.getItem('forecastFilters');
+   if (savedFilters) {
+     setFilters(JSON.parse(savedFilters));
+   }
+
+ТРЕБОВАНИЯ:
+- Smooth transition при изменении (300ms)
+- Сохранять выбор в localStorage
+- Warning если капитал < 0
+- i18n для всех текстов
+
+ТЕСТЫ:
+1. Выключить все → минимальные расходы
+2. Включить "Recurring" → расходы выше
+3. Включить "Planned Expenses" → расходы ещё выше
+4. Включить "Budget Limits" → расходы максимум, капитал в минус
+5. Включить "Planned Income" → доходы выше, капитал растёт
+
+ИТОГО: 3 часа работы
+РЕЗУЛЬТАТ: Интерактивный прогноз с гибкими фильтрами
+
+💡 ПРИМЕР РАСЧЁТА
+ДЕНЬ 1 (сегодня):
+
+Без галочек:
+income = $100 (базовый тренд)
+expense = $50 (базовый тренд)
+capital = $1000 + ($100 - $50) = $1050
+
+☑ Recurring:
+income = $100 + $20 (зарплата) = $120
+expense = $50 + $30 (аренда) = $80
+capital = $1000 + ($120 - $80) = $1040
+
+☑ Recurring + ☑ Planned Income:
+income = $120 + $500 (оплата от клиента) = $620
+expense = $80
+capital = $1000 + ($620 - $80) = $1540 📈
+
+☑ Recurring + ☑ Planned Income + ☑ Budget Limits:
+income = $620
+expense = $80 + $200 (все бюджеты) = $280
+capital = $1000 + ($620 - $280) = $1340
+
+☑ ВСЁ + Запланированные расходы:
+income = $620
+expense = $280 + $300 (MacBook) = $580
+capital = $1000 + ($620 - $580) = $1040
+
+🎯 ИТОГО
+ПРАВИЛЬНОЕ ПОНИМАНИЕ:
+
+❌ НЕ создавать новые линии
+✅ Пересчитывать существующие линии
+
+ЛИНИИ (всегда 4):
+├─ 🟢 Доходы
+├─ 🔴 Расходы  
+├─ 🔵 Капитал (факт)
+└─ 🔵 Капитал (прогноз)
+
+ГАЛОЧКИ ВЛИЯЮТ НА:
+└─ Расчёт значений этих линий
+
+ПРОСТО И ПОНЯТНО! ✅

@@ -1,0 +1,513 @@
+# 💎 ОТЛИЧНЫЕ ВОПРОСЫ! ОТВЕЧАЮ ДЕТАЛЬНО
+
+---
+
+## 1️⃣ ПОВТОРЯЮЩИЕСЯ ТРАНЗАКЦИИ (RECURRING)
+
+```
+✅ ТАБЛИЦА УЖЕ ЕСТЬ!
+
+// shared/schema.ts
+export const recurringTransactions = pgTable('recurring_transactions', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  partnerId: integer('partner_id').references(() => partners.id), // DEPRECATED
+  
+  // Основные поля
+  type: text('type').notNull(), // 'income' | 'expense'
+  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
+  description: text('description').notNull(),
+  category: text('category'),
+  
+  // Частота
+  frequency: text('frequency').notNull(), // 'daily' | 'weekly' | 'monthly' | 'yearly'
+  startDate: text('start_date').notNull(), // YYYY-MM-DD
+  endDate: text('end_date'), // optional
+  
+  // Статус
+  isActive: boolean('is_active').default(true),
+  
+  // Tier
+  tier: varchar('tier', { length: 20 }).default('basic'),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+});
+
+ИСПОЛЬЗОВАТЬ:
+✅ Таблица уже есть
+✅ Repository нужно создать (если ещё нет)
+✅ Метод для прогноза: getRecurringForDate(date)
+
+КАК РАССЧИТЫВАТЬ ДЛЯ ПРОГНОЗА:
+function getRecurringForDate(
+  recurring: RecurringTransaction[], 
+  date: Date
+): { income: number; expense: number } {
+  let income = 0;
+  let expense = 0;
+  
+  for (const r of recurring) {
+    // Проверить попадает ли date в период
+    if (!r.isActive) continue;
+    if (date < new Date(r.startDate)) continue;
+    if (r.endDate && date > new Date(r.endDate)) continue;
+    
+    // Проверить попадает ли по частоте
+    if (shouldOccurOnDate(r, date)) {
+      if (r.type === 'income') {
+        income += parseFloat(r.amount);
+      } else {
+        expense += parseFloat(r.amount);
+      }
+    }
+  }
+  
+  return { income, expense };
+}
+
+function shouldOccurOnDate(
+  r: RecurringTransaction, 
+  date: Date
+): boolean {
+  const start = new Date(r.startDate);
+  
+  switch (r.frequency) {
+    case 'daily':
+      return true; // каждый день
+    
+    case 'weekly':
+      // каждую неделю в тот же день недели
+      return date.getDay() === start.getDay();
+    
+    case 'monthly':
+      // каждый месяц в то же число
+      return date.getDate() === start.getDate();
+    
+    case 'yearly':
+      // каждый год в ту же дату
+      return (
+        date.getMonth() === start.getMonth() &&
+        date.getDate() === start.getDate()
+      );
+  }
+}
+```
+
+---
+
+## 2️⃣ ЗАПЛАНИРОВАННЫЕ ДОХОДЫ
+
+```
+✅ ТАБЛИЦА УЖЕ ЕСТЬ!
+
+// shared/schema.ts
+export const plannedIncome = pgTable('planned_income', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  
+  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
+  currency: varchar('currency', { length: 3 }).default('USD'),
+  description: text('description').notNull(),
+  category: text('category'),
+  
+  expectedDate: text('expected_date').notNull(), // YYYY-MM-DD
+  
+  status: text('status').default('pending'), // 'pending' | 'received' | 'cancelled'
+  
+  transactionId: integer('transaction_id').references(() => dailyTransactions.id),
+  receivedAt: timestamp('received_at'),
+  
+  source: text('source').default('manual'),
+  notes: text('notes'),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+});
+
+ИСПОЛЬЗОВАТЬ:
+✅ Таблица создана недавно
+✅ Repository нужно доработать (если не готов полностью)
+
+УЧИТЫВАТЬ:
+✅ Только status = 'pending'
+❌ НЕ учитывать 'received' (уже получено)
+❌ НЕ учитывать 'cancelled' (отменено)
+
+КАК РАССЧИТЫВАТЬ:
+function getPlannedIncomeForDate(
+  plannedIncomes: PlannedIncome[], 
+  date: Date
+): number {
+  return plannedIncomes
+    .filter(p => 
+      p.status === 'pending' &&
+      isSameDay(new Date(p.expectedDate), date)
+    )
+    .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+}
+```
+
+---
+
+## 3️⃣ ЗАПЛАНИРОВАННЫЕ РАСХОДЫ
+
+```
+⚠️ ТАБЛИЦА ЕСТЬ, НО НАЗЫВАЕТСЯ ПО-ДРУГОМУ!
+
+// shared/schema.ts
+export const futurePurchases = pgTable('future_purchases', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  partnerId: integer('partner_id').references(() => partners.id), // DEPRECATED
+  
+  name: text('name').notNull(),
+  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
+  
+  targetDate: text('target_date'), // YYYY-MM-DD (optional!)
+  
+  category: text('category'),
+  priority: text('priority').default('medium'), // 'low' | 'medium' | 'high'
+  notes: text('notes'),
+  
+  isPurchased: boolean('is_purchased').default(false),
+  purchasedAt: timestamp('purchased_at'),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+});
+
+ИСПОЛЬЗОВАТЬ:
+✅ Таблица futurePurchases
+✅ Переименовать концептуально в "Planned Expenses"
+
+ЛОГИКА:
+- Если targetDate = null → WISHLIST (не учитывать в прогнозе!)
+- Если targetDate != null → PLANNED (учитывать в прогнозе!)
+
+УЧИТЫВАТЬ:
+✅ Только items где targetDate IS NOT NULL
+✅ Только isPurchased = false
+❌ НЕ учитывать wishlist (targetDate = null)
+
+КАК РАССЧИТЫВАТЬ:
+function getPlannedExpenseForDate(
+  futurePurchases: FuturePurchase[], 
+  date: Date
+): number {
+  return futurePurchases
+    .filter(p => 
+      p.targetDate !== null &&  // не wishlist
+      !p.isPurchased &&
+      isSameDay(new Date(p.targetDate), date)
+    )
+    .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+}
+```
+
+---
+
+## 4️⃣ БЮДЖЕТНЫЕ ЛИМИТЫ
+
+```
+✅ ТАБЛИЦА УЖЕ ЕСТЬ!
+
+// shared/schema.ts
+export const budgets = pgTable('budgets', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  categoryId: integer('category_id').references(() => categories.id, { onDelete: 'cascade' }),
+  
+  limitAmount: decimal('limit_amount', { precision: 10, scale: 2 }).notNull(),
+  
+  period: text('period').default('month'), // 'day' | 'week' | 'month' | 'year'
+  
+  startDate: text('start_date'),
+  endDate: text('end_date'),
+  
+  isActive: boolean('is_active').default(true),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+});
+
+РАССЧИТЫВАТЬ:
+Суммировать ВСЕ лимиты, пересчитав в дневной эквивалент
+
+КАК РАССЧИТЫВАТЬ:
+function getDailyBudgetTotal(
+  budgets: Budget[], 
+  date: Date
+): number {
+  let total = 0;
+  
+  for (const b of budgets) {
+    if (!b.isActive) continue;
+    
+    // Проверить период
+    if (b.startDate && date < new Date(b.startDate)) continue;
+    if (b.endDate && date > new Date(b.endDate)) continue;
+    
+    // Пересчитать в дневной эквивалент
+    const limit = parseFloat(b.limitAmount);
+    
+    switch (b.period) {
+      case 'day':
+        total += limit;
+        break;
+      case 'week':
+        total += limit / 7;
+        break;
+      case 'month':
+        total += limit / 30;
+        break;
+      case 'year':
+        total += limit / 365;
+        break;
+    }
+  }
+  
+  return total;
+}
+
+ПРИМЕР:
+Бюджеты:
+├─ "Продукты": $1000/месяц → $33.33/день
+├─ "Транспорт": $500/месяц → $16.67/день
+├─ "Развлечения": $300/месяц → $10.00/день
+└─ ИТОГО: $60/день
+
+Если включить галочку "Бюджетные лимиты":
+→ expense += $60 на каждый день
+→ за месяц = $1800 дополнительных расходов
+```
+
+---
+
+## 5️⃣ БАЗОВЫЙ ТРЕНД (AI ПРОГНОЗ)
+
+```
+СЕЙЧАС В КОДЕ:
+
+// server/services/trend-calculator.service.ts
+
+ДВА ВАРИАНТА (используется комбинация):
+
+A) СКОЛЬЗЯЩЕЕ СРЕДНЕЕ ПО ИСТОРИИ:
+const transactions = await getTransactions(userId, historyDays);
+
+const avgIncome = transactions
+  .filter(t => t.type === 'income')
+  .reduce((sum, t) => sum + parseFloat(t.amount), 0) / historyDays;
+
+const avgExpense = transactions
+  .filter(t => t.type === 'expense')
+  .reduce((sum, t) => sum + parseFloat(t.amount), 0) / historyDays;
+
+B) AI ПРОГНОЗ (ЕСЛИ ANTHROPIC API KEY):
+const aiPrediction = await predictWithAI({
+  history: transactions,
+  anthropicApiKey: settings.anthropicApiKey
+});
+
+// AI возвращает более умный прогноз
+// учитывающий тренды, сезонность и т.д.
+
+ИСПОЛЬЗОВАТЬ:
+const baseIncome = aiPrediction?.income || avgIncome;
+const baseExpense = aiPrediction?.expense || avgExpense;
+
+FALLBACK:
+Если нет AI ключа → используем скользящее среднее
+Если есть AI ключ → AI прогноз (лучше!)
+
+В ТВОЁМ СЛУЧАЕ:
+У тебя уже есть AI прогноз (вижу на графике синюю пунктирную)
+→ Используй существующую логику
+→ Просто добавь к ней фильтры
+```
+
+---
+
+## 6️⃣ I18N
+
+```
+СТРУКТУРА i18n:
+
+shared/i18n/
+├─ web-dashboard-charts.ts ✅ (уже есть)
+└─ [ДОБАВИТЬ ТУДА ЖЕ]
+
+НЕ НУЖНО СОЗДАВАТЬ ОТДЕЛЬНЫЙ МОДУЛЬ!
+
+ДОБАВИТЬ В web-dashboard-charts.ts:
+
+export const webDashboardCharts = {
+  en: {
+    chart: {
+      // Существующие ключи...
+      
+      // НОВОЕ: Фильтры прогноза
+      forecastFilters: {
+        title: "Include in forecast:",
+        recurring: {
+          title: "Recurring transactions",
+          description: "Automatic income and expenses"
+        },
+        plannedIncome: {
+          title: "Planned income",
+          description: "Expected payments from clients"
+        },
+        plannedExpenses: {
+          title: "Planned expenses",
+          description: "Large purchases and payments"
+        },
+        budgetLimits: {
+          title: "Budget limits (max expenses)",
+          description: "Worst case scenario"
+        }
+      },
+      
+      // Warning
+      budgetWarning: {
+        title: "Warning: Risk of insufficient funds",
+        description: "If you spend all budget limits, capital will go negative",
+        recommendations: [
+          "Lower budget limits",
+          "Increase income",
+          "Postpone large purchases"
+        ]
+      }
+    }
+  },
+  
+  ru: {
+    chart: {
+      // Существующие ключи...
+      
+      // НОВОЕ: Фильтры прогноза
+      forecastFilters: {
+        title: "Включить в прогноз:",
+        recurring: {
+          title: "Повторяющиеся транзакции",
+          description: "Автоматические доходы и расходы"
+        },
+        plannedIncome: {
+          title: "Запланированные доходы",
+          description: "Ожидаемые поступления от клиентов"
+        },
+        plannedExpenses: {
+          title: "Запланированные расходы",
+          description: "Крупные покупки и платежи"
+        },
+        budgetLimits: {
+          title: "Бюджетные лимиты (макс. расходы)",
+          description: "Worst case сценарий"
+        }
+      },
+      
+      // Warning
+      budgetWarning: {
+        title: "Предупреждение: Риск нехватки средств",
+        description: "Если потратить все лимиты, капитал уйдёт в минус",
+        recommendations: [
+          "Снизить бюджетные лимиты",
+          "Увеличить доходы",
+          "Отложить крупные покупки"
+        ]
+      }
+    }
+  }
+};
+
+ИСПОЛЬЗОВАТЬ:
+import { useTranslation } from 'react-i18next';
+
+const { t } = useTranslation('webDashboardCharts');
+
+<h3>{t('chart.forecastFilters.title')}</h3>
+```
+
+---
+
+## 📋 ИТОГОВАЯ АРХИТЕКТУРА ДАННЫХ
+
+```
+ИСПОЛЬЗУЕМ СУЩЕСТВУЮЩИЕ ТАБЛИЦЫ:
+
+✅ recurring_transactions (уже есть)
+   └─ Повторяющиеся транзакции
+   └─ Нужен repository (если нет)
+
+✅ planned_income (создали недавно)
+   └─ Запланированные доходы
+   └─ Repository готов
+
+✅ future_purchases (уже есть)
+   └─ Запланированные расходы (если targetDate != null)
+   └─ Wishlist (если targetDate = null)
+   └─ Repository готов
+
+✅ budgets (уже есть)
+   └─ Бюджетные лимиты по категориям
+   └─ Repository готов
+
+НИЧЕГО НЕ НУЖНО СОЗДАВАТЬ!
+ВСЁ УЖЕ ЕСТЬ! ✅
+```
+
+---
+
+## 🎯 ФИНАЛЬНОЕ ТЗ (С УТОЧНЕНИЯМИ)
+
+```
+ЗАДАЧА: ДОБАВИТЬ ИНТЕРАКТИВНЫЕ ФИЛЬТРЫ ПРОГНОЗА
+
+BACKEND (1.5 часа):
+
+1. Создать/обновить repositories (если нет):
+   - RecurringTransactionsRepository
+   - PlannedIncomeRepository (доработать)
+   - FuturePurchasesRepository (доработать)
+   - BudgetsRepository (доработать)
+
+2. Обновить trend-calculator.service.ts:
+   
+   GET /api/analytics/trend?
+     historyDays=30&
+     forecastDays=365&
+     includeRecurring=true&
+     includePlannedIncome=true&
+     includePlannedExpenses=true&
+     includeBudgetLimits=false
+   
+   Логика:
+   - Загрузить все данные
+   - Для каждого дня прогноза:
+     * Базовый тренд (AI или скользящее среднее)
+     * + Recurring (если включен)
+     * + Planned Income (если включен)
+     * + Planned Expenses (если включен, targetDate != null)
+     * + Budget Limits (если включен, daily equivalent)
+   - Вернуть forecast с income/expense/capital
+
+FRONTEND (1.5 часа):
+
+1. Создать ForecastFilters компонент (150 строк)
+2. Обновить CapitalGrowthChart:
+   - State для фильтров
+   - Query с параметрами
+   - Сохранение в localStorage
+3. Warning если capital < 0
+
+I18N (15 минут):
+- Добавить ключи в web-dashboard-charts.ts
+
+ИТОГО: 3 часа
+```
+
+---
+
+**ВСЁ ЯСНО?** ✅
+
+**ОТПРАВИТЬ ФИНАЛЬНОЕ ТЗ В REPLIT?** 🚀
