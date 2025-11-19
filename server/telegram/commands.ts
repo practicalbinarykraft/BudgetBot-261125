@@ -969,19 +969,23 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
       if ('items' in parsed && parsed.items && parsed.items.length > 0) {
         try {
           const userSettings = await storage.getSettingsByUserId(user.id);
+          const purchaseDate = ('date' in parsed && typeof parsed.date === 'string') 
+            ? parsed.date 
+            : format(new Date(), 'yyyy-MM-dd');
+          
           await processReceiptItems({
             receiptItems: parsed.items.map((item: any) => ({
-              name: item.name || 'Unknown',
-              price: parseFloat(item.totalPrice) || 0,
+              name: item.name || item.normalizedName || 'Unknown',
+              price: typeof item.totalPrice === 'number' ? item.totalPrice : (parseFloat(item.totalPrice) || 0),
               quantity: item.quantity || 1
             })),
             userId: user.id,
             storeName: parsed.description || 'Unknown Store',
-            purchaseDate: format(new Date(), 'yyyy-MM-dd'),
+            purchaseDate,
             anthropicApiKey: userSettings?.anthropicApiKey || undefined
           });
           
-          console.log(`✅ Product catalog updated from Telegram receipt (user ${user.id})`);
+          console.log(`✅ Product catalog updated from Telegram receipt (user ${user.id}, ${parsed.items.length} items)`);
         } catch (error) {
           console.error('❌ Failed to update product catalog from Telegram:', error);
           // Don't fail the transaction if catalog update fails
