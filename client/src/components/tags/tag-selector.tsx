@@ -22,12 +22,14 @@ export function TagSelector({ value, onChange, disabled = false }: TagSelectorPr
       onValueChange={(v) => onChange(v === 'none' ? null : parseInt(v))}
       disabled={disabled || isLoading}
     >
-      <SelectTrigger data-testid="tag-selector-trigger">
-        {selectedTag ? (
-          <TagBadge tag={selectedTag} />
-        ) : (
-          <SelectValue placeholder="Select tag..." />
-        )}
+      <SelectTrigger data-testid="tag-selector-trigger" className="flex items-center">
+        <div className="flex items-center w-full">
+          {selectedTag ? (
+            <TagBadge tag={selectedTag} />
+          ) : (
+            <SelectValue placeholder="Select tag..." />
+          )}
+        </div>
       </SelectTrigger>
       
       <SelectContent>
@@ -40,8 +42,11 @@ export function TagSelector({ value, onChange, disabled = false }: TagSelectorPr
             key={tag.id} 
             value={tag.id.toString()}
             data-testid={`tag-option-${tag.id}`}
+            className="flex items-center"
           >
-            <TagBadge tag={tag} />
+            <div className="flex items-center w-full">
+              <TagBadge tag={tag} />
+            </div>
           </SelectItem>
         ))}
       </SelectContent>
