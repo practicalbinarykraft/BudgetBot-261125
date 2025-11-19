@@ -19,12 +19,13 @@ The application uses Shadcn/ui (Radix UI primitives) and Tailwind CSS with a cus
 *   **Internationalization (i18n):** Unified bilingual system (English/Russian) shared between Web and Telegram bot. Architecture:
     - `shared/i18n/`: Modular translation system with 11+ files (all <200 lines each)
     - Core modules: types.ts, common.ts, auth.ts, transactions.ts, balance.ts, income.ts, receipts.ts, help.ts, notifications.ts
-    - Web-specific modules: web-common.ts, web-dashboard.ts, web-dashboard-charts.ts, web-transactions.ts, web-settings.ts
+    - Web-specific modules: web-common.ts, web-dashboard.ts, web-dashboard-charts.ts, web-transactions.ts, web-settings.ts, web-ai-tools.ts
     - `client/src/i18n/`: React Context (I18nProvider) with useTranslation hook, auto-syncs with user settings.language from database
     - Translation function `t(key, lang)` with fallback chain: specific lang → English → key itself
     - Design principle: Single source of truth - both Telegram and Web share EXACT same translations
     - Stable identifiers: Navigation items use `id` field for keys/test-ids, `url` for badge logic (locale-independent)
     - **Dashboard i18n:** Complete translation coverage for all Dashboard components including date filters, stats cards, budget alerts with grammatically correct Russian plurals (1 бюджет, 2-4 бюджета, 5+ бюджетов), transaction list with locale-aware date formatting, and Financial Trend Chart (labels, legends, tooltips)
+    - **AI Tools i18n (web-ai-tools.ts):** Complete translation coverage for AI confirmation cards including tool names (get_balance, create_category, add_transaction), field labels (amount, description, category, currency, personal_tag), dropdown placeholders, button text (execute, cancel), toast notifications (action completed/failed/cancelled), ML confidence badges, and Russian plural forms for parameter counts (1 параметр, 2-4 параметра, 5+ параметров)
     - **Russian Plural Forms:** Helper function `getPluralKey()` implements proper Russian grammar using separate translation keys (_one/_few/_many) to handle numerical forms correctly
 *   **Frontend:** Built with React 18 (TypeScript, Vite), Wouter for routing, TanStack Query for data fetching, React Hook Form with Zod for form management, and Context API for state.
 *   **Backend:** Developed using Express.js (TypeScript) and Drizzle ORM for PostgreSQL.
@@ -74,6 +75,7 @@ The application uses Shadcn/ui (Radix UI primitives) and Tailwind CSS with a cus
     - **Category Selection:** Dropdown with ML auto-categorization suggestions and confidence badges
     - **Currency Selection:** Multi-currency dropdown (KRW, USD, RUB, EUR, CNY) with context-aware detection from chat
     - **Personal Tag Selection:** "Who" classification dropdown for shared expense tracking
+    - **Full i18n Support:** All components (confirmation-card, category-dropdown, currency-dropdown, personal-tag-dropdown, action-preview, confirmation-buttons) use useTranslation hook with ai_tools.* keys for complete EN/RU bilingual support
     - **Junior-Friendly Architecture:** All components <200 lines (CategoryDropdown 70, CurrencyDropdown 44, PersonalTagDropdown 59, EditableField 37)
 
 ### AI Tool Calling Architecture
@@ -90,16 +92,20 @@ The AI Tool Calling system enables the AI Assistant to perform automated actions
     - POST `/api/ai/chat`: Detects tool_use in Claude responses, executes READ operations immediately, returns confirmation requests for WRITE operations
     - POST `/api/ai/confirm-tool`: Executes user-confirmed tool actions
 *   **Frontend UI** (`client/src/components/ai-chat-sidebar/`):
-    - `confirmation-card.tsx`: Displays action preview with parameters and Execute/Cancel buttons
-    - `action-preview.tsx`: Shows tool icon, title, and parameter count
-    - `confirmation-buttons.tsx`: Handles confirmation/cancellation with loading states
-    - `index.tsx`: Main sidebar integrating tool confirmation flow with retry logic
+    - `confirmation-card.tsx`: Displays action preview with bilingual labels for amount, description, category, currency, and personal tag
+    - `category-dropdown.tsx`: Category selection with ML suggestion badges and i18n placeholders
+    - `currency-dropdown.tsx`: Multi-currency dropdown with localized labels
+    - `personal-tag-dropdown.tsx`: Personal tag selection with i18n "No tag" option
+    - `action-preview.tsx`: Shows tool icon, localized tool names, and parameter count with Russian plural forms
+    - `confirmation-buttons.tsx`: Execute/Cancel buttons with loading states and i18n labels
+    - `index.tsx`: Main sidebar with bilingual toast notifications for action completion/failure/cancellation
 
 *   **Key Design Decisions**:
     - BYOK pattern: Uses user's Anthropic API key from settings (no fallback)
     - Security: All tools validate userId, use storage API with ownership checks
     - UX: READ operations execute immediately, WRITE operations show confirmation card
     - Retry: Failed confirmations keep the card visible for retry attempts
+    - i18n: Complete bilingual support (EN/RU) for all confirmation UI elements via web-ai-tools.ts module
     - Junior-Friendly: All files <200 lines, modular architecture
 
 ### System Design Choices
