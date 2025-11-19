@@ -1,0 +1,133 @@
+
+📊 ШАГ 16: FRONTEND PAGE - PRODUCT CATALOG (25 минут)
+═══════════════════════════════════════════════════════
+ЗАДАЧА 16.1: СОЗДАТЬ СТРАНИЦУ КАТАЛОГА ТОВАРОВ
+═══════════════════════════════════════════════════════
+
+СОЗДАТЬ ФАЙЛ: client/src/pages/product-catalog.tsx
+
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import { Search, Filter } from 'lucide-react';
+import { ProductListItem } from '../components/product-list-item';
+
+interface Product {
+  id: number;
+  name: string;
+  category: string;
+  purchaseCount: number;
+  bestPrice: string;
+  bestStore: string;
+  lastPurchaseDate: string;
+}
+
+export default function ProductCatalog() {
+  const { t } = useTranslation();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  
+  // Загрузить товары
+  const { data: products, isLoading } = useQuery<Product[]>({
+    queryKey: ['/api/product-catalog', { 
+      search: searchQuery || undefined,
+      category: selectedCategory || undefined 
+    }]
+  });
+  
+  // Уникальные категории для фильтра
+  const categories = Array.from(
+    new Set(products?.map(p => p.category).filter(Boolean) || [])
+  );
+  
+  return (
+    <div className="container mx-auto px-4 py-6 max-w-4xl">
+      {/* Заголовок */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-2">
+          🛒 {t('productCatalog.title', 'Каталог товаров')}
+        </h1>
+        <p className="text-gray-600">
+          {t('productCatalog.subtitle', 'Товары из ваших чеков с историей цен')}
+        </p>
+      </div>
+      
+      {/* Поиск и фильтры */}
+      <div className="mb-6 flex gap-3">
+        {/* Поиск */}
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder={t('productCatalog.searchPlaceholder', 'Поиск товара...')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        
+        {/* Фильтр по категории */}
+        <select
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+          className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">
+            {t('productCatalog.allCategories', 'Все категории')}
+          </option>
+          {categories.map(cat => (
+            <option key={cat} value={cat}>{cat}</option>
+          ))}
+        </select>
+      </div>
+      
+      {/* Список товаров */}
+      {isLoading ? (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">
+            {t('productCatalog.loading', 'Загрузка...')}
+          </p>
+        </div>
+      ) : products && products.length > 0 ? (
+        <div className="space-y-2">
+          {products.map(product => (
+            <ProductListItem key={product.id} product={product} />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12">
+          <p className="text-xl text-gray-400 mb-2">📦</p>
+          <p className="text-gray-600">
+            {searchQuery 
+              ? t('productCatalog.noResults', 'Ничего не найдено')
+              : t('productCatalog.empty', 'Пока нет товаров')}
+          </p>
+          <p className="text-sm text-gray-500 mt-2">
+            {t('productCatalog.emptyHint', 'Загрузите чек через OCR чтобы добавить товары')}
+          </p>
+        </div>
+      )}
+      
+      {/* Статистика */}
+      {products && products.length > 0 && (
+        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+          <p className="text-sm text-gray-600">
+            {t('productCatalog.totalProducts', 'Всего товаров')}: {products.length}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+СТРОК: ~120 ✅
+ОТВЕТСТВЕННОСТЬ: Страница списка товаров ✅
+
+═══════════════════════════════════════════════════════
+
+ОЖИДАЕМЫЙ РЕЗУЛЬТАТ:
+✅ Страница с поиском
+✅ Фильтр по категориям
+✅ Empty state
+✅ Loading state
