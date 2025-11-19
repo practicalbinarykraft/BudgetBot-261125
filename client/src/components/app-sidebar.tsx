@@ -84,9 +84,9 @@ export function AppSidebar() {
       icon: Heart,
     },
     {
-      id: 'planned',
-      title: t("nav.planned"),
-      url: "/planned",
+      id: 'planned_expenses',
+      title: t("nav.planned_expenses"),
+      url: "/planned-expenses",
       icon: Calendar,
     },
     {

@@ -50,9 +50,9 @@ export const webCommonTranslations: Translations = {
     en: 'Recurring',
     ru: 'Повторяющиеся',
   },
-  'nav.planned': {
-    en: 'Planned',
-    ru: 'Запланированные',
+  'nav.planned_expenses': {
+    en: 'Planned Expenses',
+    ru: 'Планируемые расходы',
   },
   'nav.planned_income': {
     en: 'Planned Income',
