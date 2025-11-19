@@ -26,13 +26,6 @@ export async function generateForecast(
   daysAhead: number,
   currentCapital: number
 ): Promise<ForecastDataPoint[]> {
-  if (!apiKey) {
-    throw new Error("Anthropic API key not provided. Please add your API key in Settings.");
-  }
-
-  // Initialize Anthropic client with user's key
-  const client = new Anthropic({ apiKey });
-
   // Get historical data (last 90 days)
   const historicalDays = 90;
   const historicalTransactions = await getHistoricalTransactions(userId, historicalDays);
@@ -44,22 +37,41 @@ export async function generateForecast(
   // Calculate historical averages
   const stats = calculateHistoricalStats(historicalTransactions);
 
-  // Prepare prompt for Claude
-  const prompt = buildForecastPrompt(
-    stats,
-    activeRecurring,
-    daysAhead,
-    currentCapital
-  );
+  // If no API key, use simple forecast immediately
+  if (!apiKey) {
+    console.warn('[Forecast] No API key provided, using simple linear forecast');
+    return generateSimpleForecast(
+      daysAhead,
+      stats.avgDailyIncome,
+      stats.avgDailyExpense,
+      currentCapital,
+      activeRecurring
+    );
+  }
 
-  // Calculate required tokens based on forecast length
-  // Each data point is ~150 chars, at ~3.5 chars/token = ~50 tokens per day
-  // Add 1000 tokens buffer for JSON formatting and markdown wrappers
-  const estimatedTokens = Math.max(4096, Math.min(32000, (daysAhead * 50) + 1000));
-
-  console.log(`[Forecast] Generating ${daysAhead} days forecast, max_tokens: ${estimatedTokens}`);
-
+  // Try AI forecast with timeout
   try {
+    // Initialize Anthropic client with user's key
+    const client = new Anthropic({ 
+      apiKey,
+      timeout: 30000, // 30 second timeout
+    });
+
+    // Prepare prompt for Claude
+    const prompt = buildForecastPrompt(
+      stats,
+      activeRecurring,
+      daysAhead,
+      currentCapital
+    );
+
+    // Calculate required tokens based on forecast length
+    // Each data point is ~150 chars, at ~3.5 chars/token = ~50 tokens per day
+    // Add 1000 tokens buffer for JSON formatting and markdown wrappers
+    const estimatedTokens = Math.max(4096, Math.min(32000, (daysAhead * 50) + 1000));
+
+    console.log(`[Forecast] Generating ${daysAhead} days AI forecast, max_tokens: ${estimatedTokens}`);
+
     const message = await client.messages.create({
       model: "claude-sonnet-4-5-20250929",
       max_tokens: estimatedTokens,
@@ -131,7 +143,7 @@ export async function generateForecast(
     
     return forecast as ForecastDataPoint[];
   } catch (error: any) {
-    console.error("Forecast generation failed:", error);
+    console.error('[Forecast] AI forecast failed, falling back to simple forecast:', error.message);
     
     // Fallback to simple linear forecast
     return generateSimpleForecast(
