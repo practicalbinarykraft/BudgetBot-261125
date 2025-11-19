@@ -1,15 +1,14 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PlannedIncome, Category, insertPlannedIncomeSchema } from "@shared/schema";
-import { Button } from "@/components/ui/button";
-import { Plus, CalendarDays } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, CalendarDays, Coins } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/i18n/context";
 import { PlannedIncomeCard } from "@/components/planned-income/planned-income-card";
 import { PlannedIncomeFormDialog } from "@/components/planned-income/planned-income-form-dialog";
+import { PlannedLayout } from "@/components/planned-layout/planned-layout";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -216,100 +215,61 @@ export default function PlannedIncomePage() {
     });
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between p-6 border-b">
-          <div>
-            <Skeleton className="h-8 w-48 mb-2" />
-            <Skeleton className="h-4 w-96" />
-          </div>
-          <Skeleton className="h-10 w-40" />
-        </div>
-        <div className="flex-1 overflow-auto p-6">
-          <Skeleton className="h-10 w-full mb-4" />
-          <div className="grid gap-4">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-32 w-full" />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const tabs = [
+    { value: "all", label: t("planned_income.filter.all"), count: statusCounts.all },
+    { value: "pending", label: t("planned_income.filter.pending"), count: statusCounts.pending },
+    { value: "received", label: t("planned_income.filter.received"), count: statusCounts.received },
+    { value: "cancelled", label: t("planned_income.filter.cancelled"), count: statusCounts.cancelled },
+  ];
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-6 border-b">
-        <div>
-          <h1 className="text-3xl font-bold" data-testid="text-page-title">
-            {t("planned_income.title")}
-          </h1>
-          <p className="text-muted-foreground mt-1" data-testid="text-page-description">
-            {t("planned_income.description")}
-          </p>
-        </div>
-        <Button
-          onClick={() => setShowAddDialog(true)}
-          data-testid="button-add-planned-income"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          {t("planned_income.add")}
-        </Button>
-      </div>
-
-      <div className="flex-1 overflow-auto">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as FilterStatus)} className="h-full flex flex-col">
-          <TabsList className="mx-6 mt-4 w-fit" data-testid="tabs-filter">
-            <TabsTrigger value="all" data-testid="tab-all">
-              {t("planned_income.filter.all")} ({statusCounts.all})
-            </TabsTrigger>
-            <TabsTrigger value="pending" data-testid="tab-pending">
-              {t("planned_income.filter.pending")} ({statusCounts.pending})
-            </TabsTrigger>
-            <TabsTrigger value="received" data-testid="tab-received">
-              {t("planned_income.filter.received")} ({statusCounts.received})
-            </TabsTrigger>
-            <TabsTrigger value="cancelled" data-testid="tab-cancelled">
-              {t("planned_income.filter.cancelled")} ({statusCounts.cancelled})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value={activeTab} className="flex-1 px-6 pb-6 mt-4">
-            {filteredIncome.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                <CalendarDays className="w-16 h-16 text-muted-foreground mb-4" />
-                <h3 className="text-xl font-semibold mb-2" data-testid="text-empty-title">
-                  {t("planned_income.no_income")}
-                </h3>
-                <p className="text-muted-foreground mb-6 max-w-md" data-testid="text-empty-description">
-                  {t("planned_income.no_income_description")}
-                </p>
-                {activeTab === "all" && (
-                  <Button onClick={() => setShowAddDialog(true)} data-testid="button-add-first">
-                    <Plus className="w-4 h-4 mr-2" />
-                    {t("planned_income.add")}
-                  </Button>
-                )}
+    <>
+      <PlannedLayout
+        title={t("planned_income.title")}
+        subtitle={t("planned_income.description")}
+        icon={Coins}
+        addButtonText={t("planned_income.add")}
+        onAdd={() => setShowAddDialog(true)}
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={(v) => setActiveTab(v as FilterStatus)}
+        emptyIcon={CalendarDays}
+        emptyTitle={t("planned_income.no_income")}
+        emptySubtitle={t("planned_income.no_income_description")}
+        isEmpty={filteredIncome.length === 0}
+        isLoading={isLoading}
+        loadingElement={
+          <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between p-6 border-b">
+              <div>
+                <Skeleton className="h-8 w-48 mb-2" />
+                <Skeleton className="h-4 w-96" />
               </div>
-            ) : (
-              <div className="grid gap-4" data-testid="list-planned-income">
-                {filteredIncome.map((income) => (
-                  <PlannedIncomeCard
-                    key={income.id}
-                    income={income}
-                    categories={allCategories}
-                    onDelete={(id) => deleteMutation.mutate(id)}
-                    onReceive={(id) => receiveMutation.mutate(id)}
-                    onCancel={(id) => cancelMutation.mutate(id)}
-                    onEdit={handleEdit}
-                  />
+              <Skeleton className="h-10 w-40" />
+            </div>
+            <div className="flex-1 overflow-auto p-6">
+              <Skeleton className="h-10 w-full mb-4" />
+              <div className="grid gap-4">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-32 w-full" />
                 ))}
               </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
+            </div>
+          </div>
+        }
+      >
+        {filteredIncome.map((income) => (
+          <PlannedIncomeCard
+            key={income.id}
+            income={income}
+            categories={allCategories}
+            onDelete={(id) => deleteMutation.mutate(id)}
+            onReceive={(id) => receiveMutation.mutate(id)}
+            onCancel={(id) => cancelMutation.mutate(id)}
+            onEdit={handleEdit}
+          />
+        ))}
+      </PlannedLayout>
 
       <PlannedIncomeFormDialog
         open={showAddDialog}
@@ -320,6 +280,6 @@ export default function PlannedIncomePage() {
         incomeCategories={incomeCategories}
         isPending={createMutation.isPending || updateMutation.isPending}
       />
-    </div>
+    </>
   );
 }
