@@ -9,7 +9,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseISO, isToday, isTomorrow, differenceInDays, startOfWeek, endOfWeek, isPast } from "date-fns";
-import { useTranslation } from "@/i18n/context";
+import { useTranslation } from "@/i18n";
 
 type GroupedPlanned = {
   overdue: PlannedTransaction[];
@@ -61,7 +61,7 @@ export default function PlannedExpensesPage() {
   const [activeTab, setActiveTab] = useState<"all" | "planned" | "completed">("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
 
   const { data: allPlanned = [], isLoading } = useQuery<PlannedTransaction[]>({
     queryKey: ["/api/planned"],
@@ -202,6 +202,7 @@ export default function PlannedExpensesPage() {
       </PlannedLayout>
 
       <AddPlannedDialog
+        key={language}
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
         onAdd={handleAddPlanned}

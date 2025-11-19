@@ -166,9 +166,13 @@ export async function getPlannedIncomeForDate(
   return planned
     .filter(p => 
       p.status === 'pending' &&
-      p.expectedDate === dateStr
+      p.expectedDate === dateStr &&
+      p.amount != null
     )
-    .reduce((sum, p) => sum + parseFloat(p.amount as unknown as string), 0);
+    .reduce((sum, p) => {
+      const amount = parseFloat(p.amount as unknown as string);
+      return sum + (isNaN(amount) ? 0 : amount);
+    }, 0);
 }
 
 /**
@@ -185,9 +189,13 @@ export async function getPlannedExpenseForDate(
   return planned
     .filter(p => 
       p.status === 'planned' &&
-      p.targetDate === dateStr
+      p.targetDate === dateStr &&
+      p.amount != null
     )
-    .reduce((sum, p) => sum + parseFloat(p.amount as unknown as string), 0);
+    .reduce((sum, p) => {
+      const amount = parseFloat(p.amount as unknown as string);
+      return sum + (isNaN(amount) ? 0 : amount);
+    }, 0);
 }
 
 /**

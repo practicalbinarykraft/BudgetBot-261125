@@ -1,25 +1,16 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useQuery } from "@tanstack/react-query";
 import { Calendar, DollarSign, Tag } from "lucide-react";
 import type { Category } from "@shared/schema";
-
-const formSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, "Invalid amount format"),
-  targetDate: z.string().min(1, "Target date is required"),
-  category: z.string().optional(),
-});
-
-type FormData = z.infer<typeof formSchema>;
+import { useTranslation } from "@/i18n";
 
 interface AddPlannedDialogProps {
   open: boolean;
@@ -28,7 +19,23 @@ interface AddPlannedDialogProps {
   isSubmitting?: boolean;
 }
 
+type FormData = {
+  name: string;
+  amount: string;
+  targetDate: string;
+  category?: string;
+};
+
 export function AddPlannedDialog({ open, onOpenChange, onAdd, isSubmitting }: AddPlannedDialogProps) {
+  const { t, language } = useTranslation();
+  
+  const formSchema = useMemo(() => z.object({
+    name: z.string().min(1, t("planned.validation_name_required")),
+    amount: z.string().regex(/^\d+(\.\d{1,2})?$/, t("planned.validation_amount_invalid")),
+    targetDate: z.string().min(1, t("planned.validation_date_required")),
+    category: z.string().optional(),
+  }), [t, language]);
+  
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -65,7 +72,7 @@ export function AddPlannedDialog({ open, onOpenChange, onAdd, isSubmitting }: Ad
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent data-testid="dialog-add-planned">
         <DialogHeader>
-          <DialogTitle>Add Planned Purchase</DialogTitle>
+          <DialogTitle>{t("planned.add_dialog_title")}</DialogTitle>
         </DialogHeader>
         
         <Form {...form}>
@@ -75,11 +82,11 @@ export function AddPlannedDialog({ open, onOpenChange, onAdd, isSubmitting }: Ad
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>{t("planned.field_name")}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
-                      placeholder="Enter item name"
+                      placeholder={t("planned.field_name_placeholder")}
                       data-testid="input-planned-name"
                     />
                   </FormControl>
@@ -93,14 +100,14 @@ export function AddPlannedDialog({ open, onOpenChange, onAdd, isSubmitting }: Ad
               name="amount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Amount</FormLabel>
+                  <FormLabel>{t("planned.field_amount")}</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         {...field}
                         type="text"
-                        placeholder="0.00"
+                        placeholder={t("planned.field_amount_placeholder")}
                         className="pl-10"
                         data-testid="input-planned-amount"
                       />
@@ -116,7 +123,7 @@ export function AddPlannedDialog({ open, onOpenChange, onAdd, isSubmitting }: Ad
               name="targetDate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Target Date</FormLabel>
+                  <FormLabel>{t("planned.field_target_date")}</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -138,7 +145,7 @@ export function AddPlannedDialog({ open, onOpenChange, onAdd, isSubmitting }: Ad
               name="category"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Category (Optional)</FormLabel>
+                  <FormLabel>{t("planned.field_category")}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <div className="relative">
@@ -147,7 +154,7 @@ export function AddPlannedDialog({ open, onOpenChange, onAdd, isSubmitting }: Ad
                           className="pl-10"
                           data-testid="select-planned-category"
                         >
-                          <SelectValue placeholder="Select category" />
+                          <SelectValue placeholder={t("planned.field_category_placeholder")} />
                         </SelectTrigger>
                       </div>
                     </FormControl>
@@ -172,14 +179,14 @@ export function AddPlannedDialog({ open, onOpenChange, onAdd, isSubmitting }: Ad
                 data-testid="button-cancel-add-planned"
                 disabled={isSubmitting}
               >
-                Cancel
+                {t("planned.button_cancel")}
               </Button>
               <Button 
                 type="submit"
                 data-testid="button-confirm-add-planned"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Adding..." : "Add Plan"}
+                {isSubmitting ? t("planned.button_adding") : t("planned.button_add")}
               </Button>
             </DialogFooter>
           </form>
