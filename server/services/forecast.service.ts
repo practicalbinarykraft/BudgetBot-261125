@@ -365,13 +365,15 @@ Start from tomorrow and forecast ${daysAhead} days ahead. Return pure JSON array
 
 /**
  * Fallback: Simple linear forecast without AI
+ * Returns BASE forecast using historical averages ONLY
+ * Filters (recurring, planned, budget) are applied separately in trend-calculator
  */
 function generateSimpleForecast(
   daysAhead: number,
   avgIncome: number,
   avgExpense: number,
   currentCapital: number,
-  recurring: Recurring[]
+  recurring: Recurring[] // Not used anymore, kept for compatibility
 ): ForecastDataPoint[] {
   const forecast: ForecastDataPoint[] = [];
   let runningCapital = currentCapital;
@@ -383,23 +385,10 @@ function generateSimpleForecast(
     forecastDate.setDate(today.getDate() + i);
     const dateStr = forecastDate.toISOString().split('T')[0];
 
-    // Calculate recurring for this date
-    let recurringIncome = 0;
-    let recurringExpense = 0;
-    
-    recurring.forEach(r => {
-      if (shouldApplyRecurring(r, forecastDate)) {
-        const amount = parseFloat(r.amount as unknown as string);
-        if (r.type === 'income') {
-          recurringIncome += amount;
-        } else {
-          recurringExpense += amount;
-        }
-      }
-    });
-
-    const dailyIncome = avgIncome + recurringIncome;
-    const dailyExpense = avgExpense + recurringExpense;
+    // Use ONLY historical averages as base
+    // Recurring, planned, budget limits are applied in trend-calculator.service.ts
+    const dailyIncome = avgIncome;
+    const dailyExpense = avgExpense;
     runningCapital = runningCapital + dailyIncome - dailyExpense;
 
     forecast.push({
