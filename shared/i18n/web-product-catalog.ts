@@ -54,6 +54,18 @@ export const webProductCatalogTranslations: Translations = {
   },
 
   // Empty states
+  'productCatalog.empty': {
+    en: 'No products yet',
+    ru: 'Пока нет товаров',
+  },
+  'productCatalog.emptyHint': {
+    en: 'Products will appear here after you scan receipts or add transactions',
+    ru: 'Товары появятся здесь после сканирования чеков или добавления транзакций',
+  },
+  'productCatalog.noResults': {
+    en: 'No products found',
+    ru: 'Ничего не найдено',
+  },
   'productCatalog.noProducts': {
     en: 'No products found',
     ru: 'Товары не найдены',
@@ -61,6 +73,10 @@ export const webProductCatalogTranslations: Translations = {
   'productCatalog.noProductsMessage': {
     en: 'Start adding products through receipt scanning or manual entry',
     ru: 'Начните добавлять товары через сканирование чеков или ручной ввод',
+  },
+  'productCatalog.totalProducts': {
+    en: 'Total products',
+    ru: 'Всего товаров',
   },
 
   // Product Detail Page
