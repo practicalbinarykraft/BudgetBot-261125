@@ -21,11 +21,24 @@ interface ForecastFiltersProps {
 
 export function ForecastFiltersCard({ filters, onChange }: ForecastFiltersProps) {
   const { t } = useTranslation();
-  const [pendingFilters, setPendingFilters] = useState<ForecastFilters>(filters);
+  // Ensure all filter values are boolean (prevent uncontrolled->controlled warning)
+  const [pendingFilters, setPendingFilters] = useState<ForecastFilters>(() => ({
+    includeRecurringIncome: Boolean(filters.includeRecurringIncome),
+    includeRecurringExpense: Boolean(filters.includeRecurringExpense),
+    includePlannedIncome: Boolean(filters.includePlannedIncome),
+    includePlannedExpenses: Boolean(filters.includePlannedExpenses),
+    includeBudgetLimits: Boolean(filters.includeBudgetLimits),
+  }));
 
   // Sync pending state when parent filters change (e.g., after Apply or localStorage restore)
   useEffect(() => {
-    setPendingFilters(filters);
+    setPendingFilters({
+      includeRecurringIncome: Boolean(filters.includeRecurringIncome),
+      includeRecurringExpense: Boolean(filters.includeRecurringExpense),
+      includePlannedIncome: Boolean(filters.includePlannedIncome),
+      includePlannedExpenses: Boolean(filters.includePlannedExpenses),
+      includeBudgetLimits: Boolean(filters.includeBudgetLimits),
+    });
   }, [filters]);
 
   const incomeFilters = [
@@ -86,7 +99,7 @@ export function ForecastFiltersCard({ filters, onChange }: ForecastFiltersProps)
       <div key={option.id} className="flex items-start gap-2">
         <Checkbox
           id={option.id}
-          checked={option.checked}
+          checked={Boolean(option.checked)}
           onCheckedChange={() => handlePendingFilterChange(option.id as keyof ForecastFilters)}
           data-testid={`checkbox-${option.id}`}
         />

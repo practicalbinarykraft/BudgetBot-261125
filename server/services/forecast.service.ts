@@ -52,10 +52,15 @@ export async function generateForecast(
     currentCapital
   );
 
+  // Calculate required tokens based on forecast length
+  // ~150 chars per data point, ~4 chars per token = ~40 tokens per day
+  // Add 500 tokens buffer for response formatting
+  const estimatedTokens = Math.max(2048, Math.min(32000, (daysAhead * 40) + 500));
+
   try {
     const message = await client.messages.create({
       model: "claude-sonnet-4-5-20250929",
-      max_tokens: 2048,
+      max_tokens: estimatedTokens,
       messages: [
         {
           role: "user",

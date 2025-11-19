@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceDot } from "recharts";
 import { useFinancialTrend } from "@/hooks/use-financial-trend";
-import { queryClient } from "@/lib/queryClient";
 import { WishlistItemWithPrediction } from "@/types/goal-prediction";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -62,11 +61,9 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
     };
   });
   
-  // Save filters to localStorage when they change and invalidate query
+  // Save filters to localStorage when they change
   useEffect(() => {
     localStorage.setItem('forecastFilters', JSON.stringify(filters));
-    // Force refetch when filters change
-    queryClient.invalidateQueries({ queryKey: ["/api/analytics/trend"] });
   }, [filters]);
 
   const { data, isLoading, error } = useFinancialTrend({

@@ -79,7 +79,9 @@ export function useFinancialTrend({
         includeBudgetLimits: includeBudgetLimits.toString(),
       });
       
-      const res = await fetch(`/api/analytics/trend?${params}`);
+      const res = await fetch(`/api/analytics/trend?${params}`, {
+        cache: 'no-store',
+      });
       
       if (!res.ok) {
         throw new Error("Failed to fetch trend data");
@@ -87,9 +89,9 @@ export function useFinancialTrend({
       
       return res.json();
     },
-    // Refetch on window focus to get latest data
-    refetchOnWindowFocus: true,
     // Keep previous data while fetching new
     placeholderData: (prev) => prev,
+    // Consider data immediately stale to allow refetch on param change
+    staleTime: 0,
   });
 }
