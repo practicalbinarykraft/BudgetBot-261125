@@ -3,6 +3,7 @@ import { storage } from "../../storage";
 import { withAuth } from "../../middleware/auth-utils";
 import { parseReceiptWithItems } from "../../services/ocr/receipt-parser.service";
 import { receiptItemsRepository } from "../../repositories/receipt-items.repository";
+import { processReceiptItems } from "../../services/product-catalog.service";
 
 const router = Router();
 
