@@ -44,7 +44,8 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
         return JSON.parse(saved);
       } catch {
         return {
-          includeRecurring: true,
+          includeRecurringIncome: true,
+          includeRecurringExpense: true,
           includePlannedIncome: true,
           includePlannedExpenses: true,
           includeBudgetLimits: false,
@@ -52,7 +53,8 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
       }
     }
     return {
-      includeRecurring: true,
+      includeRecurringIncome: true,
+      includeRecurringExpense: true,
       includePlannedIncome: true,
       includePlannedExpenses: true,
       includeBudgetLimits: false,

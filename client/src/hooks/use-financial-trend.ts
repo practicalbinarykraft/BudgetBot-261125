@@ -30,7 +30,8 @@ export interface TrendWithGoals {
 interface UseFinancialTrendOptions {
   historyDays?: number;
   forecastDays?: number;
-  includeRecurring?: boolean;
+  includeRecurringIncome?: boolean;
+  includeRecurringExpense?: boolean;
   includePlannedIncome?: boolean;
   includePlannedExpenses?: boolean;
   includeBudgetLimits?: boolean;
@@ -41,7 +42,8 @@ interface UseFinancialTrendOptions {
  * 
  * @param historyDays Number of historical days to fetch (default: 30)
  * @param forecastDays Number of forecast days to generate (default: 365)
- * @param includeRecurring Include recurring transactions in forecast (default: true)
+ * @param includeRecurringIncome Include recurring income in forecast (default: true)
+ * @param includeRecurringExpense Include recurring expenses in forecast (default: true)
  * @param includePlannedIncome Include planned income in forecast (default: true)
  * @param includePlannedExpenses Include planned expenses in forecast (default: true)
  * @param includeBudgetLimits Include budget limits in forecast (default: false)
@@ -49,7 +51,8 @@ interface UseFinancialTrendOptions {
 export function useFinancialTrend({
   historyDays = 30,
   forecastDays = 365,
-  includeRecurring = true,
+  includeRecurringIncome = true,
+  includeRecurringExpense = true,
   includePlannedIncome = true,
   includePlannedExpenses = true,
   includeBudgetLimits = false,
@@ -59,7 +62,8 @@ export function useFinancialTrend({
       "/api/analytics/trend", 
       historyDays, 
       forecastDays,
-      includeRecurring,
+      includeRecurringIncome,
+      includeRecurringExpense,
       includePlannedIncome,
       includePlannedExpenses,
       includeBudgetLimits,
@@ -68,7 +72,8 @@ export function useFinancialTrend({
       const params = new URLSearchParams({
         historyDays: historyDays.toString(),
         forecastDays: forecastDays.toString(),
-        includeRecurring: includeRecurring.toString(),
+        includeRecurringIncome: includeRecurringIncome.toString(),
+        includeRecurringExpense: includeRecurringExpense.toString(),
         includePlannedIncome: includePlannedIncome.toString(),
         includePlannedExpenses: includePlannedExpenses.toString(),
         includeBudgetLimits: includeBudgetLimits.toString(),
