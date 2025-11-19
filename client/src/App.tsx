@@ -27,6 +27,7 @@ import ExpensesAnalyticsPage from "@/pages/expenses-analytics-page";
 import SwipeSortPage from "@/pages/swipe-sort-page";
 import AiTrainingHistoryPage from "@/pages/ai-training-history-page";
 import ProductCatalogPage from "@/pages/product-catalog-page";
+import ProductDetailPage from "@/pages/product-detail-page";
 
 function Router() {
   return (
@@ -48,6 +49,7 @@ function Router() {
       <ProtectedRoute path="/tags/:id" component={TagDetailPage} />
       <ProtectedRoute path="/tags" component={TagsSettingsPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
+      <ProtectedRoute path="/product-catalog/:id" component={ProductDetailPage} />
       <ProtectedRoute path="/product-catalog" component={ProductCatalogPage} />
       <Route>
         <Redirect to="/" />

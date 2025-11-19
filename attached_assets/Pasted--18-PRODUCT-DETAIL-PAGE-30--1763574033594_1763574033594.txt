@@ -1,0 +1,223 @@
+📊 ШАГ 18: PRODUCT DETAIL PAGE (30 минут)
+═══════════════════════════════════════════════════════
+ЗАДАЧА 18.1: СОЗДАТЬ СТРАНИЦУ ДЕТАЛЬНОГО ПРОСМОТРА
+═══════════════════════════════════════════════════════
+
+СОЗДАТЬ ФАЙЛ: client/src/pages/product-detail.tsx
+
+import { useParams } from 'wouter';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import { ArrowLeft, Search, TrendingDown, ShoppingBag, Calendar } from 'lucide-react';
+import { useState } from 'react';
+import { PriceHistoryChart } from '../components/price-history-chart';
+import { PriceSearchModal } from '../components/price-search-modal';
+
+interface Product {
+  id: number;
+  name: string;
+  category: string;
+  brand: string;
+  weight: string;
+  purchaseCount: number;
+  bestPrice: string;
+  bestStore: string;
+  averagePrice: string;
+  lastPurchaseDate: string;
+}
+
+interface PriceHistory {
+  id: number;
+  storeName: string;
+  price: string;
+  purchaseDate: string;
+}
+
+export default function ProductDetail() {
+  const { id } = useParams<{ id: string }>();
+  const { t } = useTranslation();
+  const [, navigate] = useNavigate();
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  
+  // Загрузить товар
+  const { data: product, isLoading } = useQuery<Product>({
+    queryKey: [`/api/product-catalog/${id}`]
+  });
+  
+  // Загрузить историю цен
+  const { data: priceData } = useQuery({
+    queryKey: [`/api/product-catalog/${id}/price-history`]
+  });
+  
+  const priceHistory = priceData?.priceHistory as PriceHistory[] | undefined;
+  const byStore = priceData?.byStore as Record<string, PriceHistory[]> | undefined;
+  
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!product) {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <p className="text-center text-gray-600">
+          {t('productDetail.notFound', 'Товар не найден')}
+        </p>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="container mx-auto px-4 py-6 max-w-4xl">
+      {/* Назад */}
+      <button
+        onClick={() => navigate('/product-catalog')}
+        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
+      >
+        <ArrowLeft className="w-5 h-5" />
+        {t('productDetail.back', 'Назад к каталогу')}
+      </button>
+      
+      {/* Заголовок товара */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
+        <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+          {product.category && <span>📦 {product.category}</span>}
+          {product.brand && <span>🏷️ {product.brand}</span>}
+          {product.weight && <span>⚖️ {product.weight}</span>}
+        </div>
+      </div>
+      
+      {/* Статистика */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {/* Куплено раз */}
+        <div className="p-4 bg-blue-50 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <ShoppingBag className="w-5 h-5 text-blue-600" />
+            <span className="text-sm text-blue-900">
+              {t('productDetail.purchased', 'Куплено')}
+            </span>
+          </div>
+          <p className="text-2xl font-bold text-blue-900">
+            {product.purchaseCount} {t('productDetail.times', 'раз')}
+          </p>
+        </div>
+        
+        {/* Лучшая цена */}
+        <div className="p-4 bg-green-50 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingDown className="w-5 h-5 text-green-600" />
+            <span className="text-sm text-green-900">
+              {t('productDetail.bestPrice', 'Лучшая цена')}
+            </span>
+          </div>
+          <p className="text-2xl font-bold text-green-900">
+            ${parseFloat(product.bestPrice || '0').toFixed(2)}
+          </p>
+          {product.bestStore && (
+            <p className="text-xs text-green-700 mt-1">
+              {product.bestStore}
+            </p>
+          )}
+        </div>
+        
+        {/* Средняя цена */}
+        <div className="p-4 bg-gray-50 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingDown className="w-5 h-5 text-gray-600" />
+            <span className="text-sm text-gray-700">
+              {t('productDetail.averagePrice', 'Средняя цена')}
+            </span>
+          </div>
+          <p className="text-2xl font-bold text-gray-900">
+            ${parseFloat(product.averagePrice || '0').toFixed(2)}
+          </p>
+        </div>
+      </div>
+      
+      {/* Кнопка поиска */}
+      <button
+        onClick={() => setShowSearchModal(true)}
+        className="w-full mb-6 px-6 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition flex items-center justify-center gap-2"
+      >
+        <Search className="w-5 h-5" />
+        {t('productDetail.searchPrices', 'Найти самую выгодную цену')}
+      </button>
+      
+      {/* График цен */}
+      {priceHistory && priceHistory.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-xl font-bold mb-4">
+            {t('productDetail.priceHistory', 'История цен')}
+          </h2>
+          <PriceHistoryChart data={priceHistory} />
+        </div>
+      )}
+      
+      {/* Таблица по магазинам */}
+      {byStore && Object.keys(byStore).length > 0 && (
+        <div>
+          <h2 className="text-xl font-bold mb-4">
+            {t('productDetail.byStore', 'Цены по магазинам')}
+          </h2>
+          <div className="space-y-3">
+            {Object.entries(byStore).map(([storeName, prices]) => {
+              const avgPrice = prices.reduce((sum, p) => sum + parseFloat(p.price), 0) / prices.length;
+              const minPrice = Math.min(...prices.map(p => parseFloat(p.price)));
+              
+              return (
+                <div key={storeName} className="p-4 border rounded-lg">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-semibold">{storeName}</h3>
+                    <span className="text-sm text-gray-500">
+                      {prices.length} {t('productDetail.purchases', 'покупок')}
+                    </span>
+                  </div>
+                  <div className="flex gap-4 text-sm">
+                    <span className="text-green-600 font-semibold">
+                      {t('productDetail.min', 'Мин')}: ${minPrice.toFixed(2)}
+                    </span>
+                    <span className="text-gray-600">
+                      {t('productDetail.avg', 'Средн')}: ${avgPrice.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      
+      {/* Modal поиска цен */}
+      {showSearchModal && (
+        <PriceSearchModal
+          productId={parseInt(id!)}
+          productName={product.name}
+          onClose={() => setShowSearchModal(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+СТРОК: ~195 ✅
+ОТВЕТСТВЕННОСТЬ: Детальная страница товара ✅
+
+ПРИМЕЧАНИЕ: Файл близок к 200 строкам, но это допустимо 
+для главной страницы с разметкой. Можно вынести части 
+в подкомпоненты если нужно.
+
+═══════════════════════════════════════════════════════
+
+ОЖИДАЕМЫЙ РЕЗУЛЬТАТ:
+✅ Детальная информация о товаре
+✅ Статистика покупок
+✅ История цен
+✅ Группировка по магазинам
+✅ Кнопка поиска цен

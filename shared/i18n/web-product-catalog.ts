@@ -58,4 +58,74 @@ export const webProductCatalogTranslations: Translations = {
     en: 'Start adding products through receipt scanning or manual entry',
     ru: 'Начните добавлять товары через сканирование чеков или ручной ввод',
   },
+
+  // Product Detail Page
+  'productDetail.back': {
+    en: 'Back to catalog',
+    ru: 'Назад к каталогу',
+  },
+  'productDetail.notFound': {
+    en: 'Product not found',
+    ru: 'Товар не найден',
+  },
+  'productDetail.priceHistory': {
+    en: 'Price History',
+    ru: 'История цен',
+  },
+  'productDetail.price': {
+    en: 'Price',
+    ru: 'Цена',
+  },
+  'productDetail.purchased': {
+    en: 'Purchased',
+    ru: 'Куплено',
+  },
+  'productDetail.times': {
+    en: 'times',
+    ru: 'раз',
+  },
+  'productDetail.bestPrice': {
+    en: 'Best Price',
+    ru: 'Лучшая цена',
+  },
+  'productDetail.averagePrice': {
+    en: 'Average Price',
+    ru: 'Средняя цена',
+  },
+  'productDetail.searchPrices': {
+    en: 'Find the best price',
+    ru: 'Найти самую выгодную цену',
+  },
+  'productDetail.byStore': {
+    en: 'Prices by Store',
+    ru: 'Цены по магазинам',
+  },
+  'productDetail.purchases': {
+    en: 'purchases',
+    ru: 'покупок',
+  },
+  'productDetail.min': {
+    en: 'Min',
+    ru: 'Мин',
+  },
+  'productDetail.avg': {
+    en: 'Avg',
+    ru: 'Средн',
+  },
+  'productDetail.startSearch': {
+    en: 'Start search',
+    ru: 'Начать поиск',
+  },
+  'productDetail.save': {
+    en: 'Save',
+    ru: 'Экономия',
+  },
+  'productDetail.visit': {
+    en: 'Visit',
+    ru: 'Перейти',
+  },
+  'productDetail.noResults': {
+    en: 'No results found',
+    ru: 'Результаты не найдены',
+  },
 };
