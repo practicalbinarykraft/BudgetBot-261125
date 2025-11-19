@@ -1,0 +1,518 @@
+# 📋 ПЛАН ПОЭТАПНОЙ РЕАЛИЗАЦИИ (JUNIOR-FRIENDLY)
+
+---
+
+## 🎯 ОБЩАЯ СТРУКТУРА
+
+```
+ЭТАПОВ: 8 (каждый ~1-2 часа)
+
+ИТОГО: ~12-15 часов работы
+РЕЗУЛЬТАТ: Полноценный Product Catalog с AI-поиском цен
+
+ПРИНЦИПЫ:
+✅ Каждый этап независимый
+✅ Можно откатиться на любом шаге
+✅ Ничего не ломаем из существующего
+✅ Тестируем после каждого этапа
+```
+
+---
+
+## 📊 ЭТАП 1: DATABASE SCHEMA (1 час)
+
+```
+ЗАДАЧА: Создать 3 новые таблицы
+
+ЗАЧЕМ:
+└─ Хранить каталог товаров, историю цен, отчёты поиска
+
+ЧТО ДЕЛАТЬ:
+
+1. Обновить shared/schema.ts:
+   - Добавить productCatalog table (15 полей)
+   - Добавить productPriceHistory table (10 полей)
+   - Добавить priceSearchReports table (15 полей)
+
+2. Запустить миграцию:
+   npm run db:push
+
+3. Проверить:
+   - 3 новые таблицы созданы
+   - Foreign keys на месте
+   - Indexes добавлены
+
+ФАЙЛЫ:
+├─ shared/schema.ts (+150 строк)
+
+РИСКИ: Минимальные (только добавление, ничего не меняем)
+
+ROLLBACK: db:push предыдущей версии
+```
+
+---
+
+## 📊 ЭТАП 2: REPOSITORIES (1.5 часа)
+
+```
+ЗАДАЧА: Создать 3 репозитория для работы с данными
+
+ЗАЧЕМ:
+└─ Абстракция доступа к БД, переиспользование логики
+
+ЧТО ДЕЛАТЬ:
+
+1. Создать server/repositories/product-catalog.repository.ts:
+   - findByUser(userId)
+   - findById(id)
+   - findByNormalizedName(name, userId)
+   - create(data)
+   - update(id, data)
+   - delete(id)
+   - incrementPurchaseCount(id)
+   - updateBestPrice(id)
+   (Итого: ~180 строк)
+
+2. Создать server/repositories/product-price-history.repository.ts:
+   - findByProduct(productId)
+   - findByStore(storeName, userId)
+   - create(data)
+   - getBestPrice(productId)
+   - getAveragePrice(productId)
+   (Итого: ~120 строк)
+
+3. Создать server/repositories/price-search-reports.repository.ts:
+   - findByProduct(productId)
+   - findLatest(productId)
+   - create(data)
+   - update(id, data)
+   (Итого: ~100 строк)
+
+4. Обновить server/repositories/index.ts:
+   - Экспортировать 3 новых репозитория
+
+ФАЙЛЫ:
+├─ server/repositories/product-catalog.repository.ts (180 строк)
+├─ server/repositories/product-price-history.repository.ts (120 строк)
+├─ server/repositories/price-search-reports.repository.ts (100 строк)
+└─ server/repositories/index.ts (+3 экспорта)
+
+ТЕСТЫ:
+- Создать продукт
+- Найти по имени
+- Добавить цену в историю
+- Проверить best price
+
+РИСКИ: Минимальные (только новые файлы)
+
+ROLLBACK: Удалить файлы
+```
+
+---
+
+## 📊 ЭТАП 3: OCR INTEGRATION (1.5 часа)
+
+```
+ЗАДАЧА: При сканировании чека → автоматически добавлять товары в каталог
+
+ЗАЧЕМ:
+└─ Наполнение каталога без ручного ввода
+
+ЧТО ДЕЛАТЬ:
+
+1. Создать server/services/product-catalog.service.ts:
+   - processReceiptItems(receiptItems, userId, storeName, date)
+   - normalizeName(name) - нормализация названия
+   - categorizeProduct(name) - AI категоризация
+   - updateBestPrice(productId) - обновить лучшую цену
+   (Итого: ~150 строк)
+
+2. Обновить существующий OCR handler:
+   - После создания транзакции
+   - Вызвать productCatalogService.processReceiptItems()
+   
+   Найти файл где обрабатывается OCR:
+   server/routes/ocr.routes.ts или server/ai/handlers/ocr-handler.ts
+   
+   Добавить:
+   // После создания транзакций из чека
+   await productCatalogService.processReceiptItems(
+     receiptItems,
+     userId,
+     receipt.storeName,
+     receipt.date
+   );
+
+ФАЙЛЫ:
+├─ server/services/product-catalog.service.ts (150 строк) NEW
+└─ server/routes/ocr.routes.ts (или ocr-handler.ts) (+10 строк)
+
+ТЕСТЫ:
+1. Загрузить чек через OCR
+2. Проверить что товары появились в productCatalog
+3. Проверить что цены в productPriceHistory
+4. Проверить purchaseCount увеличился
+
+РИСКИ: Средние (меняем существующий код)
+
+ROLLBACK: Закомментировать вызов processReceiptItems
+```
+
+---
+
+## 📊 ЭТАП 4: BACKEND API (1 час)
+
+```
+ЗАДАЧА: Создать API endpoints для каталога
+
+ЗАЧЕМ:
+└─ Frontend будет обращаться к этим endpoints
+
+ЧТО ДЕЛАТЬ:
+
+1. Создать server/routes/product-catalog.routes.ts:
+   
+   GET /api/product-catalog
+   - Список всех товаров пользователя
+   - Query params: ?category=..., ?search=..., ?sort=...
+   
+   GET /api/product-catalog/:id
+   - Детали товара + история цен
+   
+   GET /api/product-catalog/:id/price-history
+   - История цен по магазинам
+   
+   POST /api/product-catalog/:id/search-prices
+   - Запустить AI-поиск цен
+   
+   GET /api/product-catalog/:id/search-report
+   - Получить последний отчёт поиска
+   
+   (Итого: ~180 строк)
+
+2. Регистрация routes в server/index.ts:
+   app.use('/api/product-catalog', productCatalogRoutes);
+
+ФАЙЛЫ:
+├─ server/routes/product-catalog.routes.ts (180 строк) NEW
+└─ server/index.ts (+1 строка)
+
+ТЕСТЫ:
+- GET /api/product-catalog → список товаров
+- GET /api/product-catalog/1 → детали
+- GET /api/product-catalog/1/price-history → цены
+
+РИСКИ: Минимальные (новые endpoints)
+
+ROLLBACK: Удалить routes файл, убрать регистрацию
+```
+
+---
+
+## 📊 ЭТАП 5: FRONTEND PAGE (1.5 часа)
+
+```
+ЗАДАЧА: Создать страницу "Каталог товаров"
+
+ЗАЧЕМ:
+└─ User сможет видеть свои товары
+
+ЧТО ДЕЛАТЬ:
+
+1. Создать client/src/pages/product-catalog.tsx:
+   - Заголовок + описание
+   - Поиск
+   - Фильтры (категория, магазин)
+   - СПИСОК товаров (НЕ карточки!)
+   - Пагинация
+   (Итого: ~150 строк)
+
+2. Создать client/src/components/product-list-item.tsx:
+   - Одна строка списка
+   - Название товара
+   - Иконка категории
+   - Статистика (купили X раз)
+   - Лучшая цена + магазин
+   - Кнопка "Найти лучшую цену"
+   (Итого: ~120 строк)
+
+3. Добавить route в client/src/App.tsx:
+   <Route path="/product-catalog" component={ProductCatalog} />
+
+4. Добавить в sidebar (client/src/components/sidebar.tsx):
+   - 🛒 Каталог товаров
+
+ФАЙЛЫ:
+├─ client/src/pages/product-catalog.tsx (150 строк) NEW
+├─ client/src/components/product-list-item.tsx (120 строк) NEW
+├─ client/src/App.tsx (+1 route)
+└─ client/src/components/sidebar.tsx (+1 пункт меню)
+
+UI ДИЗАЙН (СПИСОК):
+┌─────────────────────────────────────────────┐
+│ Row 1:                                      │
+│ 🍝 Макароны Barilla № 5 (500г)              │
+│    Куплено: 12 раз | Пятёрочка: 150₽       │
+│    [🔍 Найти лучшую цену]                   │
+├─────────────────────────────────────────────┤
+│ Row 2:                                      │
+│ 🥛 Молоко Простоквашино 3,2% (1л)           │
+│    Куплено: 24 раза | Магнит: 95₽ ⭐        │
+│    [📋 Посмотреть отчёт]                    │
+└─────────────────────────────────────────────┘
+
+ТЕСТЫ:
+- Открыть /product-catalog
+- Увидеть список товаров (из OCR)
+- Поиск работает
+- Фильтры работают
+
+РИСКИ: Минимальные (новая страница)
+
+ROLLBACK: Удалить файлы, убрать route
+```
+
+---
+
+## 📊 ЭТАП 6: PRODUCT DETAIL PAGE (1 час)
+
+```
+ЗАДАЧА: Страница детального просмотра товара
+
+ЗАЧЕМ:
+└─ Показать полную историю цен, график, статистику
+
+ЧТО ДЕЛАТЬ:
+
+1. Создать client/src/pages/product-detail.tsx:
+   - Заголовок товара
+   - Статистика покупок
+   - График цен по времени (Recharts)
+   - Таблица истории по магазинам
+   - Кнопка "Найти лучшую цену"
+   (Итого: ~180 строк)
+
+2. Создать client/src/components/price-history-chart.tsx:
+   - Line chart с ценами
+   - X: дата, Y: цена
+   - Разные линии для разных магазинов
+   (Итого: ~100 строк)
+
+3. Обновить product-list-item.tsx:
+   - onClick → navigate to /product-catalog/:id
+
+ФАЙЛЫ:
+├─ client/src/pages/product-detail.tsx (180 строк) NEW
+├─ client/src/components/price-history-chart.tsx (100 строк) NEW
+└─ client/src/components/product-list-item.tsx (+1 onClick)
+
+ТЕСТЫ:
+- Кликнуть на товар
+- Открылась страница детального просмотра
+- График показывает историю цен
+- Таблица показывает магазины
+
+РИСКИ: Минимальные (новая страница)
+
+ROLLBACK: Удалить файлы
+```
+
+---
+
+## 📊 ЭТАП 7: AI PRICE SEARCH (2 часа)
+
+```
+ЗАДАЧА: Реализовать AI-поиск цен в интернете
+
+ЗАЧЕМ:
+└─ Находить где дешевле купить товар
+
+ЧТО ДЕЛАТЬ:
+
+1. Создать server/services/price-search.service.ts:
+   - searchBestPrice(product, userApiKey)
+   - parseSearchResults(aiResponse)
+   - calculateSavings(currentPrice, bestPrice)
+   (Итого: ~150 строк)
+
+2. Обновить POST /api/product-catalog/:id/search-prices:
+   - Вызвать priceSearchService.searchBestPrice()
+   - Сохранить отчёт
+   - Вернуть результаты
+
+3. Создать client/src/components/price-search-modal.tsx:
+   - Loading состояние (Ищем цены...)
+   - Результаты (список магазинов)
+   - Кнопка "Обновить поиск"
+   (Итого: ~120 строк)
+
+4. Интегрировать в product-detail.tsx:
+   - Кнопка "Найти лучшую цену"
+   - Открыть PriceSearchModal
+   - Показать результаты
+
+ФАЙЛЫ:
+├─ server/services/price-search.service.ts (150 строк) NEW
+├─ server/routes/product-catalog.routes.ts (+30 строк)
+├─ client/src/components/price-search-modal.tsx (120 строк) NEW
+└─ client/src/pages/product-detail.tsx (+20 строк)
+
+AI PROMPT:
+"Найди актуальные цены на товар в российских интернет-магазинах:
+Товар: {name}
+Вес: {weight}
+Верни JSON с результатами: store, price, url, availability"
+
+ТЕСТЫ:
+1. Нажать "Найти лучшую цену"
+2. Подождать 10-20 секунд
+3. Увидеть результаты (8-10 магазинов)
+4. Проверить что сохранилось в priceSearchReports
+
+РИСКИ: Средние (зависит от Claude API)
+
+ROLLBACK: Закомментировать AI вызов, показать "Coming soon"
+```
+
+---
+
+## 📊 ЭТАП 8: I18N + POLISH (1 час)
+
+```
+ЗАДАЧА: Добавить переводы и финальную полировку
+
+ЗАЧЕМ:
+└─ RU/EN поддержка, улучшить UX
+
+ЧТО ДЕЛАТЬ:
+
+1. Создать shared/i18n/web-product-catalog.ts:
+   - Все тексты на EN/RU
+   - ~100 ключей
+   (Итого: ~150 строк)
+
+2. Обновить все компоненты:
+   - Заменить хардкод текста на t('...')
+   - useTranslation('webProductCatalog')
+
+3. Добавить:
+   - Empty states (если нет товаров)
+   - Loading скелетоны
+   - Error boundaries
+   - Toast уведомления
+
+4. Полировка UI:
+   - Адаптивность (mobile/desktop)
+   - Анимации (fade-in, slide)
+   - Hover effects
+   - Accessibility (ARIA labels)
+
+ФАЙЛЫ:
+├─ shared/i18n/web-product-catalog.ts (150 строк) NEW
+├─ Обновить все компоненты (~50 строк изменений)
+
+ТЕСТЫ:
+- Переключить язык EN → RU
+- Все тексты переведены
+- Empty states показываются
+- Loading работает
+
+РИСКИ: Минимальные (только UI/UX)
+
+ROLLBACK: Откатить i18n изменения
+```
+
+---
+
+## 📋 ИТОГОВАЯ ТАБЛИЦА ЭТАПОВ
+
+```
+┌────┬──────────────────────────┬─────────┬──────────┬──────────┐
+│ #  │ Этап                     │ Время   │ Файлы    │ Риск     │
+├────┼──────────────────────────┼─────────┼──────────┼──────────┤
+│ 1  │ Database Schema          │ 1 час   │ 1 файл   │ Низкий   │
+│ 2  │ Repositories             │ 1.5 ч   │ 4 файла  │ Низкий   │
+│ 3  │ OCR Integration          │ 1.5 ч   │ 2 файла  │ Средний  │
+│ 4  │ Backend API              │ 1 час   │ 2 файла  │ Низкий   │
+│ 5  │ Frontend Page            │ 1.5 ч   │ 4 файла  │ Низкий   │
+│ 6  │ Product Detail           │ 1 час   │ 3 файла  │ Низкий   │
+│ 7  │ AI Price Search          │ 2 часа  │ 4 файла  │ Средний  │
+│ 8  │ I18N + Polish            │ 1 час   │ 1+N      │ Низкий   │
+├────┼──────────────────────────┼─────────┼──────────┼──────────┤
+│    │ ИТОГО                    │ 10.5 ч  │ 21 файл  │          │
+└────┴──────────────────────────┴─────────┴──────────┴──────────┘
+
+ФАЙЛОВ: 21 новый файл
+ИЗМЕНЕНИЙ: ~15 существующих файлов (минимальные правки)
+СТРОК КОДА: ~2,500 строк
+СРЕДНИЙ РАЗМЕР ФАЙЛА: 120 строк ✅
+
+СОБЛЮДЁН ПРИНЦИП:
+✅ Каждый файл <200 строк
+✅ Модульная архитектура
+✅ Один файл = одна ответственность
+```
+
+---
+
+## 🎯 РЕКОМЕНДАЦИИ ПО ВЫПОЛНЕНИЮ
+
+```
+ПОРЯДОК ВЫПОЛНЕНИЯ:
+1. Этап 1 → npm run db:push → ТЕСТ
+2. Этап 2 → создать моки → ТЕСТ
+3. Этап 3 → загрузить чек → ТЕСТ
+4. Этап 4 → curl endpoints → ТЕСТ
+5. Этап 5 → открыть страницу → ТЕСТ
+6. Этап 6 → кликнуть товар → ТЕСТ
+7. Этап 7 → найти цены → ТЕСТ
+8. Этап 8 → переключить язык → ТЕСТ
+
+ПОСЛЕ КАЖДОГО ЭТАПА:
+✅ Commit в git
+✅ Протестировать
+✅ Создать checkpoint в Replit
+
+ЕСЛИ ЧТО-ТО СЛОМАЛОСЬ:
+└─ Rollback to previous checkpoint
+└─ Исправить
+└─ Продолжить
+
+МОЖНО ДЕЛАТЬ ПО 1 ЭТАПУ В ДЕНЬ:
+└─ 8 дней → готово!
+└─ Или 2-3 этапа в день → 3-4 дня
+
+НЕ СПЕШИТЬ!
+Лучше медленно но без багов ✅
+```
+
+---
+
+## 💡 БОНУС: ПРИОРИТИЗАЦИЯ
+
+```
+ЕСЛИ ВРЕМЯ ОГРАНИЧЕНО:
+
+MVP (4 часа):
+├─ Этап 1: Database ✅
+├─ Этап 2: Repositories ✅
+├─ Этап 3: OCR Integration ✅
+└─ Этап 5: Frontend (без AI) ✅
+
+РЕЗУЛЬТАТ: Каталог работает, товары добавляются из чеков
+
+---
+
+FULL VERSION (10 часов):
+└─ Все 8 этапов
+
+РЕЗУЛЬТАТ: AI-поиск цен, отчёты, полировка
+```
+
+---
+
+**ЧТО СКАЖЕШЬ?** 🤔
+
+**НАЧИНАЕМ С ЭТАПА 1?** 🚀
+
+**ИЛИ ХОЧЕШЬ ДЕТАЛЬНЕЕ РАЗОБРАТЬ КАКОЙ-ТО ЭТАП?** 📋
