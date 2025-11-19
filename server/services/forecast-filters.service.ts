@@ -10,11 +10,6 @@
 
 import { storage } from "../storage";
 
-interface RecurringData {
-  income: number;
-  expense: number;
-}
-
 /**
  * Check if recurring transaction should occur on given date
  * Uses iterative approach to ensure proper cadence alignment
@@ -110,33 +105,51 @@ function shouldOccurOnDate(
 }
 
 /**
- * Get recurring income and expense for a specific date
+ * Get recurring income for a specific date
  */
-export async function getRecurringForDate(
+export async function getRecurringIncomeForDate(
   userId: number,
   date: Date
-): Promise<RecurringData> {
+): Promise<number> {
   const recurring = await storage.getRecurringByUserId(userId);
   
   let income = 0;
-  let expense = 0;
   
   for (const r of recurring) {
-    if (!r.isActive) continue;
+    if (!r.isActive || r.type !== 'income') continue;
     
     // Check if this recurring transaction occurs on target date
     if (shouldOccurOnDate(r.nextDate, r.frequency, date)) {
       const amount = parseFloat(r.amount as unknown as string);
-      
-      if (r.type === 'income') {
-        income += amount;
-      } else {
-        expense += amount;
-      }
+      income += amount;
     }
   }
   
-  return { income, expense };
+  return income;
+}
+
+/**
+ * Get recurring expenses for a specific date
+ */
+export async function getRecurringExpenseForDate(
+  userId: number,
+  date: Date
+): Promise<number> {
+  const recurring = await storage.getRecurringByUserId(userId);
+  
+  let expense = 0;
+  
+  for (const r of recurring) {
+    if (!r.isActive || r.type !== 'expense') continue;
+    
+    // Check if this recurring transaction occurs on target date
+    if (shouldOccurOnDate(r.nextDate, r.frequency, date)) {
+      const amount = parseFloat(r.amount as unknown as string);
+      expense += amount;
+    }
+  }
+  
+  return expense;
 }
 
 /**
