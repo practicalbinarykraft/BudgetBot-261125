@@ -54,6 +54,10 @@ export const webCommonTranslations: Translations = {
     en: 'Planned',
     ru: 'Запланированные',
   },
+  'nav.planned_income': {
+    en: 'Planned Income',
+    ru: 'Планируемые доходы',
+  },
 
   // Common UI
   'common.loading': {

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { storage } from "../storage";
 import { insertPlannedIncomeSchema, insertTransactionSchema } from "@shared/schema";
 import { withAuth } from "../middleware/auth-utils";
+import { convertToUSD } from "../services/currency-service";
 
 const router = Router();
 
@@ -22,8 +23,16 @@ router.post("/", withAuth(async (req, res) => {
   try {
     const { userId: _ignoreUserId, ...bodyWithoutUserId } = req.body;
     const data = insertPlannedIncomeSchema.parse(bodyWithoutUserId);
+    
+    const amountUsd = await convertToUSD(
+      parseFloat(data.amount),
+      data.currency || "USD",
+      req.user.id
+    );
+    
     const plannedItem = await storage.createPlannedIncome({
       ...data,
+      amountUsd: amountUsd.toString(),
       userId: req.user.id,
     });
     res.json(plannedItem);
@@ -42,6 +51,15 @@ router.patch("/:id", withAuth(async (req, res) => {
     
     const { userId, ...sanitizedBody } = req.body;
     const data = insertPlannedIncomeSchema.partial().parse(sanitizedBody);
+    
+    if (data.amount || data.currency) {
+      const amount = data.amount ? parseFloat(data.amount) : parseFloat(plannedItem.amount);
+      const currency = data.currency || plannedItem.currency || "USD";
+      
+      const amountUsd = await convertToUSD(amount, currency, req.user.id);
+      data.amountUsd = amountUsd.toString();
+    }
+    
     const updated = await storage.updatePlannedIncome(id, data);
     
     res.json(updated);

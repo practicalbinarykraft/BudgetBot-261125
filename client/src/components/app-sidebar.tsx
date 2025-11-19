@@ -7,6 +7,7 @@ import {
   Repeat,
   Heart,
   Calendar,
+  Coins,
   TrendingDown,
   Sparkles,
   Settings,
@@ -87,6 +88,12 @@ export function AppSidebar() {
       title: t("nav.planned"),
       url: "/planned",
       icon: Calendar,
+    },
+    {
+      id: 'planned_income',
+      title: t("nav.planned_income"),
+      url: "/planned-income",
+      icon: Coins,
     },
     {
       id: 'budgets',

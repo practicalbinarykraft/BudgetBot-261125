@@ -17,6 +17,7 @@ import CategoriesPage from "@/pages/categories-page";
 import RecurringPage from "@/pages/recurring-page";
 import WishlistPage from "@/pages/wishlist-page";
 import PlannedPage from "@/pages/planned-page";
+import PlannedIncomePage from "@/pages/planned-income-page";
 import BudgetsPage from "@/pages/budgets-page";
 import AIAnalysisPage from "@/pages/ai-analysis-page";
 import SettingsPage from "@/pages/settings-page";
@@ -38,6 +39,7 @@ function Router() {
       <ProtectedRoute path="/recurring" component={RecurringPage} />
       <ProtectedRoute path="/wishlist" component={WishlistPage} />
       <ProtectedRoute path="/planned" component={PlannedPage} />
+      <ProtectedRoute path="/planned-income" component={PlannedIncomePage} />
       <ProtectedRoute path="/budgets" component={BudgetsPage} />
       <ProtectedRoute path="/ai-analysis" component={AIAnalysisPage} />
       <ProtectedRoute path="/ai-training/history" component={AiTrainingHistoryPage} />
