@@ -17,7 +17,8 @@ import {
   type TrendDataPoint 
 } from "../lib/charts/historical-data-helpers";
 import {
-  getRecurringForDate,
+  getRecurringIncomeForDate,
+  getRecurringExpenseForDate,
   getPlannedIncomeForDate,
   getPlannedExpenseForDate,
   getDailyBudgetTotal,
@@ -33,7 +34,8 @@ export interface TrendCalculationParams {
   historyDays: number;
   forecastDays: number;
   anthropicApiKey?: string;
-  includeRecurring?: boolean;
+  includeRecurringIncome?: boolean;
+  includeRecurringExpense?: boolean;
   includePlannedIncome?: boolean;
   includePlannedExpenses?: boolean;
   includeBudgetLimits?: boolean;
@@ -57,7 +59,8 @@ export async function calculateTrend(
     historyDays, 
     forecastDays, 
     anthropicApiKey,
-    includeRecurring = true,
+    includeRecurringIncome = true,
+    includeRecurringExpense = true,
     includePlannedIncome = true,
     includePlannedExpenses = true,
     includeBudgetLimits = false,
@@ -110,7 +113,8 @@ export async function calculateTrend(
     currentCapital,
     capitalAtPeriodStart,
     historicalCumulative,
-    includeRecurring,
+    includeRecurringIncome,
+    includeRecurringExpense,
     includePlannedIncome,
     includePlannedExpenses,
     includeBudgetLimits,
@@ -130,7 +134,8 @@ async function generateAndProcessForecast(params: {
   currentCapital: number;
   capitalAtPeriodStart: number;
   historicalCumulative: TrendDataPoint[];
-  includeRecurring: boolean;
+  includeRecurringIncome: boolean;
+  includeRecurringExpense: boolean;
   includePlannedIncome: boolean;
   includePlannedExpenses: boolean;
   includeBudgetLimits: boolean;
@@ -142,7 +147,8 @@ async function generateAndProcessForecast(params: {
     currentCapital,
     capitalAtPeriodStart,
     historicalCumulative,
-    includeRecurring,
+    includeRecurringIncome,
+    includeRecurringExpense,
     includePlannedIncome,
     includePlannedExpenses,
     includeBudgetLimits,
@@ -168,10 +174,14 @@ async function generateAndProcessForecast(params: {
         let expense = f.predictedExpense;
         
         // Apply filters if enabled
-        if (includeRecurring) {
-          const recurring = await getRecurringForDate(userId, date);
-          income += recurring.income;
-          expense += recurring.expense;
+        if (includeRecurringIncome) {
+          const recurringIncome = await getRecurringIncomeForDate(userId, date);
+          income += recurringIncome;
+        }
+        
+        if (includeRecurringExpense) {
+          const recurringExpense = await getRecurringExpenseForDate(userId, date);
+          expense += recurringExpense;
         }
         
         if (includePlannedIncome) {
