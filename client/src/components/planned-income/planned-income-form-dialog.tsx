@@ -77,9 +77,9 @@ export function PlannedIncomeFormDialog({
                     <FormLabel>{t("planned_income.field.amount")}</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="text"
+                        inputMode="decimal"
+                        pattern="[0-9]+(\.[0-9]{1,2})?"
                         placeholder="1000.00"
                         {...field}
                         data-testid="input-amount"

@@ -553,7 +553,6 @@ export const insertPlannedTransactionSchema = createInsertSchema(plannedTransact
 
 export const insertPlannedIncomeSchema = createInsertSchema(plannedIncome, {
   amount: z.string().regex(/^\d+(\.\d{1,2})?$/),
-  amountUsd: z.string().regex(/^\d+(\.\d{1,2})?$/),
   expectedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
   currency: z.string().optional(),
   categoryId: z.number().optional(),
@@ -563,6 +562,7 @@ export const insertPlannedIncomeSchema = createInsertSchema(plannedIncome, {
 }).omit({
   id: true,
   userId: true,
+  amountUsd: true,
   createdAt: true,
   updatedAt: true,
   receivedAt: true,

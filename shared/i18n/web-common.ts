@@ -112,6 +112,10 @@ export const webCommonTranslations: Translations = {
     en: 'Close',
     ru: 'Закрыть',
   },
+  'common.select_category': {
+    en: 'Select category',
+    ru: 'Выберите категорию',
+  },
   'common.view_all': {
     en: 'View All',
     ru: 'Показать все',

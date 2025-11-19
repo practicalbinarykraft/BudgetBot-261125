@@ -2,7 +2,7 @@ import { Router } from "express";
 import { storage } from "../storage";
 import { insertPlannedIncomeSchema, insertTransactionSchema } from "@shared/schema";
 import { withAuth } from "../middleware/auth-utils";
-import { convertToUSD } from "../services/currency-service";
+import { convertToUSD, getUserExchangeRates } from "../services/currency-service";
 
 const router = Router();
 
@@ -24,17 +24,18 @@ router.post("/", withAuth(async (req, res) => {
     const { userId: _ignoreUserId, ...bodyWithoutUserId } = req.body;
     const data = insertPlannedIncomeSchema.parse(bodyWithoutUserId);
     
-    const amountUsd = await convertToUSD(
+    const rates = await getUserExchangeRates(req.user.id);
+    const amountUsd = convertToUSD(
       parseFloat(data.amount),
       data.currency || "USD",
-      req.user.id
+      rates
     );
     
     const plannedItem = await storage.createPlannedIncome({
       ...data,
       amountUsd: amountUsd.toString(),
       userId: req.user.id,
-    });
+    } as any);
     res.json(plannedItem);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
@@ -52,15 +53,24 @@ router.patch("/:id", withAuth(async (req, res) => {
     const { userId, ...sanitizedBody } = req.body;
     const data = insertPlannedIncomeSchema.partial().parse(sanitizedBody);
     
-    if (data.amount || data.currency) {
+    const updateData: Record<string, any> = {};
+    
+    Object.keys(data).forEach((key) => {
+      if (data[key as keyof typeof data] !== undefined) {
+        updateData[key] = data[key as keyof typeof data];
+      }
+    });
+    
+    if (data.amount !== undefined || data.currency !== undefined) {
       const amount = data.amount ? parseFloat(data.amount) : parseFloat(plannedItem.amount);
       const currency = data.currency || plannedItem.currency || "USD";
       
-      const amountUsd = await convertToUSD(amount, currency, req.user.id);
-      data.amountUsd = amountUsd.toString();
+      const rates = await getUserExchangeRates(req.user.id);
+      const amountUsd = convertToUSD(amount, currency, rates);
+      updateData.amountUsd = amountUsd.toString();
     }
     
-    const updated = await storage.updatePlannedIncome(id, data);
+    const updated = await storage.updatePlannedIncome(id, updateData);
     
     res.json(updated);
   } catch (error: any) {
@@ -136,9 +146,9 @@ router.post("/:id/receive", withAuth(async (req, res) => {
     
     await storage.updatePlannedIncome(id, {
       status: "received",
-      receivedAt: new Date() as any,
-      transactionId: transaction.id as any,
-    });
+      receivedAt: new Date(),
+      transactionId: transaction.id,
+    } as any);
     
     const updated = await storage.getPlannedIncomeById(id);
     res.json(updated);
