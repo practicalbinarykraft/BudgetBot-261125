@@ -20,6 +20,7 @@ export const webRecurringTranslations: Translations = {
   "recurring.frequency_daily": { en: "Daily", ru: "Ежедневно" },
   "recurring.frequency_weekly": { en: "Weekly", ru: "Еженедельно" },
   "recurring.frequency_monthly": { en: "Monthly", ru: "Ежемесячно" },
+  "recurring.frequency_quarterly": { en: "Every 3 months", ru: "Каждые 3 месяца" },
   "recurring.frequency_yearly": { en: "Yearly", ru: "Ежегодно" },
   "recurring.next": { en: "Next:", ru: "След.:" },
   "recurring.type_income": { en: "Income", ru: "Доход" },

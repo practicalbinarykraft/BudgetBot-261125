@@ -56,8 +56,12 @@ async function getMonthlyRecurringStats(userId: number): Promise<{ income: numbe
     
     let monthlyAmount = amountUsd;
 
-    if (rec.frequency === 'weekly') {
+    if (rec.frequency === 'daily') {
+      monthlyAmount = amountUsd * 30;
+    } else if (rec.frequency === 'weekly') {
       monthlyAmount = amountUsd * 4.33;
+    } else if (rec.frequency === 'quarterly') {
+      monthlyAmount = amountUsd / 3;
     } else if (rec.frequency === 'yearly') {
       monthlyAmount = amountUsd / 12;
     }

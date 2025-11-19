@@ -75,6 +75,36 @@ function shouldOccurOnDate(
       return false;
     }
     
+    case 'quarterly': {
+      // Every 3 months - iterate forward adding 3 months each time
+      const nextDay = nextDate.getDate();
+      let current = new Date(nextDate);
+      
+      // Max iterations to prevent infinite loops (10 years = 40 quarters)
+      for (let i = 0; i < 40; i++) {
+        // Move 3 months forward
+        current.setMonth(current.getMonth() + 3);
+        
+        // Handle month-end rollover (e.g., Jan 31 → Apr 30)
+        const daysInCurrentMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
+        if (nextDay > daysInCurrentMonth) {
+          current.setDate(daysInCurrentMonth);
+        } else {
+          current.setDate(nextDay);
+        }
+        
+        if (current.getTime() === target.getTime()) {
+          return true;
+        }
+        
+        if (current > target) {
+          return false;
+        }
+      }
+      
+      return false;
+    }
+    
     case 'yearly': {
       // Check if same month, and day matches (with month-end rollover)
       const nextDay = nextDate.getDate();

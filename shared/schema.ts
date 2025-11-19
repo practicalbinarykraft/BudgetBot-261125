@@ -88,7 +88,7 @@ export const recurring = pgTable("recurring", {
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   description: text("description").notNull(),
   category: text("category"),
-  frequency: text("frequency").notNull(), // 'monthly', 'weekly', 'yearly'
+  frequency: text("frequency").notNull(), // 'daily', 'weekly', 'monthly', 'quarterly', 'yearly'
   nextDate: date("next_date").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   // 💱 Multi-currency support: same as transactions
@@ -530,7 +530,7 @@ export const insertCategorySchema = createInsertSchema(categories, {
 export const insertRecurringSchema = createInsertSchema(recurring, {
   amount: z.string().regex(/^\d+(\.\d{1,2})?$/),
   type: z.enum(["income", "expense"]),
-  frequency: z.enum(["monthly", "weekly", "yearly"]),
+  frequency: z.enum(["daily", "weekly", "monthly", "quarterly", "yearly"]),
   currency: z.string().default("USD"),
   amountUsd: z.string().regex(/^\d+(\.\d{1,2})?$/),
 }).omit({ id: true, createdAt: true });

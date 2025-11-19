@@ -249,8 +249,10 @@ export default function RecurringPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        <SelectItem value="daily">{t("recurring.frequency_daily")}</SelectItem>
                         <SelectItem value="weekly">{t("recurring.frequency_weekly")}</SelectItem>
                         <SelectItem value="monthly">{t("recurring.frequency_monthly")}</SelectItem>
+                        <SelectItem value="quarterly">{t("recurring.frequency_quarterly")}</SelectItem>
                         <SelectItem value="yearly">{t("recurring.frequency_yearly")}</SelectItem>
                       </SelectContent>
                     </Select>
