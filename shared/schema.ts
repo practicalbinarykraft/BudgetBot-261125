@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, serial, text, varchar, decimal, date, boolean, timestamp, integer, pgEnum, unique } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, varchar, decimal, date, boolean, timestamp, integer, pgEnum, unique, jsonb } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -350,6 +350,100 @@ export const aiToolExecutions = pgTable("ai_tool_executions", {
   
   executedAt: timestamp("executed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// ========================================
+// PRODUCT CATALOG TABLES
+// ========================================
+
+// 1. Каталог товаров
+export const productCatalog = pgTable('product_catalog', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  
+  // Основная информация
+  name: text('name').notNull(), // "Макароны Barilla № 5"
+  normalizedName: text('normalized_name').notNull(), // "макароны barilla 5"
+  
+  // Детали товара
+  brand: text('brand'), // "Barilla"
+  weight: text('weight'), // "500г"
+  unit: text('unit'), // "шт", "кг", "л"
+  
+  // Категоризация
+  category: text('category'), // "Продукты питания"
+  subcategory: text('subcategory'), // "Макароны"
+  
+  // Статистика покупок
+  purchaseCount: integer('purchase_count').default(0),
+  lastPurchaseDate: text('last_purchase_date'), // YYYY-MM-DD
+  
+  // Цены (денормализация для скорости)
+  averagePrice: decimal('average_price', { precision: 10, scale: 2 }),
+  bestPrice: decimal('best_price', { precision: 10, scale: 2 }),
+  bestStore: text('best_store'),
+  
+  // Метаданные
+  imageUrl: text('image_url'),
+  barcode: text('barcode'),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+});
+
+// 2. История цен по магазинам
+export const productPriceHistory = pgTable('product_price_history', {
+  id: serial('id').primaryKey(),
+  productId: integer('product_id').references(() => productCatalog.id, { onDelete: 'cascade' }).notNull(),
+  
+  // Магазин
+  storeName: text('store_name').notNull(),
+  storeAddress: text('store_address'),
+  
+  // Цена
+  price: decimal('price', { precision: 10, scale: 2 }).notNull(),
+  currency: varchar('currency', { length: 3 }).default('USD'),
+  
+  // Дата покупки
+  purchaseDate: text('purchase_date').notNull(), // YYYY-MM-DD
+  
+  // Связь с транзакцией (опционально)
+  transactionId: integer('transaction_id').references(() => transactions.id),
+  
+  createdAt: timestamp('created_at').defaultNow()
+});
+
+// 3. Отчёты AI-поиска цен
+export const priceSearchReports = pgTable('price_search_reports', {
+  id: serial('id').primaryKey(),
+  productId: integer('product_id').references(() => productCatalog.id, { onDelete: 'cascade' }).notNull(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  
+  // Когда искали
+  searchDate: timestamp('search_date').defaultNow(),
+  
+  // Статус поиска
+  status: text('status').default('pending'), // 'pending' | 'completed' | 'failed'
+  
+  // Результаты (JSON массив магазинов)
+  results: jsonb('results'), // [{ store, price, url, availability }]
+  
+  // Лучшая найденная цена
+  bestPrice: decimal('best_price', { precision: 10, scale: 2 }),
+  bestStore: text('best_store'),
+  bestUrl: text('best_url'),
+  
+  // Сравнение с текущей ценой
+  currentPrice: decimal('current_price', { precision: 10, scale: 2 }),
+  savings: decimal('savings', { precision: 10, scale: 2 }),
+  savingsPercent: decimal('savings_percent', { precision: 5, scale: 2 }),
+  
+  // Метаданные
+  searchQuery: text('search_query'),
+  searchMethod: text('search_method'), // 'ai' | 'api' | 'scraping'
+  errorMessage: text('error_message'),
+  
+  createdAt: timestamp('created_at').defaultNow()
 });
 
 // Relations
@@ -733,6 +827,15 @@ export type ReceiptItem = typeof receiptItems.$inferSelect;
 
 export type InsertAiChatMessage = z.infer<typeof insertAiChatMessageSchema>;
 export type AiChatMessage = typeof aiChatMessages.$inferSelect;
+
+export type ProductCatalog = typeof productCatalog.$inferSelect;
+export type InsertProductCatalog = typeof productCatalog.$inferInsert;
+
+export type ProductPriceHistory = typeof productPriceHistory.$inferSelect;
+export type InsertProductPriceHistory = typeof productPriceHistory.$inferInsert;
+
+export type PriceSearchReport = typeof priceSearchReports.$inferSelect;
+export type InsertPriceSearchReport = typeof priceSearchReports.$inferInsert;
 
 export interface TrainingStats {
   totalExamples: number;

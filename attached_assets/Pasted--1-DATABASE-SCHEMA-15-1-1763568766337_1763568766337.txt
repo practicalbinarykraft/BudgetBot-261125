@@ -1,0 +1,119 @@
+📋 ШАГ 1: DATABASE SCHEMA (15 минут)═══════════════════════════════════════════════════════
+ЗАДАЧА 1.1: СОЗДАТЬ ТАБЛИЦЫ ДЛЯ PRODUCT CATALOG
+═══════════════════════════════════════════════════════
+
+ФАЙЛ: shared/schema.ts
+
+ДОБАВИТЬ В КОНЕЦ ФАЙЛА (после существующих таблиц):
+
+// ========================================
+// PRODUCT CATALOG TABLES
+// ========================================
+
+// 1. Каталог товаров
+export const productCatalog = pgTable('product_catalog', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  
+  // Основная информация
+  name: text('name').notNull(), // "Макароны Barilla № 5"
+  normalizedName: text('normalized_name').notNull(), // "макароны barilla 5"
+  
+  // Детали товара
+  brand: text('brand'), // "Barilla"
+  weight: text('weight'), // "500г"
+  unit: text('unit'), // "шт", "кг", "л"
+  
+  // Категоризация
+  category: text('category'), // "Продукты питания"
+  subcategory: text('subcategory'), // "Макароны"
+  
+  // Статистика покупок
+  purchaseCount: integer('purchase_count').default(0),
+  lastPurchaseDate: text('last_purchase_date'), // YYYY-MM-DD
+  
+  // Цены (денормализация для скорости)
+  averagePrice: decimal('average_price', { precision: 10, scale: 2 }),
+  bestPrice: decimal('best_price', { precision: 10, scale: 2 }),
+  bestStore: text('best_store'),
+  
+  // Метаданные
+  imageUrl: text('image_url'),
+  barcode: text('barcode'),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+});
+
+// 2. История цен по магазинам
+export const productPriceHistory = pgTable('product_price_history', {
+  id: serial('id').primaryKey(),
+  productId: integer('product_id').references(() => productCatalog.id, { onDelete: 'cascade' }).notNull(),
+  
+  // Магазин
+  storeName: text('store_name').notNull(),
+  storeAddress: text('store_address'),
+  
+  // Цена
+  price: decimal('price', { precision: 10, scale: 2 }).notNull(),
+  currency: varchar('currency', { length: 3 }).default('USD'),
+  
+  // Дата покупки
+  purchaseDate: text('purchase_date').notNull(), // YYYY-MM-DD
+  
+  // Связь с транзакцией (опционально)
+  transactionId: integer('transaction_id').references(() => dailyTransactions.id),
+  
+  createdAt: timestamp('created_at').defaultNow()
+});
+
+// 3. Отчёты AI-поиска цен
+export const priceSearchReports = pgTable('price_search_reports', {
+  id: serial('id').primaryKey(),
+  productId: integer('product_id').references(() => productCatalog.id, { onDelete: 'cascade' }).notNull(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  
+  // Когда искали
+  searchDate: timestamp('search_date').defaultNow(),
+  
+  // Статус поиска
+  status: text('status').default('pending'), // 'pending' | 'completed' | 'failed'
+  
+  // Результаты (JSON массив магазинов)
+  results: jsonb('results'), // [{ store, price, url, availability }]
+  
+  // Лучшая найденная цена
+  bestPrice: decimal('best_price', { precision: 10, scale: 2 }),
+  bestStore: text('best_store'),
+  bestUrl: text('best_url'),
+  
+  // Сравнение с текущей ценой
+  currentPrice: decimal('current_price', { precision: 10, scale: 2 }),
+  savings: decimal('savings', { precision: 10, scale: 2 }),
+  savingsPercent: decimal('savings_percent', { precision: 5, scale: 2 }),
+  
+  // Метаданные
+  searchQuery: text('search_query'),
+  searchMethod: text('search_method'), // 'ai' | 'api' | 'scraping'
+  errorMessage: text('error_message'),
+  
+  createdAt: timestamp('created_at').defaultNow()
+});
+
+// Type exports
+export type ProductCatalog = typeof productCatalog.$inferSelect;
+export type InsertProductCatalog = typeof productCatalog.$inferInsert;
+export type ProductPriceHistory = typeof productPriceHistory.$inferSelect;
+export type InsertProductPriceHistory = typeof productPriceHistory.$inferInsert;
+export type PriceSearchReport = typeof priceSearchReports.$inferSelect;
+export type InsertPriceSearchReport = typeof priceSearchReports.$inferInsert;
+
+ПОСЛЕ ДОБАВЛЕНИЯ:
+1. Сохранить файл
+2. Запустить: npm run db:push
+3. Проверить что таблицы созданы в базе
+
+ОЖИДАЕМЫЙ РЕЗУЛЬТАТ:
+✅ 3 новые таблицы созданы
+✅ Foreign keys настроены
+✅ Type exports доступны
