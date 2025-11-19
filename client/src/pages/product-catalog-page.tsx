@@ -12,17 +12,17 @@ import { ProductCatalog } from '@shared/schemas/product-catalog';
 export default function ProductCatalogPage() {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   // Build query params
   const queryParams = new URLSearchParams();
   if (searchQuery) queryParams.append('search', searchQuery);
-  if (selectedCategory) queryParams.append('category', selectedCategory);
+  if (selectedCategory && selectedCategory !== 'all') queryParams.append('category', selectedCategory);
   const queryString = queryParams.toString();
 
   // Fetch products
   const { data: products = [], isLoading } = useQuery<ProductCatalog[]>({
-    queryKey: ['/api/product-catalog', { search: searchQuery, category: selectedCategory }],
+    queryKey: ['/api/product-catalog', { search: searchQuery, category: selectedCategory === 'all' ? '' : selectedCategory }],
     queryFn: async () => {
       const url = `/api/product-catalog${queryString ? `?${queryString}` : ''}`;
       const res = await fetch(url, { credentials: 'include' });
@@ -72,7 +72,7 @@ export default function ProductCatalogPage() {
             <SelectValue placeholder={t('productCatalog.allCategories') || 'Все категории'} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="" data-testid="select-item-all-categories">
+            <SelectItem value="all" data-testid="select-item-all-categories">
               {t('productCatalog.allCategories') || 'Все категории'}
             </SelectItem>
             {categories.map(cat => (

@@ -26,6 +26,10 @@ export const webProductCatalogTranslations: Translations = {
     en: 'Search products...',
     ru: 'Поиск товаров...',
   },
+  'productCatalog.searchPlaceholder': {
+    en: 'Search products...',
+    ru: 'Поиск товаров...',
+  },
   'productCatalog.allCategories': {
     en: 'All Categories',
     ru: 'Все категории',
