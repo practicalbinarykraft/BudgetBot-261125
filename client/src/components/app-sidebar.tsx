@@ -25,6 +25,8 @@ import {
   SidebarMenuItem,
   SidebarFooter,
   SidebarRail,
+  SidebarHeader,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -114,11 +116,12 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
+      <SidebarHeader className="flex flex-row items-center justify-between p-4 border-b">
+        <span className="text-lg font-bold">Budget Buddy</span>
+        <SidebarTrigger data-testid="button-sidebar-toggle" />
+      </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-lg font-bold mb-2">
-            Budget Buddy
-          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
@@ -161,7 +164,6 @@ export function AppSidebar() {
           </Button>
         </div>
       </SidebarFooter>
-      <SidebarRail />
     </Sidebar>
   );
 }
