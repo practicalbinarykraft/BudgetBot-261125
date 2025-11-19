@@ -71,8 +71,44 @@ export async function generateForecast(
 
     // Parse AI response (expecting JSON array)
     // Remove markdown code blocks if present
-    const cleanedText = content.text.replace(/```json\n?|```\n?/g, '').trim();
-    const forecast = JSON.parse(cleanedText);
+    let cleanedText = content.text.replace(/```json\n?|```\n?/g, '').trim();
+    
+    // Robust JSON parsing with multiple fallback strategies
+    let forecast: ForecastDataPoint[];
+    try {
+      // Strategy 1: Direct parse (works for clean JSON)
+      forecast = JSON.parse(cleanedText);
+    } catch (parseError: any) {
+      console.warn('Direct JSON parse failed, trying cleanup strategies:', parseError.message);
+      
+      try {
+        // Strategy 2: Clean up common JSON issues
+        // Remove line breaks inside string values
+        cleanedText = cleanedText.replace(/\n/g, ' ');
+        // Remove multiple spaces
+        cleanedText = cleanedText.replace(/\s+/g, ' ');
+        // Fix trailing commas before closing brackets
+        cleanedText = cleanedText.replace(/,\s*([\]}])/g, '$1');
+        
+        forecast = JSON.parse(cleanedText);
+      } catch (cleanupError: any) {
+        console.warn('Cleanup strategy failed, trying JSON extraction:', cleanupError.message);
+        
+        try {
+          // Strategy 3: Extract first valid JSON array from response
+          const jsonMatch = cleanedText.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            forecast = JSON.parse(jsonMatch[0]);
+          } else {
+            throw new Error('No JSON array found in response');
+          }
+        } catch (extractError: any) {
+          console.error('All JSON parsing strategies failed:', extractError.message);
+          console.error('Raw response text:', content.text.substring(0, 500));
+          throw parseError; // Throw original error for fallback
+        }
+      }
+    }
     
     return forecast as ForecastDataPoint[];
   } catch (error: any) {

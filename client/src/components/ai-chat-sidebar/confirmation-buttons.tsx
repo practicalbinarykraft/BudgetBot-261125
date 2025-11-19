@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Check, X, Loader2 } from 'lucide-react';
+import { useTranslation } from '@/i18n/context';
 
 interface ConfirmationButtonsProps {
   onConfirm: () => void;
@@ -12,6 +13,8 @@ export function ConfirmationButtons({
   onCancel, 
   loading 
 }: ConfirmationButtonsProps) {
+  const { t } = useTranslation();
+  
   return (
     <div className="flex gap-2">
       <Button
@@ -23,12 +26,12 @@ export function ConfirmationButtons({
         {loading ? (
           <>
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            Executing...
+            {t('analysis.executing')}
           </>
         ) : (
           <>
             <Check className="w-4 h-4 mr-2" />
-            Execute
+            {t('analysis.execute')}
           </>
         )}
       </Button>
@@ -39,7 +42,7 @@ export function ConfirmationButtons({
         data-testid="button-cancel-action"
       >
         <X className="w-4 h-4 mr-2" />
-        Cancel
+        {t('analysis.cancel')}
       </Button>
     </div>
   );

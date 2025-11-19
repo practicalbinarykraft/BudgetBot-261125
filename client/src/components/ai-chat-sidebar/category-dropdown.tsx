@@ -1,6 +1,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles } from 'lucide-react';
+import { useTranslation } from '@/i18n/context';
 
 interface Category {
   id: number;
@@ -28,11 +29,13 @@ export function CategoryDropdown({
   mlSuggestion,
   onChange 
 }: CategoryDropdownProps) {
+  const { t } = useTranslation();
+  
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
         <span className="text-muted-foreground capitalize text-xs">
-          Category:
+          {t('common.category')}:
         </span>
         {mlSuggestion && (
           <Badge 
@@ -51,7 +54,7 @@ export function CategoryDropdown({
         data-testid="select-category"
       >
         <SelectTrigger className="h-8 text-sm">
-          <SelectValue placeholder="Select category" />
+          <SelectValue placeholder={t('analysis.select_category')} />
         </SelectTrigger>
         <SelectContent>
           {availableCategories.map((cat) => (

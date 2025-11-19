@@ -47,4 +47,40 @@ export const webAnalysisTranslations: Translations = {
   "analysis.generating_ai_tips": { en: "Generating AI shopping tips...", ru: "Генерация AI советов по покупкам..." },
   "analysis.found_items_better_prices": { en: "Found {count} items with better prices elsewhere", ru: "Найдено {count} товаров с лучшими ценами в других местах" },
   "analysis.save": { en: "Save", ru: "Экономия" },
+
+  // AI Assistant Sidebar
+  "analysis.ai_assistant": { en: "AI Assistant", ru: "AI Ассистент" },
+  "analysis.currently_on": { en: "Currently on", ru: "Текущая страница" },
+  "analysis.quick_actions": { en: "Quick Actions", ru: "Быстрые действия" },
+  "analysis.analyze_budget": { en: "Analyze Budget", ru: "Анализ бюджета" },
+  "analysis.trends": { en: "Trends", ru: "Тренды" },
+  "analysis.goals": { en: "Goals", ru: "Цели" },
+  "analysis.advice": { en: "Advice", ru: "Советы" },
+  "analysis.where_cheaper": { en: "Where's cheaper?", ru: "Где дешевле?" },
+  "analysis.ask_ai": { en: "Ask AI...", ru: "Спросить AI..." },
+
+  // Confirmation Card
+  "analysis.confirm_action": { en: "Confirm Action", ru: "Подтвердите действие" },
+  "analysis.execute": { en: "Execute", ru: "Выполнить" },
+  "analysis.cancel": { en: "Cancel", ru: "Отмена" },
+  "analysis.executing": { en: "Executing...", ru: "Выполняю..." },
+  "analysis.parameters": { en: "parameters", ru: "параметров" },
+  "analysis.parameter": { en: "parameter", ru: "параметр" },
+
+  // Tool Actions
+  "analysis.action_get_balance": { en: "Check Balance", ru: "Проверить баланс" },
+  "analysis.action_create_category": { en: "Create Category", ru: "Создать категорию" },
+  "analysis.action_add_transaction": { en: "Add Transaction", ru: "Добавить транзакцию" },
+
+  // AI Assistant Errors
+  "analysis.api_key_required": { en: "Please add your Anthropic API key in Settings to use AI Assistant", ru: "Добавьте API ключ Anthropic в Настройках для использования AI Ассистента" },
+  "analysis.action_failed": { en: "Action failed", ru: "Действие не выполнено" },
+  "analysis.try_again": { en: "Please try again", ru: "Попробуйте снова" },
+  "analysis.no_api_key": { en: "No API key configured", ru: "API ключ не настроен" },
+
+  // ML Category Suggestions
+  "analysis.ml_suggestion": { en: "ML Suggestion", ru: "ML Подсказка" },
+  "analysis.confidence": { en: "Confidence", ru: "Уверенность" },
+  "analysis.select_category": { en: "Select category", ru: "Выберите категорию" },
+  "analysis.select_personal_tag": { en: "Select personal tag (optional)", ru: "Выберите тег (необязательно)" },
 };

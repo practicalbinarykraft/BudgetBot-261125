@@ -1,4 +1,5 @@
 import { Folder, DollarSign, Wallet, Bot } from 'lucide-react';
+import { useTranslation } from '@/i18n/context';
 
 interface ActionPreviewProps {
   action: string;
@@ -6,6 +7,8 @@ interface ActionPreviewProps {
 }
 
 export function ActionPreview({ action, params }: ActionPreviewProps) {
+  const { t } = useTranslation();
+  
   const getIcon = () => {
     switch (action) {
       case 'create_category': return Folder;
@@ -17,14 +20,16 @@ export function ActionPreview({ action, params }: ActionPreviewProps) {
   
   const getTitle = () => {
     switch (action) {
-      case 'create_category': return 'Create Category';
-      case 'add_transaction': return 'Add Transaction';
-      case 'get_balance': return 'Check Balance';
-      default: return 'Action';
+      case 'create_category': return t('analysis.action_create_category');
+      case 'add_transaction': return t('analysis.action_add_transaction');
+      case 'get_balance': return t('analysis.action_get_balance');
+      default: return action;
     }
   };
   
   const Icon = getIcon();
+  const paramCount = Object.keys(params).length;
+  const paramText = paramCount === 1 ? t('analysis.parameter') : t('analysis.parameters');
   
   return (
     <div className="flex items-center gap-3" data-testid={`preview-${action}`}>
@@ -37,7 +42,7 @@ export function ActionPreview({ action, params }: ActionPreviewProps) {
           {getTitle()}
         </h4>
         <p className="text-xs text-muted-foreground" data-testid="text-param-count">
-          {Object.keys(params).length} parameter{Object.keys(params).length !== 1 ? 's' : ''}
+          {paramCount} {paramText}
         </p>
       </div>
     </div>

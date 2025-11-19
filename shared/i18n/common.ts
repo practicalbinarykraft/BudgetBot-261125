@@ -74,4 +74,38 @@ export const commonTranslations: Translations = {
     en: 'Edit',
     ru: 'Редактировать',
   },
+
+  // Common fields
+  'common.name': {
+    en: 'Name',
+    ru: 'Название',
+  },
+  'common.description': {
+    en: 'Description',
+    ru: 'Описание',
+  },
+  'common.amount': {
+    en: 'Amount',
+    ru: 'Сумма',
+  },
+  'common.category': {
+    en: 'Category',
+    ru: 'Категория',
+  },
+  'common.type': {
+    en: 'Type',
+    ru: 'Тип',
+  },
+  'common.date': {
+    en: 'Date',
+    ru: 'Дата',
+  },
+  'common.currency': {
+    en: 'Currency',
+    ru: 'Валюта',
+  },
+  'common.balance': {
+    en: 'Balance',
+    ru: 'Баланс',
+  },
 };

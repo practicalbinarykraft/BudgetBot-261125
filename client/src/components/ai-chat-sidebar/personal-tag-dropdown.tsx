@@ -1,4 +1,5 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useTranslation } from '@/i18n/context';
 
 interface PersonalTag {
   id: number;
@@ -14,6 +15,8 @@ interface PersonalTagDropdownProps {
 }
 
 export function PersonalTagDropdown({ value, availableTags, onChange }: PersonalTagDropdownProps) {
+  const { t } = useTranslation();
+  
   if (!availableTags || availableTags.length === 0) {
     return null; // Don't render if no tags available
   }
@@ -25,7 +28,7 @@ export function PersonalTagDropdown({ value, availableTags, onChange }: Personal
   return (
     <div className="space-y-1.5">
       <span className="text-muted-foreground capitalize text-xs">
-        Who (Personal Tag):
+        {t('analysis.select_personal_tag')}:
       </span>
       <Select 
         value={value || 'none'} 
@@ -33,11 +36,11 @@ export function PersonalTagDropdown({ value, availableTags, onChange }: Personal
         data-testid="select-personal-tag"
       >
         <SelectTrigger className="h-8 text-sm">
-          <SelectValue placeholder="Select person" />
+          <SelectValue placeholder={t('analysis.select_personal_tag')} />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="none" data-testid="option-tag-none">
-            No tag
+            {t('analysis.select_personal_tag')}
           </SelectItem>
           {availableTags.map((tag) => (
             <SelectItem 

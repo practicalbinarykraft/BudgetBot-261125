@@ -1,4 +1,5 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useTranslation } from '@/i18n/context';
 
 const CURRENCIES = [
   { code: 'USD', symbol: '$', name: 'US Dollar' },
@@ -16,6 +17,8 @@ interface CurrencyDropdownProps {
 }
 
 export function CurrencyDropdown({ value, onChange, availableCurrencies }: CurrencyDropdownProps) {
+  const { t } = useTranslation();
+  
   // Filter currencies to only show those configured by user (or all if not provided)
   const filteredCurrencies = availableCurrencies
     ? CURRENCIES.filter(curr => availableCurrencies.includes(curr.code))
@@ -24,7 +27,7 @@ export function CurrencyDropdown({ value, onChange, availableCurrencies }: Curre
   return (
     <div className="space-y-1.5">
       <span className="text-muted-foreground capitalize text-xs">
-        Currency:
+        {t('common.currency')}:
       </span>
       <Select 
         value={value || 'USD'} 
@@ -32,7 +35,7 @@ export function CurrencyDropdown({ value, onChange, availableCurrencies }: Curre
         data-testid="select-currency"
       >
         <SelectTrigger className="h-8 text-sm">
-          <SelectValue placeholder="Select currency" />
+          <SelectValue placeholder={t('common.currency')} />
         </SelectTrigger>
         <SelectContent>
           {filteredCurrencies.map((curr) => (

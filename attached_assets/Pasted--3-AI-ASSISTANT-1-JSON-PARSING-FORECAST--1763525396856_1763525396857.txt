@@ -1,0 +1,201 @@
+ИСПРАВЬ 3 ПРОБЛЕМЫ В AI ASSISTANT
+
+ПРОБЛЕМА 1: JSON PARSING В FORECAST
+----------------------------------
+
+В server/services/forecast.service.ts:
+
+НАЙДИ:
+const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+if (jsonMatch) {
+  forecastData = JSON.parse(jsonMatch[0]); // ← ТУТ ОШИБКА
+}
+
+ЗАМЕНИ НА:
+// Более надежный парсинг JSON
+const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+if (jsonMatch) {
+  try {
+    // Очистить JSON от проблемных символов
+    let jsonStr = jsonMatch[0];
+    
+    // Заменить неэкранированные кавычки в значениях
+    // "description": "User said "hello"" → "description": "User said \"hello\""
+    jsonStr = jsonStr.replace(
+      /"([^"]*)":\s*"([^"]*)"/g,
+      (match, key, value) => {
+        // Экранировать кавычки в значении
+        const escapedValue = value.replace(/"/g, '\\"');
+        return `"${key}": "${escapedValue}"`;
+      }
+    );
+    
+    forecastData = JSON.parse(jsonStr);
+  } catch (parseError: any) {
+    console.error('JSON parse failed, trying fallback:', parseError.message);
+    
+    // Fallback: попробовать исправить через regex
+    try {
+      let jsonStr = jsonMatch[0];
+      // Убрать переносы строк в значениях
+      jsonStr = jsonStr.replace(/\n/g, ' ');
+      // Убрать двойные пробелы
+      jsonStr = jsonStr.replace(/\s+/g, ' ');
+      forecastData = JSON.parse(jsonStr);
+    } catch (fallbackError) {
+      console.error('Fallback parse also failed');
+      throw parseError; // Бросить оригинальную ошибку
+    }
+  }
+}
+
+ПРОБЛЕМА 2: MISSING TRANSLATION KEY
+----------------------------------
+
+В client/src/i18n/locales/en.json:
+
+НАЙДИ:
+"common": {
+  "save": "Save",
+  "cancel": "Cancel",
+  // ... другие ключи
+}
+
+ДОБАВЬ:
+"common": {
+  "save": "Save",
+  "cancel": "Cancel",
+  "name": "Name",           // ← ДОБАВИТЬ
+  "description": "Description",  // ← ДОБАВИТЬ (на всякий)
+  "amount": "Amount",       // ← ДОБАВИТЬ
+  "category": "Category",   // ← ДОБАВИТЬ
+  "type": "Type",           // ← ДОБАВИТЬ
+  "date": "Date",           // ← ДОБАВИТЬ
+  // ... остальные
+}
+
+В client/src/i18n/locales/ru.json:
+
+"common": {
+  "save": "Сохранить",
+  "cancel": "Отмена",
+  "name": "Название",       // ← ДОБАВИТЬ
+  "description": "Описание", // ← ДОБАВИТЬ
+  "amount": "Сумма",        // ← ДОБАВИТЬ
+  "category": "Категория",  // ← ДОБАВИТЬ
+  "type": "Тип",            // ← ДОБАВИТЬ
+  "date": "Дата",           // ← ДОБАВИТЬ
+}
+
+ПРОБЛЕМА 3: AI TOOLS I18N
+------------------------
+
+Проверь и добавь переводы для AI Assistant компонентов:
+
+1. В en.json добавить:
+"ai": {
+  "assistant": {
+    "title": "AI Assistant",
+    "currentlyOn": "Currently on",
+    "quickActions": "Quick Actions",
+    "analysisBudget": "Analyze Budget",
+    "trends": "Trends",
+    "goals": "Goals",
+    "advice": "Advice",
+    "whereCheaper": "Where's cheaper?",
+    "askAI": "Ask AI...",
+    
+    "confirmation": {
+      "title": "Confirm Action",
+      "execute": "Execute",
+      "cancel": "Cancel",
+      "executing": "Executing...",
+      "parameters": "parameters"
+    },
+    
+    "actions": {
+      "get_balance": "Check Balance",
+      "create_category": "Create Category",
+      "add_transaction": "Add Transaction"
+    },
+    
+    "errors": {
+      "apiKeyRequired": "Please add your Anthropic API key in Settings to use AI Assistant",
+      "actionFailed": "Action failed",
+      "tryAgain": "Please try again"
+    }
+  }
+}
+
+2. В ru.json добавить:
+"ai": {
+  "assistant": {
+    "title": "AI Ассистент",
+    "currentlyOn": "Текущая страница",
+    "quickActions": "Быстрые действия",
+    "analysisBudget": "Анализ бюджета",
+    "trends": "Тренды",
+    "goals": "Цели",
+    "advice": "Советы",
+    "whereCheaper": "Где дешевле?",
+    "askAI": "Спросить AI...",
+    
+    "confirmation": {
+      "title": "Подтвердите действие",
+      "execute": "Выполнить",
+      "cancel": "Отмена",
+      "executing": "Выполняю...",
+      "parameters": "параметров"
+    },
+    
+    "actions": {
+      "get_balance": "Проверить баланс",
+      "create_category": "Создать категорию",
+      "add_transaction": "Добавить транзакцию"
+    },
+    
+    "errors": {
+      "apiKeyRequired": "Добавьте API ключ Anthropic в Настройках для использования AI Ассистента",
+      "actionFailed": "Действие не выполнено",
+      "tryAgain": "Попробуйте снова"
+    }
+  }
+}
+
+3. Обновить компоненты для использования переводов:
+
+В client/src/components/ai-chat-sidebar/index.tsx:
+import { useTranslation } from 'react-i18next';
+
+const { t } = useTranslation();
+
+<h3>{t('ai.assistant.title')}</h3>
+<p>{t('ai.assistant.currentlyOn')}: {currentPage}</p>
+
+В client/src/components/ai-chat-sidebar/action-preview.tsx:
+const getTitle = () => {
+  switch (action) {
+    case 'create_category': 
+      return t('ai.assistant.actions.create_category');
+    case 'add_transaction': 
+      return t('ai.assistant.actions.add_transaction');
+    case 'get_balance': 
+      return t('ai.assistant.actions.get_balance');
+    default: 
+      return action;
+  }
+};
+
+В client/src/components/ai-chat-sidebar/confirmation-buttons.tsx:
+<button onClick={onConfirm}>
+  {loading ? t('ai.assistant.confirmation.executing') : t('ai.assistant.confirmation.execute')}
+</button>
+<button onClick={onCancel}>
+  {t('ai.assistant.confirmation.cancel')}
+</button>
+
+РЕЗУЛЬТАТ:
+✅ JSON parsing более надёжный (не падает на кавычках)
+✅ Все missing keys добавлены
+✅ AI Assistant полностью переведён на RU/EN
+✅ Нет warnings в консоли
