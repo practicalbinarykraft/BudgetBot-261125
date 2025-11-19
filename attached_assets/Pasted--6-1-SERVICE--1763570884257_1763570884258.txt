@@ -1,3 +1,11 @@
+═══════════════════════════════════════════════════════
+ЗАДАЧА 6.1: СОЗДАТЬ БАЗОВЫЙ SERVICE
+═══════════════════════════════════════════════════════
+
+СОЗДАТЬ ФАЙЛ: server/services/product-catalog.service.ts
+
+СОДЕРЖИМОЕ:
+
 import { productCatalogRepository } from '../repositories/product-catalog.repository';
 import { productPriceHistoryRepository } from '../repositories/product-price-history.repository';
 
@@ -101,6 +109,24 @@ export async function updateBestPrice(productId: number): Promise<void> {
   });
 }
 
+СТРОК: ~95 ✅
+ОТВЕТСТВЕННОСТЬ: Базовые утилиты для работы с товарами ✅
+
+═══════════════════════════════════════════════════════
+
+ОЖИДАЕМЫЙ РЕЗУЛЬТАТ:
+✅ Функции нормализации названий
+✅ Извлечение бренда и веса
+✅ Поиск/создание товара
+✅ Обновление лучшей цены
+
+📊 ШАГ 7: PRODUCT CATALOG SERVICE - ЧАСТЬ 2 (20 минут)
+═══════════════════════════════════════════════════════
+ЗАДАЧА 7.1: ДОБАВИТЬ КАТЕГОРИЗАЦИЮ
+═══════════════════════════════════════════════════════
+
+ДОБАВИТЬ В ФАЙЛ: server/services/product-catalog.service.ts
+
 // AI категоризация товара (опционально, можно и без AI)
 export async function categorizeProduct(
   name: string,
@@ -144,3 +170,13 @@ export async function categorizeProduct(
   //   return await categorizeWithAI(name, anthropicApiKey);
   // }
 }
+
+ДОБАВЛЯЕМЫХ СТРОК: ~40 ✅
+ИТОГО В ФАЙЛЕ: ~135 строк ✅
+
+═══════════════════════════════════════════════════════
+
+ОЖИДАЕМЫЙ РЕЗУЛЬТАТ:
+✅ Rule-based категоризация работает
+✅ Можно расширить на AI позже
+✅ Fallback на "Разное"
