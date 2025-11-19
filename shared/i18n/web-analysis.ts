@@ -65,6 +65,7 @@ export const webAnalysisTranslations: Translations = {
   "analysis.cancel": { en: "Cancel", ru: "Отмена" },
   "analysis.executing": { en: "Executing...", ru: "Выполняю..." },
   "analysis.parameters": { en: "parameters", ru: "параметров" },
+  "analysis.parameters_few": { en: "parameters", ru: "параметра" },
   "analysis.parameter": { en: "parameter", ru: "параметр" },
 
   // Tool Actions
@@ -83,4 +84,5 @@ export const webAnalysisTranslations: Translations = {
   "analysis.confidence": { en: "Confidence", ru: "Уверенность" },
   "analysis.select_category": { en: "Select category", ru: "Выберите категорию" },
   "analysis.select_personal_tag": { en: "Select personal tag (optional)", ru: "Выберите тег (необязательно)" },
+  "analysis.no_personal_tag": { en: "No tag", ru: "Без тега" },
 };

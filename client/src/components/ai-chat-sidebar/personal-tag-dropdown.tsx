@@ -40,7 +40,7 @@ export function PersonalTagDropdown({ value, availableTags, onChange }: Personal
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="none" data-testid="option-tag-none">
-            {t('analysis.select_personal_tag')}
+            {t('analysis.no_personal_tag')}
           </SelectItem>
           {availableTags.map((tag) => (
             <SelectItem 

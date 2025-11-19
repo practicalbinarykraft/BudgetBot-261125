@@ -29,7 +29,15 @@ export function ActionPreview({ action, params }: ActionPreviewProps) {
   
   const Icon = getIcon();
   const paramCount = Object.keys(params).length;
-  const paramText = paramCount === 1 ? t('analysis.parameter') : t('analysis.parameters');
+  
+  // Russian plural forms: 1 параметр, 2-4 параметра, 5+ параметров
+  const getParamText = () => {
+    if (paramCount === 1) return t('analysis.parameter');
+    if (paramCount >= 2 && paramCount <= 4) return t('analysis.parameters_few');
+    return t('analysis.parameters');
+  };
+  
+  const paramText = getParamText();
   
   return (
     <div className="flex items-center gap-3" data-testid={`preview-${action}`}>
