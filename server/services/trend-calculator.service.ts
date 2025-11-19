@@ -207,9 +207,10 @@ async function generateAndProcessForecast(params: {
       }
     );
 
-    // Apply filters to forecast data
+    // Apply filters to forecast data (recurring, planned, budget limits)
+    // Capital is calculated immediately after filters to avoid stale data
     const forecastDataWithFilters = await Promise.all(
-      result.forecast.map(async (f) => {
+      result.forecast.map(async (f, index) => {
         const date = new Date(f.date);
         let income = f.predictedIncome;
         let expense = f.predictedExpense;
@@ -244,13 +245,18 @@ async function generateAndProcessForecast(params: {
           date: f.date,
           income,
           expense,
-          capital: f.predictedCapital,
+          capital: 0, // Will be recalculated below in running sum
           isToday: false,
           isForecast: true,
         };
       })
     );
     
+    // Convert to cumulative format and recalculate capital
+    // makeCumulativeFromBase takes DAILY deltas and converts to CUMULATIVE totals
+    // Example: daily=[{income:10}, {income:15}] + base=100 → cumulative=[{income:110}, {income:125}]
+    // Capital is simply: baseCapital + cumulativeIncome - cumulativeExpense
+    // This ensures capital reflects ALL filters (recurring, planned, budget)
     let forecastData = forecastDataWithFilters;
 
     if (historicalCumulative.length > 0) {
@@ -260,6 +266,9 @@ async function generateAndProcessForecast(params: {
         lastHistorical.income,
         lastHistorical.expense
       );
+      // Capital = base capital + cumulative income - cumulative expense
+      // Note: makeCumulativeFromBase already added lastHistorical income/expense to each point
+      // So we need to calculate capital from capitalAtPeriodStart, NOT lastHistorical.capital
       forecastData.forEach((point: TrendDataPoint) => {
         point.capital = capitalAtPeriodStart + point.income - point.expense;
       });
