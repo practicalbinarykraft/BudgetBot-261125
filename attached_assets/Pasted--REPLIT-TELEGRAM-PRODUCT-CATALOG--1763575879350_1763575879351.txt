@@ -1,0 +1,251 @@
+📋 ТЗ ДЛЯ REPLIT: ИНТЕГРАЦИЯ TELEGRAM БОТА С PRODUCT CATALOG
+
+═══════════════════════════════════════════════════════
+ЗАДАЧА: ДОБАВИТЬ ТОВАРЫ ИЗ TELEGRAM ЧЕКОВ В КАТАЛОГ
+═══════════════════════════════════════════════════════
+
+ПРОБЛЕМА:
+- Когда пользователь отправляет чек в Telegram бота,
+  товары сохраняются в receipt_items
+- НО не добавляются в product_catalog
+- В веб-версии OCR это работает
+
+РЕШЕНИЕ:
+Добавить вызов processReceiptItems() в Telegram обработчик чеков
+
+ВРЕМЯ: 15 минут
+РИСКИ: Низкие (копируем логику из веб-версии)
+
+═══════════════════════════════════════════════════════
+
+ШАГ 1: НАЙТИ TELEGRAM ОБРАБОТЧИК ЧЕКОВ
+═══════════════════════════════════════════════════════
+
+ФАЙЛ: server/telegram/commands.ts
+
+НАЙТИ ФУНКЦИЮ: handleReceiptProcessing или похожую
+
+ПРИМЕРНО СТРОКИ: 935-965
+
+КОД ВЫГЛЯДИТ ТАК:
+
+// После обработки чека Claude AI
+const receiptData = await processReceiptWithClaude(imageBuffer);
+
+// Сохранить чек
+const receipt = await db.insert(receipts).values({
+  userId,
+  merchantName: receiptData.merchantName,
+  totalAmount: receiptData.totalAmount,
+  purchaseDate: receiptData.purchaseDate,
+  // ...
+}).returning();
+
+// Сохранить товары
+for (const item of receiptData.items) {
+  await db.insert(receiptItems).values({
+    receiptId: receipt[0].id,
+    name: item.name,
+    quantity: item.quantity,
+    price: item.price,
+    // ...
+  });
+}
+
+// ← ЗДЕСЬ НУЖНО ДОБАВИТЬ ИНТЕГРАЦИЮ С КАТАЛОГОМ
+
+═══════════════════════════════════════════════════════
+
+ШАГ 2: ДОБАВИТЬ ИМПОРТ
+═══════════════════════════════════════════════════════
+
+В НАЧАЛО ФАЙЛА server/telegram/commands.ts ДОБАВИТЬ:
+
+import { processReceiptItems } from '../services/product-catalog.service';
+
+═══════════════════════════════════════════════════════
+
+ШАГ 3: ДОБАВИТЬ ВЫЗОВ ПОСЛЕ СОХРАНЕНИЯ ЧЕКА
+═══════════════════════════════════════════════════════
+
+НАЙТИ МЕСТО ПОСЛЕ СОХРАНЕНИЯ ТОВАРОВ:
+
+// Сохранить товары
+for (const item of receiptData.items) {
+  await db.insert(receiptItems).values({
+    receiptId: receipt[0].id,
+    name: item.name,
+    quantity: item.quantity,
+    price: item.price
+  });
+}
+
+// Отправить ответ пользователю
+await bot.sendMessage(chatId, '✅ Чек обработан');
+
+ДОБАВИТЬ МЕЖДУ СОХРАНЕНИЕМ И ОТВЕТОМ:
+
+// ============================================
+// ДОБАВИТЬ ТОВАРЫ В КАТАЛОГ
+// ============================================
+
+try {
+  await processReceiptItems({
+    receiptItems: receiptData.items.map(item => ({
+      name: item.name || item.description || 'Unknown',
+      price: parseFloat(item.price) || 0,
+      quantity: item.quantity || 1
+    })),
+    userId: userId,
+    storeName: receiptData.merchantName || 'Unknown Store',
+    purchaseDate: receiptData.purchaseDate || new Date().toISOString().split('T')[0],
+    // API ключ пользователя (если есть)
+    anthropicApiKey: undefined // Telegram не использует user API keys
+  });
+  
+  console.log(`✅ Product catalog updated from Telegram receipt (user ${userId})`);
+} catch (error) {
+  console.error('❌ Failed to update product catalog from Telegram:', error);
+  // Не прерываем обработку чека - просто логируем ошибку
+}
+
+// Отправить ответ пользователю
+await bot.sendMessage(chatId, '✅ Чек обработан');
+
+ДОБАВЛЯЕМЫХ СТРОК: ~25 ✅
+
+═══════════════════════════════════════════════════════
+
+ВАЖНО: ГДЕ НАЙТИ userId
+═══════════════════════════════════════════════════════
+
+В Telegram обработчике userId обычно берётся из:
+
+1. ВАРИАНТ A: Из сообщения
+   const telegramId = msg.from.id;
+   const user = await getUserByTelegramId(telegramId);
+   const userId = user.id;
+
+2. ВАРИАНТ B: Уже есть в контексте
+   const userId = ctx.user.id; // или похожее
+
+3. ВАРИАНТ C: Передаётся в функцию
+   async function handleReceipt(userId: number, receiptData: any) {
+     // userId уже доступен
+   }
+
+НАЙДИ КАК В ТВОЁМ КОДЕ ПОЛУЧАЕТСЯ userId И ИСПОЛЬЗУЙ ЕГО!
+
+═══════════════════════════════════════════════════════
+
+ПРИМЕР ПОЛНОГО КОДА (КАК ДОЛЖНО ВЫГЛЯДЕТЬ)
+═══════════════════════════════════════════════════════
+
+// Импорт в начале файла
+import { processReceiptItems } from '../services/product-catalog.service';
+
+// Внутри обработчика
+async function handleReceiptProcessing(msg: Message, userId: number) {
+  try {
+    // 1. Скачать фото
+    const imageBuffer = await downloadPhoto(msg.photo);
+    
+    // 2. Обработать через Claude AI
+    const receiptData = await processReceiptWithClaude(imageBuffer);
+    
+    // 3. Сохранить чек в БД
+    const receipt = await db.insert(receipts).values({
+      userId,
+      merchantName: receiptData.merchantName,
+      totalAmount: receiptData.totalAmount,
+      purchaseDate: receiptData.purchaseDate,
+      currency: receiptData.currency || 'USD'
+    }).returning();
+    
+    // 4. Сохранить товары
+    for (const item of receiptData.items) {
+      await db.insert(receiptItems).values({
+        receiptId: receipt[0].id,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price
+      });
+    }
+    
+    // ============================================
+    // 5. ДОБАВИТЬ В PRODUCT CATALOG (НОВОЕ!)
+    // ============================================
+    try {
+      await processReceiptItems({
+        receiptItems: receiptData.items.map(item => ({
+          name: item.name || item.description || 'Unknown',
+          price: parseFloat(item.price) || 0,
+          quantity: item.quantity || 1
+        })),
+        userId: userId,
+        storeName: receiptData.merchantName || 'Unknown Store',
+        purchaseDate: receiptData.purchaseDate || new Date().toISOString().split('T')[0],
+        anthropicApiKey: undefined
+      });
+      
+      console.log(`✅ Product catalog updated (user ${userId})`);
+    } catch (error) {
+      console.error('❌ Product catalog update failed:', error);
+    }
+    
+    // 6. Отправить ответ
+    await bot.sendMessage(msg.chat.id, 
+      `✅ Чек обработан!\n\n` +
+      `Магазин: ${receiptData.merchantName}\n` +
+      `Товаров: ${receiptData.items.length}\n` +
+      `Сумма: $${receiptData.totalAmount}`
+    );
+    
+  } catch (error) {
+    console.error('Receipt processing error:', error);
+    await bot.sendMessage(msg.chat.id, '❌ Ошибка обработки чека');
+  }
+}
+
+═══════════════════════════════════════════════════════
+
+ТЕСТИРОВАНИЕ
+═══════════════════════════════════════════════════════
+
+1. Отправить фото чека в Telegram бота
+2. Дождаться ответа "✅ Чек обработан"
+3. Проверить в БД:
+
+   SELECT * FROM product_catalog WHERE user_id = YOUR_USER_ID;
+   
+   Должны появиться новые товары!
+
+4. Открыть веб-версию → Product Catalog
+   Должны увидеть товары из Telegram чека
+
+═══════════════════════════════════════════════════════
+
+ОЖИДАЕМЫЙ РЕЗУЛЬТАТ
+═══════════════════════════════════════════════════════
+
+ДО:
+- Telegram чек → receipt_items ✅
+- Telegram чек → product_catalog ❌
+
+ПОСЛЕ:
+- Telegram чек → receipt_items ✅
+- Telegram чек → product_catalog ✅
+- Веб чек → receipt_items ✅
+- Веб чек → product_catalog ✅
+
+ЕДИНООБРАЗИЕ! Не важно откуда пришёл чек - 
+товары попадают в каталог! 🎉
+
+═══════════════════════════════════════════════════════
+
+КРИТИЧНОСТЬ: Средняя
+ВРЕМЯ: 15 минут
+РИСКИ: Низкие
+ЗАВИСИМОСТИ: 
+- processReceiptItems() уже существует
+- product_catalog tables уже созданы

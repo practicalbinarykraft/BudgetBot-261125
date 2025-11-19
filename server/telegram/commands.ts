@@ -15,6 +15,7 @@ import { pendingEdits } from './pending-edits';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 import { ReceiptItemsRepository } from '../repositories/receipt-items.repository';
 import { parseShoppingList, isShoppingList } from './shopping-list-parser';
+import { processReceiptItems } from '../services/product-catalog.service';
 
 async function formatTransactionMessage(
   userId: number,
@@ -961,6 +962,29 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
         } catch (error) {
           console.error('Failed to save receipt items:', error);
           // Don't fail the transaction if items fail to save
+        }
+      }
+
+      // Add items to Product Catalog
+      if ('items' in parsed && parsed.items && parsed.items.length > 0) {
+        try {
+          const userSettings = await storage.getSettingsByUserId(user.id);
+          await processReceiptItems({
+            receiptItems: parsed.items.map((item: any) => ({
+              name: item.name || 'Unknown',
+              price: parseFloat(item.totalPrice) || 0,
+              quantity: item.quantity || 1
+            })),
+            userId: user.id,
+            storeName: parsed.description || 'Unknown Store',
+            purchaseDate: format(new Date(), 'yyyy-MM-dd'),
+            anthropicApiKey: userSettings?.anthropicApiKey || undefined
+          });
+          
+          console.log(`✅ Product catalog updated from Telegram receipt (user ${user.id})`);
+        } catch (error) {
+          console.error('❌ Failed to update product catalog from Telegram:', error);
+          // Don't fail the transaction if catalog update fails
         }
       }
 
