@@ -22,6 +22,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/i18n/context";
 import { z } from "zod";
 
 interface EditTransactionDialogProps {
@@ -39,6 +40,7 @@ type FormData = z.infer<typeof formSchema>;
 export function EditTransactionDialog({ transaction, open, onOpenChange }: EditTransactionDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
@@ -87,14 +89,14 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
       queryClient.invalidateQueries({ queryKey: ["/api/sorting/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/unsorted"], exact: false });
       toast({
-        title: "Success",
-        description: "Transaction updated successfully",
+        title: t("common.success"),
+        description: t("transactions.updated_successfully"),
       });
       onOpenChange(false);
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t("common.error_occurred"),
         description: error.message,
         variant: "destructive",
       });
@@ -111,7 +113,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Edit Transaction</DialogTitle>
+          <DialogTitle>{t("transactions.edit_transaction")}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-4 overflow-y-auto flex-1 pr-2">
@@ -120,16 +122,16 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
               name="type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Type</FormLabel>
+                  <FormLabel>{t("common.type")}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger data-testid="select-type-edit">
-                        <SelectValue placeholder="Select type" />
+                        <SelectValue placeholder={t("transactions.select_type")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="income">Income</SelectItem>
-                      <SelectItem value="expense">Expense</SelectItem>
+                      <SelectItem value="income">{t("transactions.type.income")}</SelectItem>
+                      <SelectItem value="expense">{t("transactions.type.expense")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -143,7 +145,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
                 name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Amount</FormLabel>
+                    <FormLabel>{t("transactions.amount")}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -163,11 +165,11 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
                 name="currency"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Currency</FormLabel>
+                    <FormLabel>{t("transactions.currency")}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || undefined}>
                       <FormControl>
                         <SelectTrigger data-testid="select-currency-edit">
-                          <SelectValue placeholder="Currency" />
+                          <SelectValue placeholder={t("transactions.currency")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -187,9 +189,9 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>{t("transactions.description")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Coffee, groceries, etc." data-testid="input-description-edit" {...field} />
+                    <Input placeholder={t("transactions.placeholder_description")} data-testid="input-description-edit" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -201,11 +203,11 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
               name="category"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Category (Optional)</FormLabel>
+                  <FormLabel>{t("transactions.category_optional")}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value || ""}>
                     <FormControl>
                       <SelectTrigger data-testid="select-category-edit">
-                        <SelectValue placeholder="Select category" />
+                        <SelectValue placeholder={t("transactions.select_category")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -226,7 +228,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
               name="personalTagId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tag (Optional)</FormLabel>
+                  <FormLabel>{t("transactions.tag_optional")}</FormLabel>
                   <FormControl>
                     <TagSelector
                       value={field.value ?? null}
@@ -243,18 +245,18 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
               name="financialType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Financial Type</FormLabel>
+                  <FormLabel>{t("transactions.financial_type")}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value || undefined}>
                     <FormControl>
                       <SelectTrigger data-testid="select-financial-type-edit">
-                        <SelectValue placeholder="Select financial type" />
+                        <SelectValue placeholder={t("transactions.select_financial_type")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="essential">Essential</SelectItem>
-                      <SelectItem value="discretionary">Discretionary</SelectItem>
-                      <SelectItem value="asset">Asset</SelectItem>
-                      <SelectItem value="liability">Liability</SelectItem>
+                      <SelectItem value="essential">{t("transactions.essential")}</SelectItem>
+                      <SelectItem value="discretionary">{t("transactions.discretionary")}</SelectItem>
+                      <SelectItem value="asset">{t("transactions.asset")}</SelectItem>
+                      <SelectItem value="liability">{t("transactions.liability")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -267,7 +269,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
               name="date"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Date</FormLabel>
+                  <FormLabel>{t("transactions.date")}</FormLabel>
                   <FormControl>
                     <Input type="date" data-testid="input-date-edit" {...field} />
                   </FormControl>
@@ -283,14 +285,14 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
                 onClick={() => onOpenChange(false)}
                 data-testid="button-cancel-edit"
               >
-                Cancel
+                {t("transactions.cancel")}
               </Button>
               <Button
                 type="submit"
                 disabled={updateMutation.isPending}
                 data-testid="button-submit-edit"
               >
-                {updateMutation.isPending ? "Updating..." : "Update Transaction"}
+                {updateMutation.isPending ? t("transactions.updating") : t("transactions.update_transaction")}
               </Button>
             </div>
           </form>

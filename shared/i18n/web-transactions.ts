@@ -121,4 +121,76 @@ export const webTransactionsTranslations: Translations = {
     en: 'Transaction deleted successfully',
     ru: 'Транзакция успешно удалена',
   },
+  'transactions.amount': {
+    en: 'Amount',
+    ru: 'Сумма',
+  },
+  'transactions.description': {
+    en: 'Description',
+    ru: 'Описание',
+  },
+  'transactions.category_optional': {
+    en: 'Category (Optional)',
+    ru: 'Категория (необязательно)',
+  },
+  'transactions.tag_optional': {
+    en: 'Tag (Optional)',
+    ru: 'Тег (необязательно)',
+  },
+  'transactions.financial_type': {
+    en: 'Financial Type',
+    ru: 'Финансовый тип',
+  },
+  'transactions.select_type': {
+    en: 'Select type',
+    ru: 'Выберите тип',
+  },
+  'transactions.select_category': {
+    en: 'Select category',
+    ru: 'Выберите категорию',
+  },
+  'transactions.select_financial_type': {
+    en: 'Select financial type',
+    ru: 'Выберите финансовый тип',
+  },
+  'transactions.essential': {
+    en: 'Essential',
+    ru: 'Необходимое',
+  },
+  'transactions.discretionary': {
+    en: 'Discretionary',
+    ru: 'По желанию',
+  },
+  'transactions.asset': {
+    en: 'Asset',
+    ru: 'Актив',
+  },
+  'transactions.liability': {
+    en: 'Liability',
+    ru: 'Обязательство',
+  },
+  'transactions.date': {
+    en: 'Date',
+    ru: 'Дата',
+  },
+  'transactions.cancel': {
+    en: 'Cancel',
+    ru: 'Отмена',
+  },
+  'transactions.update_transaction': {
+    en: 'Update Transaction',
+    ru: 'Обновить транзакцию',
+  },
+  'transactions.updating': {
+    en: 'Updating...',
+    ru: 'Обновление...',
+  },
+  'transactions.updated_successfully': {
+    en: 'Transaction updated successfully',
+    ru: 'Транзакция успешно обновлена',
+  },
+  'transactions.placeholder_description': {
+    en: 'Coffee, groceries, etc.',
+    ru: 'Кофе, продукты и т.д.',
+  },
 };
