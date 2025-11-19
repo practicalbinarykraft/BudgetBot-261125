@@ -19,6 +19,7 @@ import { ChartLoadingState, ChartErrorState, ChartEmptyState } from "@/component
 import { useTranslation } from "@/i18n";
 import { ForecastFiltersCard, type ForecastFilters } from "@/components/charts/forecast-filters";
 import { CapitalWarning } from "@/components/charts/capital-warning";
+import { useToast } from "@/hooks/use-toast";
 
 /**
  * Financial Trend Chart
@@ -30,6 +31,7 @@ interface FinancialTrendChartProps {
 
 export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrendChartProps) {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const [historyDays, setHistoryDays] = useState(30);
   const [forecastDays, setForecastDays] = useState(365);
   const [hoveredGoal, setHoveredGoal] = useState<string | null>(null); // String only (all IDs normalized)
@@ -75,6 +77,18 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
     includePlannedExpenses: filters.includePlannedExpenses,
     includeBudgetLimits: filters.includeBudgetLimits,
   });
+
+  // Show error toast when query fails
+  useEffect(() => {
+    if (error) {
+      console.error('[FinancialTrendChart] Query failed:', error);
+      toast({
+        title: t('common.error'),
+        description: error instanceof Error ? error.message : t('dashboard.forecast_error_generic'),
+        variant: "destructive",
+      });
+    }
+  }, [error, t]);
 
   // Destructure trend data and goals
   const trendData = data?.trendData || [];
@@ -243,6 +257,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
         <ForecastFiltersCard
           filters={filters}
           onChange={setFilters}
+          isLoading={isLoading}
         />
         
         {/* Capital Warning */}

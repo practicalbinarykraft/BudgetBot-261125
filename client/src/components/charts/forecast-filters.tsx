@@ -17,9 +17,10 @@ export interface ForecastFilters {
 interface ForecastFiltersProps {
   filters: ForecastFilters;
   onChange: (filters: ForecastFilters) => void;
+  isLoading?: boolean;
 }
 
-export function ForecastFiltersCard({ filters, onChange }: ForecastFiltersProps) {
+export function ForecastFiltersCard({ filters, onChange, isLoading = false }: ForecastFiltersProps) {
   const { t } = useTranslation();
   // Ensure all filter values are boolean (prevent uncontrolled->controlled warning)
   const [pendingFilters, setPendingFilters] = useState<ForecastFilters>(() => ({
@@ -139,9 +140,10 @@ export function ForecastFiltersCard({ filters, onChange }: ForecastFiltersProps)
         <Button 
           onClick={handleApply} 
           className="w-full"
+          disabled={isLoading}
           data-testid="button-apply-filters"
         >
-          {t('dashboard.filter_apply_button')}
+          {isLoading ? t('common.loading') : t('dashboard.filter_apply_button')}
         </Button>
       </CardContent>
     </Card>

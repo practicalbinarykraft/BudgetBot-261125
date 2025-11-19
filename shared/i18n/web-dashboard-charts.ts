@@ -106,4 +106,10 @@ export const webDashboardChartsTranslations: Translations = {
     en: 'Consider: lower budget limits, increase income, or postpone large purchases',
     ru: 'Рекомендации: снизить лимиты, увеличить доходы или отложить покупки',
   },
+  
+  // Forecast Errors
+  'dashboard.forecast_error_generic': {
+    en: 'Failed to load forecast data. Please try again.',
+    ru: 'Не удалось загрузить прогноз. Попробуйте снова.',
+  },
 };

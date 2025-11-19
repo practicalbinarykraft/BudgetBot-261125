@@ -53,9 +53,11 @@ export async function generateForecast(
   );
 
   // Calculate required tokens based on forecast length
-  // ~150 chars per data point, ~4 chars per token = ~40 tokens per day
-  // Add 500 tokens buffer for response formatting
-  const estimatedTokens = Math.max(2048, Math.min(32000, (daysAhead * 40) + 500));
+  // Each data point is ~150 chars, at ~3.5 chars/token = ~50 tokens per day
+  // Add 1000 tokens buffer for JSON formatting and markdown wrappers
+  const estimatedTokens = Math.max(4096, Math.min(32000, (daysAhead * 50) + 1000));
+
+  console.log(`[Forecast] Generating ${daysAhead} days forecast, max_tokens: ${estimatedTokens}`);
 
   try {
     const message = await client.messages.create({
@@ -69,9 +71,17 @@ export async function generateForecast(
       ],
     });
 
+    console.log(`[Forecast] AI response received, stop_reason: ${message.stop_reason}`);
+
     const content = message.content[0];
     if (content.type !== "text") {
       throw new Error("Invalid response from AI");
+    }
+
+    // Check if response was truncated
+    if (message.stop_reason === 'max_tokens') {
+      console.error(`[Forecast] Response truncated! Requested ${estimatedTokens} tokens but hit limit`);
+      throw new Error(`AI forecast was cut short. Try reducing forecast days or contact support.`);
     }
 
     // Parse AI response (expecting JSON array)
@@ -83,8 +93,9 @@ export async function generateForecast(
     try {
       // Strategy 1: Direct parse (works for clean JSON)
       forecast = JSON.parse(cleanedText);
+      console.log(`[Forecast] Successfully parsed ${forecast.length} data points`);
     } catch (parseError: any) {
-      console.warn('Direct JSON parse failed, trying cleanup strategies:', parseError.message);
+      console.warn('[Forecast] Direct JSON parse failed, trying cleanup strategies:', parseError.message);
       
       try {
         // Strategy 2: Clean up common JSON issues
@@ -96,21 +107,24 @@ export async function generateForecast(
         cleanedText = cleanedText.replace(/,\s*([\]}])/g, '$1');
         
         forecast = JSON.parse(cleanedText);
+        console.log(`[Forecast] Cleanup successful, parsed ${forecast.length} data points`);
       } catch (cleanupError: any) {
-        console.warn('Cleanup strategy failed, trying JSON extraction:', cleanupError.message);
+        console.warn('[Forecast] Cleanup strategy failed, trying JSON extraction:', cleanupError.message);
         
         try {
           // Strategy 3: Extract first valid JSON array from response
           const jsonMatch = cleanedText.match(/\[[\s\S]*\]/);
           if (jsonMatch) {
             forecast = JSON.parse(jsonMatch[0]);
+            console.log(`[Forecast] Extraction successful, parsed ${forecast.length} data points`);
           } else {
             throw new Error('No JSON array found in response');
           }
         } catch (extractError: any) {
-          console.error('All JSON parsing strategies failed:', extractError.message);
-          console.error('Raw response text:', content.text.substring(0, 500));
-          throw parseError; // Throw original error for fallback
+          console.error('[Forecast] All JSON parsing strategies failed:', extractError.message);
+          console.error('[Forecast] Raw response text:', content.text.substring(0, 500));
+          console.error('[Forecast] Response length:', content.text.length);
+          throw new Error('AI response could not be parsed. The forecast data may be incomplete.');
         }
       }
     }
