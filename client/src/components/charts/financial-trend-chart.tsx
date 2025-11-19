@@ -63,8 +63,9 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
     };
   });
   
-  // Save filters to localStorage when they change
+  // Save filters to localStorage when they change and log for debugging
   useEffect(() => {
+    console.log('[FinancialTrendChart] Filters changed:', filters);
     localStorage.setItem('forecastFilters', JSON.stringify(filters));
   }, [filters]);
 

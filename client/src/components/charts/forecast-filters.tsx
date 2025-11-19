@@ -91,6 +91,7 @@ export function ForecastFiltersCard({ filters, onChange, isLoading = false }: Fo
   };
 
   const handleApply = () => {
+    console.log('[ForecastFilters] Apply clicked, pending filters:', pendingFilters);
     onChange(pendingFilters);
   };
 
