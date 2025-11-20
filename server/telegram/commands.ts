@@ -116,7 +116,8 @@ async function formatTransactionMessage(
   message += `${t('transaction.category', lang)}: ${categoryName}\n`;
   message += `${t('transaction.amount', lang)}: ${formatCurrency(amount, currency)}\n`;
   
-  if (currency !== 'USD') {
+  // Show conversion only if we have valid USD amount
+  if (currency !== 'USD' && amountUsd > 0) {
     message += `\n${t('transaction.conversion', lang)}: 1 USD = ${exchangeRate.toFixed(2)} ${currency}\n`;
     message += `${t('transaction.usd_amount', lang)}: ~$${amountUsd.toFixed(0)}`;
   }
