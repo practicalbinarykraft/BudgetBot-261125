@@ -39,7 +39,8 @@ async function formatTransactionMessage(
     0
   );
 
-  const exchangeRate = currency === 'USD' ? 1 : (amount / amountUsd);
+  // Guard against division by zero
+  const exchangeRate = currency === 'USD' ? 1 : (amountUsd > 0 ? (amount / amountUsd) : 1);
   
   let budgetInfo = '';
   let categoryName = t('transaction.no_category', lang);
@@ -136,7 +137,9 @@ async function formatTransactionMessage(
     const displayItems = items.slice(0, 5);
     for (const item of displayItems) {
       const price = parseFloat(item.totalPrice || item.pricePerUnit || 0);
-      message += `• ${item.name} - ${formatCurrency(price, currency)}\n`;
+      // Use per-item currency if available (future mixed-currency receipts)
+      const itemCurrency = item.currency || currency;
+      message += `• ${item.name} - ${formatCurrency(price, itemCurrency)}\n`;
     }
     
     if (items.length > 5) {
