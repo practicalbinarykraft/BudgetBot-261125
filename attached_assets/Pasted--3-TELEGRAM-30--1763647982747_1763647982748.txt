@@ -1,0 +1,188 @@
+ШАГ 3: ДОБАВИТЬ ОБРАБОТЧИК В TELEGRAM БОТ (30 минут)
+═══════════════════════════════════════════════════════
+ЗАДАЧА 3.1: ДОБАВИТЬ VOICE HANDLER
+═══════════════════════════════════════════════════════
+
+ФАЙЛ: server/telegram/commands.ts
+
+НАЙТИ ГДЕ РЕГИСТРИРУЮТСЯ ХЭНДЛЕРЫ (после bot.onText, bot.on('photo'))
+
+ДОБАВИТЬ:
+
+import { whisperService } from '../services/whisper.service';
+import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+
+// Обработка голосовых сообщений
+bot.on('voice', async (msg) => {
+  const chatId = msg.chat.id;
+  const voice = msg.voice;
+  
+  console.log(`🎤 Received voice message from ${chatId}`);
+  
+  try {
+    // 1. Получить информацию о пользователе
+    const telegramUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.telegramId, chatId.toString()))
+      .limit(1);
+    
+    if (!telegramUser.length) {
+      await bot.sendMessage(chatId, 
+        '❌ Пожалуйста, сначала зарегистрируйтесь через /start'
+      );
+      return;
+    }
+    
+    const user = telegramUser[0];
+    const userId = user.id;
+    
+    // 2. Получить API ключ пользователя
+    const settings = await storage.getSettingsByUserId(userId);
+    const openaiApiKey = settings?.openaiApiKey;
+    
+    if (!openaiApiKey) {
+      await bot.sendMessage(chatId,
+        '❌ Для транскрипции голосовых сообщений нужен OpenAI API ключ.\n\n' +
+        'Добавьте его в настройках приложения:\n' +
+        '⚙️ Settings → OpenAI API Key\n\n' +
+        'Получить ключ: https://platform.openai.com/api-keys'
+      );
+      return;
+    }
+    
+    // 3. Показать индикатор "печатает"
+    await bot.sendChatAction(chatId, 'typing');
+    
+    // 4. Скачать голосовой файл
+    const fileId = voice.file_id;
+    const fileInfo = await bot.getFile(fileId);
+    const filePath = fileInfo.file_path;
+    
+    if (!filePath) {
+      throw new Error('Could not get file path');
+    }
+    
+    // URL файла на серверах Telegram
+    const fileUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${filePath}`;
+    
+    // Скачать во временную папку
+    const tempDir = os.tmpdir();
+    const localFilePath = path.join(tempDir, `voice_${Date.now()}.ogg`);
+    
+    const response = await axios({
+      method: 'get',
+      url: fileUrl,
+      responseType: 'stream'
+    });
+    
+    const writer = fs.createWriteStream(localFilePath);
+    response.data.pipe(writer);
+    
+    await new Promise((resolve, reject) => {
+      writer.on('finish', resolve);
+      writer.on('error', reject);
+    });
+    
+    console.log(`📥 Downloaded voice file: ${localFilePath}`);
+    
+    // 5. Транскрибировать через Whisper
+    await bot.sendMessage(chatId, '🎤 Транскрибирую голосовое сообщение...');
+    
+    const transcription = await whisperService.transcribe({
+      audioFilePath: localFilePath,
+      language: 'auto', // автоопределение языка
+      apiKey: openaiApiKey
+    });
+    
+    console.log(`✅ Transcription: "${transcription.text}"`);
+    
+    // 6. Удалить временный файл
+    fs.unlinkSync(localFilePath);
+    
+    // 7. Обработать текст как обычное сообщение
+    // (парсинг транзакции)
+    
+    const text = transcription.text.trim();
+    
+    if (!text) {
+      await bot.sendMessage(chatId, '❌ Не удалось распознать текст');
+      return;
+    }
+    
+    // Показать распознанный текст
+    await bot.sendMessage(chatId, 
+      `✅ Распознано: "${text}"\n\n` +
+      'Обрабатываю...'
+    );
+    
+    // ВАЖНО: Использовать ту же логику что и для текстовых сообщений
+    // Найти функцию parseTransactionText() или аналогичную
+    
+    // Пример (адаптировать под ваш код):
+    const parsed = parseTransactionText(text);
+    
+    if (!parsed.amount) {
+      await bot.sendMessage(chatId,
+        '❌ Не удалось распознать сумму транзакции.\n\n' +
+        `Попробуйте сказать четче, например:\n` +
+        `"Потратил 500 рублей на продукты"`
+      );
+      return;
+    }
+    
+    // Создать транзакцию (использовать существующую логику)
+    // ... (копировать из обработчика текстовых сообщений)
+    
+    await bot.sendMessage(chatId,
+      `✅ Транзакция добавлена!\n\n` +
+      `💰 Сумма: ${parsed.amount} ${parsed.currency}\n` +
+      `📝 Описание: ${parsed.description || 'Не указано'}`
+    );
+    
+  } catch (error) {
+    console.error('❌ Voice message processing failed:', error);
+    
+    await bot.sendMessage(chatId,
+      '❌ Ошибка при обработке голосового сообщения.\n\n' +
+      `Детали: ${error.message}`
+    );
+  }
+});
+
+ДОБАВЛЯЕМЫХ СТРОК: ~150 ✅
+
+═══════════════════════════════════════════════════════
+ВАЖНО: ПОВТОРНОЕ ИСПОЛЬЗОВАНИЕ ЛОГИКИ
+═══════════════════════════════════════════════════════
+
+ПРОБЛЕМА:
+Логика парсинга транзакции сейчас дублируется в:
+- Обработчик текстовых сообщений
+- Обработчик команды /add
+- Теперь голосовые сообщения
+
+РЕШЕНИЕ (ЕСЛИ ЕСТЬ ВРЕМЯ):
+Вынести в отдельную функцию:
+
+// server/telegram/transaction-handler.ts
+export async function handleTransactionText(params: {
+  text: string;
+  userId: number;
+  chatId: number;
+  bot: TelegramBot;
+}): Promise<void> {
+  // ВСЯ логика парсинга и создания транзакции
+  // Переиспользуется везде
+}
+
+// В voice handler:
+await handleTransactionText({
+  text: transcription.text,
+  userId,
+  chatId,
+  bot
+});
