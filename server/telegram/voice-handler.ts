@@ -3,6 +3,7 @@ import { db } from "../db";
 import { users, settings } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { transcribeVoiceMessage, getTelegramFileUrl } from "../services/whisper-transcription.service";
+import { voiceTransactionNormalizer } from "../services/voice-transaction-normalizer.service";
 import { t } from "@shared/i18n";
 import { getUserLanguageByTelegramId } from "./language";
 import { handleTextMessage } from "./commands";
@@ -132,13 +133,64 @@ export async function handleVoiceMessage(bot: TelegramBot, msg: TelegramBot.Mess
       `${t('voice.transcribed', lang)}:\n\n"${result.text}"`
     );
 
+    // Try AI normalization (if Anthropic API key available)
+    const anthropicApiKey = userSettings?.anthropicApiKey;
+    let processedText = result.text;
+
+    if (anthropicApiKey) {
+      console.log('[Voice] Attempting AI normalization...');
+      
+      const normalizationResult = await voiceTransactionNormalizer.normalize({
+        transcribedText: result.text,
+        userCurrency: userSettings?.currency || 'USD',
+        anthropicApiKey
+      });
+
+      if (normalizationResult.success) {
+        const normalized = normalizationResult.data;
+        console.log('[Voice] AI normalization successful:', normalized);
+
+        // Validate that we have required fields (description optional)
+        if (normalized.amount > 0 && normalized.currency) {
+          // Convert normalized data back to "smart" text for handleTextMessage
+          // Format: "{amount} {currency} {description}"
+          // Example: "150000 IDR Coffee at Starbucks"
+          const description = normalized.description?.trim() || result.text.slice(0, 50).trim();
+          processedText = `${normalized.amount} ${normalized.currency} ${description}`;
+          
+          // Show confidence indicator to user
+          if (normalized.confidence === 'medium' || normalized.confidence === 'low') {
+            await bot.sendMessage(
+              chatId,
+              `ℹ️ ${t('voice.ai_processed', lang)}: ${processedText}`
+            );
+          }
+        } else {
+          console.log('[Voice] AI normalization incomplete (missing amount or currency), using original text');
+        }
+      } else {
+        // AI normalization failed - use fallback if available
+        console.log('[Voice] AI normalization failed, trying fallback...');
+        
+        if (normalizationResult.fallback) {
+          const fallback = normalizationResult.fallback;
+          
+          if (fallback.amount > 0 && fallback.currency) {
+            const fallbackDesc = fallback.description?.trim() || result.text.slice(0, 50);
+            processedText = `${fallback.amount} ${fallback.currency} ${fallbackDesc}`;
+            console.log('[Voice] Using fallback parser:', processedText);
+          }
+        }
+      }
+    }
+
     // Create a synthetic text message to reuse existing text handler
     const syntheticMsg: TelegramBot.Message = {
       ...msg,
-      text: result.text,
+      text: processedText,
     };
 
-    // Process transcribed text as a regular text message
+    // Process text as a regular text message
     // This will handle transaction parsing, AI chat, etc.
     await handleTextMessage(bot, syntheticMsg);
 

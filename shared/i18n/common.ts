@@ -132,6 +132,10 @@ export const commonTranslations: Translations = {
     en: '✅ *Transcribed*',
     ru: '✅ *Распознано*',
   },
+  'voice.ai_processed': {
+    en: '🤖 AI processed',
+    ru: '🤖 AI обработал',
+  },
   'voice.download_error': {
     en: '❌ Failed to download voice message. Please try again.',
     ru: '❌ Не удалось загрузить голосовое сообщение. Попробуйте снова.',
