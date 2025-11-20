@@ -4,6 +4,7 @@ import { TrendingUp, TrendingDown, Wallet } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion } from "framer-motion";
 import { useTranslation } from "@/i18n/context";
+import { CHART_COLORS, formatCompactCurrency } from "@/lib/chart-utils";
 
 // Mock data for demo
 const chartData = [
@@ -148,7 +149,7 @@ export function DashboardPreview() {
             <h3 className="text-lg font-semibold mb-4">{t("preview.chart_title")}</h3>
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
                 <XAxis 
                   dataKey="month" 
                   className="text-xs"
@@ -157,6 +158,7 @@ export function DashboardPreview() {
                 <YAxis 
                   className="text-xs"
                   tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                  tickFormatter={formatCompactCurrency}
                 />
                 <Tooltip 
                   contentStyle={{
@@ -169,18 +171,18 @@ export function DashboardPreview() {
                 <Line 
                   type="monotone" 
                   dataKey="income" 
-                  stroke="#3b82f6"
-                  strokeWidth={3}
-                  dot={{ fill: '#3b82f6', r: 4 }}
+                  stroke={CHART_COLORS.income}
+                  strokeWidth={2}
+                  dot={true}
                   animationDuration={2000}
                   animationBegin={500}
                 />
                 <Line 
                   type="monotone" 
                   dataKey="expenses" 
-                  stroke="#ef4444"
-                  strokeWidth={3}
-                  dot={{ fill: '#ef4444', r: 4 }}
+                  stroke={CHART_COLORS.expense}
+                  strokeWidth={2}
+                  dot={true}
                   animationDuration={2000}
                   animationBegin={500}
                 />
