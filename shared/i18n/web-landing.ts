@@ -1,6 +1,12 @@
 import { Translations } from "./types";
 
 export const webLandingTranslations: Translations = {
+  // Dashboard Preview Component
+  "preview.balance": { en: "Balance", ru: "Баланс" },
+  "preview.income": { en: "Income", ru: "Доходы" },
+  "preview.expenses": { en: "Expenses", ru: "Расходы" },
+  "preview.chart_title": { en: "Financial Trends", ru: "Финансовые тренды" },
+
   // Hero Section
   "landing.hero.badge": { en: "AI-Powered Personal Finance", ru: "AI-Финансовый помощник" },
   "landing.hero.preview": { en: "App Dashboard Preview", ru: "Предпросмотр дашборда" },

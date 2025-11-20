@@ -2,6 +2,7 @@ import { useTranslation } from "@/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LanguageToggle } from "@/components/language-toggle";
+import { DashboardPreview } from "@/components/landing/dashboard-preview";
 import { 
   Camera, 
   TrendingUp, 
@@ -105,21 +106,14 @@ export default function LandingPage() {
             </div>
           </motion.div>
 
-          {/* Animated mockup placeholder */}
+          {/* Interactive Dashboard Preview */}
           <motion.div 
             className="mt-16 max-w-5xl mx-auto"
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            <div className="relative rounded-2xl overflow-hidden border bg-card shadow-2xl">
-              <div className="aspect-video bg-gradient-to-br from-primary/20 via-accent/20 to-secondary/20 flex items-center justify-center">
-                <div className="text-center">
-                  <Sparkles className="w-16 h-16 mx-auto mb-4 text-primary animate-pulse" />
-                  <p className="text-muted-foreground">{t("landing.hero.preview")}</p>
-                </div>
-              </div>
-            </div>
+            <DashboardPreview />
           </motion.div>
         </div>
 
