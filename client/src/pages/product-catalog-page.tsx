@@ -14,6 +14,13 @@ export default function ProductCatalogPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
+  // Fetch user settings for currency
+  const { data: settings } = useQuery<{ currency?: string }>({
+    queryKey: ['/api/settings'],
+  });
+
+  const currency = settings?.currency || 'USD';
+
   // Build query params
   const queryParams = new URLSearchParams();
   if (searchQuery) queryParams.append('search', searchQuery);
@@ -95,7 +102,7 @@ export default function ProductCatalogPage() {
         <>
           <div className="space-y-3" data-testid="list-products">
             {products.map(product => (
-              <ProductListItem key={product.id} product={product} />
+              <ProductListItem key={product.id} product={product} currency={currency} />
             ))}
           </div>
 
