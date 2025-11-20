@@ -1,0 +1,180 @@
+📊 ЭТАП 7: ОБНОВИТЬ FRONTEND - PRODUCT DETAIL (15 минут)
+═══════════════════════════════════════════════════════
+ЗАДАЧА 7.1: ПОКАЗЫВАТЬ МУЛЬТИВАЛЮТУ НА ДЕТАЛЬНОЙ СТРАНИЦЕ
+═══════════════════════════════════════════════════════
+
+ФАЙЛ: client/src/pages/product-detail.tsx
+
+НАЙТИ БЛОК "ЛУЧШАЯ ЦЕНА":
+<div className="p-4 bg-green-50 rounded-lg">
+  <div className="flex items-center gap-2 mb-2">
+    <TrendingDown className="w-5 h-5 text-green-600" />
+    <span className="text-sm text-green-900">
+      {t('productDetail.bestPrice', 'Лучшая цена')}
+    </span>
+  </div>
+  <p className="text-2xl font-bold text-green-900">
+    ${parseFloat(product.bestPrice || '0').toFixed(2)}
+  </p>
+  {product.bestStore && (
+    <p className="text-xs text-green-700 mt-1">
+      {product.bestStore}
+    </p>
+  )}
+</div>
+
+ЗАМЕНИТЬ НА:
+
+<div className="p-4 bg-green-50 rounded-lg">
+  <div className="flex items-center gap-2 mb-2">
+    <TrendingDown className="w-5 h-5 text-green-600" />
+    <span className="text-sm text-green-900">
+      {t('productDetail.bestPrice', 'Лучшая цена')}
+    </span>
+  </div>
+  
+  {/* Исходная цена */}
+  {product.bestPriceOriginal && product.bestPriceCurrency ? (
+    <>
+      <p className="text-2xl font-bold text-green-900">
+        {getCurrencySymbol(product.bestPriceCurrency)}
+        {parseFloat(product.bestPriceOriginal).toLocaleString('en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        })}
+      </p>
+      <p className="text-sm text-green-700 mt-1">
+        ≈ ${parseFloat(product.bestPrice || '0').toFixed(2)} USD
+      </p>
+    </>
+  ) : (
+    <p className="text-2xl font-bold text-green-900">
+      ${parseFloat(product.bestPrice || '0').toFixed(2)}
+    </p>
+  )}
+  
+  {product.bestStore && (
+    <p className="text-xs text-green-700 mt-2">
+      {product.bestStore}
+    </p>
+  )}
+</div>
+
+ДОБАВИТЬ getCurrencySymbol ЕСЛИ ЕЩЁ НЕТ:
+
+const getCurrencySymbol = (currency: string): string => {
+  const symbols: Record<string, string> = {
+    'USD': '$',
+    'RUB': '₽',
+    'IDR': 'Rp',
+    'EUR': '€',
+    'GBP': '£'
+  };
+  return symbols[currency] || currency + ' ';
+};
+
+ОБНОВИТЬ INTERFACE Product:
+
+interface Product {
+  // ...existing fields
+  bestPriceOriginal?: string;
+  bestPriceCurrency?: string;
+}
+
+═══════════════════════════════════════════════════════
+
+ЗАДАЧА 7.2: ОБНОВИТЬ ТАБЛИЦУ "ЦЕНЫ ПО МАГАЗИНАМ"
+═══════════════════════════════════════════════════════
+
+НАЙТИ:
+{Object.entries(byStore).map(([storeName, prices]) => {
+  const avgPrice = prices.reduce((sum, p) => sum + parseFloat(p.price), 0) / prices.length;
+  const minPrice = Math.min(...prices.map(p => parseFloat(p.price)));
+  
+  return (
+    <div key={storeName} className="p-4 border rounded-lg">
+      <div className="flex justify-between items-start mb-2">
+        <h3 className="font-semibold">{storeName}</h3>
+        <span className="text-sm text-gray-500">
+          {prices.length} покупок
+        </span>
+      </div>
+      <div className="flex gap-4 text-sm">
+        <span className="text-green-600 font-semibold">
+          Мин: ${minPrice.toFixed(2)}
+        </span>
+        <span className="text-gray-600">
+          Средн: ${avgPrice.toFixed(2)}
+        </span>
+      </div>
+    </div>
+  );
+})}
+
+ЗАМЕНИТЬ НА:
+
+{Object.entries(byStore).map(([storeName, prices]) => {
+  // USD цены
+  const avgPriceUsd = prices.reduce((sum, p) => sum + parseFloat(p.price), 0) / prices.length;
+  const minPriceUsd = Math.min(...prices.map(p => parseFloat(p.price)));
+  
+  // Исходные цены (если есть)
+  const hasOriginal = prices.some(p => p.priceOriginal && p.currencyOriginal);
+  const currency = hasOriginal ? prices[0].currencyOriginal : 'USD';
+  const minOriginal = hasOriginal 
+    ? Math.min(...prices.filter(p => p.priceOriginal).map(p => parseFloat(p.priceOriginal)))
+    : minPriceUsd;
+  
+  return (
+    <div key={storeName} className="p-4 border rounded-lg">
+      <div className="flex justify-between items-start mb-2">
+        <h3 className="font-semibold">{storeName}</h3>
+        <span className="text-sm text-gray-500">
+          {prices.length} покупок
+        </span>
+      </div>
+      
+      {hasOriginal ? (
+        <div className="space-y-1">
+          <div className="flex gap-4 text-sm">
+            <span className="text-green-600 font-semibold">
+              Мин: {getCurrencySymbol(currency)}
+              {minOriginal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+          <div className="text-xs text-gray-500">
+            ≈ ${minPriceUsd.toFixed(2)} USD
+          </div>
+        </div>
+      ) : (
+        <div className="flex gap-4 text-sm">
+          <span className="text-green-600 font-semibold">
+            Мин: ${minPriceUsd.toFixed(2)}
+          </span>
+          <span className="text-gray-600">
+            Средн: ${avgPriceUsd.toFixed(2)}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+})}
+
+ОБНОВИТЬ INTERFACE PriceHistory:
+
+interface PriceHistory {
+  id: number;
+  storeName: string;
+  price: string; // USD
+  purchaseDate: string;
+  
+  // Новые поля
+  priceOriginal?: string;
+  currencyOriginal?: string;
+  exchangeRate?: string;
+}
+
+ОЖИДАЕМЫЙ РЕЗУЛЬТАТ:
+✅ Везде показывается исходная валюта
+✅ USD эквивалент внизу мелким шрифтом
+✅ Для старых записей fallback на USD

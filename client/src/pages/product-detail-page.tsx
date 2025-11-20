@@ -28,8 +28,13 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 interface PriceHistoryEntry {
   id: number;
   storeName: string;
-  price: string;
+  price: string; // USD
   purchaseDate: string;
+  
+  // Dual-currency fields
+  priceOriginal?: string;
+  currencyOriginal?: string;
+  exchangeRate?: string;
 }
 
 interface PriceHistoryData {
@@ -310,8 +315,19 @@ export default function ProductDetailPage() {
           <h2 className="text-xl font-bold mb-4">{t('productDetail.byStore')}</h2>
           <div className="space-y-3">
             {Object.entries(priceData.byStore).map(([storeName, prices]) => {
-              const avgPrice = prices.reduce((sum, p) => sum + parseFloat(p.price), 0) / prices.length;
-              const minPrice = Math.min(...prices.map(p => parseFloat(p.price)));
+              // USD цены
+              const avgPriceUsd = prices.reduce((sum, p) => sum + parseFloat(p.price), 0) / prices.length;
+              const minPriceUsd = Math.min(...prices.map(p => parseFloat(p.price)));
+              
+              // Исходные цены (если есть)
+              const hasOriginal = prices.some(p => p.priceOriginal && p.currencyOriginal);
+              const storeCurrency = hasOriginal ? prices.find(p => p.currencyOriginal)?.currencyOriginal || 'USD' : 'USD';
+              const minOriginal = hasOriginal 
+                ? Math.min(...prices.filter(p => p.priceOriginal).map(p => parseFloat(p.priceOriginal!)))
+                : minPriceUsd;
+              const avgOriginal = hasOriginal
+                ? prices.filter(p => p.priceOriginal).reduce((sum, p) => sum + parseFloat(p.priceOriginal!), 0) / prices.filter(p => p.priceOriginal).length
+                : avgPriceUsd;
 
               return (
                 <Card key={storeName} data-testid={`card-store-${storeName}`}>
@@ -324,14 +340,33 @@ export default function ProductDetailPage() {
                         {prices.length} {t('productDetail.purchases')}
                       </span>
                     </div>
-                    <div className="flex gap-4 text-sm">
-                      <span className="text-green-600 font-semibold">
-                        {t('productDetail.min')}: {currencySymbol}{minPrice.toFixed(2)}
-                      </span>
-                      <span className="text-muted-foreground">
-                        {t('productDetail.avg')}: {currencySymbol}{avgPrice.toFixed(2)}
-                      </span>
-                    </div>
+                    
+                    {hasOriginal ? (
+                      <div className="space-y-1">
+                        <div className="flex gap-4 text-sm">
+                          <span className="text-green-600 font-semibold">
+                            {t('productDetail.min')}: {formatPrice(minOriginal, storeCurrency)}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {t('productDetail.avg')}: {formatPrice(avgOriginal, storeCurrency)}
+                          </span>
+                        </div>
+                        {storeCurrency !== 'USD' && (
+                          <div className="text-xs text-muted-foreground">
+                            ≈ ${minPriceUsd.toFixed(2)} / ${avgPriceUsd.toFixed(2)} USD
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex gap-4 text-sm">
+                        <span className="text-green-600 font-semibold">
+                          {t('productDetail.min')}: {formatPrice(minPriceUsd, currency)}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {t('productDetail.avg')}: {formatPrice(avgPriceUsd, currency)}
+                        </span>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );
