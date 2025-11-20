@@ -157,4 +157,31 @@ router.patch('/:id', withAuth(async (req, res) => {
   }
 }));
 
+// DELETE /api/product-catalog/:id - Удалить товар
+router.delete('/:id', withAuth(async (req, res) => {
+  try {
+    const productId = parseInt(req.params.id);
+    const userId = req.user.id;
+    
+    // Проверить что товар существует и принадлежит пользователю
+    const product = await productCatalogRepository.findById(productId);
+    
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    if (product.userId !== userId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    // Удалить товар (каскадное удаление истории цен настроено в схеме)
+    await productCatalogRepository.delete(productId);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting product:', error);
+    res.status(500).json({ error: 'Failed to delete product' });
+  }
+}));
+
 export default router;
