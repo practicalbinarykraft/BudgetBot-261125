@@ -7,10 +7,22 @@ import type { ParsedReceiptItem } from '../services/ocr/receipt-parser.service';
 
 export interface ReceiptData {
   amount: number;
-  currency: 'USD' | 'RUB' | 'IDR';
+  currency: string; // ANY ISO currency code (from OCR or heuristic)
   merchantName?: string;
   description?: string;
   date?: string;
+  items?: ParsedReceiptItem[];
+}
+
+/**
+ * Результат OCR обработки чека (поддерживает ЛЮБУЮ валюту)
+ */
+export interface ProcessedReceipt {
+  amount: number;
+  currency: string; // ANY ISO currency code
+  description: string;
+  category: string;
+  type: 'expense';
   items?: ParsedReceiptItem[];
 }
 
@@ -27,7 +39,7 @@ export async function processReceiptImage(
   userId: number,
   imageBase64: string,
   mimeType: string = 'image/jpeg'
-): Promise<(ParsedTransaction & { items?: ParsedReceiptItem[] }) | null> {
+): Promise<ProcessedReceipt | null> {
   try {
     console.log('1️⃣ Starting OCR process for user:', userId);
     
@@ -56,12 +68,15 @@ export async function processReceiptImage(
       merchant: parsedReceipt.merchant,
       total: parsedReceipt.total,
       itemsCount: parsedReceipt.items?.length || 0,
-      date: parsedReceipt.date
+      date: parsedReceipt.date,
+      currency: parsedReceipt.currency
     });
 
-    // 3. Конвертировать валюту (если нужно)
-    const currency = mapCurrency(parsedReceipt.merchant);
-    console.log('6️⃣ Currency detected:', currency);
+    // 3. Определить валюту (приоритет):
+    // 1. Claude OCR (parsedReceipt.currency) - HIGHEST (supports ANY ISO currency)
+    // 2. Merchant name heuristic (mapCurrency) - FALLBACK
+    const currency = parsedReceipt.currency || mapCurrency(parsedReceipt.merchant);
+    console.log('6️⃣ Currency detected:', currency, parsedReceipt.currency ? '(from OCR)' : '(from merchant)');
 
     // 4. Определить категорию
     const category = detectCategory(parsedReceipt.merchant);
@@ -92,9 +107,10 @@ export async function processReceiptImage(
 }
 
 /**
- * Определить валюту по названию магазина (по умолчанию IDR для Индонезии)
+ * Определить валюту по названию магазина (эвристика)
+ * Возвращает ISO currency code
  */
-function mapCurrency(merchantName: string): 'USD' | 'RUB' | 'IDR' {
+function mapCurrency(merchantName: string): string {
   const lower = merchantName.toLowerCase();
   
   // Индонезийские магазины
@@ -102,8 +118,8 @@ function mapCurrency(merchantName: string): 'USD' | 'RUB' | 'IDR' {
     return 'IDR';
   }
   
-  // По умолчанию IDR (т.к. пользователь в Индонезии)
-  return 'IDR';
+  // По умолчанию USD (универсальный fallback)
+  return 'USD';
 }
 
 /**

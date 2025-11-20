@@ -3,21 +3,31 @@ import type { ParsedReceiptItem } from '../services/ocr/receipt-parser.service';
 
 export interface ParsedTransaction {
   amount: number;
-  currency: 'USD' | 'RUB' | 'IDR';
+  currency: string; // ANY ISO currency code
   description: string;
   category: string;
   type: 'expense' | 'income';
   items?: ParsedReceiptItem[];  // Receipt items from OCR
 }
 
-const CURRENCY_SYMBOLS: Record<string, 'USD' | 'RUB' | 'IDR'> = {
+const CURRENCY_SYMBOLS: Record<string, string> = {
   '$': 'USD',
   '₽': 'RUB',
   'руб': 'RUB',
   'rub': 'RUB',
-  '₹': 'IDR',
-  'idr': 'IDR',
+  'Rp': 'IDR',
   'rp': 'IDR',
+  'idr': 'IDR',
+  '€': 'EUR',
+  'eur': 'EUR',
+  '฿': 'THB',
+  'thb': 'THB',
+  '£': 'GBP',
+  'gbp': 'GBP',
+  '¥': 'JPY',
+  'jpy': 'JPY',
+  '₩': 'KRW',
+  'krw': 'KRW',
 };
 
 const INCOME_KEYWORDS = [
@@ -28,7 +38,7 @@ const INCOME_KEYWORDS = [
 
 export function parseTransactionText(
   text: string,
-  defaultCurrency: 'USD' | 'RUB' | 'IDR'
+  defaultCurrency: string = 'USD'
 ): ParsedTransaction | null {
   if (!text || text.trim().length === 0) {
     return null;
@@ -37,7 +47,7 @@ export function parseTransactionText(
   const cleaned = text.trim().toLowerCase();
   
   let amount: number | null = null;
-  let currency: 'USD' | 'RUB' | 'IDR' = defaultCurrency;
+  let currency: string = defaultCurrency;
   let description = '';
 
   const amountMatch = cleaned.match(/(\d+(?:[.,]\d+)?[kк]?)\s*([₽₹$]|руб|rub|idr|rp|usd)?/i);
@@ -69,8 +79,12 @@ export function parseTransactionText(
   const currencySymbol = amountMatch[2];
   if (currencySymbol && CURRENCY_SYMBOLS[currencySymbol]) {
     currency = CURRENCY_SYMBOLS[currencySymbol];
-  } else if (cleaned.includes('usd') || currencySymbol?.toLowerCase() === 'usd') {
+  } else if (cleaned.includes('usd')) {
     currency = 'USD';
+  } else if (cleaned.includes('€') || cleaned.includes('eur')) {
+    currency = 'EUR';
+  } else if (cleaned.includes('฿') || cleaned.includes('thb')) {
+    currency = 'THB';
   } else if (cleaned.includes('₽') || cleaned.includes('руб')) {
     currency = 'RUB';
   } else if (cleaned.includes('₹') || cleaned.includes('idr') || cleaned.includes('rp')) {
@@ -115,12 +129,19 @@ function detectCategory(description: string, type: 'expense' | 'income'): string
   return type === 'income' ? 'Salary' : DEFAULT_CATEGORY_EXPENSE;
 }
 
-export function formatCurrency(amount: number, currency: 'USD' | 'RUB' | 'IDR'): string {
+export function formatCurrency(amount: number, currency: string): string {
   const symbols: Record<string, string> = {
     USD: '$',
     RUB: '₽',
-    IDR: '₹'
+    IDR: 'Rp',
+    EUR: '€',
+    THB: '฿',
+    GBP: '£',
+    JPY: '¥',
+    CNY: '¥',
+    KRW: '₩'
   };
 
-  return `${symbols[currency]}${amount.toFixed(2)}`;
+  const symbol = symbols[currency] || currency;
+  return `${symbol}${amount.toFixed(2)}`;
 }

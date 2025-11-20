@@ -1,8 +1,9 @@
 import { randomBytes } from 'crypto';
 import type { ParsedTransaction } from './parser';
+import type { ProcessedReceipt } from './ocr';
 
 interface PendingReceipt {
-  parsed: ParsedTransaction;
+  parsed: ParsedTransaction | ProcessedReceipt; // Support both text and OCR receipts
   categoryId: number | null;
   userId: number;
   expiresAt: number;

@@ -910,8 +910,11 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
 
       // Recalculate with fresh user rates
       const rates = await getUserExchangeRates(user.id);
-      const amountUsd = convertToUSD(parsed.amount, parsed.currency, rates);
-      const exchangeRate = parsed.currency === 'USD' ? 1 : rates[parsed.currency] || 1;
+      
+      // Ensure currency is set (fallback to USD if OCR didn't extract)
+      const currency = parsed.currency || 'USD';
+      const amountUsd = convertToUSD(parsed.amount, currency, rates);
+      const exchangeRate = currency === 'USD' ? 1 : rates[currency] || 1;
 
       const [transaction] = await db
         .insert(transactions)
@@ -922,10 +925,10 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
           amount: parsed.amount.toString(),
           description: parsed.description,
           categoryId,
-          currency: parsed.currency,
+          currency: currency,
           amountUsd: amountUsd.toFixed(2),
           originalAmount: parsed.amount.toString(),
-          originalCurrency: parsed.currency,
+          originalCurrency: currency,
           exchangeRate: exchangeRate.toFixed(4),
           source: 'ocr',
           walletId: primaryWallet.id,
@@ -940,7 +943,7 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
             // Convert item total price to USD
             const itemTotalUsd = convertToUSD(
               parseFloat(item.totalPrice), 
-              parsed.currency, 
+              currency, 
               rates
             );
             
@@ -951,7 +954,7 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
               quantity: item.quantity?.toString(),
               pricePerUnit: item.pricePerUnit.toString(),
               totalPrice: item.totalPrice.toString(),
-              currency: parsed.currency,
+              currency: currency,
               merchantName: parsed.description,
               amountUsd: itemTotalUsd.toFixed(2)  // USD conversion for analytics
             };
@@ -973,6 +976,13 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
             ? parsed.date 
             : format(new Date(), 'yyyy-MM-dd');
           
+          // Per-item currency resolution (matches web upload logic)
+          const getItemCurrency = (item: any): string => {
+            return item.currency       // 1. Per-item currency (future mixed-currency)
+              || parsed.currency       // 2. Receipt-level currency (from OCR)
+              || 'USD';                // 3. Fallback
+          };
+          
           // Передать товары с исходной валютой (НЕ конвертировать в USD!)
           await processReceiptItems({
             receiptItems: parsed.items.map((item: any) => {
@@ -982,8 +992,8 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
               
               return {
                 name: item.name || item.normalizedName || 'Unknown',
-                price: itemTotalPrice,  // ИСХОДНАЯ цена из чека
-                currency: parsed.currency, // ИСХОДНАЯ валюта
+                price: itemTotalPrice,       // ИСХОДНАЯ цена из чека
+                currency: getItemCurrency(item), // Per-item currency с приоритетом
                 quantity: item.quantity || 1
               };
             }),
@@ -1013,7 +1023,7 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
         user.id,
         transaction.id,
         parsed.amount,
-        parsed.currency,
+        currency,
         amountUsd,
         parsed.description,
         categoryId,
