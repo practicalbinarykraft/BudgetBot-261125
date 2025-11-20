@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { ProductCatalog } from '@shared/schemas/product-catalog';
-import { getCurrencySymbol } from '@/lib/currency-utils';
+import { getCurrencySymbol, convertFromUSD } from '@/lib/currency-utils';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 
 interface PriceHistoryEntry {
@@ -46,23 +46,60 @@ interface PriceHistoryData {
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const { data: settings } = useQuery<{ currency?: string }>({
+  const { data: settings } = useQuery<{
+    currency?: string;
+    exchangeRateRUB?: string;
+    exchangeRateIDR?: string;
+    exchangeRateKRW?: string;
+    exchangeRateEUR?: string;
+    exchangeRateCNY?: string;
+  }>({
     queryKey: ['/api/settings'],
   });
 
   const currency = settings?.currency || 'USD';
   const currencySymbol = getCurrencySymbol(currency);
+  
+  // Get exchange rate for user's currency
+  const exchangeRate = currency === 'USD' ? 1 :
+    currency === 'RUB' ? parseFloat(settings?.exchangeRateRUB || '92.5') :
+    currency === 'IDR' ? parseFloat(settings?.exchangeRateIDR || '15750') :
+    currency === 'KRW' ? parseFloat(settings?.exchangeRateKRW || '1320') :
+    currency === 'EUR' ? parseFloat(settings?.exchangeRateEUR || '0.92') :
+    currency === 'CNY' ? parseFloat(settings?.exchangeRateCNY || '7.24') : 1;
 
   const { data: product, isLoading: productLoading } = useQuery<ProductCatalog>({
     queryKey: ['/api/product-catalog', id],
     enabled: !!id,
   });
+
+  // ИСХОДНАЯ цена из чека (приоритет) для bestPrice
+  const hasOriginalPrice = product?.bestPriceOriginal && product?.bestCurrencyOriginal;
+  const originalPrice = parseFloat(product?.bestPriceOriginal || '0');
+  const originalCurrency = product?.bestCurrencyOriginal || 'USD';
+  const originalCurrencySymbol = getCurrencySymbol(originalCurrency);
+  
+  // USD цена для конвертации
+  const priceUsd = parseFloat(product?.bestPrice || '0');
+  
+  // Для старых товаров без исходной цены - конвертируем USD в пользовательскую валюту
+  const priceInUserCurrency = convertFromUSD(priceUsd, currency, exchangeRate);
+
+  // Форматирование с локализацией
+  const formatPrice = (amount: number, curr: string) => {
+    return new Intl.NumberFormat(language === 'ru' ? 'ru-RU' : 'en-US', {
+      style: 'currency',
+      currency: curr,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount);
+  };
 
   const { data: priceData } = useQuery<PriceHistoryData>({
     queryKey: ['/api/product-catalog', id, 'price-history'],
@@ -215,8 +252,22 @@ export default function ProductDetailPage() {
               <span className="text-sm">{t('productDetail.bestPrice')}</span>
             </div>
             <p className="text-2xl font-bold text-green-700" data-testid="text-best-price">
-              {currencySymbol}{parseFloat(product.bestPrice || '0').toFixed(2)}
+              {hasOriginalPrice 
+                ? formatPrice(originalPrice, originalCurrency)
+                : formatPrice(priceInUserCurrency, currency)
+              }
             </p>
+            {/* Показать USD конвертацию */}
+            {hasOriginalPrice && originalCurrency !== 'USD' && (
+              <p className="text-xs text-muted-foreground mt-1">
+                ≈ {formatPrice(priceUsd, 'USD')}
+              </p>
+            )}
+            {!hasOriginalPrice && currency !== 'USD' && (
+              <p className="text-xs text-muted-foreground mt-1">
+                ≈ {formatPrice(priceUsd, 'USD')}
+              </p>
+            )}
             {product.bestStore && (
               <p className="text-xs text-muted-foreground mt-1" data-testid="text-best-store">
                 {product.bestStore}

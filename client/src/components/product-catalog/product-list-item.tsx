@@ -19,11 +19,27 @@ export function ProductListItem({ product, currency = 'USD', exchangeRate = 1 }:
   const { t, language } = useTranslation();
   const [, navigate] = useLocation();
   const locale = language === 'ru' ? ru : enUS;
-  const currencySymbol = getCurrencySymbol(currency);
 
-  // Convert USD price to user's currency
+  // ИСХОДНАЯ цена из чека (приоритет)
+  const hasOriginalPrice = product.bestPriceOriginal && product.bestCurrencyOriginal;
+  const originalPrice = parseFloat(product.bestPriceOriginal || '0');
+  const originalCurrency = product.bestCurrencyOriginal || 'USD';
+  
+  // USD цена для конвертации
   const priceUsd = parseFloat(product.bestPrice || '0');
+  
+  // Для старых товаров без исходной цены - конвертируем USD в пользовательскую валюту
   const priceInUserCurrency = convertFromUSD(priceUsd, currency, exchangeRate);
+  
+  // Форматирование с локализацией
+  const formatPrice = (amount: number, curr: string) => {
+    return new Intl.NumberFormat(language === 'ru' ? 'ru-RU' : 'en-US', {
+      style: 'currency',
+      currency: curr,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount);
+  };
 
   const formattedDate = product.lastPurchaseDate
     ? format(parseISO(product.lastPurchaseDate), "d MMM yyyy", { locale })
@@ -105,16 +121,25 @@ export function ProductListItem({ product, currency = 'USD', exchangeRate = 1 }:
                     <div className="flex items-center gap-1">
                       <TrendingDown className="w-4 h-4 text-green-600" />
                       <span className="text-lg font-bold text-green-700" data-testid={`text-best-price-${product.id}`}>
-                        {currencySymbol}{priceInUserCurrency.toFixed(2)}
+                        {hasOriginalPrice 
+                          ? formatPrice(originalPrice, originalCurrency)
+                          : formatPrice(priceInUserCurrency, currency)
+                        }
                       </span>
                     </div>
                     <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                       {t('productCatalog.bestPrice')}
                     </Badge>
                   </div>
-                  {currency !== 'USD' && (
+                  {/* Показать USD конвертацию */}
+                  {hasOriginalPrice && originalCurrency !== 'USD' && (
                     <span className="text-xs text-muted-foreground">
-                      ≈ ${priceUsd.toFixed(2)} USD
+                      ≈ {formatPrice(priceUsd, 'USD')}
+                    </span>
+                  )}
+                  {!hasOriginalPrice && currency !== 'USD' && (
+                    <span className="text-xs text-muted-foreground">
+                      ≈ {formatPrice(priceUsd, 'USD')}
                     </span>
                   )}
                 </div>

@@ -30,8 +30,13 @@ export const productCatalog = pgTable('product_catalog', {
   
   // Цены (денормализация для скорости)
   averagePrice: decimal('average_price', { precision: 10, scale: 2 }),
-  bestPrice: decimal('best_price', { precision: 10, scale: 2 }),
+  bestPrice: decimal('best_price', { precision: 10, scale: 2 }), // USD для сравнения
   bestStore: text('best_store'),
+  
+  // Исходная цена лучшего предложения (мультивалютность)
+  bestPriceOriginal: decimal('best_price_original', { precision: 12, scale: 2 }),
+  bestCurrencyOriginal: text('best_currency_original'),
+  bestExchangeRate: decimal('best_exchange_rate', { precision: 12, scale: 6 }),
   
   // Метаданные
   imageUrl: text('image_url'),

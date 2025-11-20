@@ -84,7 +84,7 @@ export async function updateBestPrice(productId: number): Promise<void> {
   
   if (prices.length === 0) return;
   
-  // Найти лучшую (минимальную)
+  // Найти лучшую по USD (минимальную)
   const best = prices.reduce((min, p) => 
     parseFloat(p.price) < parseFloat(min.price) ? p : min
   );
@@ -93,11 +93,15 @@ export async function updateBestPrice(productId: number): Promise<void> {
   const sum = prices.reduce((acc, p) => acc + parseFloat(p.price), 0);
   const avg = sum / prices.length;
   
-  // Обновить товар
+  // Обновить товар (сохранить и USD и исходную валюту)
   await productCatalogRepository.update(productId, {
     bestPrice: best.price,
     bestStore: best.storeName,
-    averagePrice: avg.toFixed(2)
+    averagePrice: avg.toFixed(2),
+    // Исходная валюта из чека (fallback к USD если нет)
+    bestPriceOriginal: best.priceOriginal || best.price,
+    bestCurrencyOriginal: best.currencyOriginal || best.currency || 'USD',
+    bestExchangeRate: best.exchangeRate || '1'
   });
 }
 
