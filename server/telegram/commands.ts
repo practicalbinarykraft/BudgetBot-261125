@@ -973,19 +973,29 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
             ? parsed.date 
             : format(new Date(), 'yyyy-MM-dd');
           
+          // Конвертировать цены в USD для каталога
           await processReceiptItems({
-            receiptItems: parsed.items.map((item: any) => ({
-              name: item.name || item.normalizedName || 'Unknown',
-              price: typeof item.totalPrice === 'number' ? item.totalPrice : (parseFloat(item.totalPrice) || 0),
-              quantity: item.quantity || 1
-            })),
+            receiptItems: parsed.items.map((item: any) => {
+              const itemTotalPrice = typeof item.totalPrice === 'number' 
+                ? item.totalPrice 
+                : (parseFloat(item.totalPrice) || 0);
+              
+              // Конвертировать в USD используя те же rates что и для транзакции
+              const priceUsd = convertToUSD(itemTotalPrice, parsed.currency, rates);
+              
+              return {
+                name: item.name || item.normalizedName || 'Unknown',
+                price: priceUsd,  // Цена уже в USD
+                quantity: item.quantity || 1
+              };
+            }),
             userId: user.id,
             storeName: parsed.description || 'Unknown Store',
             purchaseDate,
             anthropicApiKey: userSettings?.anthropicApiKey || undefined
           });
           
-          console.log(`✅ Product catalog updated from Telegram receipt (user ${user.id}, ${parsed.items.length} items)`);
+          console.log(`✅ Product catalog updated from Telegram receipt (user ${user.id}, ${parsed.items.length} items, currency: ${parsed.currency})`);
         } catch (error) {
           console.error('❌ Failed to update product catalog from Telegram:', error);
           // Don't fail the transaction if catalog update fails
