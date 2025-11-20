@@ -202,4 +202,30 @@ export const webProductCatalogTranslations: Translations = {
     en: 'Optional',
     ru: 'Необязательно',
   },
+
+  // Delete Product
+  'productDetail.delete': {
+    en: 'Delete',
+    ru: 'Удалить',
+  },
+  'productDetail.deleteConfirmTitle': {
+    en: 'Delete Product',
+    ru: 'Удалить товар',
+  },
+  'productDetail.deleteConfirmDesc': {
+    en: 'Are you sure you want to delete this product? This will remove all price history. This action cannot be undone.',
+    ru: 'Вы уверены, что хотите удалить этот товар? Вся история цен будет удалена. Это действие нельзя отменить.',
+  },
+  'productDetail.deleteSuccess': {
+    en: 'Product deleted successfully',
+    ru: 'Товар успешно удалён',
+  },
+  'productDetail.deleteError': {
+    en: 'Failed to delete product',
+    ru: 'Не удалось удалить товар',
+  },
+  'productDetail.confirmDelete': {
+    en: 'Delete',
+    ru: 'Удалить',
+  },
 };
