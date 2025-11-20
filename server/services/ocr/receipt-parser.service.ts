@@ -17,12 +17,14 @@ export interface ParsedReceiptItem {
   quantity: number;
   pricePerUnit: number;
   totalPrice: number;
+  currency?: string; // Per-item currency (for mixed-currency receipts)
 }
 
 export interface ParsedReceipt {
   total: number;
   merchant: string;
   date: string;
+  currency?: string; // Currency code from receipt (USD, IDR, RUB, etc.)
   items: ParsedReceiptItem[];
 }
 
@@ -65,6 +67,7 @@ Parse this receipt image and extract structured data.
 Return ONLY valid JSON in this exact format (no explanations, no markdown):
 {
   "total": 180000,
+  "currency": "IDR",
   "merchant": "Moris Grocier",
   "date": "2025-11-17",
   "items": [
@@ -85,9 +88,10 @@ Return ONLY valid JSON in this exact format (no explanations, no markdown):
 
 Required fields:
 1. total - final receipt total (number)
-2. merchant - store/merchant name (string)
-3. date - purchase date in YYYY-MM-DD format (string)
-4. items - array of purchased items with:
+2. currency - 3-letter currency code (USD, IDR, RUB, EUR, etc.) - detect from receipt symbols or context
+3. merchant - store/merchant name (string)
+4. date - purchase date in YYYY-MM-DD format (string)
+5. items - array of purchased items with:
    - name: item description from receipt (string)
    - quantity: number of units (default 1 if not specified)
    - pricePerUnit: price for one unit (number)
@@ -95,6 +99,8 @@ Required fields:
 
 Rules:
 - All prices in original currency (keep as shown on receipt)
+- Detect currency from symbols: $ → USD, Rp → IDR, ₽ → RUB, € → EUR
+- If currency symbol unclear, infer from merchant location/name
 - If quantity not specified, use 1
 - Calculate: pricePerUnit = totalPrice / quantity
 - Extract ALL items from receipt

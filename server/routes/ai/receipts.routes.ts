@@ -8,6 +8,26 @@ import { processReceiptItems } from "../../services/product-catalog.service";
 const router = Router();
 
 /**
+ * Определить валюту по названию магазина (аналогично Telegram боту)
+ */
+function detectCurrencyFromMerchant(merchantName: string): string {
+  const lower = merchantName.toLowerCase();
+  
+  // Индонезийские магазины
+  if (lower.includes('pepito') || lower.includes('indomaret') || lower.includes('alfamart')) {
+    return 'IDR';
+  }
+  
+  // Российские магазины
+  if (lower.includes('пятёрочка') || lower.includes('магнит') || lower.includes('дикси')) {
+    return 'RUB';
+  }
+  
+  // По умолчанию IDR (т.к. основной пользователь в Индонезии)
+  return 'IDR';
+}
+
+/**
  * POST /api/ai/receipt-with-items
  * Parse receipt and extract individual items with prices
  * 
@@ -40,8 +60,22 @@ router.post("/receipt-with-items", withAuth(async (req, res) => {
       });
     }
     
+    // Получить курсы валют из настроек
+    const exchangeRates: Record<string, number> = {
+      'USD': 1,
+      'RUB': parseFloat(settings?.exchangeRateRUB || '90'),
+      'IDR': parseFloat(settings?.exchangeRateIDR || '16000'),
+      'EUR': parseFloat(settings?.exchangeRateEUR || '0.95'),
+    };
+    
+    // Определить валюту (из настроек или USD по умолчанию)
+    const currency = settings?.currency || 'USD';
+    
     const validMimeType = mimeType || 'image/jpeg';
     const parsed = await parseReceiptWithItems(imageBase64, anthropicApiKey, validMimeType);
+    
+    // Получить валюту транзакции (если привязан)
+    let transactionCurrency: string | null = null;
     
     if (transactionId) {
       const txId = parseInt(transactionId);
@@ -54,6 +88,26 @@ router.post("/receipt-with-items", withAuth(async (req, res) => {
         return res.status(403).json({ error: "Transaction not found or access denied" });
       }
       
+      transactionCurrency = transaction.currency;
+    }
+    
+    // Функция определения валюты для каждого товара (приоритет):
+    // 1. Per-item currency (если Claude извлек для конкретного товара) - HIGHEST
+    // 2. Receipt-level currency (если Claude извлек для всего чека)
+    // 3. Transaction currency (если привязан к существующей транзакции)
+    // 4. User settings
+    // 5. Merchant heuristic - LAST FALLBACK
+    const getItemCurrency = (item: any): string => {
+      return item.currency 
+        || parsed.currency 
+        || transactionCurrency 
+        || currency 
+        || detectCurrencyFromMerchant(parsed.merchant || '');
+    };
+    
+    // Сохранить items в БД (если привязан к транзакции)
+    if (transactionId) {
+      const txId = parseInt(transactionId);
       const items = parsed.items.map(item => ({
         transactionId: txId,
         itemName: item.name,
@@ -61,7 +115,7 @@ router.post("/receipt-with-items", withAuth(async (req, res) => {
         quantity: (item.quantity ?? 1).toString(),
         pricePerUnit: (item.pricePerUnit ?? 0).toString(),
         totalPrice: (item.totalPrice ?? 0).toString(),
-        currency: transaction.currency,
+        currency: getItemCurrency(item), // Per-item currency с правильным приоритетом
         merchantName: parsed.merchant || '',
       }));
       
@@ -74,11 +128,13 @@ router.post("/receipt-with-items", withAuth(async (req, res) => {
         receiptItems: parsed.items.map(item => ({
           name: item.name,
           price: item.totalPrice,
+          currency: getItemCurrency(item), // Per-item currency с правильным приоритетом
           quantity: item.quantity || 1
         })),
         userId,
         storeName: parsed.merchant || 'Unknown Store',
         purchaseDate: parsed.date,
+        exchangeRates,
         anthropicApiKey
       });
       

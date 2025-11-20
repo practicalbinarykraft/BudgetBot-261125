@@ -1,0 +1,134 @@
+📊 ЭТАП 3: ОБНОВИТЬ PRODUCT CATALOG SERVICE (20 минут)
+═══════════════════════════════════════════════════════
+ЗАДАЧА 3.1: СОХРАНЯТЬ ИСХОДНУЮ ВАЛЮТУ
+═══════════════════════════════════════════════════════
+
+ФАЙЛ: server/services/product-catalog.service.ts
+
+НАЙТИ ФУНКЦИЮ: processReceiptItems
+
+ТЕКУЩИЙ КОД:
+// 4. Добавить цену в историю
+await productPriceHistoryRepository.create({
+  productId,
+  storeName,
+  price: item.price.toString(),
+  currency: 'USD',
+  purchaseDate
+});
+
+ЗАМЕНИТЬ НА:
+
+// 4. Добавить цену в историю (с исходной валютой)
+await productPriceHistoryRepository.create({
+  productId,
+  storeName,
+  
+  // USD цена (конвертированная)
+  price: item.priceUsd?.toString() || item.price.toString(),
+  currency: 'USD',
+  
+  // Исходная цена из чека
+  priceOriginal: item.priceOriginal?.toString() || item.price.toString(),
+  currencyOriginal: item.currencyOriginal || params.currency || 'USD',
+  exchangeRate: item.exchangeRate?.toString(),
+  
+  purchaseDate
+});
+
+═══════════════════════════════════════════════════════
+
+ЗАДАЧА 3.2: ОБНОВИТЬ СИГНАТУРУ ФУНКЦИИ
+═══════════════════════════════════════════════════════
+
+НАЙТИ:
+interface ReceiptItem {
+  name: string;
+  price: number;
+  quantity?: number;
+}
+
+ЗАМЕНИТЬ НА:
+
+interface ReceiptItem {
+  name: string;
+  
+  // USD цена
+  price: number;
+  priceUsd?: number;
+  
+  // Исходная цена
+  priceOriginal?: number;
+  currencyOriginal?: string;
+  exchangeRate?: number;
+  
+  quantity?: number;
+}
+
+И ОБНОВИТЬ ПАРАМЕТРЫ:
+
+export async function processReceiptItems(params: {
+  receiptItems: ReceiptItem[];
+  userId: number;
+  storeName: string;
+  purchaseDate: string;
+  currency?: string; // ← НОВЫЙ ПАРАМЕТР
+  anthropicApiKey?: string;
+}): Promise<void>
+
+═══════════════════════════════════════════════════════
+
+ЗАДАЧА 3.3: ОБНОВИТЬ updateBestPrice
+═══════════════════════════════════════════════════════
+
+НАЙТИ:
+export async function updateBestPrice(productId: number): Promise<void> {
+  const prices = await productPriceHistoryRepository.findByProduct(productId);
+  
+  if (prices.length === 0) return;
+  
+  const best = prices.reduce((min, p) => 
+    parseFloat(p.price) < parseFloat(min.price) ? p : min
+  );
+  
+  const sum = prices.reduce((acc, p) => acc + parseFloat(p.price), 0);
+  const avg = sum / prices.length;
+  
+  await productCatalogRepository.update(productId, {
+    bestPrice: best.price,
+    bestStore: best.storeName,
+    averagePrice: avg.toFixed(2)
+  });
+}
+
+ЗАМЕНИТЬ НА:
+
+export async function updateBestPrice(productId: number): Promise<void> {
+  const prices = await productPriceHistoryRepository.findByProduct(productId);
+  
+  if (prices.length === 0) return;
+  
+  // Найти лучшую цену по USD
+  const best = prices.reduce((min, p) => 
+    parseFloat(p.price) < parseFloat(min.price) ? p : min
+  );
+  
+  // Рассчитать среднюю USD цену
+  const sum = prices.reduce((acc, p) => acc + parseFloat(p.price), 0);
+  const avg = sum / prices.length;
+  
+  await productCatalogRepository.update(productId, {
+    // USD цены
+    bestPrice: best.price,
+    bestStore: best.storeName,
+    averagePrice: avg.toFixed(2),
+    
+    // Исходная цена лучшего предложения
+    bestPriceOriginal: best.priceOriginal,
+    bestPriceCurrency: best.currencyOriginal
+  });
+}
+
+ОЖИДАЕМЫЙ РЕЗУЛЬТАТ:
+✅ Сохраняет обе валюты
+✅ Обновляет product_catalog с исходной валютой
