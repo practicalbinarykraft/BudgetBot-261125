@@ -1,6 +1,7 @@
 import { useTranslation } from "@/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { LanguageToggle } from "@/components/language-toggle";
 import { 
   Camera, 
   TrendingUp, 
@@ -33,6 +34,22 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Navigation Bar */}
+      <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-6 h-6 text-primary" />
+            <span className="font-bold text-lg">{t("landing.footer.app_name")}</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <LanguageToggle />
+            <Button asChild variant="default" size="sm" data-testid="button-nav-login">
+              <Link href="/login">{t("landing.hero.cta_primary")}</Link>
+            </Button>
+          </div>
+        </div>
+      </nav>
+
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-b from-primary/5 via-background to-background">
         <div className="container mx-auto px-4 py-24 md:py-32">

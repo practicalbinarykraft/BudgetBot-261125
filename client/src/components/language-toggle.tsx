@@ -13,13 +13,14 @@ export function LanguageToggle() {
   return (
     <Button
       variant="ghost"
-      size="icon"
+      size="sm"
       onClick={toggleLanguage}
       data-testid="button-language-toggle"
       title={language === 'en' ? 'Switch to Russian' : 'Переключить на английский'}
+      className="gap-2"
     >
-      <Languages className="h-5 w-5" />
-      <span className="ml-2 text-sm font-medium">{language.toUpperCase()}</span>
+      <Languages className="h-4 w-4" />
+      <span className="text-sm font-medium">{language.toUpperCase()}</span>
     </Button>
   );
 }
