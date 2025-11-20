@@ -5,6 +5,7 @@ import { ArrowLeft, Search, TrendingDown, ShoppingBag, Package, Tag, Weight } fr
 import { useState } from 'react';
 import { PriceHistoryChart } from '@/components/product-catalog/price-history-chart';
 import { PriceSearchModal } from '@/components/product-catalog/price-search-modal';
+import { ProductEditDialog } from '@/components/product-catalog/product-edit-dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -95,7 +96,10 @@ export default function ProductDetailPage() {
       </Button>
 
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2" data-testid="text-product-name">{product.name}</h1>
+        <div className="flex items-start justify-between gap-4 mb-2">
+          <h1 className="text-3xl font-bold" data-testid="text-product-name">{product.name}</h1>
+          <ProductEditDialog product={product} />
+        </div>
         <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
           {product.category && (
             <span className="flex items-center gap-1" data-testid="text-category">

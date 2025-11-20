@@ -137,18 +137,18 @@ router.patch('/:id', withAuth(async (req, res) => {
     
     const updateData = validation.data;
     
-    // Если имя изменилось - обновить normalizedName
-    if (updateData.name) {
-      const updatedProduct = await productCatalogRepository.update(productId, {
-        ...updateData,
-        normalizedName: normalizeName(updateData.name)
-      });
-      
-      return res.json(updatedProduct);
+    // Преобразовать undefined в null для Drizzle (чтобы очищать поля)
+    const cleanedData: any = {};
+    for (const key in updateData) {
+      cleanedData[key] = updateData[key as keyof typeof updateData] ?? null;
     }
     
-    // Обновить без изменения normalizedName
-    const updatedProduct = await productCatalogRepository.update(productId, updateData);
+    // Если имя изменилось - обновить normalizedName
+    if (updateData.name) {
+      cleanedData.normalizedName = normalizeName(updateData.name);
+    }
+    
+    const updatedProduct = await productCatalogRepository.update(productId, cleanedData);
     
     res.json(updatedProduct);
   } catch (error) {

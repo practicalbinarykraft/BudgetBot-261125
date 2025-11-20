@@ -59,11 +59,11 @@ export const insertProductCatalogSchema = createInsertSchema(productCatalog).omi
 
 export const updateProductCatalogSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  category: z.string().min(1, 'Category is required').optional(),
-  brand: z.string().optional(),
-  weight: z.string().optional(),
-  unit: z.string().optional(),
-  subcategory: z.string().optional()
+  category: z.string().optional().transform(val => val === '' ? undefined : val),
+  brand: z.string().optional().transform(val => val === '' ? undefined : val),
+  weight: z.string().optional().transform(val => val === '' ? undefined : val),
+  unit: z.string().optional().transform(val => val === '' ? undefined : val),
+  subcategory: z.string().optional().transform(val => val === '' ? undefined : val)
 });
 
 export type UpdateProductCatalog = z.infer<typeof updateProductCatalogSchema>;
