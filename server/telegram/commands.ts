@@ -113,7 +113,7 @@ async function formatTransactionMessage(
   let message = `${typeLabel}\n\n`;
   message += `${t('transaction.description', lang)}: ${description}\n`;
   message += `${t('transaction.category', lang)}: ${categoryName}\n`;
-  message += `${t('transaction.amount', lang)}: ${formatCurrency(amount, currency as 'USD' | 'RUB' | 'IDR')}\n`;
+  message += `${t('transaction.amount', lang)}: ${formatCurrency(amount, currency)}\n`;
   
   if (currency !== 'USD') {
     message += `\n${t('transaction.conversion', lang)}: 1 USD = ${exchangeRate.toFixed(2)} ${currency}\n`;
@@ -131,14 +131,12 @@ async function formatTransactionMessage(
 
   // Add receipt items if available
   if (items && items.length > 0) {
-    const currencySymbol = currency === 'IDR' ? 'Rp' : currency === 'RUB' ? '₽' : '$';
     message += '\n\n🛒 ' + (lang === 'ru' ? 'Товары' : 'Items') + ':\n';
     
     const displayItems = items.slice(0, 5);
     for (const item of displayItems) {
       const price = parseFloat(item.totalPrice || item.pricePerUnit || 0);
-      const formattedPrice = price.toLocaleString('en-US', { maximumFractionDigits: 0 });
-      message += `• ${item.name} - ${currencySymbol}${formattedPrice}\n`;
+      message += `• ${item.name} - ${formatCurrency(price, currency)}\n`;
     }
     
     if (items.length > 5) {
