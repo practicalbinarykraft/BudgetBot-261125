@@ -7,18 +7,23 @@ import { format, parseISO } from "date-fns";
 import { ru, enUS } from "date-fns/locale";
 import { useTranslation } from "@/i18n/context";
 import { ProductCatalog } from "@shared/schemas/product-catalog";
-import { getCurrencySymbol } from "@/lib/currency-utils";
+import { getCurrencySymbol, convertFromUSD } from "@/lib/currency-utils";
 
 interface ProductListItemProps {
   product: ProductCatalog;
   currency?: string;
+  exchangeRate?: number;
 }
 
-export function ProductListItem({ product, currency = 'USD' }: ProductListItemProps) {
+export function ProductListItem({ product, currency = 'USD', exchangeRate = 1 }: ProductListItemProps) {
   const { t, language } = useTranslation();
   const [, navigate] = useLocation();
   const locale = language === 'ru' ? ru : enUS;
   const currencySymbol = getCurrencySymbol(currency);
+
+  // Convert USD price to user's currency
+  const priceUsd = parseFloat(product.bestPrice || '0');
+  const priceInUserCurrency = convertFromUSD(priceUsd, currency, exchangeRate);
 
   const formattedDate = product.lastPurchaseDate
     ? format(parseISO(product.lastPurchaseDate), "d MMM yyyy", { locale })
@@ -95,16 +100,23 @@ export function ProductListItem({ product, currency = 'USD' }: ProductListItemPr
             {/* Right: Price & Button */}
             <div className="flex flex-col items-end gap-2 flex-shrink-0">
               {product.bestPrice && (
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1">
-                    <TrendingDown className="w-4 h-4 text-green-600" />
-                    <span className="text-lg font-bold text-green-700" data-testid={`text-best-price-${product.id}`}>
-                      {currencySymbol}{parseFloat(product.bestPrice).toFixed(2)}
-                    </span>
+                <div className="flex flex-col items-end gap-1">
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <TrendingDown className="w-4 h-4 text-green-600" />
+                      <span className="text-lg font-bold text-green-700" data-testid={`text-best-price-${product.id}`}>
+                        {currencySymbol}{priceInUserCurrency.toFixed(2)}
+                      </span>
+                    </div>
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      {t('productCatalog.bestPrice')}
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                    {t('productCatalog.bestPrice')}
-                  </Badge>
+                  {currency !== 'USD' && (
+                    <span className="text-xs text-muted-foreground">
+                      ≈ ${priceUsd.toFixed(2)} USD
+                    </span>
+                  )}
                 </div>
               )}
               <Button

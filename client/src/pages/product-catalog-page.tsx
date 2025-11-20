@@ -14,12 +14,27 @@ export default function ProductCatalogPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  // Fetch user settings for currency
-  const { data: settings } = useQuery<{ currency?: string }>({
+  // Fetch user settings for currency and exchange rates
+  const { data: settings } = useQuery<{
+    currency?: string;
+    exchangeRateRUB?: string;
+    exchangeRateIDR?: string;
+    exchangeRateKRW?: string;
+    exchangeRateEUR?: string;
+    exchangeRateCNY?: string;
+  }>({
     queryKey: ['/api/settings'],
   });
 
   const currency = settings?.currency || 'USD';
+  
+  // Get exchange rate for user's currency
+  const exchangeRate = currency === 'USD' ? 1 :
+    currency === 'RUB' ? parseFloat(settings?.exchangeRateRUB || '92.5') :
+    currency === 'IDR' ? parseFloat(settings?.exchangeRateIDR || '15750') :
+    currency === 'KRW' ? parseFloat(settings?.exchangeRateKRW || '1320') :
+    currency === 'EUR' ? parseFloat(settings?.exchangeRateEUR || '0.92') :
+    currency === 'CNY' ? parseFloat(settings?.exchangeRateCNY || '7.24') : 1;
 
   // Build query params
   const queryParams = new URLSearchParams();
@@ -102,7 +117,12 @@ export default function ProductCatalogPage() {
         <>
           <div className="space-y-3" data-testid="list-products">
             {products.map(product => (
-              <ProductListItem key={product.id} product={product} currency={currency} />
+              <ProductListItem 
+                key={product.id} 
+                product={product} 
+                currency={currency}
+                exchangeRate={exchangeRate}
+              />
             ))}
           </div>
 

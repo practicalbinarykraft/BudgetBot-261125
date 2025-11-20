@@ -12,8 +12,22 @@ export function getCurrencySymbol(currency: string): string {
     USD: "$",
     RUB: "₽",
     IDR: "Rp",
+    KRW: "₩",
+    EUR: "€",
+    CNY: "¥",
   };
   return symbols[currency] || currency;
+}
+
+/**
+ * Convert USD amount to target currency using exchange rate
+ * @param usdAmount - Amount in USD
+ * @param targetCurrency - Target currency code
+ * @param exchangeRate - Exchange rate (how many units of target currency = 1 USD)
+ */
+export function convertFromUSD(usdAmount: number, targetCurrency: string, exchangeRate: number): number {
+  if (targetCurrency === 'USD') return usdAmount;
+  return usdAmount * exchangeRate;
 }
 
 function isValidAmount(value: string | null | undefined): boolean {
