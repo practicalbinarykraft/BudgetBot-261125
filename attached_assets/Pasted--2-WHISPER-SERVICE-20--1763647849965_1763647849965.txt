@@ -1,0 +1,87 @@
+ШАГ 2: СОЗДАТЬ WHISPER SERVICE (20 минут)
+═══════════════════════════════════════════════════════
+ЗАДАЧА 2.1: СОЗДАТЬ WHISPER SERVICE
+═══════════════════════════════════════════════════════
+
+СОЗДАТЬ ФАЙЛ: server/services/whisper.service.ts
+
+import OpenAI from 'openai';
+import fs from 'fs';
+import path from 'path';
+
+export class WhisperService {
+  
+  // Транскрибировать аудио файл
+  async transcribe(params: {
+    audioFilePath: string;
+    language?: string; // 'ru', 'en', 'auto'
+    apiKey: string;
+  }): Promise<{
+    text: string;
+    language: string;
+    duration: number;
+  }> {
+    const { audioFilePath, language = 'auto', apiKey } = params;
+    
+    try {
+      // Инициализировать OpenAI client
+      const openai = new OpenAI({
+        apiKey: apiKey
+      });
+      
+      // Проверить размер файла (макс 25 MB)
+      const stats = fs.statSync(audioFilePath);
+      const fileSizeInMB = stats.size / (1024 * 1024);
+      
+      if (fileSizeInMB > 25) {
+        throw new Error('Audio file too large (max 25 MB)');
+      }
+      
+      // Создать read stream
+      const audioFile = fs.createReadStream(audioFilePath);
+      
+      // Вызвать Whisper API
+      const startTime = Date.now();
+      
+      const transcription = await openai.audio.transcriptions.create({
+        file: audioFile,
+        model: 'whisper-1',
+        language: language === 'auto' ? undefined : language,
+        response_format: 'verbose_json' // получить детали
+      });
+      
+      const duration = (Date.now() - startTime) / 1000;
+      
+      console.log(`✅ Whisper transcription completed in ${duration}s`);
+      
+      return {
+        text: transcription.text,
+        language: transcription.language || 'unknown',
+        duration: transcription.duration || 0
+      };
+      
+    } catch (error) {
+      console.error('❌ Whisper transcription failed:', error);
+      throw new Error(`Transcription failed: ${error.message}`);
+    }
+  }
+  
+  // Определить язык аудио (если нужно)
+  async detectLanguage(params: {
+    audioFilePath: string;
+    apiKey: string;
+  }): Promise<string> {
+    // Whisper автоматически определяет язык
+    // Но можно явно запросить
+    const result = await this.transcribe({
+      ...params,
+      language: 'auto'
+    });
+    
+    return result.language;
+  }
+}
+
+export const whisperService = new WhisperService();
+
+СТРОК: ~80 ✅
