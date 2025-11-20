@@ -973,25 +973,24 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
             ? parsed.date 
             : format(new Date(), 'yyyy-MM-dd');
           
-          // Конвертировать цены в USD для каталога
+          // Передать товары с исходной валютой (НЕ конвертировать в USD!)
           await processReceiptItems({
             receiptItems: parsed.items.map((item: any) => {
               const itemTotalPrice = typeof item.totalPrice === 'number' 
                 ? item.totalPrice 
                 : (parseFloat(item.totalPrice) || 0);
               
-              // Конвертировать в USD используя те же rates что и для транзакции
-              const priceUsd = convertToUSD(itemTotalPrice, parsed.currency, rates);
-              
               return {
                 name: item.name || item.normalizedName || 'Unknown',
-                price: priceUsd,  // Цена уже в USD
+                price: itemTotalPrice,  // ИСХОДНАЯ цена из чека
+                currency: parsed.currency, // ИСХОДНАЯ валюта
                 quantity: item.quantity || 1
               };
             }),
             userId: user.id,
             storeName: parsed.description || 'Unknown Store',
             purchaseDate,
+            exchangeRates: rates, // Передать курсы для конвертации в сервисе
             anthropicApiKey: userSettings?.anthropicApiKey || undefined
           });
           

@@ -148,6 +148,7 @@ export async function categorizeProduct(
 interface ReceiptItem {
   name: string;
   price: number;
+  currency: string;
   quantity?: number;
 }
 
@@ -157,9 +158,10 @@ export async function processReceiptItems(params: {
   userId: number;
   storeName: string;
   purchaseDate: string; // YYYY-MM-DD
+  exchangeRates: Record<string, number>; // Курсы валют для конвертации
   anthropicApiKey?: string;
 }): Promise<void> {
-  const { receiptItems, userId, storeName, purchaseDate, anthropicApiKey } = params;
+  const { receiptItems, userId, storeName, purchaseDate, exchangeRates, anthropicApiKey } = params;
   
   for (const item of receiptItems) {
     try {
@@ -177,11 +179,20 @@ export async function processReceiptItems(params: {
       await productCatalogRepository.incrementPurchaseCount(productId);
       
       // 4. Добавить цену в историю
+      // Конвертировать в USD для сравнения
+      const exchangeRate = exchangeRates[item.currency] || 1;
+      const priceUsd = item.currency === 'USD' 
+        ? item.price 
+        : item.price / exchangeRate;
+      
       await productPriceHistoryRepository.create({
         productId,
         storeName,
-        price: item.price.toString(),
+        price: priceUsd.toFixed(2),
         currency: 'USD',
+        priceOriginal: item.price.toString(),
+        currencyOriginal: item.currency,
+        exchangeRate: exchangeRate.toString(),
         purchaseDate
       });
       
