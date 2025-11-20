@@ -142,6 +142,7 @@ export default function SettingsPage() {
       timezone: "UTC",
       notificationTime: "09:00",
       anthropicApiKey: undefined,
+      openaiApiKey: undefined,
       exchangeRateRUB: undefined,
       exchangeRateIDR: undefined,
     },
@@ -158,6 +159,7 @@ export default function SettingsPage() {
         timezone: settings.timezone || "UTC",
         notificationTime: settings.notificationTime || "09:00",
         anthropicApiKey: settings.anthropicApiKey || undefined,
+        openaiApiKey: settings.openaiApiKey || undefined,
         exchangeRateRUB: settings.exchangeRateRUB || undefined,
         exchangeRateIDR: settings.exchangeRateIDR || undefined,
       });
@@ -380,6 +382,29 @@ export default function SettingsPage() {
                     </FormControl>
                     <FormDescription>
                       {t("settings.anthropic_api_key.description")}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="openaiApiKey"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("settings.openai_api_key")}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder={t("settings.openai_api_key.placeholder")}
+                        {...field}
+                        value={field.value || ""}
+                        data-testid="input-openai-key"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t("settings.openai_api_key.description")}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

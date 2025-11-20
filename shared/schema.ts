@@ -169,6 +169,7 @@ export const settings = pgTable("settings", {
   timezone: text("timezone").default("UTC"), // User's timezone (IANA format, e.g., "Europe/Moscow", "Asia/Jakarta")
   notificationTime: text("notification_time").default("09:00"), // Time for daily notifications in HH:MM format
   anthropicApiKey: text("anthropic_api_key"), // User's BYOK for AI features (forecast, analysis)
+  openaiApiKey: text("openai_api_key"), // User's BYOK for Whisper voice transcription
   exchangeRateRUB: decimal("exchange_rate_rub", { precision: 10, scale: 4 }), // Custom exchange rate: 1 USD = X RUB
   exchangeRateIDR: decimal("exchange_rate_idr", { precision: 10, scale: 2 }), // Custom exchange rate: 1 USD = X IDR
   exchangeRateKRW: decimal("exchange_rate_krw", { precision: 10, scale: 2 }), // Custom exchange rate: 1 USD = X KRW

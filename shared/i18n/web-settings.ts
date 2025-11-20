@@ -121,6 +121,18 @@ export const webSettingsTranslations: Translations = {
     en: 'sk-ant-...',
     ru: 'sk-ant-...',
   },
+  'settings.openai_api_key': {
+    en: 'OpenAI API Key',
+    ru: 'OpenAI API ключ',
+  },
+  'settings.openai_api_key.description': {
+    en: 'Your personal OpenAI API key for voice message transcription in Telegram bot. Get one at platform.openai.com/api-keys',
+    ru: 'Ваш личный API ключ OpenAI для транскрипции голосовых сообщений в Telegram боте. Получить можно на platform.openai.com/api-keys',
+  },
+  'settings.openai_api_key.placeholder': {
+    en: 'sk-proj-...',
+    ru: 'sk-proj-...',
+  },
   'settings.general_settings': {
     en: 'General Settings',
     ru: 'Общие настройки',

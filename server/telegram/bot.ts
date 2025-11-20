@@ -13,8 +13,10 @@ import {
   handleCallbackQuery,
 } from './commands';
 import { handleCurrencyCommand, handleCurrencyCallback } from './currency-command';
+import { handleVoiceMessage } from './voice-handler';
 import { TELEGRAM_BOT_TOKEN } from './config';
 import { getUserLanguageByTelegramId } from './language';
+import { t } from '@shared/i18n';
 import { isMainMenuButton, getMenuSection } from './menu/keyboards';
 import { showAiChatWelcome, handleAiChatMessage, endAiChat, isAiChatActive } from './menu/ai-chat-handler';
 import { showWallets } from './menu/wallets-handler';
@@ -83,7 +85,6 @@ export function initTelegramBot(): TelegramBot | null {
               break;
             default:
               // Get user's language for error message
-              const { t } = await import('./i18n');
               const telegramId = msg.from?.id.toString();
               const lang = telegramId ? await getUserLanguageByTelegramId(telegramId) : 'en';
               
@@ -94,6 +95,8 @@ export function initTelegramBot(): TelegramBot | null {
           }
         } else if (msg.photo && msg.photo.length > 0) {
           await handlePhotoMessage(bot!, msg);
+        } else if (msg.voice || msg.audio) {
+          await handleVoiceMessage(bot!, msg);
         } else if (msg.text) {
           // Получить userId для проверки состояния AI чата
           const telegramId = msg.from?.id.toString();
@@ -143,7 +146,6 @@ export function initTelegramBot(): TelegramBot | null {
       } catch (error) {
         console.error('Error handling message:', error);
         try {
-          const { t } = await import('./i18n');
           const telegramId = msg.from?.id.toString();
           const lang = telegramId ? await getUserLanguageByTelegramId(telegramId) : 'en';
           
