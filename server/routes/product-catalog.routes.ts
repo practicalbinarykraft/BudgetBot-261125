@@ -3,6 +3,8 @@ import { withAuth } from '../middleware/auth-utils';
 import { productCatalogRepository } from '../repositories/product-catalog.repository';
 import { productPriceHistoryRepository } from '../repositories/product-price-history.repository';
 import { priceSearchReportsRepository } from '../repositories/price-search-reports.repository';
+import { updateProductCatalogSchema } from '@shared/schema';
+import { normalizeName } from '../services/product-catalog.service';
 
 const router = Router();
 
@@ -103,6 +105,55 @@ router.get('/:id', withAuth(async (req, res) => {
   } catch (error) {
     console.error('Error fetching product:', error);
     res.status(500).json({ error: 'Failed to fetch product' });
+  }
+}));
+
+// PATCH /api/product-catalog/:id - Обновить товар
+router.patch('/:id', withAuth(async (req, res) => {
+  try {
+    const productId = parseInt(req.params.id);
+    const userId = req.user.id;
+    
+    // Проверить что товар существует и принадлежит пользователю
+    const product = await productCatalogRepository.findById(productId);
+    
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    if (product.userId !== userId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    // Валидация данных
+    const validation = updateProductCatalogSchema.safeParse(req.body);
+    
+    if (!validation.success) {
+      return res.status(400).json({ 
+        error: 'Validation failed', 
+        details: validation.error.issues 
+      });
+    }
+    
+    const updateData = validation.data;
+    
+    // Если имя изменилось - обновить normalizedName
+    if (updateData.name) {
+      const updatedProduct = await productCatalogRepository.update(productId, {
+        ...updateData,
+        normalizedName: normalizeName(updateData.name)
+      });
+      
+      return res.json(updatedProduct);
+    }
+    
+    // Обновить без изменения normalizedName
+    const updatedProduct = await productCatalogRepository.update(productId, updateData);
+    
+    res.json(updatedProduct);
+  } catch (error) {
+    console.error('Error updating product:', error);
+    res.status(500).json({ error: 'Failed to update product' });
   }
 }));
 

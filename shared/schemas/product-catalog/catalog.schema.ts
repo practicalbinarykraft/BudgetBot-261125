@@ -1,4 +1,6 @@
 import { pgTable, serial, text, integer, decimal, timestamp } from "drizzle-orm/pg-core";
+import { createInsertSchema } from 'drizzle-zod';
+import { z } from 'zod';
 import { users } from "../../schema";
 
 /**
@@ -42,3 +44,26 @@ export const productCatalog = pgTable('product_catalog', {
 // TypeScript types
 export type ProductCatalog = typeof productCatalog.$inferSelect;
 export type InsertProductCatalog = typeof productCatalog.$inferInsert;
+
+// Zod schemas
+export const insertProductCatalogSchema = createInsertSchema(productCatalog).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  purchaseCount: true,
+  lastPurchaseDate: true,
+  averagePrice: true,
+  bestPrice: true,
+  bestStore: true
+});
+
+export const updateProductCatalogSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  category: z.string().min(1, 'Category is required').optional(),
+  brand: z.string().optional(),
+  weight: z.string().optional(),
+  unit: z.string().optional(),
+  subcategory: z.string().optional()
+});
+
+export type UpdateProductCatalog = z.infer<typeof updateProductCatalogSchema>;
