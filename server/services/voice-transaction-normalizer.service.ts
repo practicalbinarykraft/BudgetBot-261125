@@ -175,29 +175,118 @@ RETURN STRICTLY IN JSON:
   
   /**
    * Fallback parser when Claude is unavailable
-   * Uses simple regex matching with basic magnitude word support
+   * Uses simple regex matching with basic word-to-number mapping
    * 
-   * SUPPORTED: "150 тысяч", "2 миллиона", "500k"
-   * NOT SUPPORTED: "сто рублей", "пятьсот" (pure word numbers require Claude)
+   * SUPPORTED: 
+   * - Numbers with magnitudes: "150 тысяч", "2 миллиона", "500k"
+   * - Common Russian numerals: "сто", "двести", "триста", "пятьсот" etc.
+   * - Common English numerals: "hundred", "thousand"
+   * 
+   * NOT SUPPORTED: Complex combinations ("сто пятьдесят три")
    */
   private fallbackParse(text: string, userCurrency?: string): NormalizedTransaction {
     const cleaned = text.toLowerCase();
     
-    // Extract base amount (number before magnitude word)
-    const amountMatch = cleaned.match(/(\d+(?:[.,]\d+)?)\s*(?:тысяч|тыс|thousand|k|к|миллион|million|m|м)?/i);
+    // Word-to-number mapping (Russian and English)
+    const wordToNumber: Record<string, number> = {
+      // Russian 1-19
+      'один': 1, 'одна': 1, 'одно': 1, 'два': 2, 'две': 2, 'три': 3, 'четыре': 4, 'пять': 5,
+      'шесть': 6, 'семь': 7, 'восемь': 8, 'девять': 9, 'десять': 10,
+      'одиннадцать': 11, 'двенадцать': 12, 'тринадцать': 13, 'четырнадцать': 14, 'пятнадцать': 15,
+      'шестнадцать': 16, 'семнадцать': 17, 'восемнадцать': 18, 'девятнадцать': 19,
+      // Russian tens
+      'двадцать': 20, 'тридцать': 30, 'сорок': 40, 'пятьдесят': 50,
+      'шестьдесят': 60, 'семьдесят': 70, 'восемьдесят': 80, 'девяносто': 90,
+      // Russian hundreds
+      'сто': 100, 'двести': 200, 'триста': 300, 'четыреста': 400,
+      'пятьсот': 500, 'шестьсот': 600, 'семьсот': 700, 'восемьсот': 800, 'девятьсот': 900,
+      // Russian magnitudes
+      'тысяча': 1000, 'тысячи': 1000, 'тысяч': 1000, 'тыс': 1000,
+      'миллион': 1000000, 'миллиона': 1000000, 'миллионов': 1000000,
+      // English 1-19
+      'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
+      'eleven': 11, 'twelve': 12, 'thirteen': 13, 'fourteen': 14, 'fifteen': 15,
+      'sixteen': 16, 'seventeen': 17, 'eighteen': 18, 'nineteen': 19,
+      // English tens
+      'twenty': 20, 'thirty': 30, 'forty': 40, 'fifty': 50, 'sixty': 60, 'seventy': 70, 'eighty': 80, 'ninety': 90,
+      // English magnitudes
+      'hundred': 100, 'thousand': 1000, 'million': 1000000,
+      // Short forms
+      'k': 1000, 'к': 1000, 'm': 1000000, 'м': 1000000
+    };
+    
     let amount = 0;
     
-    if (amountMatch) {
-      const baseAmount = parseFloat(amountMatch[1].replace(/,/g, ''));
-      const fullMatch = amountMatch[0];
+    // Priority 1A: Check for "X hundred thousand/million" patterns FIRST
+    // (e.g., "one hundred thousand" = 100 × 1000 = 100,000, "five hundred million" = 500 × 1,000,000)
+    const hundredMagnitudeMatch = cleaned.match(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen)\s+hundred\s+(thousand|million)/i);
+    if (hundredMagnitudeMatch) {
+      const quantity = wordToNumber[hundredMagnitudeMatch[1].toLowerCase()] || 1;
+      const magnitude = wordToNumber[hundredMagnitudeMatch[2].toLowerCase()] || 1;
+      amount = quantity * 100 * magnitude;
+    }
+    
+    // Priority 1B: Check for "X hundred" pattern (e.g., "one hundred", "five hundred")
+    if (amount === 0) {
+      const hundredMatch = cleaned.match(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen)\s+hundred(?!\s+(thousand|million))/i);
+      if (hundredMatch) {
+        const quantity = wordToNumber[hundredMatch[1].toLowerCase()] || 1;
+        amount = quantity * 100;
+      }
+    }
+    
+    // Priority 2: Check for quantity word before magnitude (e.g., "пять тысяч" = 5 × 1000, "сто тысяч" = 100 × 1000)
+    if (amount === 0) {
+      // Build regex pattern from all base number words (excluding magnitudes and "hundred")
+      const baseNumbers = Object.keys(wordToNumber).filter(word => 
+        !['тысяча', 'тысячи', 'тысяч', 'тыс', 'миллион', 'миллиона', 'миллионов', 
+          'thousand', 'million', 'hundred', 'k', 'к', 'm', 'м'].includes(word)
+      );
+      const basePattern = baseNumbers.join('|');
+      const magnitudePattern = 'тысяч|тысячи|тысяча|тыс|миллион|миллиона|миллионов|thousand|million|k|к|m|м';
       
-      // Apply magnitude multipliers
-      if (fullMatch.match(/тысяч|тыс|thousand|k|к/i)) {
-        amount = baseAmount * 1000;
-      } else if (fullMatch.match(/миллион|million|m|м/i)) {
-        amount = baseAmount * 1000000;
-      } else {
-        amount = baseAmount;
+      const quantityMagnitudeRegex = new RegExp(`\\b(${basePattern})\\s+(${magnitudePattern})`, 'i');
+      const quantityMagnitudeMatch = cleaned.match(quantityMagnitudeRegex);
+      
+      if (quantityMagnitudeMatch) {
+        const quantityWord = quantityMagnitudeMatch[1].toLowerCase();
+        const magnitudeWord = quantityMagnitudeMatch[2].toLowerCase();
+        
+        const quantity = wordToNumber[quantityWord] || 1;
+        const magnitude = wordToNumber[magnitudeWord] || 1;
+        
+        amount = quantity * magnitude;
+      }
+    }
+    
+    // Priority 3: Try to find pure word number (e.g., "сто рублей", "пятнадцать")
+    // But prioritize longer words first to avoid matching "one" in "one hundred"
+    if (amount === 0) {
+      const sortedWords = Object.entries(wordToNumber).sort((a, b) => b[0].length - a[0].length);
+      for (const [word, value] of sortedWords) {
+        const wordRegex = new RegExp(`\\b${word}\\b`, 'i');
+        if (cleaned.match(wordRegex)) {
+          amount = value;
+          break;
+        }
+      }
+    }
+    
+    // If no word found, try digit + magnitude (e.g., "150 тысяч")
+    if (amount === 0) {
+      const digitMatch = cleaned.match(/(\d+(?:[.,]\d+)?)\s*(?:тысяч|тыс|thousand|k|к|миллион|million|m|м)?/i);
+      if (digitMatch) {
+        const baseAmount = parseFloat(digitMatch[1].replace(/,/g, ''));
+        const fullMatch = digitMatch[0];
+        
+        // Apply magnitude multipliers
+        if (fullMatch.match(/тысяч|тыс|thousand|k|к/i)) {
+          amount = baseAmount * 1000;
+        } else if (fullMatch.match(/миллион|million|m|м/i)) {
+          amount = baseAmount * 1000000;
+        } else {
+          amount = baseAmount;
+        }
       }
     }
     
