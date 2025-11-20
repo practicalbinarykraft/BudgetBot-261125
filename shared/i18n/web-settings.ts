@@ -282,8 +282,8 @@ export const webSettingsTranslations: Translations = {
     ru: 'Как подключить:',
   },
   'settings.telegram_step1': {
-    en: 'Open Telegram and find @BudgetBuddyBot',
-    ru: 'Откройте Telegram и найдите @BudgetBuddyBot',
+    en: 'Open Telegram and find @ai_budgetbuddy_bot',
+    ru: 'Откройте Telegram и найдите @ai_budgetbuddy_bot',
   },
   'settings.telegram_step2': {
     en: 'Send the command',
