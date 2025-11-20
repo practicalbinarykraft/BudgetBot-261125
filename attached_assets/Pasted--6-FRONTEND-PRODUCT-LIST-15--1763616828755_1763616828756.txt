@@ -1,0 +1,80 @@
+📊 ЭТАП 6: ОБНОВИТЬ FRONTEND - PRODUCT LIST (15 минут)
+═══════════════════════════════════════════════════════
+ЗАДАЧА 6.1: ПОКАЗЫВАТЬ ИСХОДНУЮ ВАЛЮТУ В СПИСКЕ
+═══════════════════════════════════════════════════════
+
+ФАЙЛ: client/src/components/product-list-item.tsx
+
+НАЙТИ БЛОК С ЦЕНОЙ:
+<div className="flex items-center gap-1">
+  <TrendingDown className="w-4 h-4 text-green-600" />
+  <span className="text-lg font-bold text-green-700">
+    {parseFloat(product.bestPrice).toFixed(2)} ₽
+  </span>
+</div>
+
+ЗАМЕНИТЬ НА:
+
+<div className="space-y-0.5">
+  {/* Исходная цена (если есть) */}
+  {product.bestPriceOriginal && product.bestPriceCurrency ? (
+    <>
+      <div className="flex items-center gap-1">
+        <TrendingDown className="w-4 h-4 text-green-600" />
+        <span className="text-lg font-bold text-green-700">
+          {getCurrencySymbol(product.bestPriceCurrency)}
+          {parseFloat(product.bestPriceOriginal).toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          })}
+        </span>
+      </div>
+      {/* USD эквивалент */}
+      <div className="text-xs text-gray-500 pl-5">
+        ≈ ${parseFloat(product.bestPrice).toFixed(2)} USD
+      </div>
+    </>
+  ) : (
+    // Fallback для старых записей
+    <div className="flex items-center gap-1">
+      <TrendingDown className="w-4 h-4 text-green-600" />
+      <span className="text-lg font-bold text-green-700">
+        ${parseFloat(product.bestPrice).toFixed(2)}
+      </span>
+    </div>
+  )}
+</div>
+
+ДОБАВИТЬ HELPER ФУНКЦИЮ В НАЧАЛО ФАЙЛА:
+
+const getCurrencySymbol = (currency: string): string => {
+  const symbols: Record<string, string> = {
+    'USD': '$',
+    'RUB': '₽',
+    'IDR': 'Rp',
+    'EUR': '€',
+    'GBP': '£'
+  };
+  return symbols[currency] || currency + ' ';
+};
+
+ОБНОВИТЬ INTERFACE:
+
+interface Product {
+  id: number;
+  name: string;
+  category: string;
+  purchaseCount: number;
+  bestPrice: string; // USD
+  bestStore: string;
+  lastPurchaseDate: string;
+  
+  // Новые поля
+  bestPriceOriginal?: string;
+  bestPriceCurrency?: string;
+}
+
+ОЖИДАЕМЫЙ РЕЗУЛЬТАТ:
+✅ В списке показывается:
+    Rp47,000.00
+    ≈ $2.82 USD
