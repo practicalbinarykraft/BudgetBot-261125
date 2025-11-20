@@ -27,6 +27,7 @@ The application utilizes Shadcn/ui (Radix UI primitives) and Tailwind CSS with a
 *   **Financial Trend Chart with AI Forecasting:** The dashboard includes a visualization for cumulative income, expenses, and capital trends, with AI predicting future capital trajectories. It features interactive forecast filters for "what-if" scenarios, persistent user preferences, and alerts for potential negative balances. **Unified Forecast Filter Architecture:** Filters (recurring payments, planned expenses/income, budget limits) are applied centrally for both LINEAR (free, default) and AI (opt-in, BYOK) forecast paths, ensuring consistent behavior. LINEAR forecast uses historical averages as baseline, AI forecast uses Claude predictions; both apply identical filter logic before cumulative conversion and capital calculation.
 *   **AI Agent Tool Calling:** The AI Assistant can execute actions through natural language using tool detection and confirmation flows. Tools include `get_balance` (read-only, immediate execution), `create_category`, and `add_transaction` (write operations requiring user confirmation).
 *   **Editable Confirmation Card:** For AI-initiated write operations, an interactive UI allows users to review and edit transaction details (amount, description, category, currency, personal tag) before execution, with full i18n support.
+*   **Voice Transcription (Telegram Bot):** Users can send voice or audio messages in Telegram bot for expense tracking. OpenAI Whisper API transcribes audio to text, which is then processed through the standard text parser. BYOK pattern: users provide their own OpenAI API key via Settings page. Modular architecture: `whisper-transcription.service.ts` handles API calls and file management (Node.js-compatible fs.createReadStream, automatic temp file cleanup), `voice-handler.ts` orchestrates the flow with proper i18n error handling. Plain text responses avoid Markdown formatting issues with special characters.
 
 ### System Design Choices
 
@@ -38,6 +39,7 @@ The application utilizes Shadcn/ui (Radix UI primitives) and Tailwind CSS with a
 ### Third-Party Services
 
 *   **Anthropic Claude API:** Used for AI-powered spending analysis, receipt OCR, and financial chat.
+*   **OpenAI API:** Used for voice message transcription via Whisper model in Telegram bot.
 *   **Neon Serverless PostgreSQL:** The primary database.
 
 ### UI Component Libraries
