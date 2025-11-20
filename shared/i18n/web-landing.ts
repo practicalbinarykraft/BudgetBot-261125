@@ -2,6 +2,8 @@ import { Translations } from "./types";
 
 export const webLandingTranslations: Translations = {
   // Hero Section
+  "landing.hero.badge": { en: "AI-Powered Personal Finance", ru: "AI-Финансовый помощник" },
+  "landing.hero.preview": { en: "App Dashboard Preview", ru: "Предпросмотр дашборда" },
   "landing.hero.title": { 
     en: "Your Money, Smarter. Not Harder.", 
     ru: "Ваши финансы проще. Не сложнее." 
@@ -64,6 +66,10 @@ export const webLandingTranslations: Translations = {
 
   // Killer Features
   "landing.features.title": { en: "Powerful Features That Set Us Apart", ru: "Мощные функции, которые выделяют нас" },
+  "landing.features.subtitle": { 
+    en: "Six powerful features that make Budget Buddy your ultimate financial companion", 
+    ru: "Шесть мощных функций, которые делают Budget Buddy вашим главным финансовым помощником" 
+  },
   
   "landing.feature1.title": { en: "AI-Powered Receipt Scanning", ru: "AI-сканирование чеков" },
   "landing.feature1.desc": { 
@@ -179,6 +185,7 @@ export const webLandingTranslations: Translations = {
   "landing.cta.button": { en: "Start Free Now", ru: "Начать бесплатно" },
 
   // Footer
+  "landing.footer.app_name": { en: "Budget Buddy", ru: "Budget Buddy" },
   "landing.footer.tagline": { 
     en: "AI-powered personal finance for everyone", 
     ru: "AI-помощник для личных финансов для всех" 

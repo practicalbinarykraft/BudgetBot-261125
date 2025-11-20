@@ -78,7 +78,7 @@ export function BudgetAlerts() {
               ))}
             </ul>
             <div className="pt-2">
-              <Link href="/budgets">
+              <Link href="/app/budgets">
                 <Button variant="outline" size="sm" data-testid="button-view-budgets">
                   <TrendingDown className="h-4 w-4 mr-2" />
                   {t("dashboard.manage_budgets")}

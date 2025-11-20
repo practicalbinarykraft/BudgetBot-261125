@@ -44,7 +44,7 @@ export default function LandingPage() {
           >
             <div className="inline-flex items-center gap-2 mb-6 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
               <Sparkles className="w-4 h-4" />
-              <span>AI-Powered Personal Finance</span>
+              <span>{t("landing.hero.badge")}</span>
             </div>
             
             <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
@@ -99,7 +99,7 @@ export default function LandingPage() {
               <div className="aspect-video bg-gradient-to-br from-primary/20 via-accent/20 to-secondary/20 flex items-center justify-center">
                 <div className="text-center">
                   <Sparkles className="w-16 h-16 mx-auto mb-4 text-primary animate-pulse" />
-                  <p className="text-muted-foreground">App Dashboard Preview</p>
+                  <p className="text-muted-foreground">{t("landing.hero.preview")}</p>
                 </div>
               </div>
             </div>
@@ -220,7 +220,7 @@ export default function LandingPage() {
               {t("landing.features.title")}
             </h2>
             <p className="text-center text-muted-foreground text-xl mb-16 max-w-3xl mx-auto">
-              Six powerful features that make Budget Buddy your ultimate financial companion
+              {t("landing.features.subtitle")}
             </p>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
@@ -415,7 +415,7 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 py-12">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
-              <h3 className="font-bold text-lg mb-4">Budget Buddy</h3>
+              <h3 className="font-bold text-lg mb-4">{t("landing.footer.app_name")}</h3>
               <p className="text-sm text-muted-foreground">
                 {t("landing.footer.tagline")}
               </p>
@@ -450,7 +450,7 @@ export default function LandingPage() {
 
           <div className="border-t pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-muted-foreground">
-              © 2025 Budget Buddy. {t("landing.footer.rights")}
+              © 2025 {t("landing.footer.app_name")}. {t("landing.footer.rights")}
             </p>
             <div className="flex gap-4">
               <Shield className="w-5 h-5 text-muted-foreground" />

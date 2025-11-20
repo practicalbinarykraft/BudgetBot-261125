@@ -46,7 +46,7 @@ export default function ExpensesAnalyticsPage() {
       <div className="container mx-auto p-6 max-w-7xl">
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/">
+            <Link href="/app/dashboard">
               <Button variant="ghost" size="icon" data-testid="button-back">
                 <ArrowLeft className="h-5 w-5" />
               </Button>

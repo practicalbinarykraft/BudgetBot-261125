@@ -144,7 +144,7 @@ export default function DashboardPage() {
           icon={TrendingDown}
           className="border-l-4 border-l-red-500"
           action={
-            <Link href="/expenses/analytics">
+            <Link href="/app/expenses/analytics">
               <span className="text-sm text-primary hover:underline flex items-center gap-1 cursor-pointer" data-testid="link-view-analytics">
                 {t("dashboard.view_details")} <ArrowRight className="h-3 w-3" />
               </span>

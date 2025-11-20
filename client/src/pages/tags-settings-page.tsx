@@ -80,7 +80,7 @@ export default function TagsSettingsPage() {
   };
   
   const handleViewDetails = (tagId: number) => {
-    navigate(`/tags/${tagId}`);
+    navigate(`/app/tags/${tagId}`);
   };
   
   const handleCloseDialog = () => {

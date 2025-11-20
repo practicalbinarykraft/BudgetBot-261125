@@ -174,7 +174,7 @@ export default function ProductDetailPage() {
   return (
     <div className="container mx-auto px-4 py-6 max-w-4xl">
       <Button variant="ghost" className="mb-6" asChild data-testid="button-back">
-        <Link href="/product-catalog">
+        <Link href="/app/product-catalog">
           <ArrowLeft className="w-4 h-4 mr-2" />
           {t('productDetail.back')}
         </Link>
