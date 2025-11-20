@@ -148,4 +148,58 @@ export const webProductCatalogTranslations: Translations = {
     en: 'No results found',
     ru: 'Результаты не найдены',
   },
+
+  // Edit Product
+  'productEdit.title': {
+    en: 'Edit Product',
+    ru: 'Редактировать товар',
+  },
+  'productEdit.edit': {
+    en: 'Edit',
+    ru: 'Редактировать',
+  },
+  'productEdit.name': {
+    en: 'Product Name',
+    ru: 'Название товара',
+  },
+  'productEdit.category': {
+    en: 'Category',
+    ru: 'Категория',
+  },
+  'productEdit.brand': {
+    en: 'Brand',
+    ru: 'Бренд',
+  },
+  'productEdit.weight': {
+    en: 'Weight/Size',
+    ru: 'Вес/Размер',
+  },
+  'productEdit.unit': {
+    en: 'Unit',
+    ru: 'Единица',
+  },
+  'productEdit.save': {
+    en: 'Save Changes',
+    ru: 'Сохранить изменения',
+  },
+  'productEdit.cancel': {
+    en: 'Cancel',
+    ru: 'Отмена',
+  },
+  'productEdit.success': {
+    en: 'Product updated successfully',
+    ru: 'Товар успешно обновлен',
+  },
+  'productEdit.error': {
+    en: 'Failed to update product',
+    ru: 'Не удалось обновить товар',
+  },
+  'productEdit.nameRequired': {
+    en: 'Product name is required',
+    ru: 'Укажите название товара',
+  },
+  'productEdit.categoryOptional': {
+    en: 'Optional',
+    ru: 'Необязательно',
+  },
 };
