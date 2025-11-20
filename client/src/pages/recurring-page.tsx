@@ -136,8 +136,8 @@ export default function RecurringPage() {
                   <div className="flex-1">
                     <p className="font-medium">{item.description}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="secondary" className="text-xs capitalize">
-                        {item.frequency}
+                      <Badge variant="secondary" className="text-xs">
+                        {t(`recurring.frequency_${item.frequency}`)}
                       </Badge>
                       {item.category && (
                         <Badge variant="outline" className="text-xs">
