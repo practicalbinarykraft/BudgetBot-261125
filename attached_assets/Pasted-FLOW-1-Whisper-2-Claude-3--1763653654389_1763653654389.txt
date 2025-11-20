@@ -1,0 +1,519 @@
+FLOW:
+1. Whisper распознаёт голос → текст (как есть)
+2. Claude понимает контекст и нормализует
+3. Создаётся правильная транзакция
+
+ПРЕИМУЩЕСТВА:
+✅ Понимает "150 тысяч" = 150,000
+✅ Распознаёт валюту ("рупий" = IDR)
+✅ Извлекает магазин ("Старбакс" = Starbucks)
+✅ Определяет правильную категорию (кофе = Кафе, не Продукты)
+✅ Убирает лишние слова
+
+📋 РЕАЛИЗАЦИЯ (2 ШАГА)
+ШАГ 1: СОЗДАТЬ AI NORMALIZER SERVICE (20 минут)
+typescript═══════════════════════════════════════════════════════
+СОЗДАТЬ ФАЙЛ: server/services/voice-transaction-normalizer.service.ts
+═══════════════════════════════════════════════════════
+
+import Anthropic from '@anthropic-ai/sdk';
+
+interface NormalizedTransaction {
+  amount: number;
+  currency: 'USD' | 'RUB' | 'IDR';
+  description: string;
+  category?: string;
+  merchantName?: string;
+  type: 'income' | 'expense';
+  confidence: 'high' | 'medium' | 'low';
+}
+
+export class VoiceTransactionNormalizer {
+  
+  // Нормализовать транскрипцию в структурированную транзакцию
+  async normalize(params: {
+    transcribedText: string;
+    userRegion?: string; // 'russia', 'indonesia-bali', etc
+    anthropicApiKey: string;
+  }): Promise<NormalizedTransaction> {
+    
+    const { transcribedText, userRegion, anthropicApiKey } = params;
+    
+    const anthropic = new Anthropic({
+      apiKey: anthropicApiKey
+    });
+    
+    // Промпт для Claude
+    const prompt = `Ты помощник для финансового приложения. Пользователь записал голосовое сообщение о своих тратах или доходах.
+
+РЕГИОН ПОЛЬЗОВАТЕЛЯ: ${userRegion || 'unknown'}
+
+ТРАНСКРИПЦИЯ ГОЛОСОВОГО СООБЩЕНИЯ:
+"${transcribedText}"
+
+ТВОЯ ЗАДАЧА:
+Извлечь из этого текста структурированную финансовую транзакцию.
+
+ПРАВИЛА:
+1. СУММА:
+   - "150 тысяч" = 150000
+   - "полтора миллиона" = 1500000
+   - "пятьсот" = 500
+   - "тыща" = 1000
+   - Конвертируй словами в числа
+
+2. ВАЛЮТА:
+   - "рублей" / "рубля" / "руб" = RUB
+   - "рупий" / "рупии" / "индонезийских" = IDR
+   - "долларов" / "баксов" / "usd" = USD
+   - Если не указана, угадай по региону:
+     * russia → RUB
+     * indonesia → IDR
+     * default → USD
+
+3. ОПИСАНИЕ:
+   - Сделай коротким и понятным
+   - Убери лишние слова типа "купил", "потратил", "заплатил"
+   - "Купил кофе в Старбаксе" → "Кофе Starbucks"
+   - "Заправился на бензин" → "Бензин"
+   - Исправь название магазинов на нормальное написание
+
+4. КАТЕГОРИЯ:
+   - Определи из контекста
+   - Варианты: Продукты, Транспорт, Кафе/Рестораны, Развлечения, Здоровье, Одежда, Дом, Прочее
+
+5. МАГАЗИН (если упомянут):
+   - "Старбакс" → "Starbucks"
+   - "Пятёрочка" → "Пятёрочка"
+   - "Индомарет" → "Indomaret"
+
+6. ТИП:
+   - По умолчанию expense (расход)
+   - Если упомянуты слова "получил", "зарплата", "доход" → income
+
+ОТВЕТ ВЕРНИ СТРОГО В JSON:
+{
+  "amount": 150000,
+  "currency": "IDR",
+  "description": "Кофе Starbucks",
+  "category": "Кафе/Рестораны",
+  "merchantName": "Starbucks",
+  "type": "expense",
+  "confidence": "high"
+}
+
+CONFIDENCE:
+- high: всё понятно из текста
+- medium: пришлось угадывать категорию/валюту
+- low: текст непонятный или данных мало`;
+
+    try {
+      const message = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1024,
+        messages: [{
+          role: 'user',
+          content: prompt
+        }]
+      });
+      
+      const responseText = message.content[0].type === 'text' 
+        ? message.content[0].text 
+        : '';
+      
+      // Извлечь JSON из ответа
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('Claude did not return valid JSON');
+      }
+      
+      const normalized: NormalizedTransaction = JSON.parse(jsonMatch[0]);
+      
+      console.log('✅ Voice transaction normalized:', normalized);
+      
+      return normalized;
+      
+    } catch (error) {
+      console.error('❌ Voice normalization failed:', error);
+      
+      // Fallback: простой парсинг
+      return this.fallbackParse(transcribedText);
+    }
+  }
+  
+  // Fallback если Claude не работает
+  private fallbackParse(text: string): NormalizedTransaction {
+    // Простой regex парсинг (как сейчас)
+    const amountMatch = text.match(/(\d+[\s,]?\d*)/);
+    const amount = amountMatch ? parseFloat(amountMatch[1].replace(/[\s,]/g, '')) : 0;
+    
+    const currency = text.includes('рупи') ? 'IDR' 
+                   : text.includes('рубл') ? 'RUB' 
+                   : 'USD';
+    
+    return {
+      amount,
+      currency,
+      description: text.slice(0, 100),
+      type: 'expense',
+      confidence: 'low'
+    };
+  }
+}
+
+export const voiceTransactionNormalizer = new VoiceTransactionNormalizer();
+
+СТРОК: ~180 ✅
+
+ШАГ 2: ИНТЕГРИРОВАТЬ В TELEGRAM BOT (15 минут)
+typescript═══════════════════════════════════════════════════════
+ОБНОВИТЬ: server/telegram/commands.ts (voice handler)
+═══════════════════════════════════════════════════════
+
+НАЙТИ:
+// 7. Обработать текст как обычное сообщение
+const text = transcription.text.trim();
+
+if (!text) {
+  await bot.sendMessage(chatId, '❌ Не удалось распознать текст');
+  return;
+}
+
+await bot.sendMessage(chatId, 
+  `✅ Распознано: "${text}"\n\n` +
+  'Обрабатываю...'
+);
+
+ЗАМЕНИТЬ НА:
+
+// 7. Обработать текст УМНО через AI
+const text = transcription.text.trim();
+
+if (!text) {
+  await bot.sendMessage(chatId, '❌ Не удалось распознать текст');
+  return;
+}
+
+// Показать что распознали
+await bot.sendMessage(chatId, 
+  `🎤 Распознано: "${text}"\n\n` +
+  '🤖 Обрабатываю через AI...'
+);
+
+// НОВОЕ: AI нормализация
+import { voiceTransactionNormalizer } from '../services/voice-transaction-normalizer.service';
+
+try {
+  // Получить Anthropic ключ
+  const anthropicApiKey = settings?.anthropicApiKey;
+  
+  if (!anthropicApiKey) {
+    // Fallback на простой парсинг если нет ключа
+    const parsed = parseTransactionText(text);
+    // ... обработать как раньше
+    return;
+  }
+  
+  // Определить регион пользователя
+  const userLocation = await locationService.getUserLocation(userId);
+  const region = userLocation?.region || 'unknown';
+  
+  // AI нормализация
+  const normalized = await voiceTransactionNormalizer.normalize({
+    transcribedText: text,
+    userRegion: region,
+    anthropicApiKey: anthropicApiKey
+  });
+  
+  console.log('✅ Normalized transaction:', normalized);
+  
+  // Конвертировать в USD (если нужно)
+  const exchangeRates = await getExchangeRates();
+  const amountUsd = normalized.currency === 'USD' 
+    ? normalized.amount
+    : normalized.amount / exchangeRates[normalized.currency];
+  
+  // Найти/создать категорию
+  let categoryId = null;
+  if (normalized.category) {
+    const category = await findOrCreateCategory({
+      userId,
+      name: normalized.category,
+      type: normalized.type
+    });
+    categoryId = category.id;
+  }
+  
+  // Создать транзакцию
+  const transaction = await storage.createTransaction({
+    userId,
+    type: normalized.type,
+    amount: amountUsd.toString(),
+    amountOriginal: normalized.amount.toString(),
+    currency: 'USD',
+    currencyOriginal: normalized.currency,
+    description: normalized.description,
+    categoryId,
+    merchantName: normalized.merchantName,
+    date: new Date().toISOString().split('T')[0],
+    source: 'telegram_voice'
+  });
+  
+  // Добавить в каталог (если есть магазин)
+  if (normalized.merchantName) {
+    await processReceiptItems({
+      receiptItems: [{
+        name: normalized.description,
+        price: normalized.amount,
+        priceUsd: amountUsd,
+        priceOriginal: normalized.amount,
+        currencyOriginal: normalized.currency
+      }],
+      userId,
+      storeName: normalized.merchantName,
+      purchaseDate: new Date().toISOString().split('T')[0],
+      currency: normalized.currency
+    });
+  }
+  
+  // Сформировать ответ
+  let message = `✅ Транзакция добавлена!\n\n`;
+  message += `💰 Сумма: ${normalized.amount.toLocaleString()} ${normalized.currency}`;
+  
+  if (normalized.currency !== 'USD') {
+    message += ` (≈ $${amountUsd.toFixed(2)} USD)`;
+  }
+  
+  message += `\n📝 Описание: ${normalized.description}`;
+  
+  if (normalized.category) {
+    message += `\n📂 Категория: ${normalized.category}`;
+  }
+  
+  if (normalized.merchantName) {
+    message += `\n🏪 Магазин: ${normalized.merchantName}`;
+  }
+  
+  if (normalized.confidence === 'medium' || normalized.confidence === 'low') {
+    message += `\n\n⚠️ Проверьте данные - AI мог ошибиться`;
+  }
+  
+  await bot.sendMessage(chatId, message, {
+    reply_markup: {
+      inline_keyboard: [[
+        { text: '✏️ Редактировать', callback_data: `edit_${transaction.id}` },
+        { text: '🗑️ Удалить', callback_data: `delete_${transaction.id}` }
+      ]]
+    }
+  });
+  
+} catch (error) {
+  console.error('❌ AI normalization failed:', error);
+  
+  // Fallback на простой парсинг
+  await bot.sendMessage(chatId, 
+    '⚠️ AI обработка не удалась, использую простой парсинг...'
+  );
+  
+  const parsed = parseTransactionText(text);
+  // ... обработать как раньше
+}
+
+ДОБАВЛЯЕМЫХ СТРОК: ~100 ✅
+
+ИМПОРТЫ ДОБАВИТЬ:
+import { voiceTransactionNormalizer } from '../services/voice-transaction-normalizer.service';
+import { locationService } from '../services/location.service';
+import { processReceiptItems } from '../services/product-catalog.service';
+```
+
+---
+
+## 🎯 РЕЗУЛЬТАТ (ДО/ПОСЛЕ)
+
+### **ДО (ДОСЛОВНО):**
+```
+Пользователь говорит:
+"Купил кофе в Старбаксе, 150 тысяч рупий индонезийских"
+
+Бот создаёт: ❌
+- Описание: "Купил кофе в старбаксе тысяч рупий индонезийских"
+- Сумма: $150.00 USD (НЕПРАВИЛЬНО!)
+- Категория: Продукты
+- Магазин: не указан
+```
+
+### **ПОСЛЕ (УМНО):**
+```
+Пользователь говорит:
+"Купил кофе в Старбаксе, 150 тысяч рупий индонезийских"
+
+AI понимает: ✅
+- "150 тысяч" = 150,000
+- "рупий индонезийских" = IDR
+- "Старбаксе" = Starbucks
+- контекст "кофе" = Кафе/Рестораны
+
+Бот создаёт: ✅
+- Описание: "Кофе Starbucks"
+- Сумма: 150,000 IDR (≈ $9.38 USD)
+- Категория: Кафе/Рестораны
+- Магазин: Starbucks
+- Товар добавлен в Product Catalog ✅
+```
+
+---
+
+## 🧪 ПРИМЕРЫ ОБРАБОТКИ
+
+### **ПРИМЕР 1: РАЗГОВОРНЫЙ ЯЗЫК**
+```
+Голос: "Ну вот, заправился сегодня, тыща рублей примерно"
+
+AI нормализует:
+{
+  "amount": 1000,
+  "currency": "RUB",
+  "description": "Бензин",
+  "category": "Транспорт",
+  "type": "expense",
+  "confidence": "high"
+}
+```
+
+### **ПРИМЕР 2: СЛОЖНЫЕ ЧИСЛА**
+```
+Голос: "Купил новый айфон, сто пятьдесят тысяч рублей"
+
+AI нормализует:
+{
+  "amount": 150000,
+  "currency": "RUB",
+  "description": "iPhone",
+  "category": "Электроника",
+  "type": "expense",
+  "confidence": "high"
+}
+```
+
+### **ПРИМЕР 3: С МАГАЗИНОМ**
+```
+Голос: "Сходил в Пятёрочку, накупил продуктов на три тысячи"
+
+AI нормализует:
+{
+  "amount": 3000,
+  "currency": "RUB",
+  "description": "Продукты",
+  "category": "Продукты питания",
+  "merchantName": "Пятёрочка",
+  "type": "expense",
+  "confidence": "high"
+}
+```
+
+### **ПРИМЕР 4: ДОХОД**
+```
+Голос: "Получил аванс, пятьдесят тысяч"
+
+AI нормализует:
+{
+  "amount": 50000,
+  "currency": "RUB",
+  "description": "Аванс",
+  "category": "Зарплата",
+  "type": "income",
+  "confidence": "high"
+}
+```
+
+### **ПРИМЕР 5: БЕЗ ВАЛЮТЫ (УГАДЫВАНИЕ)**
+```
+Голос: "Купил пиццу, двести"
+Регион: indonesia-bali
+
+AI нормализует:
+{
+  "amount": 200,
+  "currency": "IDR",  // угадал по региону
+  "description": "Пицца",
+  "category": "Кафе/Рестораны",
+  "type": "expense",
+  "confidence": "medium"  // угадал валюту
+}
+```
+
+---
+
+## 💰 СТОИМОСТЬ
+```
+WHISPER: $0.006/минута
+CLAUDE: ~$0.001-0.003 за запрос (зависит от длины)
+
+ПРИМЕР ГОЛОСОВОГО СООБЩЕНИЯ:
+- 10 секунд голоса
+- Whisper: $0.001
+- Claude: $0.002
+- ИТОГО: $0.003
+
+ЕСЛИ 100 ГОЛОСОВЫХ/МЕСЯЦ:
+100 × $0.003 = $0.30/месяц
+
+ДЁШЕВО! ✅
+```
+
+---
+
+## ⚡ ПРЕИМУЩЕСТВА AI ПОДХОДА
+```
+✅ ПОНИМАЕТ КОНТЕКСТ
+   "Купил кофе в Старбаксе"
+   → Категория: Кафе/Рестораны (не Продукты!)
+
+✅ КОНВЕРТИРУЕТ ЧИСЛА СЛОВАМИ
+   "150 тысяч" → 150,000
+   "полтора миллиона" → 1,500,000
+
+✅ РАСПОЗНАЁТ ВАЛЮТУ ИЗ СЛОВ
+   "рупий" → IDR
+   "баксов" → USD
+
+✅ ИЗВЛЕКАЕТ МАГАЗИН
+   "в Старбаксе" → merchantName: "Starbucks"
+
+✅ ИСПРАВЛЯЕТ ОПЕЧАТКИ/ПРОИЗНОШЕНИЕ
+   "Старбакс" → "Starbucks"
+   "Пятёрочка" → "Пятёрочка" (правильное написание)
+
+✅ УБИРАЕТ ЛИШНИЕ СЛОВА
+   "Ну вот купил кофе в общем"
+   → "Кофе"
+
+✅ ОПРЕДЕЛЯЕТ ТИП
+   "Получил зарплату" → type: income
+   "Потратил" → type: expense
+
+✅ FALLBACK
+   Если Claude не работает → простой парсинг
+```
+
+---
+
+## 🎯 ИТОГО: ЧТО МЕНЯТЬ
+```
+ФАЙЛОВ: 2
+ВРЕМЕНИ: 35 минут
+
+ШАГ 1: Создать VoiceTransactionNormalizer (~180 строк)
+ШАГ 2: Обновить voice handler (~100 строк)
+
+РЕЗУЛЬТАТ:
+❌ БЫЛО: Дословная транскрипция → плохие транзакции
+✅ СТАЛО: AI понимает контекст → правильные транзакции
+
+БОНУСЫ:
++ Автоматически добавляет в Product Catalog
++ Правильная валюта (IDR, не USD)
++ Правильная категория
++ Извлекает магазин
++ Умеет "150 тысяч" = 150,000
