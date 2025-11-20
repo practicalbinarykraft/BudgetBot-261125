@@ -14,9 +14,14 @@ export const productPriceHistory = pgTable('product_price_history', {
   storeName: text('store_name').notNull(),
   storeAddress: text('store_address'),
   
-  // Цена
+  // Цена (USD для сравнения)
   price: decimal('price', { precision: 10, scale: 2 }).notNull(),
   currency: varchar('currency', { length: 3 }).default('USD'),
+  
+  // Исходная цена из чека (мультивалютность)
+  priceOriginal: decimal('price_original', { precision: 12, scale: 2 }),
+  currencyOriginal: varchar('currency_original', { length: 3 }),
+  exchangeRate: decimal('exchange_rate', { precision: 12, scale: 6 }),
   
   // Дата покупки
   purchaseDate: text('purchase_date').notNull(), // YYYY-MM-DD

@@ -1,0 +1,82 @@
+📋 ПЛАН ИСПРАВЛЕНИЯ: МУЛЬТИВАЛЮТНЫЕ ЦЕНЫ
+
+🎯 ПРОБЛЕМА
+СЕЙЧАС (НЕПРАВИЛЬНО):
+Чек: Coconut = 47,000 IDR
+  ↓ (конвертация при загрузке)
+БД: price = 2.82, currency = USD
+  ↓
+UI: показывает $47,000 ❌ БРЕД!
+
+ДОЛЖНО БЫТЬ:
+Чек: Coconut = 47,000 IDR
+  ↓
+БД: priceOriginal = 47000, currencyOriginal = IDR
+    priceUsd = 2.82
+  ↓
+UI: Rp47,000.00 ✅
+    ≈ $2.82 USD ✅
+
+📊 ЭТАП 1: ОБНОВИТЬ DATABASE SCHEMA (15 минут)
+═══════════════════════════════════════════════════════
+ЗАДАЧА 1.1: ДОБАВИТЬ ПОЛЯ ДЛЯ ИСХОДНОЙ ВАЛЮТЫ
+═══════════════════════════════════════════════════════
+
+ФАЙЛ: shared/schemas/product-catalog/price-history.schema.ts
+
+НАЙТИ:
+export const productPriceHistory = pgTable('product_price_history', {
+  id: serial('id').primaryKey(),
+  productId: integer('product_id').references(() => productCatalog.id, { onDelete: 'cascade' }).notNull(),
+  
+  storeName: text('store_name').notNull(),
+  storeAddress: text('store_address'),
+  
+  // Старые поля (оставляем для обратной совместимости)
+  price: decimal('price', { precision: 10, scale: 2 }).notNull(),
+  currency: varchar('currency', { length: 3 }).default('USD'),
+  
+  purchaseDate: text('purchase_date').notNull(),
+  transactionId: integer('transaction_id').references(() => dailyTransactions.id),
+  
+  createdAt: timestamp('created_at').defaultNow()
+});
+
+ДОБАВИТЬ ПОСЛЕ currency:
+
+  // Новые поля для мультивалютности
+  priceOriginal: decimal('price_original', { precision: 12, scale: 2 }),
+  currencyOriginal: varchar('currency_original', { length: 3 }),
+  exchangeRate: decimal('exchange_rate', { precision: 10, scale: 4 }),
+
+ИТОГОВАЯ СХЕМА:
+
+export const productPriceHistory = pgTable('product_price_history', {
+  id: serial('id').primaryKey(),
+  productId: integer('product_id').references(() => productCatalog.id, { onDelete: 'cascade' }).notNull(),
+  
+  storeName: text('store_name').notNull(),
+  storeAddress: text('store_address'),
+  
+  // USD цена (конвертированная)
+  price: decimal('price', { precision: 10, scale: 2 }).notNull(),
+  currency: varchar('currency', { length: 3 }).default('USD'),
+  
+  // ИСХОДНАЯ цена из чека
+  priceOriginal: decimal('price_original', { precision: 12, scale: 2 }),
+  currencyOriginal: varchar('currency_original', { length: 3 }),
+  exchangeRate: decimal('exchange_rate', { precision: 10, scale: 4 }),
+  
+  purchaseDate: text('purchase_date').notNull(),
+  transactionId: integer('transaction_id').references(() => dailyTransactions.id),
+  
+  createdAt: timestamp('created_at').defaultNow()
+});
+
+ЗАПУСТИТЬ МИГРАЦИЮ:
+npm run db:push
+
+ОЖИДАЕМЫЙ РЕЗУЛЬТАТ:
+✅ 3 новых поля добавлены
+✅ Старые записи остались (backward compatible)
+✅ Миграция успешна
