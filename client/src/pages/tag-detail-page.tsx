@@ -21,7 +21,7 @@ interface TagStats {
 }
 
 export default function TagDetailPage() {
-  const [, params] = useRoute("/tags/:id");
+  const [, params] = useRoute("/app/tags/:id");
   const tagId = params?.id ? parseInt(params.id) : null;
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -96,7 +96,7 @@ export default function TagDetailPage() {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Link href="/tags">
+          <Link href="/app/tags">
             <Button variant="ghost" size="icon" data-testid="button-back">
               <ArrowLeft className="h-4 w-4" />
             </Button>

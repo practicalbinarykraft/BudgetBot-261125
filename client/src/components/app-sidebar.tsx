@@ -45,79 +45,79 @@ export function AppSidebar() {
     {
       id: 'dashboard',
       title: t("nav.dashboard"),
-      url: "/",
+      url: "/app/dashboard",
       icon: LayoutDashboard,
     },
     {
       id: 'transactions',
       title: t("nav.transactions"),
-      url: "/transactions",
+      url: "/app/transactions",
       icon: CreditCard,
     },
     {
       id: 'wallets',
       title: t("nav.wallets"),
-      url: "/wallets",
+      url: "/app/wallets",
       icon: Wallet,
     },
     {
       id: 'categories',
       title: t("nav.categories"),
-      url: "/categories",
+      url: "/app/categories",
       icon: Tag,
     },
     {
       id: 'tags',
       title: t("nav.tags"),
-      url: "/tags",
+      url: "/app/tags",
       icon: Users,
     },
     {
       id: 'recurring',
       title: t("nav.recurring"),
-      url: "/recurring",
+      url: "/app/recurring",
       icon: Repeat,
     },
     {
       id: 'wishlist',
       title: t("nav.wishlist"),
-      url: "/wishlist",
+      url: "/app/wishlist",
       icon: Heart,
     },
     {
       id: 'planned_expenses',
       title: t("nav.planned_expenses"),
-      url: "/planned-expenses",
+      url: "/app/planned-expenses",
       icon: Calendar,
     },
     {
       id: 'planned_income',
       title: t("nav.planned_income"),
-      url: "/planned-income",
+      url: "/app/planned-income",
       icon: Coins,
     },
     {
       id: 'budgets',
       title: t("nav.budgets"),
-      url: "/budgets",
+      url: "/app/budgets",
       icon: TrendingDown,
     },
     {
       id: 'product_catalog',
       title: t("nav.product_catalog"),
-      url: "/product-catalog",
+      url: "/app/product-catalog",
       icon: Package,
     },
     {
       id: 'ai_analysis',
       title: t("nav.ai_analysis"),
-      url: "/ai-analysis",
+      url: "/app/ai-analysis",
       icon: Sparkles,
     },
     {
       id: 'settings',
       title: t("nav.settings"),
-      url: "/settings",
+      url: "/app/settings",
       icon: Settings,
     },
   ];
@@ -144,7 +144,7 @@ export function AppSidebar() {
                     <Link href={item.url} data-testid={`nav-${item.id}`}>
                       <item.icon className="w-4 h-4" />
                       <span>{item.title}</span>
-                      {item.url === '/transactions' && unsortedCount > 0 && (
+                      {item.url === '/app/transactions' && unsortedCount > 0 && (
                         <Badge 
                           variant="outline" 
                           className="ml-auto bg-muted" 

@@ -1,4 +1,4 @@
-import { Switch, Route, Redirect } from "wouter";
+import { Switch, Route, Redirect, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { I18nProvider } from "@/i18n";
 import { AIChatSidebar } from "@/components/ai-chat-sidebar";
+import LandingPage from "@/pages/landing-page";
 import AuthPage from "@/pages/auth-page";
 import DashboardPage from "@/pages/dashboard-page";
 import TransactionsPage from "@/pages/transactions-page";
@@ -28,29 +29,54 @@ import SwipeSortPage from "@/pages/swipe-sort-page";
 import AiTrainingHistoryPage from "@/pages/ai-training-history-page";
 import ProductCatalogPage from "@/pages/product-catalog-page";
 import ProductDetailPage from "@/pages/product-detail-page";
+import { useEffect } from "react";
+
+// Landing page with redirect logic for authenticated users
+function LandingPageWrapper() {
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (user) {
+      setLocation('/app/dashboard');
+    }
+  }, [user, setLocation]);
+
+  if (user) {
+    return null;
+  }
+
+  return <LandingPage />;
+}
 
 function Router() {
   return (
     <Switch>
-      <Route path="/auth" component={AuthPage} />
-      <ProtectedRoute path="/" component={DashboardPage} />
-      <ProtectedRoute path="/transactions/sort" component={SwipeSortPage} />
-      <ProtectedRoute path="/transactions" component={TransactionsPage} />
-      <ProtectedRoute path="/wallets" component={WalletsPage} />
-      <ProtectedRoute path="/categories" component={CategoriesPage} />
-      <ProtectedRoute path="/recurring" component={RecurringPage} />
-      <ProtectedRoute path="/wishlist" component={WishlistPage} />
-      <ProtectedRoute path="/planned-expenses" component={PlannedExpensesPage} />
-      <ProtectedRoute path="/planned-income" component={PlannedIncomePage} />
-      <ProtectedRoute path="/budgets" component={BudgetsPage} />
-      <ProtectedRoute path="/ai-analysis" component={AIAnalysisPage} />
-      <ProtectedRoute path="/ai-training/history" component={AiTrainingHistoryPage} />
-      <ProtectedRoute path="/expenses/analytics" component={ExpensesAnalyticsPage} />
-      <ProtectedRoute path="/tags/:id" component={TagDetailPage} />
-      <ProtectedRoute path="/tags" component={TagsSettingsPage} />
-      <ProtectedRoute path="/settings" component={SettingsPage} />
-      <ProtectedRoute path="/product-catalog/:id" component={ProductDetailPage} />
-      <ProtectedRoute path="/product-catalog" component={ProductCatalogPage} />
+      {/* Public routes */}
+      <Route path="/" component={LandingPageWrapper} />
+      <Route path="/login" component={AuthPage} />
+      
+      {/* Protected app routes */}
+      <ProtectedRoute path="/app/dashboard" component={DashboardPage} />
+      <ProtectedRoute path="/app/transactions/sort" component={SwipeSortPage} />
+      <ProtectedRoute path="/app/transactions" component={TransactionsPage} />
+      <ProtectedRoute path="/app/wallets" component={WalletsPage} />
+      <ProtectedRoute path="/app/categories" component={CategoriesPage} />
+      <ProtectedRoute path="/app/recurring" component={RecurringPage} />
+      <ProtectedRoute path="/app/wishlist" component={WishlistPage} />
+      <ProtectedRoute path="/app/planned-expenses" component={PlannedExpensesPage} />
+      <ProtectedRoute path="/app/planned-income" component={PlannedIncomePage} />
+      <ProtectedRoute path="/app/budgets" component={BudgetsPage} />
+      <ProtectedRoute path="/app/ai-analysis" component={AIAnalysisPage} />
+      <ProtectedRoute path="/app/ai-training/history" component={AiTrainingHistoryPage} />
+      <ProtectedRoute path="/app/expenses/analytics" component={ExpensesAnalyticsPage} />
+      <ProtectedRoute path="/app/tags/:id" component={TagDetailPage} />
+      <ProtectedRoute path="/app/tags" component={TagsSettingsPage} />
+      <ProtectedRoute path="/app/settings" component={SettingsPage} />
+      <ProtectedRoute path="/app/product-catalog/:id" component={ProductDetailPage} />
+      <ProtectedRoute path="/app/product-catalog" component={ProductCatalogPage} />
+      
+      {/* 404 redirect */}
       <Route>
         <Redirect to="/" />
       </Route>

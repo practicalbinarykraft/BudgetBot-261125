@@ -46,12 +46,12 @@ export function ProductListItem({ product, currency = 'USD', exchangeRate = 1 }:
     : null;
 
   const handleCardClick = () => {
-    navigate(`/product-catalog/${product.id}`);
+    navigate(`/app/product-catalog/${product.id}`);
   };
 
   const handleSearchClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigate(`/product-catalog/${product.id}`);
+    navigate(`/app/product-catalog/${product.id}`);
   };
 
   return (

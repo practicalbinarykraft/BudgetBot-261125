@@ -123,7 +123,7 @@ export default function ProductDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/product-catalog'] });
       queryClient.invalidateQueries({ queryKey: ['/api/product-catalog', id] });
       queryClient.invalidateQueries({ queryKey: ['/api/product-catalog', id, 'price-history'] });
-      navigate('/product-catalog');
+      navigate('/app/product-catalog');
     },
     onError: () => {
       toast({
@@ -160,7 +160,7 @@ export default function ProductDetailPage() {
             <Package className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground">{t('productDetail.notFound')}</p>
             <Button variant="outline" className="mt-4" asChild>
-              <Link href="/product-catalog">
+              <Link href="/app/product-catalog">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 {t('productDetail.back')}
               </Link>
