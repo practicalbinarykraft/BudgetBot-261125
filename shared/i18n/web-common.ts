@@ -136,6 +136,10 @@ export const webCommonTranslations: Translations = {
     en: 'Success',
     ru: 'Успешно',
   },
+  'common.coming_soon': {
+    en: 'Coming Soon',
+    ru: 'Скоро',
+  },
   'common.total': {
     en: 'Total',
     ru: 'Всего',

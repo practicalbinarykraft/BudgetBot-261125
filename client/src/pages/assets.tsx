@@ -3,15 +3,18 @@ import { useQuery } from '@tanstack/react-query';
 import { Plus, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AssetList } from '@/components/assets/asset-list';
 import { AssetForm } from '@/components/assets/asset-form';
 import { AdBlock } from '@/components/assets/ad-block';
 import { AIAdviceBlock } from '@/components/assets/ai-advice-block';
 import type { AssetWithCategory, NetWorthSummary } from '@/lib/types/assets';
 import { useTranslation } from '@/i18n';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AssetsPage() {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'asset' | 'liability'>('asset');
   const [showForm, setShowForm] = useState(false);
   
@@ -106,53 +109,69 @@ export default function AssetsPage() {
           </Card>
         )}
         
-        {/* Табы и кнопки */}
-        <div className="flex items-center justify-between">
-          <div className="flex gap-2">
-            <Button
-              variant={activeTab === 'asset' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('asset')}
-              className={activeTab === 'asset' ? 'bg-green-600 hover:bg-green-700' : ''}
-              data-testid="button-tab-assets"
-            >
-              <TrendingUp className="w-4 h-4 mr-2" />
+        {/* Табы */}
+        <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as 'asset' | 'liability')} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2" data-testid="tabs-list">
+            <TabsTrigger value="asset" data-testid="tab-assets">
               {t('assets.tab_assets')}
-            </Button>
-            <Button
-              variant={activeTab === 'liability' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('liability')}
-              className={activeTab === 'liability' ? 'bg-red-600 hover:bg-red-700' : ''}
-              data-testid="button-tab-liabilities"
-            >
-              <TrendingDown className="w-4 h-4 mr-2" />
+            </TabsTrigger>
+            <TabsTrigger value="liability" data-testid="tab-liabilities">
               {t('assets.tab_liabilities')}
+            </TabsTrigger>
+          </TabsList>
+          
+          {/* Кнопки */}
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                toast({
+                  title: t('common.coming_soon'),
+                  description: "Функция добавления категорий скоро будет доступна",
+                });
+              }}
+              data-testid="button-add-category"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              {t('assets.add_category')}
+            </Button>
+            
+            <Button
+              onClick={() => setShowForm(true)}
+              data-testid="button-add-asset"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              {activeTab === 'asset' ? t('assets.add_asset') : t('assets.add_liability')}
             </Button>
           </div>
           
-          <Button
-            onClick={() => setShowForm(true)}
-            data-testid="button-add-asset"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            {activeTab === 'asset' ? t('assets.add_asset') : t('assets.add_liability')}
-          </Button>
-        </div>
-        
-        {/* Список */}
-        {isLoading ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">{t('assets.loading')}</p>
-          </div>
-        ) : (
-          <AssetList 
-            groupedAssets={filteredGrouped}
-            emptyMessage={
-              activeTab === 'asset' 
-                ? t('assets.no_assets')
-                : t('assets.no_liabilities')
-            }
-          />
-        )}
+          {/* Контент вкладок */}
+          <TabsContent value="asset" className="space-y-4">
+            {isLoading ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">{t('assets.loading')}</p>
+              </div>
+            ) : (
+              <AssetList 
+                groupedAssets={filteredGrouped}
+                emptyMessage={t('assets.no_assets')}
+              />
+            )}
+          </TabsContent>
+          
+          <TabsContent value="liability" className="space-y-4">
+            {isLoading ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">{t('assets.loading')}</p>
+              </div>
+            ) : (
+              <AssetList 
+                groupedAssets={filteredGrouped}
+                emptyMessage={t('assets.no_liabilities')}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
         
         {/* Форма */}
         <AssetForm

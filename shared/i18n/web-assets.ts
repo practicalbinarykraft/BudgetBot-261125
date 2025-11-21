@@ -19,6 +19,7 @@ export const webAssetsTranslations: Translations = {
   "assets.tab_liabilities": { en: "Liabilities", ru: "Обязательства" },
   "assets.add_asset": { en: "Add Asset", ru: "Добавить актив" },
   "assets.add_liability": { en: "Add Liability", ru: "Добавить обязательство" },
+  "assets.add_category": { en: "Add Category", ru: "Добавить категорию" },
   
   "assets.no_assets": { en: "No assets yet. Add your first asset!", ru: "Пока нет активов. Добавьте первый актив!" },
   "assets.no_liabilities": { en: "No liabilities yet.", ru: "Пока нет обязательств." },
