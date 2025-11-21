@@ -93,12 +93,43 @@ function calculatePrediction(
  * 
  * 3. income=5000, expenses=3500, budgets=6000
  *    → min(1500, -1000) → 1500 (ignore unrealistic budgets)
+ * 
+ * @param currentCapital - Current total wallet balance (optional)
+ * @param targetDate - User-specified target date (optional)
  */
 export function predictGoalWithStats(
   goalAmount: number,
   stats: MonthlyStats,
-  budgetLimits: number
+  budgetLimits: number,
+  currentCapital?: number,
+  targetDate?: string | null
 ): GoalPrediction {
+  // Three modes for affordableDate:
+  // 1. If targetDate is provided, use it (motivational mode)
+  // 2. If currentCapital >= goalAmount, goal is already affordable (today)
+  // 3. Otherwise calculate based on monthly surplus
+  
+  if (targetDate) {
+    // Mode 1: User has set a target date - use it for motivation
+    return {
+      canAfford: currentCapital !== undefined && currentCapital >= goalAmount,
+      freeCapital: stats.freeCapital,
+      monthsToAfford: null,
+      affordableDate: targetDate,
+    };
+  }
+  
+  if (currentCapital !== undefined && currentCapital >= goalAmount) {
+    // Mode 2: Goal is already affordable
+    return {
+      canAfford: true,
+      freeCapital: stats.freeCapital,
+      monthsToAfford: 0,
+      affordableDate: format(new Date(), 'yyyy-MM-dd'),
+    };
+  }
+  
+  // Mode 3: Calculate based on monthly surplus (original logic)
   let adjustedStats = stats;
   
   // Apply budget-aware adjustment if user has set limits

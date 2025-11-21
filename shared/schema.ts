@@ -124,6 +124,7 @@ export const plannedTransactions = pgTable("planned_transactions", {
   source: text("source").default("manual"), // 'manual' | 'wishlist'
   wishlistId: integer("wishlist_id").references(() => wishlist.id, { onDelete: "set null" }),
   status: text("status").default("planned"), // 'planned' | 'purchased' | 'cancelled'
+  showOnChart: boolean("show_on_chart").default(true).notNull(), // Show goal marker on forecast chart
   purchasedAt: timestamp("purchased_at"),
   transactionId: integer("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),

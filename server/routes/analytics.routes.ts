@@ -108,10 +108,17 @@ router.get("/trend", withAuth(async (req, res) => {
 
     // ШАГ 4: Получить planned transaction goals с предсказаниями для timeline markers
     const allPlanned = await storage.getPlannedByUserId(userId);
-    const planned = allPlanned.filter((item: PlannedTransaction) => item.status === 'planned');
+    const planned = allPlanned.filter((item: PlannedTransaction) => item.status === 'planned' && item.showOnChart !== false);
     const stats = await getMonthlyStats(userId);
     const budgetLimits = await getTotalBudgetLimits(userId);
     const today = new Date();
+    
+    // Получить текущий капитал (сумма всех кошельков)
+    const wallets = await storage.getWalletsByUserId(userId);
+    const currentCapital = wallets.reduce((sum, w) => {
+      const balance = parseFloat(w.balanceUsd || w.balance || "0");
+      return sum + (isNaN(balance) ? 0 : balance);
+    }, 0);
     
     // Добавить AI predictions и derived priority к каждой цели
     const goals = planned
@@ -139,14 +146,19 @@ router.get("/trend", withAuth(async (req, res) => {
           priority = 'low'; // >90 days
         }
         
-        const prediction = predictGoalWithStats(amount, stats, budgetLimits);
+        const prediction = predictGoalWithStats(
+          amount, 
+          stats, 
+          budgetLimits, 
+          currentCapital, 
+          item.targetDate
+        );
         return {
           ...item,
           prediction,
           priority,
         };
       })
-      .filter((item: any) => item.prediction?.monthsToAfford !== null); // Только доступные цели
 
     // ШАГ 5: Вернуть тренд + цели + metadata (already ISO string)
     res.json({
