@@ -34,12 +34,14 @@ import personalTagsRouter from "./personal-tags.routes";
 import migrationRouter from "./admin/migration.routes";
 import sortingRouter from "./sorting.routes";
 import productCatalogRouter from "./product-catalog.routes";
+import assetsRouter from "./assets.routes";
 
 export function registerRoutes(app: Express) {
   // Domain-specific routes
   app.use("/api/transactions", transactionsRouter);
   app.use("/api/wallets", walletsRouter);
   app.use("/api/categories", categoriesRouter);
+  app.use("/api/assets", assetsRouter);
   app.use("/api/recurring", recurringRouter);
   app.use("/api/wishlist", wishlistRouter);
   app.use("/api/planned", plannedRouter);
