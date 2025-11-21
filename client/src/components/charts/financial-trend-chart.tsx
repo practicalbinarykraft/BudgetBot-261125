@@ -194,6 +194,27 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
     }
   ] : [];
 
+  // Calculate fixed Y-axis domain to prevent chart "jumping" when toggling lines
+  const yDomain = (() => {
+    const allValues: number[] = [];
+    chartData.forEach(point => {
+      if (point.income !== undefined) allValues.push(point.income);
+      if (point.expense !== undefined) allValues.push(point.expense);
+      if (point.capital !== undefined) allValues.push(point.capital);
+      if (point.assetsNet !== undefined) allValues.push(point.assetsNet);
+    });
+    if (assetsForecastData.length > 0) {
+      assetsForecastData.forEach(point => {
+        const totalCapital = (point as any).totalCapital;
+        if (totalCapital !== undefined) allValues.push(totalCapital);
+      });
+    }
+    const min = Math.min(...allValues, 0);
+    const max = Math.max(...allValues, 0);
+    const padding = (max - min) * 0.1;
+    return [Math.floor(min - padding), Math.ceil(max + padding)];
+  })();
+
   return (
     <Card data-testid="card-financial-trend">
       <CardHeader>
@@ -311,6 +332,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
               />
               
               <YAxis
+                domain={yDomain}
                 tickFormatter={formatCompactCurrency}
                 stroke="hsl(var(--muted-foreground))"
               />
