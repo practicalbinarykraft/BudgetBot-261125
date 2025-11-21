@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { assetsRepository } from '../repositories/assets.repository';
 import { netWorthService } from '../services/net-worth.service';
 import { withAuth } from '../middleware/auth-utils';
@@ -57,16 +58,46 @@ router.get('/summary', withAuth(async (req, res) => {
   }
 }));
 
+// Query parameter validation schema
+const historyQuerySchema = z.object({
+  startDate: z.string().optional().refine((val) => {
+    if (!val) return true;
+    const date = new Date(val);
+    return !isNaN(date.getTime());
+  }, { message: 'Invalid startDate format' }),
+  endDate: z.string().optional().refine((val) => {
+    if (!val) return true;
+    const date = new Date(val);
+    return !isNaN(date.getTime());
+  }, { message: 'Invalid endDate format' }),
+}).refine((data) => {
+  if (!data.startDate || !data.endDate) return true;
+  const start = new Date(data.startDate);
+  const end = new Date(data.endDate);
+  return start <= end;
+}, { message: 'startDate must be before or equal to endDate' });
+
 // GET /api/assets/history - получить историю стоимости активов по датам
 router.get('/history', withAuth(async (req, res) => {
   try {
     const userId = req.user.id;
-    const { startDate, endDate } = req.query;
+    
+    // Validate query parameters
+    const validation = historyQuerySchema.safeParse(req.query);
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid query parameters',
+        details: validation.error.errors
+      });
+    }
+    
+    const { startDate, endDate } = validation.data;
     
     // Если даты не указаны - последние 6 месяцев
-    const end = endDate ? new Date(endDate as string) : new Date();
+    const end = endDate ? new Date(endDate) : new Date();
     const start = startDate 
-      ? new Date(startDate as string) 
+      ? new Date(startDate) 
       : new Date(end.getTime() - 180 * 24 * 60 * 60 * 1000); // 6 месяцев назад
     
     // Получить все активы пользователя
