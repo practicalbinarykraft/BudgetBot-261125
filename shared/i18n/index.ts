@@ -31,6 +31,7 @@ import { webAiToolsTranslations } from './web-ai-tools';
 import { webProductCatalogTranslations } from './web-product-catalog';
 import { webLandingTranslations } from './web-landing';
 import { webAnalyticsTranslations } from './web-analytics';
+import { webAssetsTranslations } from './web-assets';
 
 // Export types
 export type { Language, Translation, Translations } from './types';
@@ -64,6 +65,7 @@ const allTranslations: Translations = {
   ...webProductCatalogTranslations,
   ...webLandingTranslations,
   ...webAnalyticsTranslations,
+  ...webAssetsTranslations,
 };
 
 /**

@@ -1,52 +1,54 @@
 import { TrendingUp, Home, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useTranslation } from '@/i18n';
 
 interface AdBlockProps {
   netWorth?: number;
 }
 
 export function AdBlock({ netWorth = 0 }: AdBlockProps) {
+  const { t } = useTranslation();
   
   // Логика показа рекламы в зависимости от капитала
   const getAdContent = () => {
     if (netWorth > 50000) {
       return {
-        title: 'Real Estate in Bali',
+        title: t('assets.ad_realestate_title'),
         icon: Home,
         items: [
-          'Installment plan for 2 years, 0% interest',
-          'Down payment: $20,000',
-          'Monthly payment: $2,000',
-          'Rental income: ~$1,500/month'
+          t('assets.ad_realestate_item1'),
+          t('assets.ad_realestate_item2'),
+          t('assets.ad_realestate_item3'),
+          t('assets.ad_realestate_item4')
         ],
-        cta: 'Learn More',
+        cta: t('assets.ad_realestate_cta'),
         gradient: 'from-blue-500/10 to-purple-500/10'
       };
     } else if (netWorth > 20000) {
       return {
-        title: 'ETF Investments',
+        title: t('assets.ad_etf_title'),
         icon: TrendingUp,
         items: [
-          'Diversified portfolio',
-          'Minimum deposit: $1,000',
-          'Average return: 8-12% annually',
-          'Low fees'
+          t('assets.ad_etf_item1'),
+          t('assets.ad_etf_item2'),
+          t('assets.ad_etf_item3'),
+          t('assets.ad_etf_item4')
         ],
-        cta: 'Start Investing',
+        cta: t('assets.ad_etf_cta'),
         gradient: 'from-green-500/10 to-emerald-500/10'
       };
     } else {
       return {
-        title: 'Financial Literacy Course',
+        title: t('assets.ad_literacy_title'),
         icon: BookOpen,
         items: [
-          'How to manage personal finances',
-          'Investment basics',
-          'Building passive income',
-          '50% discount for new users'
+          t('assets.ad_literacy_item1'),
+          t('assets.ad_literacy_item2'),
+          t('assets.ad_literacy_item3'),
+          t('assets.ad_literacy_item4')
         ],
-        cta: 'Enroll Now',
+        cta: t('assets.ad_literacy_cta'),
         gradient: 'from-orange-500/10 to-yellow-500/10'
       };
     }
@@ -60,7 +62,7 @@ export function AdBlock({ netWorth = 0 }: AdBlockProps) {
       <div className="p-6">
         {/* Метка "Реклама" */}
         <p className="text-xs text-muted-foreground mb-3" data-testid="text-ad-label">
-          SPONSORED
+          {t('assets.sponsored')}
         </p>
         
         {/* Изображение-заглушка */}

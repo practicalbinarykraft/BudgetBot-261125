@@ -8,8 +8,10 @@ import { AssetForm } from '@/components/assets/asset-form';
 import { AdBlock } from '@/components/assets/ad-block';
 import { AIAdviceBlock } from '@/components/assets/ai-advice-block';
 import type { AssetWithCategory, NetWorthSummary } from '@/lib/types/assets';
+import { useTranslation } from '@/i18n';
 
 export default function AssetsPage() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'asset' | 'liability'>('asset');
   const [showForm, setShowForm] = useState(false);
   
@@ -44,9 +46,9 @@ export default function AssetsPage() {
       <div className="flex-1 space-y-6">
         {/* Заголовок */}
         <div>
-          <h1 className="text-3xl font-bold mb-2">Assets & Liabilities</h1>
+          <h1 className="text-3xl font-bold mb-2">{t('assets.title')}</h1>
           <p className="text-muted-foreground">
-            Manage your possessions and track their value
+            {t('assets.subtitle')}
           </p>
         </div>
       
@@ -56,7 +58,7 @@ export default function AssetsPage() {
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <p className="text-sm opacity-80">Net Worth</p>
+                  <p className="text-sm opacity-80">{t('assets.net_worth')}</p>
                   <p className="text-4xl font-bold" data-testid="text-net-worth">
                     ${(summary.netWorth ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
                   </p>
@@ -75,21 +77,21 @@ export default function AssetsPage() {
               
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-white/10 p-3 rounded-lg">
-                  <p className="text-xs opacity-80">Assets</p>
+                  <p className="text-xs opacity-80">{t('assets.assets')}</p>
                   <p className="text-lg font-semibold" data-testid="text-total-assets">
                     ${((summary.totalAssets ?? 0) / 1000).toFixed(0)}K
                   </p>
                 </div>
                 
                 <div className="bg-white/10 p-3 rounded-lg">
-                  <p className="text-xs opacity-80">Liabilities</p>
+                  <p className="text-xs opacity-80">{t('assets.liabilities')}</p>
                   <p className="text-lg font-semibold" data-testid="text-total-liabilities">
                     ${((summary.totalLiabilities ?? 0) / 1000).toFixed(0)}K
                   </p>
                 </div>
                 
                 <div className="bg-white/10 p-3 rounded-lg">
-                  <p className="text-xs opacity-80">Cashflow</p>
+                  <p className="text-xs opacity-80">{t('assets.cashflow')}</p>
                   <p 
                     className={`text-lg font-semibold ${
                       summary.monthlyCashflow >= 0 ? 'text-green-200' : 'text-red-200'
@@ -114,7 +116,7 @@ export default function AssetsPage() {
               data-testid="button-tab-assets"
             >
               <TrendingUp className="w-4 h-4 mr-2" />
-              Assets
+              {t('assets.tab_assets')}
             </Button>
             <Button
               variant={activeTab === 'liability' ? 'default' : 'outline'}
@@ -123,7 +125,7 @@ export default function AssetsPage() {
               data-testid="button-tab-liabilities"
             >
               <TrendingDown className="w-4 h-4 mr-2" />
-              Liabilities
+              {t('assets.tab_liabilities')}
             </Button>
           </div>
           
@@ -132,22 +134,22 @@ export default function AssetsPage() {
             data-testid="button-add-asset"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Add {activeTab === 'asset' ? 'Asset' : 'Liability'}
+            {activeTab === 'asset' ? t('assets.add_asset') : t('assets.add_liability')}
           </Button>
         </div>
         
         {/* Список */}
         {isLoading ? (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">Loading...</p>
+            <p className="text-muted-foreground">{t('assets.loading')}</p>
           </div>
         ) : (
           <AssetList 
             groupedAssets={filteredGrouped}
             emptyMessage={
               activeTab === 'asset' 
-                ? 'No assets yet. Add your first asset!' 
-                : 'No liabilities yet.'
+                ? t('assets.no_assets')
+                : t('assets.no_liabilities')
             }
           />
         )}

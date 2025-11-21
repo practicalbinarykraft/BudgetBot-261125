@@ -1,12 +1,14 @@
 import { Sparkles, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useTranslation } from '@/i18n';
 
 interface AIAdviceBlockProps {
   onOpenChat?: () => void;
 }
 
 export function AIAdviceBlock({ onOpenChat }: AIAdviceBlockProps) {
+  const { t } = useTranslation();
   const handleClick = () => {
     if (onOpenChat) {
       onOpenChat();
@@ -20,12 +22,11 @@ export function AIAdviceBlock({ onOpenChat }: AIAdviceBlockProps) {
       <div className="p-6">
         <h3 className="font-bold text-lg mb-3 flex items-center gap-2" data-testid="text-ai-advice-title">
           <Sparkles className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-          AI Advisor
+          {t('assets.ai_advisor_title')}
         </h3>
         
         <p className="text-sm text-foreground/80 mb-4" data-testid="text-ai-advice-description">
-          Want to optimize your assets and liabilities? 
-          Our AI advisor will analyze your situation and provide personalized recommendations.
+          {t('assets.ai_advisor_text')}
         </p>
         
         <Button
@@ -35,7 +36,7 @@ export function AIAdviceBlock({ onOpenChat }: AIAdviceBlockProps) {
           data-testid="button-open-ai-chat"
         >
           <MessageCircle className="w-4 h-4 mr-2" />
-          Get Advice
+          {t('assets.get_advice')}
         </Button>
       </div>
     </Card>
