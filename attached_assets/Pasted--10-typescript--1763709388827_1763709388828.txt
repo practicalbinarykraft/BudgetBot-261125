@@ -1,0 +1,279 @@
+ШАГ 10: СОЗДАТЬ ФОРМУ ДОБАВЛЕНИЯ АКТИВА
+typescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Форма для создания/редактирования актива
+ФАЙЛ: client/src/components/assets/asset-form.tsx
+СТРОК: ~180
+═══════════════════════════════════════════════════════
+
+СОЗДАЙ ФАЙЛ: client/src/components/assets/asset-form.tsx
+
+СОДЕРЖИМОЕ:
+
+import { useState } from 'react';
+import { X } from 'lucide-react';
+import type { Asset } from '@/lib/types/assets';
+
+interface AssetFormProps {
+  asset?: Asset;
+  type: 'asset' | 'liability';
+  categories: Array<{ id: number; name: string; icon: string; color: string }>;
+  onSubmit: (data: any) => Promise<void>;
+  onClose: () => void;
+}
+
+export function AssetForm({ asset, type, categories, onSubmit, onClose }: AssetFormProps) {
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: asset?.name || '',
+    type: type,
+    categoryId: asset?.categoryId || null,
+    
+    currentValue: asset?.currentValue || '',
+    currentValueOriginal: asset?.currentValueOriginal || '',
+    currencyOriginal: asset?.currencyOriginal || 'USD',
+    
+    purchasePrice: asset?.purchasePrice || '',
+    purchasePriceOriginal: asset?.purchasePriceOriginal || '',
+    purchaseDate: asset?.purchaseDate || '',
+    
+    monthlyIncome: asset?.monthlyIncome || '0',
+    monthlyExpense: asset?.monthlyExpense || '0',
+    
+    depreciationRate: asset?.depreciationRate || '',
+    appreciationRate: asset?.appreciationRate || '',
+    
+    location: asset?.location || '',
+    notes: asset?.notes || '',
+    imageUrl: asset?.imageUrl || ''
+  });
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    try {
+      await onSubmit(formData);
+      onClose();
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      alert('Ошибка при сохранении');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const updateField = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+  
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Заголовок */}
+        <div className="flex items-center justify-between p-6 border-b">
+          <h2 className="text-2xl font-bold">
+            {asset ? 'Редактировать' : 'Добавить'} {type === 'asset' ? 'актив' : 'пассив'}
+          </h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X size={24} />
+          </button>
+        </div>
+        
+        {/* Форма */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Название */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Название *</label>
+            <input
+              type="text"
+              required
+              value={formData.name}
+              onChange={(e) => updateField('name', e.target.value)}
+              placeholder="Например: Квартира в Москве"
+              className="w-full px-3 py-2 border rounded-lg"
+            />
+          </div>
+          
+          {/* Категория */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Категория</label>
+            <select
+              value={formData.categoryId || ''}
+              onChange={(e) => updateField('categoryId', e.target.value ? parseInt(e.target.value) : null)}
+              className="w-full px-3 py-2 border rounded-lg"
+            >
+              <option value="">Без категории</option>
+              {categories.map(cat => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.icon} {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          {/* Текущая стоимость */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Текущая стоимость *</label>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={formData.currentValueOriginal}
+                onChange={(e) => updateField('currentValueOriginal', e.target.value)}
+                placeholder="200000"
+                className="flex-1 px-3 py-2 border rounded-lg"
+              />
+              <select
+                value={formData.currencyOriginal}
+                onChange={(e) => updateField('currencyOriginal', e.target.value)}
+                className="px-3 py-2 border rounded-lg"
+              >
+                <option value="USD">USD</option>
+                <option value="RUB">RUB</option>
+                <option value="IDR">IDR</option>
+              </select>
+            </div>
+          </div>
+          
+          {/* Цена покупки */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Цена покупки (опционально)</label>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                step="0.01"
+                value={formData.purchasePriceOriginal}
+                onChange={(e) => updateField('purchasePriceOriginal', e.target.value)}
+                placeholder="150000"
+                className="flex-1 px-3 py-2 border rounded-lg"
+              />
+              <input
+                type="date"
+                value={formData.purchaseDate}
+                onChange={(e) => updateField('purchaseDate', e.target.value)}
+                className="px-3 py-2 border rounded-lg"
+              />
+            </div>
+          </div>
+          
+          {/* Cashflow */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Доход в месяц</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.monthlyIncome}
+                onChange={(e) => updateField('monthlyIncome', e.target.value)}
+                placeholder="0"
+                className="w-full px-3 py-2 border rounded-lg"
+              />
+              <p className="text-xs text-gray-500 mt-1">Например, аренда</p>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-2">Расход в месяц</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.monthlyExpense}
+                onChange={(e) => updateField('monthlyExpense', e.target.value)}
+                placeholder="0"
+                className="w-full px-3 py-2 border rounded-lg"
+              />
+              <p className="text-xs text-gray-500 mt-1">Например, бензин, налоги</p>
+            </div>
+          </div>
+          
+          {/* Изменение цены */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Рост цены (% в год)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.appreciationRate}
+                onChange={(e) => updateField('appreciationRate', e.target.value)}
+                placeholder="8"
+                className="w-full px-3 py-2 border rounded-lg"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-2">Падение цены (% в год)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.depreciationRate}
+                onChange={(e) => updateField('depreciationRate', e.target.value)}
+                placeholder="8"
+                className="w-full px-3 py-2 border rounded-lg"
+              />
+            </div>
+          </div>
+          
+          {/* Локация */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Местоположение</label>
+            <input
+              type="text"
+              value={formData.location}
+              onChange={(e) => updateField('location', e.target.value)}
+              placeholder="Москва, ул. Пушкина 10"
+              className="w-full px-3 py-2 border rounded-lg"
+            />
+          </div>
+          
+          {/* URL изображения */}
+          <div>
+            <label className="block text-sm font-medium mb-2">URL изображения</label>
+            <input
+              type="url"
+              value={formData.imageUrl}
+              onChange={(e) => updateField('imageUrl', e.target.value)}
+              placeholder="https://example.com/image.jpg"
+              className="w-full px-3 py-2 border rounded-lg"
+            />
+          </div>
+          
+          {/* Заметки */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Заметки</label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => updateField('notes', e.target.value)}
+              placeholder="Дополнительная информация..."
+              rows={3}
+              className="w-full px-3 py-2 border rounded-lg"
+            />
+          </div>
+          
+          {/* Кнопки */}
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
+            >
+              Отмена
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+              {loading ? 'Сохранение...' : asset ? 'Обновить' : 'Создать'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+ПРОВЕРКА:
+✅ Файл создан
+✅ Форма валидируется
+✅ Мультивалюта поддерживается
+✅ Все поля присутствуют
