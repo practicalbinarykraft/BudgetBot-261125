@@ -100,7 +100,8 @@ export default function DashboardPage() {
             <p className="text-muted-foreground">{t("dashboard.overview")}</p>
           </div>
         </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <Skeleton className="h-32" />
           <Skeleton className="h-32" />
           <Skeleton className="h-32" />
           <Skeleton className="h-32" />
@@ -137,7 +138,7 @@ export default function DashboardPage() {
 
       <BudgetAlerts />
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title={t("dashboard.total_income")}
           value={`$${stats?.totalIncome?.toFixed(2) ?? "0.00"}`}
@@ -171,11 +172,28 @@ export default function DashboardPage() {
             </div>
           }
         />
+        {netWorthSummary && (
+          <StatCard
+            title={t("assets.net_worth")}
+            value={`$${(netWorthSummary.netWorth ?? 0).toFixed(0)}`}
+            icon={Wallet}
+            className="border-l-4 border-l-purple-500"
+            action={
+              <div className="space-y-1">
+                <div className="text-xs text-muted-foreground space-y-0.5" data-testid="assets-breakdown">
+                  <div>{t("assets.assets")}: ${((netWorthSummary.totalAssets ?? 0) / 1000).toFixed(0)}K</div>
+                  <div>{t("assets.liabilities")}: ${((netWorthSummary.totalLiabilities ?? 0) / 1000).toFixed(0)}K</div>
+                </div>
+                <Link href="/app/assets">
+                  <span className="text-sm text-primary hover:underline flex items-center gap-1 cursor-pointer" data-testid="link-view-assets">
+                    {t("dashboard.view_details")} <ArrowRight className="h-3 w-3" />
+                  </span>
+                </Link>
+              </div>
+            }
+          />
+        )}
       </div>
-
-      {netWorthSummary && (
-        <NetWorthWidget summary={netWorthSummary} />
-      )}
 
       <FinancialTrendChart wishlistPredictions={wishlistItems} />
 
