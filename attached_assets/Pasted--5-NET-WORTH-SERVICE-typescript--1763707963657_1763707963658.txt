@@ -1,0 +1,149 @@
+ШАГ 5: СОЗДАТЬ NET WORTH SERVICE
+typescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Сервис для расчёта чистого капитала
+ФАЙЛ: server/services/net-worth.service.ts
+СТРОК: ~130
+═══════════════════════════════════════════════════════
+
+СОЗДАЙ НОВЫЙ ФАЙЛ: server/services/net-worth.service.ts
+
+СОДЕРЖИМОЕ:
+
+import { assetsRepository } from '../repositories/assets.repository';
+import { Asset } from '@shared/schemas/assets.schema';
+
+interface NetWorthSummary {
+  totalAssets: number;
+  totalLiabilities: number;
+  netWorth: number;
+  monthlyIncome: number;
+  monthlyExpense: number;
+  monthlyCashflow: number;
+  changePercent: number;
+}
+
+export class NetWorthService {
+  
+  async calculateNetWorth(userId: number): Promise<NetWorthSummary> {
+    // Получить все активы и пассивы
+    const allAssets = await assetsRepository.findByUserId(userId);
+    
+    const assetsOnly = allAssets.filter(item => item.asset.type === 'asset');
+    const liabilities = allAssets.filter(item => item.asset.type === 'liability');
+    
+    // Рассчитать суммы
+    const totalAssets = this.sumCurrentValue(assetsOnly.map(i => i.asset));
+    const totalLiabilities = this.sumCurrentValue(liabilities.map(i => i.asset));
+    const netWorth = totalAssets - totalLiabilities;
+    
+    // Рассчитать cashflow
+    const allAssetsFlat = allAssets.map(i => i.asset);
+    const monthlyIncome = this.sumMonthlyIncome(allAssetsFlat);
+    const monthlyExpense = this.sumMonthlyExpense(allAssetsFlat);
+    const monthlyCashflow = monthlyIncome - monthlyExpense;
+    
+    // Рассчитать изменение (годовое: cashflow * 12 / netWorth)
+    const changePercent = netWorth > 0 
+      ? (monthlyCashflow / netWorth) * 100 * 12
+      : 0;
+    
+    return {
+      totalAssets,
+      totalLiabilities,
+      netWorth,
+      monthlyIncome,
+      monthlyExpense,
+      monthlyCashflow,
+      changePercent
+    };
+  }
+  
+  private sumCurrentValue(assets: Asset[]): number {
+    return assets.reduce((sum, asset) => {
+      return sum + parseFloat(asset.currentValue);
+    }, 0);
+  }
+  
+  private sumMonthlyIncome(assets: Asset[]): number {
+    return assets.reduce((sum, asset) => {
+      return sum + parseFloat(asset.monthlyIncome || '0');
+    }, 0);
+  }
+  
+  private sumMonthlyExpense(assets: Asset[]): number {
+    return assets.reduce((sum, asset) => {
+      return sum + parseFloat(asset.monthlyExpense || '0');
+    }, 0);
+  }
+  
+  // Рассчитать изменение стоимости актива за период
+  calculateAssetChange(asset: Asset): {
+    changeAmount: number;
+    changePercent: number;
+    ownershipYears: number;
+  } {
+    if (!asset.purchasePrice || !asset.purchaseDate) {
+      return { 
+        changeAmount: 0, 
+        changePercent: 0,
+        ownershipYears: 0
+      };
+    }
+    
+    const currentValue = parseFloat(asset.currentValue);
+    const purchasePrice = parseFloat(asset.purchasePrice);
+    
+    const changeAmount = currentValue - purchasePrice;
+    const changePercent = (changeAmount / purchasePrice) * 100;
+    
+    const ownershipYears = this.calculateOwnershipYears(asset);
+    
+    return {
+      changeAmount,
+      changePercent,
+      ownershipYears
+    };
+  }
+  
+  // Рассчитать время владения
+  private calculateOwnershipYears(asset: Asset): number {
+    if (!asset.purchaseDate) return 0;
+    
+    const purchaseDate = new Date(asset.purchaseDate);
+    const now = new Date();
+    
+    const years = (now.getTime() - purchaseDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
+    
+    return Math.max(0, years);
+  }
+  
+  // Рассчитать прогноз стоимости актива
+  projectAssetValue(asset: Asset, months: number): number {
+    const currentValue = parseFloat(asset.currentValue);
+    
+    // Если есть appreciation rate (растёт)
+    if (asset.appreciationRate) {
+      const annualRate = parseFloat(asset.appreciationRate) / 100;
+      const monthlyRate = annualRate / 12;
+      return currentValue * Math.pow(1 + monthlyRate, months);
+    }
+    
+    // Если есть depreciation rate (падает)
+    if (asset.depreciationRate) {
+      const annualRate = parseFloat(asset.depreciationRate) / 100;
+      const monthlyRate = annualRate / 12;
+      return currentValue * Math.pow(1 - monthlyRate, months);
+    }
+    
+    // Если нет изменения - текущая стоимость
+    return currentValue;
+  }
+}
+
+export const netWorthService = new NetWorthService();
+
+ПРОВЕРКА:
+✅ Файл создан в server/services/net-worth.service.ts
+✅ Никаких TypeScript ошибок
+✅ Методы логичны и понятны
+✅ Поддержка прогнозирования
