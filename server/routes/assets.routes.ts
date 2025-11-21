@@ -102,8 +102,9 @@ router.get('/history', withAuth(async (req, res) => {
       for (const item of allAssets) {
         const asset = item.asset;
         
-        // Пропустить если актив создан после этой даты
-        if (new Date(asset.createdAt) > new Date(date)) {
+        // Пропустить если актив куплен после этой даты
+        const purchaseDate = asset.purchaseDate ? new Date(asset.purchaseDate) : new Date(asset.createdAt);
+        if (purchaseDate > new Date(date)) {
           continue;
         }
         
