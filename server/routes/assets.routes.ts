@@ -58,6 +58,62 @@ router.get('/summary', withAuth(async (req, res) => {
   }
 }));
 
+// Validation schema for forecast query
+const forecastQuerySchema = z.object({
+  months: z.string().optional().transform((val) => {
+    if (!val) return 6; // default 6 months
+    const num = parseInt(val, 10);
+    if (isNaN(num) || num < 1 || num > 120) {
+      throw new Error('months must be between 1 and 120');
+    }
+    return num;
+  }),
+  currentWalletsBalance: z.string().optional().transform((val) => {
+    if (!val) return 0;
+    const num = parseFloat(val);
+    if (isNaN(num)) {
+      throw new Error('currentWalletsBalance must be a valid number');
+    }
+    return num;
+  })
+});
+
+// GET /api/assets/forecast - спрогнозировать общий капитал
+router.get('/forecast', withAuth(async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Validate query parameters
+    const validation = forecastQuerySchema.safeParse(req.query);
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid query parameters',
+        details: validation.error.errors
+      });
+    }
+    
+    const { months, currentWalletsBalance } = validation.data;
+    
+    const forecast = await netWorthService.forecastTotalCapital({
+      userId,
+      months,
+      currentWalletsBalance
+    });
+    
+    res.json({
+      success: true,
+      data: forecast
+    });
+  } catch (error: any) {
+    console.error('Error forecasting total capital:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to forecast total capital'
+    });
+  }
+}));
+
 // Query parameter validation schema
 const historyQuerySchema = z.object({
   startDate: z.string().optional().refine((val) => {

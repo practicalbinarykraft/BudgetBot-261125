@@ -1,0 +1,94 @@
+ШАГ 25: ДОБАВИТЬ ПРОГНОЗ С УЧЁТОМ АКТИВОВ
+typescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Обновить прогноз капитала (учитывать appreciation/depreciation)
+ФАЙЛ: server/services/net-worth.service.ts
+ДОБАВИТЬ: метод прогнозирования
+═══════════════════════════════════════════════════════
+
+ОТКРОЙ ФАЙЛ: server/services/net-worth.service.ts
+
+ДОБАВЬ НОВЫЙ МЕТОД:
+
+// Спрогнозировать общий капитал на N месяцев вперёд
+async forecastTotalCapital(params: {
+  userId: number;
+  months: number;
+  currentWalletsBalance: number;
+}): Promise<{
+  current: number;
+  projected: number;
+  breakdown: {
+    wallets: number;
+    assets: number;
+    liabilities: number;
+  };
+}> {
+  const { userId, months, currentWalletsBalance } = params;
+  
+  // Получить текущий net worth
+  const netWorth = await this.calculateNetWorth(userId);
+  
+  // Получить все активы для прогноза
+  const allAssets = await assetsRepository.findByUserId(userId);
+  
+  let projectedAssetsValue = 0;
+  let projectedLiabilitiesValue = 0;
+  
+  // Спрогнозировать каждый актив/пассив
+  for (const item of allAssets) {
+    const asset = item.asset;
+    const projectedValue = this.projectAssetValue(asset, months);
+    
+    if (asset.type === 'asset') {
+      projectedAssetsValue += projectedValue;
+    } else {
+      projectedLiabilitiesValue += projectedValue;
+    }
+  }
+  
+  // Спрогнозировать кошельки (на основе среднего cashflow)
+  const avgMonthlyCashflow = netWorth.monthlyCashflow; // доходы - расходы от активов
+  const projectedWalletsBalance = currentWalletsBalance + (avgMonthlyCashflow * months);
+  
+  // Общий прогнозный капитал
+  const projectedTotal = projectedWalletsBalance + projectedAssetsValue - projectedLiabilitiesValue;
+  const currentTotal = currentWalletsBalance + netWorth.netWorth;
+  
+  return {
+    current: currentTotal,
+    projected: projectedTotal,
+    breakdown: {
+      wallets: projectedWalletsBalance,
+      assets: projectedAssetsValue,
+      liabilities: projectedLiabilitiesValue
+    }
+  };
+}
+
+// Метод projectAssetValue уже есть, но проверим:
+projectAssetValue(asset: Asset, months: number): number {
+  const currentValue = parseFloat(asset.currentValue);
+  
+  // Если есть appreciation rate (растёт)
+  if (asset.appreciationRate) {
+    const annualRate = parseFloat(asset.appreciationRate) / 100;
+    const monthlyRate = annualRate / 12;
+    return currentValue * Math.pow(1 + monthlyRate, months);
+  }
+  
+  // Если есть depreciation rate (падает)
+  if (asset.depreciationRate) {
+    const annualRate = parseFloat(asset.depreciationRate) / 100;
+    const monthlyRate = annualRate / 12;
+    return currentValue * Math.pow(1 - monthlyRate, months);
+  }
+  
+  // Если нет изменения - текущая стоимость
+  return currentValue;
+}
+
+ПРОВЕРКА:
+✅ Метод добавлен
+✅ Прогноз учитывает рост/падение активов
+✅ Прогноз учитывает cashflow
+✅ Возвращает разбивку по компонентам

@@ -139,6 +139,98 @@ export class NetWorthService {
     // Если нет изменения - текущая стоимость
     return currentValue;
   }
+  
+  // Спрогнозировать общий капитал на N месяцев вперёд
+  async forecastTotalCapital(params: {
+    userId: number;
+    months: number;
+    currentWalletsBalance: number;
+  }): Promise<{
+    current: number;
+    projected: number;
+    breakdown: {
+      wallets: number;
+      assets: number;
+      liabilities: number;
+    };
+  }> {
+    const { userId, months, currentWalletsBalance } = params;
+    
+    // Получить текущий net worth
+    const netWorth = await this.calculateNetWorth(userId);
+    
+    // Получить все активы для прогноза
+    const allAssets = await assetsRepository.findByUserId(userId);
+    
+    let projectedAssetsValue = 0;
+    let projectedLiabilitiesValue = 0;
+    let adjustedCashflow = 0;
+    
+    // Спрогнозировать каждый актив/пассив и рассчитать реальный cashflow
+    for (const item of allAssets) {
+      const asset = item.asset;
+      const monthlyIncome = parseFloat(asset.monthlyIncome || '0');
+      const monthlyExpense = parseFloat(asset.monthlyExpense || '0');
+      
+      if (asset.type === 'asset') {
+        // Активы: применить appreciation/depreciation
+        const projectedValue = this.projectAssetValue(asset, months);
+        projectedAssetsValue += projectedValue;
+        
+        // Добавить cashflow за весь период
+        adjustedCashflow += (monthlyIncome - monthlyExpense) * months;
+      } else {
+        // Пассивы: применить depreciation ИЛИ вычесть ежемесячные платежи
+        let projectedValue = this.projectAssetValue(asset, months);
+        
+        // Если у пассива есть ежемесячные расходы (платежи), уменьшить баланс долга
+        if (asset.monthlyExpense) {
+          const currentValue = parseFloat(asset.currentValue);
+          const monthlyPayment = parseFloat(asset.monthlyExpense);
+          
+          // Рассчитать реальное количество месяцев платежей (до полного погашения)
+          const actualMonthsOfPayment = Math.min(
+            months,
+            Math.ceil(currentValue / monthlyPayment)
+          );
+          
+          // Ограничить общие платежи размером долга (последний платёж может быть меньше)
+          const totalPayments = Math.min(
+            monthlyPayment * actualMonthsOfPayment,
+            currentValue
+          );
+          
+          // Уменьшить долг, но не ниже нуля
+          projectedValue = Math.max(0, projectedValue - totalPayments);
+          
+          // Вычесть из cashflow только реальные платежи (не платежи после погашения)
+          adjustedCashflow -= totalPayments;
+        } else {
+          // Нет платежей, только стандартный cashflow
+          adjustedCashflow += (monthlyIncome - monthlyExpense) * months;
+        }
+        
+        projectedLiabilitiesValue += projectedValue;
+      }
+    }
+    
+    // Спрогнозировать кошельки (на основе скорректированного cashflow)
+    const projectedWalletsBalance = currentWalletsBalance + adjustedCashflow;
+    
+    // Общий прогнозный капитал
+    const projectedTotal = projectedWalletsBalance + projectedAssetsValue - projectedLiabilitiesValue;
+    const currentTotal = currentWalletsBalance + netWorth.netWorth;
+    
+    return {
+      current: currentTotal,
+      projected: projectedTotal,
+      breakdown: {
+        wallets: projectedWalletsBalance,
+        assets: projectedAssetsValue,
+        liabilities: projectedLiabilitiesValue
+      }
+    };
+  }
 }
 
 export const netWorthService = new NetWorthService();
