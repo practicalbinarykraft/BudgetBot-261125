@@ -4,6 +4,7 @@ import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { AssetCard } from './asset-card';
 import type { AssetWithCategory } from '@/lib/types/assets';
+import { useTranslation } from '@/i18n';
 
 interface AssetListProps {
   groupedAssets: Record<string, AssetWithCategory[]>;
@@ -11,6 +12,7 @@ interface AssetListProps {
 }
 
 export function AssetList({ groupedAssets, emptyMessage = 'No assets yet' }: AssetListProps) {
+  const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   
   const totalAssets = Object.values(groupedAssets).flat().length;
@@ -20,7 +22,7 @@ export function AssetList({ groupedAssets, emptyMessage = 'No assets yet' }: Ass
       <div className="text-center py-12">
         <p className="text-muted-foreground text-lg">{emptyMessage}</p>
         <p className="text-muted-foreground text-sm mt-2">
-          Click "+ Add" to add your first asset
+          {t('assets.add_first_hint')}
         </p>
       </div>
     );
