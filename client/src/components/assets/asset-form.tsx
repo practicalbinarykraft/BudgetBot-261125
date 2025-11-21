@@ -12,6 +12,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Category } from "@shared/schema";
+import { useTranslation } from "@/i18n";
 
 interface AssetFormProps {
   open: boolean;
@@ -20,33 +21,49 @@ interface AssetFormProps {
   type: 'asset' | 'liability';
 }
 
-const assetFormSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  type: z.enum(['asset', 'liability']),
-  categoryId: z.number().nullable(),
-  
-  currentValueOriginal: z.string().min(1, "Current value is required"),
-  currencyOriginal: z.string().default('USD'),
-  
-  purchasePriceOriginal: z.string().optional(),
-  purchaseDate: z.string().optional(),
-  
-  monthlyIncome: z.string().default('0'),
-  monthlyExpense: z.string().default('0'),
-  
-  depreciationRate: z.string().optional(),
-  appreciationRate: z.string().optional(),
-  
-  location: z.string().optional(),
-  notes: z.string().optional(),
-  imageUrl: z.string().optional(),
-});
-
-type FormData = z.infer<typeof assetFormSchema>;
+type FormData = {
+  name: string;
+  type: 'asset' | 'liability';
+  categoryId: number | null;
+  currentValueOriginal: string;
+  currencyOriginal: string;
+  purchasePriceOriginal?: string;
+  purchaseDate?: string;
+  monthlyIncome: string;
+  monthlyExpense: string;
+  depreciationRate?: string;
+  appreciationRate?: string;
+  location?: string;
+  notes?: string;
+  imageUrl?: string;
+};
 
 export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
+  
+  const assetFormSchema = z.object({
+    name: z.string().min(1, t("assets.form_name_required")),
+    type: z.enum(['asset', 'liability']),
+    categoryId: z.number().nullable(),
+    
+    currentValueOriginal: z.string().min(1, t("assets.form_current_value_required")),
+    currencyOriginal: z.string().default('USD'),
+    
+    purchasePriceOriginal: z.string().optional(),
+    purchaseDate: z.string().optional(),
+    
+    monthlyIncome: z.string().default('0'),
+    monthlyExpense: z.string().default('0'),
+    
+    depreciationRate: z.string().optional(),
+    appreciationRate: z.string().optional(),
+    
+    location: z.string().optional(),
+    notes: z.string().optional(),
+    imageUrl: z.string().optional(),
+  });
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
@@ -96,7 +113,8 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
         
         const rate = rates[currency];
         if (!rate) {
-          throw new Error(`Unsupported currency: ${currency}. Please select a supported currency.`);
+          const errorMsg = t("assets.error_unsupported_currency").replace("{currency}", currency);
+          throw new Error(errorMsg);
         }
         
         return (num / rate).toFixed(2);
@@ -128,17 +146,18 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/assets"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["/api/assets/summary"] });
+      const successKey = asset 
+        ? (type === 'asset' ? 'assets.form_updated' : 'assets.liability_form_updated')
+        : (type === 'asset' ? 'assets.form_created' : 'assets.liability_form_created');
       toast({
-        title: asset ? "Asset updated" : "Asset created",
-        description: `${form.getValues('name')} has been ${asset ? 'updated' : 'added'} successfully.`,
+        description: t(successKey),
       });
       onOpenChange(false);
       form.reset();
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
-        description: error.message || "Failed to save asset",
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -153,7 +172,10 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {asset ? 'Edit' : 'Add'} {type === 'asset' ? 'Asset' : 'Liability'}
+            {asset 
+              ? (type === 'asset' ? t("assets.edit_asset") : t("assets.edit_liability"))
+              : (type === 'asset' ? t("assets.add_asset") : t("assets.add_liability"))
+            }
           </DialogTitle>
         </DialogHeader>
 
@@ -165,11 +187,11 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name *</FormLabel>
+                  <FormLabel>{t("assets.form_name")} *</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
-                      placeholder="e.g., Apartment in Moscow"
+                      placeholder={t("assets.form_name_placeholder")}
                       data-testid="input-asset-name"
                     />
                   </FormControl>
@@ -184,18 +206,18 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
               name="categoryId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Category</FormLabel>
+                  <FormLabel>{t("assets.form_category")}</FormLabel>
                   <Select
                     value={field.value?.toString() || "none"}
                     onValueChange={(value) => field.onChange(value === "none" ? null : parseInt(value))}
                   >
                     <FormControl>
                       <SelectTrigger data-testid="select-category">
-                        <SelectValue placeholder="No category" />
+                        <SelectValue placeholder={t("assets.form_no_category")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="none">No category</SelectItem>
+                      <SelectItem value="none">{t("assets.form_no_category")}</SelectItem>
                       {assetCategories.map(cat => (
                         <SelectItem key={cat.id} value={cat.id.toString()}>
                           {cat.name}
@@ -216,7 +238,7 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
                   name="currentValueOriginal"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Current Value *</FormLabel>
+                      <FormLabel>{t("assets.form_current_value")} *</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -236,7 +258,7 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
                 name="currencyOriginal"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Currency</FormLabel>
+                    <FormLabel>{t("assets.form_currency")}</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger data-testid="select-currency">
@@ -265,7 +287,7 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
                 name="purchasePriceOriginal"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Purchase Price</FormLabel>
+                    <FormLabel>{t("assets.form_purchase_price")}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -284,7 +306,7 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
                 name="purchaseDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Purchase Date</FormLabel>
+                    <FormLabel>{t("assets.form_purchase_date")}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -305,7 +327,7 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
                 name="monthlyIncome"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Monthly Income</FormLabel>
+                    <FormLabel>{t("assets.form_monthly_income")}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -315,7 +337,7 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
                         data-testid="input-monthly-income"
                       />
                     </FormControl>
-                    <p className="text-xs text-muted-foreground">e.g., rent</p>
+                    <p className="text-xs text-muted-foreground">{t("assets.form_income_hint")}</p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -325,7 +347,7 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
                 name="monthlyExpense"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Monthly Expense</FormLabel>
+                    <FormLabel>{t("assets.form_monthly_expense")}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -335,7 +357,7 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
                         data-testid="input-monthly-expense"
                       />
                     </FormControl>
-                    <p className="text-xs text-muted-foreground">e.g., gas, taxes</p>
+                    <p className="text-xs text-muted-foreground">{t("assets.form_expense_hint")}</p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -349,7 +371,7 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
                 name="appreciationRate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Appreciation (% per year)</FormLabel>
+                    <FormLabel>{t("assets.form_appreciation")}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -368,7 +390,7 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
                 name="depreciationRate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Depreciation (% per year)</FormLabel>
+                    <FormLabel>{t("assets.form_depreciation")}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -390,11 +412,11 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
               name="location"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Location</FormLabel>
+                  <FormLabel>{t("assets.form_location")}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
-                      placeholder="Moscow, Pushkin St. 10"
+                      placeholder={t("assets.form_location_placeholder")}
                       data-testid="input-location"
                     />
                   </FormControl>
@@ -409,12 +431,12 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
               name="imageUrl"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Image URL</FormLabel>
+                  <FormLabel>{t("assets.form_image_url")}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       type="url"
-                      placeholder="https://example.com/image.jpg"
+                      placeholder={t("assets.form_image_url_placeholder")}
                       data-testid="input-image-url"
                     />
                   </FormControl>
@@ -429,11 +451,11 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notes</FormLabel>
+                  <FormLabel>{t("assets.form_notes")}</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
-                      placeholder="Additional information..."
+                      placeholder={t("assets.form_notes_placeholder")}
                       rows={3}
                       data-testid="textarea-notes"
                     />
@@ -452,7 +474,7 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
                 className="flex-1"
                 data-testid="button-cancel"
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button
                 type="submit"
@@ -460,7 +482,7 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
                 className="flex-1"
                 data-testid="button-submit"
               >
-                {createMutation.isPending ? 'Saving...' : asset ? 'Update' : 'Create'}
+                {createMutation.isPending ? t("common.creating") : (asset ? t("common.update") : t("common.create"))}
               </Button>
             </div>
           </form>
