@@ -387,9 +387,12 @@ Start from tomorrow and forecast ${daysAhead} days ahead. Return pure JSON array
 
 /**
  * Fallback: Simple linear forecast without AI
- * Returns BASE forecast using historical expense averages
- * Income baseline is only used when user has recurring income sources
- * Filters (recurring, planned, budget) are applied separately in trend-calculator
+ * Returns BASE forecast with ZERO income/expense
+ * Filters (recurring, planned, budget, assets) are applied separately in trend-calculator
+ * 
+ * FIX: Previously used avgIncome/avgExpense as base, which caused income to grow
+ * even when all filters were disabled. Now returns 0 for both, and filters
+ * add their contributions on top of zero baseline.
  */
 function generateSimpleForecast(
   daysAhead: number,
@@ -408,11 +411,11 @@ function generateSimpleForecast(
     forecastDate.setDate(today.getDate() + i);
     const dateStr = forecastDate.toISOString().split('T')[0];
 
-    // Use historical expense average as baseline
-    // For income: only use historical average if user has recurring income sources
-    // Otherwise income stays flat (0) until recurring/planned filters add income
-    const dailyIncome = hasRecurringIncome ? avgIncome : 0;
-    const dailyExpense = avgExpense;
+    // BASE forecast is ZERO for both income and expense
+    // Filters will add recurring/planned/budget/asset components
+    // This ensures: No filters = flat lines (no growth)
+    const dailyIncome = 0;
+    const dailyExpense = 0;
     runningCapital = runningCapital + dailyIncome - dailyExpense;
 
     forecast.push({
