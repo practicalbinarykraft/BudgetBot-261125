@@ -137,6 +137,13 @@ export default function PlannedExpensesPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/planned"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/trend"] });
     },
+    onError: (error: Error) => {
+      toast({ 
+        title: t("common.error_occurred"), 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    },
   });
 
   const handleAddPlanned = (data: { name: string; amount: string; targetDate: string; category?: string }) => {
