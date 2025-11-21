@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { AssetList } from '@/components/assets/asset-list';
 import { AssetForm } from '@/components/assets/asset-form';
 import { AdBlock } from '@/components/assets/ad-block';
+import { AIAdviceBlock } from '@/components/assets/ai-advice-block';
 import type { AssetWithCategory, NetWorthSummary } from '@/lib/types/assets';
 
 export default function AssetsPage() {
@@ -159,9 +160,10 @@ export default function AssetsPage() {
         />
       </div>
       
-      {/* Sidebar с рекламой */}
+      {/* Sidebar с советами и рекламой */}
       <div className="hidden lg:block w-80 flex-shrink-0">
-        <div className="sticky top-6">
+        <div className="sticky top-6 space-y-6">
+          <AIAdviceBlock />
           <AdBlock netWorth={summary?.netWorth} />
         </div>
       </div>

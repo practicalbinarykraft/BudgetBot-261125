@@ -1,0 +1,87 @@
+ШАГ 17: ДОБАВИТЬ AD BLOCK НА СТРАНИЦУ ASSETS
+typescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Добавить рекламу справа на странице Assets
+ФАЙЛ: client/src/pages/assets.tsx
+ИЗМЕНЕНИЙ: ~15 строк
+═══════════════════════════════════════════════════════
+
+ОТКРОЙ ФАЙЛ: client/src/pages/assets.tsx
+
+ДОБАВЬ ИМПОРТ:
+import { AdBlock } from '@/components/assets/ad-block';
+
+НАЙДИ RETURN БЛОК С РАЗМЕТКОЙ
+
+ИЗМЕНИ СТРУКТУРУ НА GRID С БОКОВОЙ КОЛОНКОЙ:
+
+БЫЛО:
+<div className="max-w-7xl mx-auto px-4 py-8">
+  {/* Весь контент */}
+</div>
+
+ДОЛЖНО СТАТЬ:
+<div className="max-w-7xl mx-auto px-4 py-8">
+  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    {/* Основной контент (2 колонки) */}
+    <div className="lg:col-span-2">
+      {/* Заголовок с сводкой */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Активы и пассивы</h1>
+        {/* ... остальное */}
+      </div>
+      
+      {/* Табы и кнопки */}
+      <div className="flex items-center justify-between mb-6">
+        {/* ... */}
+      </div>
+      
+      {/* Список */}
+      {isLoading ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500">Загрузка...</p>
+        </div>
+      ) : (
+        <AssetList 
+          groupedAssets={filteredGrouped}
+          emptyMessage={
+            activeTab === 'asset' 
+              ? 'Активов пока нет. Добавьте первый актив!' 
+              : 'Пассивов пока нет.'
+          }
+        />
+      )}
+    </div>
+    
+    {/* Боковая колонка (1 колонка) */}
+    <div className="lg:col-span-1">
+      <div className="sticky top-4 space-y-6">
+        {/* AI Советы */}
+        <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg p-6 border border-orange-200">
+          <h3 className="font-bold text-lg mb-3">💡 Советы от AI</h3>
+          <p className="text-sm text-gray-700 mb-4">
+            Хотите оптимизировать свои активы и пассивы? 
+            Наш AI-советник проанализирует вашу ситуацию и даст рекомендации.
+          </p>
+          <button 
+            className="w-full py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-medium"
+            onClick={() => {
+              // TODO: Открыть AI чат с контекстом активов
+              alert('AI советник скоро будет доступен!');
+            }}
+          >
+            💬 Дай совет
+          </button>
+        </div>
+        
+        {/* Реклама */}
+        <AdBlock netWorth={summary?.netWorth || 0} />
+      </div>
+    </div>
+  </div>
+</div>
+
+ПРОВЕРКА:
+✅ Страница разделена на 2 колонки
+✅ Реклама отображается справа
+✅ Блок AI советов добавлен
+✅ На мобильных устройствах колонки идут друг под другом
