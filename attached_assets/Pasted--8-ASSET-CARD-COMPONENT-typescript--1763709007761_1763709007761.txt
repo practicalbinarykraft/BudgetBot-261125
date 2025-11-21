@@ -1,0 +1,121 @@
+ШАГ 8: СОЗДАТЬ ASSET CARD COMPONENT
+typescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Карточка актива (плитка)
+ФАЙЛ: client/src/components/assets/asset-card.tsx
+СТРОК: ~95
+═══════════════════════════════════════════════════════
+
+СОЗДАЙ ПАПКУ: client/src/components/assets/
+
+СОЗДАЙ ФАЙЛ: client/src/components/assets/asset-card.tsx
+
+СОДЕРЖИМОЕ:
+
+import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { Link } from 'wouter';
+import type { Asset } from '@/lib/types/assets';
+
+interface AssetCardProps {
+  asset: Asset;
+}
+
+export function AssetCard({ asset }: AssetCardProps) {
+  const currentValue = parseFloat(asset.currentValue);
+  const purchasePrice = asset.purchasePrice ? parseFloat(asset.purchasePrice) : null;
+  
+  // Расчёт изменения цены
+  let changeAmount = 0;
+  let changePercent = 0;
+  let ownershipYears = 0;
+  
+  if (purchasePrice && asset.purchaseDate) {
+    changeAmount = currentValue - purchasePrice;
+    changePercent = (changeAmount / purchasePrice) * 100;
+    
+    const purchaseDate = new Date(asset.purchaseDate);
+    const now = new Date();
+    ownershipYears = Math.floor((now.getTime() - purchaseDate.getTime()) / (1000 * 60 * 60 * 24 * 365));
+  }
+  
+  const isPositive = changeAmount >= 0;
+  
+  // Cashflow
+  const monthlyIncome = parseFloat(asset.monthlyIncome || '0');
+  const monthlyExpense = parseFloat(asset.monthlyExpense || '0');
+  const monthlyCashflow = monthlyIncome - monthlyExpense;
+  
+  return (
+    <Link href={`/assets/${asset.id}`}>
+      <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden">
+        {/* Изображение */}
+        <div className="h-40 bg-gray-200 relative">
+          {asset.imageUrl ? (
+            <img 
+              src={asset.imageUrl} 
+              alt={asset.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-400">
+              <DollarSign size={48} />
+            </div>
+          )}
+          
+          {/* Тип badge */}
+          <div className={`absolute top-2 right-2 px-2 py-1 rounded text-xs font-medium ${
+            asset.type === 'asset' 
+              ? 'bg-green-100 text-green-800' 
+              : 'bg-red-100 text-red-800'
+          }`}>
+            {asset.type === 'asset' ? '📈 Актив' : '📉 Пассив'}
+          </div>
+        </div>
+        
+        {/* Контент */}
+        <div className="p-4">
+          <h3 className="font-semibold text-lg mb-2 truncate">{asset.name}</h3>
+          
+          {/* Стоимость */}
+          <p className="text-2xl font-bold text-gray-900 mb-1">
+            ${currentValue.toLocaleString('en-US', {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 0
+            })}
+          </p>
+          
+          {/* Изменение */}
+          {purchasePrice && (
+            <div className={`flex items-center gap-1 text-sm mb-3 ${
+              isPositive ? 'text-green-600' : 'text-red-600'
+            }`}>
+              {isPositive ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+              <span>
+                {isPositive ? '+' : ''}{changePercent.toFixed(1)}%
+              </span>
+              {ownershipYears > 0 && (
+                <span className="text-gray-500">
+                  ({ownershipYears} {ownershipYears === 1 ? 'год' : ownershipYears < 5 ? 'года' : 'лет'})
+                </span>
+              )}
+            </div>
+          )}
+          
+          {/* Cashflow */}
+          {(monthlyIncome > 0 || monthlyExpense > 0) && (
+            <div className={`text-sm font-medium ${
+              monthlyCashflow > 0 ? 'text-green-600' : 'text-red-600'
+            }`}>
+              {monthlyCashflow > 0 ? '💵' : '💸'} {monthlyCashflow > 0 ? '+' : ''}${Math.abs(monthlyCashflow).toFixed(0)}/мес
+            </div>
+          )}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+ПРОВЕРКА:
+✅ Папка создана
+✅ Файл создан
+✅ Никаких TypeScript ошибок
+✅ Импорты корректны
