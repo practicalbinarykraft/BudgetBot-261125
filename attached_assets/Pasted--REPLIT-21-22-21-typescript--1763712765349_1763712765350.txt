@@ -1,0 +1,124 @@
+📋 ДОПОЛНИТЕЛЬНЫЕ ШАГИ ДЛЯ REPLIT (ШАГИ 21-22)ШАГ 21: ДОБАВИТЬ ЛИНИЮ АКТИВОВ НА ГРАФИКtypescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Добавить оранжевую линию "Активы и пассивы" на график Dashboard
+ФАЙЛ: client/src/components/trend-chart.tsx (или где график)
+ИЗМЕНЕНИЙ: ~40 строк
+═══════════════════════════════════════════════════════
+
+НАЙДИ ФАЙЛ С ГРАФИКОМ ФИНАНСОВЫХ ТРЕНДОВ:
+Обычно это:
+- client/src/components/trend-chart.tsx
+- client/src/components/capital-growth-chart.tsx
+- client/src/components/dashboard/financial-chart.tsx
+
+НАЙДИ КОМПОНЕНТ КОТОРЫЙ РИСУЕТ ГРАФИК (LineChart/AreaChart)
+
+ДОБАВЬ STATE ДЛЯ ВИДИМОСТИ ЛИНИИ:
+import { useState } from 'react';
+
+const [showAssetsLine, setShowAssetsLine] = useState(true);
+
+ОБНОВИ ДАННЫЕ ДЛЯ ГРАФИКА:
+
+БЫЛО (примерно):
+const chartData = [
+  { date: '2024-01', wallets: 10000 },
+  { date: '2024-02', wallets: 12000 },
+  { date: '2024-03', wallets: 15000 },
+];
+
+ДОЛЖНО СТАТЬ:
+const chartData = await Promise.all(
+  dates.map(async (date) => {
+    // Получить баланс кошельков на эту дату
+    const walletsBalance = await getWalletsBalanceAtDate(date);
+    
+    // Получить стоимость активов на эту дату
+    const assetsValue = await getAssetsValueAtDate(date);
+    
+    // Получить стоимость пассивов на эту дату
+    const liabilitiesValue = await getLiabilitiesValueAtDate(date);
+    
+    // Рассчитать общий капитал
+    const totalCapital = walletsBalance + assetsValue - liabilitiesValue;
+    
+    return {
+      date,
+      wallets: walletsBalance,
+      assetsAndLiabilities: assetsValue - liabilitiesValue, // Чистая стоимость активов
+      totalCapital // Общий капитал (для будущего использования)
+    };
+  })
+);
+
+ДОБАВЬ ЧЕКБОКС ДЛЯ ПЕРЕКЛЮЧЕНИЯ:
+<div className="flex items-center gap-4 mb-4">
+  {/* Существующие чекбоксы */}
+  <label className="flex items-center gap-2 cursor-pointer">
+    <input
+      type="checkbox"
+      checked={showWalletsLine}
+      onChange={(e) => setShowWalletsLine(e.target.checked)}
+      className="w-4 h-4"
+    />
+    <span className="flex items-center gap-1">
+      <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+      <span className="text-sm">Кошельки</span>
+    </span>
+  </label>
+  
+  {/* НОВЫЙ ЧЕКБОКС */}
+  <label className="flex items-center gap-2 cursor-pointer">
+    <input
+      type="checkbox"
+      checked={showAssetsLine}
+      onChange={(e) => setShowAssetsLine(e.target.checked)}
+      className="w-4 h-4"
+    />
+    <span className="flex items-center gap-1">
+      <span className="w-3 h-3 bg-orange-500 rounded-full"></span>
+      <span className="text-sm">Активы и пассивы</span>
+    </span>
+  </label>
+</div>
+
+ДОБАВЬ ЛИНИЮ НА ГРАФИК:
+<ResponsiveContainer width="100%" height={300}>
+  <LineChart data={chartData}>
+    <CartesianGrid strokeDasharray="3 3" />
+    <XAxis dataKey="date" />
+    <YAxis />
+    <Tooltip 
+      formatter={(value: number) => `$${value.toLocaleString()}`}
+    />
+    <Legend />
+    
+    {/* Существующая линия кошельков */}
+    {showWalletsLine && (
+      <Line 
+        type="monotone" 
+        dataKey="wallets" 
+        stroke="#3b82f6" 
+        strokeWidth={2}
+        name="Кошельки"
+      />
+    )}
+    
+    {/* НОВАЯ ЛИНИЯ АКТИВОВ */}
+    {showAssetsLine && (
+      <Line 
+        type="monotone" 
+        dataKey="assetsAndLiabilities" 
+        stroke="#f97316" 
+        strokeWidth={2}
+        name="Активы и пассивы"
+        strokeDasharray="5 5"
+      />
+    )}
+  </LineChart>
+</ResponsiveContainer>
+
+ПРОВЕРКА:
+✅ Чекбокс отображается
+✅ Оранжевая линия появляется на графике
+✅ Линия показывает (активы - пассивы)
+✅ Переключение чекбокса скрывает/показывает линию

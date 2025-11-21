@@ -35,6 +35,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
   const [historyDays, setHistoryDays] = useState(30);
   const [forecastDays, setForecastDays] = useState(365);
   const [useAI, setUseAI] = useState(false); // AI forecast opt-in (default: false)
+  const [showAssetsLine, setShowAssetsLine] = useState(true); // Assets & Liabilities line visibility
   const [hoveredGoal, setHoveredGoal] = useState<string | null>(null); // String only (all IDs normalized)
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [, setLocation] = useLocation();
@@ -228,6 +229,20 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                 />
               )}
 
+              {/* Assets & Liabilities Line (Orange) */}
+              {showAssetsLine && (
+                <Line
+                  data={chartData}
+                  dataKey="assetsNet"
+                  stroke="hsl(var(--chart-4))"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  dot={false}
+                  name={t("dashboard.chart_assets_liabilities")}
+                  connectNulls
+                />
+              )}
+
               {/* Goal Markers on Timeline */}
               <GoalMarkersLayer
                 goals={goals}
@@ -262,6 +277,8 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
         <ChartLegend
           hasForecast={forecastDays > 0 && forecastData.length > 0}
           hasGoals={goals.length > 0}
+          showAssetsLine={showAssetsLine}
+          onAssetsLineToggle={setShowAssetsLine}
         />
         
         {/* Forecast Filters */}

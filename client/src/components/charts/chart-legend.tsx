@@ -5,9 +5,11 @@ import { useTranslation } from "@/i18n";
 interface ChartLegendProps {
   hasForecast: boolean;
   hasGoals: boolean;
+  showAssetsLine?: boolean;
+  onAssetsLineToggle?: (show: boolean) => void;
 }
 
-export function ChartLegend({ hasForecast, hasGoals }: ChartLegendProps) {
+export function ChartLegend({ hasForecast, hasGoals, showAssetsLine, onAssetsLineToggle }: ChartLegendProps) {
   const { t } = useTranslation();
   
   return (
@@ -29,6 +31,19 @@ export function ChartLegend({ hasForecast, hasGoals }: ChartLegendProps) {
           <div className="w-8 h-0.5 border-t-2 border-dashed" style={{ borderColor: CHART_COLORS.forecast }} />
           <span>{t("dashboard.chart_capital_forecast")}</span>
         </div>
+      )}
+      {showAssetsLine !== undefined && onAssetsLineToggle && (
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showAssetsLine}
+            onChange={(e) => onAssetsLineToggle(e.target.checked)}
+            className="w-4 h-4 cursor-pointer"
+            data-testid="checkbox-assets-net-toggle"
+          />
+          <div className="w-8 h-0.5 border-t-2 border-dashed" style={{ borderColor: "hsl(var(--chart-4))" }} />
+          <span>{t("dashboard.chart_assets_liabilities")}</span>
+        </label>
       )}
       {hasGoals && (
         <div className="flex items-center gap-2">

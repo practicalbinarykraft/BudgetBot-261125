@@ -23,6 +23,7 @@ import {
   getPlannedExpenseForDate,
   getDailyBudgetTotal,
 } from "./forecast-filters.service";
+import { assetsRepository } from "../repositories/assets.repository";
 
 export type { TrendDataPoint };
 
@@ -80,12 +81,27 @@ export async function calculateTrend(
   // ШАГ 1: Получить данные из базы
   const transactions = await storage.getTransactionsByUserId(userId);
   const wallets = await storage.getWalletsByUserId(userId);
+  const assets = await assetsRepository.findByUserId(userId);
   
   // Защита от NaN: нормализовать балансы перед суммированием
-  const currentCapital = wallets.reduce(
+  const currentWalletsBalance = wallets.reduce(
     (sum, w) => sum + Number(w.balanceUsd ?? 0),
     0
   );
+  
+  // Рассчитать чистую стоимость активов (assets - liabilities)
+  const currentAssetsValue = assets
+    .filter(a => a.type === 'asset')
+    .reduce((sum, a) => sum + parseFloat(a.currentValue as unknown as string), 0);
+    
+  const currentLiabilitiesValue = assets
+    .filter(a => a.type === 'liability')
+    .reduce((sum, a) => sum + parseFloat(a.currentValue as unknown as string), 0);
+    
+  const currentAssetsNet = currentAssetsValue - currentLiabilitiesValue;
+  
+  // Полный капитал = кошельки + активы - пассивы
+  const currentCapital = currentWalletsBalance + currentAssetsNet;
 
   // ШАГ 2: Рассчитать исторические данные
   const today = new Date();
@@ -100,20 +116,24 @@ export async function calculateTrend(
   const historicalCumulative = makeCumulative(historicalData);
 
   // ШАГ 3.5: Рассчитать capital с учётом баланса кошельков
-  // Capital на начало периода = текущий баланс - (доход после начала - расход после начала)
-  const transactionsAfterPeriodStart = transactions.filter(t => t.date >= historyStartStr);
-  const incomeAfterStart = transactionsAfterPeriodStart
-    .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + parseFloat(t.amountUsd as unknown as string), 0);
-  const expenseAfterStart = transactionsAfterPeriodStart
-    .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + parseFloat(t.amountUsd as unknown as string), 0);
+  // Вычислить баланс кошельков на начало периода (до любых транзакций в периоде)
+  // walletsAtStart = currentWalletsBalance - (cumulative income до сегодня - cumulative expense до сегодня)
+  let walletsBalanceAtPeriodStart: number;
   
-  const capitalAtPeriodStart = currentCapital - incomeAfterStart + expenseAfterStart;
+  if (historicalCumulative.length > 0) {
+    const lastPoint = historicalCumulative[historicalCumulative.length - 1];
+    // Вычесть кумулятивную разницу (доход - расход) от текущего баланса
+    walletsBalanceAtPeriodStart = currentWalletsBalance - (lastPoint.income - lastPoint.expense);
+  } else {
+    // Если нет исторических данных, используем текущий баланс
+    walletsBalanceAtPeriodStart = currentWalletsBalance;
+  }
   
-  // Capital для каждого дня = начальный капитал + cumulative income - cumulative expense
+  // Capital для каждого дня = баланс кошельков на начало периода + cumulative income - cumulative expense + assetsNet
+  // AssetsNet остается постоянным для исторических данных (текущее значение)
   historicalCumulative.forEach(point => {
-    point.capital = capitalAtPeriodStart + point.income - point.expense;
+    point.assetsNet = currentAssetsNet;
+    point.capital = walletsBalanceAtPeriodStart + point.income - point.expense + currentAssetsNet;
   });
 
   // ШАГ 4: Получить прогноз от AI (если есть API ключ)
@@ -122,8 +142,9 @@ export async function calculateTrend(
     anthropicApiKey,
     useAI,
     forecastDays,
-    currentCapital,
-    capitalAtPeriodStart,
+    currentWalletsBalance,
+    walletsBalanceAtPeriodStart,
+    currentAssetsNet,
     historicalCumulative,
     includeRecurringIncome,
     includeRecurringExpense,
@@ -148,8 +169,9 @@ async function generateAndProcessForecast(params: {
   anthropicApiKey?: string;
   useAI?: boolean;
   forecastDays: number;
-  currentCapital: number;
-  capitalAtPeriodStart: number;
+  currentWalletsBalance: number;
+  walletsBalanceAtPeriodStart: number;
+  currentAssetsNet: number;
   historicalCumulative: TrendDataPoint[];
   includeRecurringIncome: boolean;
   includeRecurringExpense: boolean;
@@ -169,8 +191,9 @@ async function generateAndProcessForecast(params: {
     anthropicApiKey,
     useAI = false,
     forecastDays,
-    currentCapital,
-    capitalAtPeriodStart,
+    currentWalletsBalance,
+    walletsBalanceAtPeriodStart,
+    currentAssetsNet,
     historicalCumulative,
     includeRecurringIncome,
     includeRecurringExpense,
@@ -191,11 +214,14 @@ async function generateAndProcessForecast(params: {
   }
 
   try {
+    // For AI forecast, we need total capital (wallets + assetsNet)
+    const totalCapital = currentWalletsBalance + currentAssetsNet;
+    
     const result = await generateForecast(
       userId,
       anthropicApiKey || '',
       forecastDays,
-      currentCapital,
+      totalCapital,
       useAI,
       // Передаем фильтры для правильного cache key
       {
@@ -246,6 +272,7 @@ async function generateAndProcessForecast(params: {
           income,
           expense,
           capital: 0, // Will be recalculated below in running sum
+          assetsNet: 0, // Will be set after forecast
           isToday: false,
           isForecast: true,
         };
@@ -266,16 +293,22 @@ async function generateAndProcessForecast(params: {
         lastHistorical.income,
         lastHistorical.expense
       );
-      // Capital = base capital + cumulative income - cumulative expense
-      // Note: makeCumulativeFromBase already added lastHistorical income/expense to each point
-      // So we need to calculate capital from capitalAtPeriodStart, NOT lastHistorical.capital
+      // Capital for forecast must continue from last historical wallet balance
+      // baseWalletsForForecast = wallets balance at end of last historical point
+      const baseWalletsForForecast = walletsBalanceAtPeriodStart + lastHistorical.income - lastHistorical.expense;
+      
+      // Since makeCumulativeFromBase adds lastHistorical to each forecast point,
+      // we compute delta from lastHistorical and add to baseWalletsForForecast
       forecastData.forEach((point: TrendDataPoint) => {
-        point.capital = capitalAtPeriodStart + point.income - point.expense;
+        point.assetsNet = currentAssetsNet; // Assets value stays constant in forecast
+        const walletsDelta = (point.income - lastHistorical.income) - (point.expense - lastHistorical.expense);
+        point.capital = baseWalletsForForecast + walletsDelta + currentAssetsNet;
       });
     } else {
       forecastData = makeCumulativeFromBase(forecastData, 0, 0);
       forecastData.forEach((point: TrendDataPoint) => {
-        point.capital = currentCapital + point.income - point.expense;
+        point.assetsNet = currentAssetsNet;
+        point.capital = currentWalletsBalance + point.income - point.expense + currentAssetsNet;
       });
     }
 

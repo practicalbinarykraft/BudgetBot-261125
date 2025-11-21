@@ -42,6 +42,10 @@ export const webDashboardChartsTranslations: Translations = {
     en: 'Goal Markers (click for details)',
     ru: 'Метки целей (клик для деталей)',
   },
+  'dashboard.chart_assets_liabilities': {
+    en: 'Assets & Liabilities',
+    ru: 'Активы и обязательства',
+  },
   
   // Forecast Filters
   'dashboard.forecast_filters_title': {

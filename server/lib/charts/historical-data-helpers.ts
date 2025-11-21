@@ -6,6 +6,7 @@ export interface TrendDataPoint {
   income: number;
   expense: number;
   capital: number;
+  assetsNet: number; // assets - liabilities (net worth from assets)
   isToday: boolean;
   isForecast: boolean;
 }
@@ -49,6 +50,7 @@ export function calculateHistoricalData(
       income: dayIncome,
       expense: dayExpense,
       capital: 0,
+      assetsNet: 0, // Will be calculated later
       isToday: dateStr === todayStr,
       isForecast: false,
     });

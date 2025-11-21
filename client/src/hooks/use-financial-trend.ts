@@ -5,6 +5,7 @@ export interface TrendDataPoint {
   income: number;
   expense: number;
   capital: number;
+  assetsNet: number; // assets - liabilities (net worth from assets)
   isToday: boolean;
   isForecast: boolean;
 }
