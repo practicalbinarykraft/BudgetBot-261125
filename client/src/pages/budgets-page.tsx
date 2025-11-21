@@ -171,7 +171,9 @@ export default function BudgetsPage() {
     );
   }
 
-  const expenseCategories = categories.filter((c) => c.type === "expense");
+  const expenseCategories = categories.filter((c) => 
+    c.type === "expense" && (c.applicableTo === "transaction" || c.applicableTo === "both")
+  );
   const exceededBudgets = budgets.filter((b) => {
     const category = categories.find((c) => c.id === b.categoryId);
     if (!category) return false;

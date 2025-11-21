@@ -186,8 +186,8 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
                 <FormItem>
                   <FormLabel>Category</FormLabel>
                   <Select
-                    value={field.value?.toString() || ""}
-                    onValueChange={(value) => field.onChange(value ? parseInt(value) : null)}
+                    value={field.value?.toString() || "none"}
+                    onValueChange={(value) => field.onChange(value === "none" ? null : parseInt(value))}
                   >
                     <FormControl>
                       <SelectTrigger data-testid="select-category">
@@ -195,7 +195,7 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">No category</SelectItem>
+                      <SelectItem value="none">No category</SelectItem>
                       {assetCategories.map(cat => (
                         <SelectItem key={cat.id} value={cat.id.toString()}>
                           {cat.name}

@@ -92,6 +92,10 @@ export const webCommonTranslations: Translations = {
     en: 'Create',
     ru: 'Создать',
   },
+  'common.creating': {
+    en: 'Creating...',
+    ru: 'Создание...',
+  },
   'common.update': {
     en: 'Update',
     ru: 'Обновить',

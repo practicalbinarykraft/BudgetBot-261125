@@ -106,8 +106,12 @@ export default function CategoriesPage() {
     );
   }
 
-  const incomeCategories = categories.filter((c) => c.type === "income");
-  const expenseCategories = categories.filter((c) => c.type === "expense");
+  const incomeCategories = categories.filter((c) => 
+    c.type === "income" && (c.applicableTo === "transaction" || c.applicableTo === "both")
+  );
+  const expenseCategories = categories.filter((c) => 
+    c.type === "expense" && (c.applicableTo === "transaction" || c.applicableTo === "both")
+  );
 
   return (
     <div className="space-y-6">
