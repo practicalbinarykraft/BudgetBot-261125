@@ -1,0 +1,105 @@
+ШАГ 27: ПОКАЗАТЬ ПРОГНОЗ НА ГРАФИКЕ
+typescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Добавить пунктирную линию прогноза на график
+ФАЙЛ: client/src/components/trend-chart.tsx
+ИЗМЕНЕНИЙ: ~40 строк
+═══════════════════════════════════════════════════════
+
+НАЙДИ КОМПОНЕНТ ГРАФИКА
+
+ДОБАВЬ ЗАПРОС ПРОГНОЗА:
+const { data: forecast } = useQuery({
+  queryKey: ['/api/assets/forecast', { months: 12 }],
+  queryFn: async () => {
+    const res = await fetch('/api/assets/forecast?months=12');
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.data;
+  }
+});
+
+ДОБАВЬ ПРОГНОЗНЫЕ ТОЧКИ К ДАННЫМ ГРАФИКА:
+// Исторические данные
+const historicalData = chartData; // ваши существующие данные
+
+// Добавить прогнозную точку
+const withForecast = forecast ? [
+  ...historicalData,
+  {
+    date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // +1 год
+    wallets: forecast.breakdown.wallets,
+    netAssetsValue: forecast.breakdown.assets - forecast.breakdown.liabilities,
+    totalCapital: forecast.projected,
+    isForecast: true // флаг для отображения
+  }
+] : historicalData;
+
+ОБНОВИ ГРАФИК - ДОБАВЬ ПРОГНОЗНУЮ ОБЛАСТЬ:
+<Line 
+  type="monotone" 
+  dataKey="totalCapital" 
+  stroke="#10b981" 
+  strokeWidth={3}
+  name="Общий капитал"
+  dot={(props: any) => {
+    const { cx, cy, payload } = props;
+    // Прогнозная точка - пунктир
+    if (payload.isForecast) {
+      return (
+        <circle 
+          cx={cx} 
+          cy={cy} 
+          r={5} 
+          fill="#10b981" 
+          stroke="#fff" 
+          strokeWidth={2}
+          strokeDasharray="3 3"
+        />
+      );
+    }
+    // Обычная точка
+    return <circle cx={cx} cy={cy} r={4} fill="#10b981" />;
+  }}
+  strokeDasharray={(entry: any) => entry.isForecast ? "5 5" : "0"}
+/>
+
+ИЛИ СОЗДАЙ ОТДЕЛЬНУЮ ЛИНИЮ ДЛЯ ПРОГНОЗА:
+{forecast && (
+  <Line 
+    type="monotone" 
+    dataKey="totalCapital" 
+    stroke="#10b981" 
+    strokeWidth={2}
+    strokeDasharray="5 5"
+    name="Прогноз"
+    dot={{ r: 4, strokeWidth: 2 }}
+    data={[
+      historicalData[historicalData.length - 1], // последняя точка
+      {
+        date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        totalCapital: forecast.projected
+      }
+    ]}
+  />
+)}
+
+ДОБАВЬ ПОДСКАЗКУ О ПРОГНОЗЕ:
+<div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+  <span>📈</span>
+  <span>
+    Прогноз через год: 
+    <span className="font-semibold ml-1">
+      ${forecast?.projected.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+    </span>
+  </span>
+  <span className="text-xs">
+    ({forecast && forecast.projected > forecast.current ? '+' : ''}
+    {forecast && ((forecast.projected - forecast.current) / forecast.current * 100).toFixed(1)}%)
+  </span>
+</div>
+
+ПРОВЕРКА:
+✅ Прогноз загружается
+✅ Пунктирная линия отображается
+✅ Подсказка показывает прогнозную сумму
+✅ График понятен

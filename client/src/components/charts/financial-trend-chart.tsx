@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceDot } from "recharts";
 import { useFinancialTrend } from "@/hooks/use-financial-trend";
 import { useAssetsHistory } from "@/hooks/use-assets-history";
+import { useAssetsForecast } from "@/hooks/use-assets-forecast";
 import { WishlistItemWithPrediction } from "@/types/goal-prediction";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -91,6 +92,9 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
     endDate: new Date().toISOString().split('T')[0],
   });
 
+  // Fetch long-term assets forecast (12 months)
+  const { data: assetsForecast } = useAssetsForecast({ months: 12 });
+
   // Show error toast when query fails
   useEffect(() => {
     if (error) {
@@ -148,6 +152,16 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
   // Check if capital goes negative in forecast
   const hasNegativeCapital = forecastData.some(d => d.capital < 0);
 
+  // Prepare long-term assets forecast data (12 months from last point)
+  const assetsForecastData = assetsForecast && chartData.length > 0 ? [
+    chartData[chartData.length - 1], // Последняя точка
+    {
+      date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      totalCapital: assetsForecast.projected,
+      isForecast: true,
+    }
+  ] : [];
+
   return (
     <Card data-testid="card-financial-trend">
       <CardHeader>
@@ -172,6 +186,42 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
           onHistoryChange={setHistoryDays}
           onForecastChange={setForecastDays}
         />
+
+        {/* Assets Forecast Info (12 months) */}
+        {assetsForecast && (
+          <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border" data-testid="assets-forecast-info">
+            <TrendingUp className="h-5 w-5 text-primary" />
+            <div className="flex-1 space-y-1">
+              <div className="flex items-baseline gap-2">
+                <span className="text-sm font-medium">
+                  {t("dashboard.forecast_12_months")}:
+                </span>
+                <span className="text-lg font-bold text-primary" data-testid="forecast-projected-value">
+                  ${assetsForecast.projected.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                </span>
+                <span className={`text-xs font-medium ${
+                  assetsForecast.projected > assetsForecast.current 
+                    ? 'text-green-600 dark:text-green-400' 
+                    : 'text-red-600 dark:text-red-400'
+                }`}>
+                  ({assetsForecast.projected > assetsForecast.current ? '+' : ''}
+                  {((assetsForecast.projected - assetsForecast.current) / assetsForecast.current * 100).toFixed(1)}%)
+                </span>
+              </div>
+              <div className="flex gap-4 text-xs text-muted-foreground">
+                <span>
+                  {t("dashboard.wallets")}: ${assetsForecast.breakdown.wallets.toFixed(0)}
+                </span>
+                <span>
+                  {t("dashboard.assets")}: ${assetsForecast.breakdown.assets.toFixed(0)}
+                </span>
+                <span>
+                  {t("dashboard.liabilities")}: ${assetsForecast.breakdown.liabilities.toFixed(0)}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Chart */}
         <div className="h-[400px]">
@@ -269,6 +319,20 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                   strokeDasharray="5 5"
                   dot={false}
                   name={t("dashboard.chart_assets_liabilities")}
+                  connectNulls
+                />
+              )}
+
+              {/* Long-term Total Capital Forecast (12 months, dashed purple line) */}
+              {assetsForecastData.length > 0 && (
+                <Line
+                  data={assetsForecastData}
+                  dataKey="totalCapital"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={3}
+                  strokeDasharray="8 4"
+                  dot={{ r: 6, strokeWidth: 2, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))" }}
+                  name={t("dashboard.forecast_12_months")}
                   connectNulls
                 />
               )}

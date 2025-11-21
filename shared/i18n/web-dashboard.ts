@@ -37,6 +37,18 @@ export const webDashboardTranslations: Translations = {
     en: 'Net Worth',
     ru: 'Чистая стоимость',
   },
+  'dashboard.forecast_12_months': {
+    en: 'Forecast in 12 months',
+    ru: 'Прогноз через 12 месяцев',
+  },
+  'dashboard.assets': {
+    en: 'Assets',
+    ru: 'Активы',
+  },
+  'dashboard.liabilities': {
+    en: 'Liabilities',
+    ru: 'Пассивы',
+  },
   'dashboard.this_month': {
     en: 'This Month',
     ru: 'В этом месяце',
