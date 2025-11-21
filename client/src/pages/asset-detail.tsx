@@ -28,7 +28,7 @@ export default function AssetDetailPage() {
       ownershipYears: number;
     } | null;
   }>({
-    queryKey: ['/api/assets', assetId],
+    queryKey: [`/api/assets/${assetId}`],
     enabled: !!assetId
   });
   
@@ -48,7 +48,7 @@ export default function AssetDetailPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/assets'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/net-worth'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/assets/summary'] });
       toast({
         title: "Asset deleted",
         description: "The asset has been successfully removed.",
@@ -318,8 +318,8 @@ export default function AssetDetailPage() {
         onOpenChange={setShowCalibration}
         asset={asset}
         onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['/api/assets', assetId] });
-          queryClient.invalidateQueries({ queryKey: ['/api/net-worth'] });
+          queryClient.invalidateQueries({ queryKey: [`/api/assets/${assetId}`] });
+          queryClient.invalidateQueries({ queryKey: ['/api/assets/summary'] });
           setShowCalibration(false);
         }}
       />

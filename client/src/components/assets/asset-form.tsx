@@ -91,7 +91,7 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/assets"], exact: false });
-      queryClient.invalidateQueries({ queryKey: ["/api/net-worth"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/assets/summary"] });
       toast({
         title: asset ? "Asset updated" : "Asset created",
         description: `${form.getValues('name')} has been ${asset ? 'updated' : 'added'} successfully.`,

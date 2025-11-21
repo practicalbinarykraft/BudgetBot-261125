@@ -1,0 +1,142 @@
+ШАГ 13: СОЗДАТЬ NET WORTH WIDGETtypescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Виджет чистого капитала для Dashboard
+ФАЙЛ: client/src/components/assets/net-worth-widget.tsx
+СТРОК: ~120
+═══════════════════════════════════════════════════════
+
+СОЗДАЙ ФАЙЛ: client/src/components/assets/net-worth-widget.tsx
+
+СОДЕРЖИМОЕ:
+
+import { TrendingUp, TrendingDown, Eye, EyeOff } from 'lucide-react';
+import { Link } from 'wouter';
+import type { NetWorthSummary } from '@/lib/types/assets';
+
+interface NetWorthWidgetProps {
+  summary: NetWorthSummary;
+  visible?: boolean;
+  onToggleVisibility?: () => void;
+}
+
+export function NetWorthWidget({ 
+  summary, 
+  visible = true,
+  onToggleVisibility 
+}: NetWorthWidgetProps) {
+  const isPositive = summary.changePercent >= 0;
+  
+  // Форматирование больших чисел
+  const formatCurrency = (value: number) => {
+    if (Math.abs(value) >= 1000000) {
+      return `$${(value / 1000000).toFixed(1)}M`;
+    }
+    if (Math.abs(value) >= 1000) {
+      return `$${(value / 1000).toFixed(0)}K`;
+    }
+    return `$${value.toFixed(0)}`;
+  };
+  
+  return (
+    <div className="bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl text-white p-6">
+      {/* Заголовок */}
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-medium opacity-80">Чистый капитал (Net Worth)</h3>
+        {onToggleVisibility && (
+          <button
+            onClick={onToggleVisibility}
+            className="p-1 hover:bg-white/10 rounded transition"
+            title={visible ? 'Скрыть' : 'Показать'}
+          >
+            {visible ? <Eye size={18} /> : <EyeOff size={18} />}
+          </button>
+        )}
+      </div>
+      
+      {/* Главная цифра */}
+      <div className="mb-4">
+        {visible ? (
+          <>
+            <p className="text-4xl font-bold mb-2">
+              {formatCurrency(summary.netWorth)}
+            </p>
+            
+            {/* Изменение */}
+            <div className="flex items-center gap-2">
+              {isPositive ? (
+                <TrendingUp className="w-5 h-5" />
+              ) : (
+                <TrendingDown className="w-5 h-5" />
+              )}
+              <span className="text-sm font-medium">
+                {isPositive ? '+' : ''}{summary.changePercent.toFixed(1)}% годовых
+              </span>
+            </div>
+          </>
+        ) : (
+          <div className="text-4xl font-bold">••••••</div>
+        )}
+      </div>
+      
+      {/* Разбивка */}
+      {visible && (
+        <>
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="bg-white/10 backdrop-blur-sm p-3 rounded-lg">
+              <p className="text-xs opacity-80 mb-1">Активы</p>
+              <p className="text-lg font-semibold">
+                {formatCurrency(summary.totalAssets)}
+              </p>
+            </div>
+            
+            <div className="bg-white/10 backdrop-blur-sm p-3 rounded-lg">
+              <p className="text-xs opacity-80 mb-1">Пассивы</p>
+              <p className="text-lg font-semibold">
+                {formatCurrency(summary.totalLiabilities)}
+              </p>
+            </div>
+            
+            <div className="bg-white/10 backdrop-blur-sm p-3 rounded-lg">
+              <p className="text-xs opacity-80 mb-1">Cashflow</p>
+              <p className={`text-lg font-semibold ${
+                summary.monthlyCashflow >= 0 ? 'text-green-200' : 'text-red-200'
+              }`}>
+                {summary.monthlyCashflow >= 0 ? '+' : ''}
+                {formatCurrency(summary.monthlyCashflow)}/мес
+              </p>
+            </div>
+          </div>
+          
+          {/* Детали */}
+          <div className="space-y-2 mb-4 text-sm">
+            <div className="flex justify-between items-center">
+              <span className="opacity-80">Доход от активов:</span>
+              <span className="font-medium text-green-200">
+                +${summary.monthlyIncome.toFixed(0)}/мес
+              </span>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <span className="opacity-80">Расход на пассивы:</span>
+              <span className="font-medium text-red-200">
+                -${summary.monthlyExpense.toFixed(0)}/мес
+              </span>
+            </div>
+          </div>
+        </>
+      )}
+      
+      {/* Кнопка */}
+      <Link href="/assets">
+        <button className="w-full py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition backdrop-blur-sm">
+          Подробная информация →
+        </button>
+      </Link>
+    </div>
+  );
+}
+
+ПРОВЕРКА:
+✅ Файл создан
+✅ Форматирование чисел работает (K, M)
+✅ Видимость переключается
+✅ Ссылка на /assets работает

@@ -21,7 +21,7 @@ export default function AssetsPage() {
   
   // Получить сводку
   const { data: summary } = useQuery<NetWorthSummary>({
-    queryKey: ['/api/net-worth/summary'],
+    queryKey: ['/api/assets/summary'],
   });
   
   // Фильтровать по табу
