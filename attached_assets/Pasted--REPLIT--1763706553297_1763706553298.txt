@@ -1,0 +1,130 @@
+🎯 ПОШАГОВЫЙ ПЛАН: ДОБАВЛЕНИЕ АКТИВОВ/ПАССИВОВ📋 ОБЩАЯ КАРТИНА (ДЛЯ REPLIT)═══════════════════════════════════════════════════════
+ЧТО МЫ ДОБАВЛЯЕМ: СИСТЕМА АКТИВОВ И ПАССИВОВ
+═══════════════════════════════════════════════════════
+
+КОНЦЕПЦИЯ:
+Пользователь может добавлять свои вещи (квартира, машина, ноутбук)
+и отслеживать их стоимость.
+
+КЛЮЧЕВАЯ ИДЕЯ:
+📈 АКТИВЫ = вещи которые ПРИНОСЯТ деньги (квартира в аренде, акции)
+📉 ПАССИВЫ = вещи которые ЗАБИРАЮТ деньги (личная машина, техника)
+
+UI КАК В ИГРАХ RPG:
+- Инвентарь вещей с картинками
+- График изменения цены (растёт/падает)
+- Показываем доходы и расходы от каждой вещи
+
+НОВЫЕ СТРАНИЦЫ:
+1. /assets - список всех активов и пассивов
+2. /assets/:id - подробная страница конкретной вещи
+
+ИНТЕГРАЦИЯ:
+- Dashboard: показать виджет с чистым капиталом
+- Не ломаем существующий функционал (wallets, transactions, goals)
+
+ПРИНЦИПЫ:
+✅ Junior-Friendly Code
+✅ Модульная архитектура
+✅ Каждый файл <200 строк
+✅ Понятные имена
+✅ Один файл = одна ответственность🗺️ АРХИТЕКТУРА (HIGH-LEVEL)BACKEND:
+server/
+  schemas/
+    assets.schema.ts          (новый, ~80 строк)
+  repositories/
+    assets.repository.ts      (новый, ~150 строк)
+  routes/
+    assets.routes.ts          (новый, ~180 строк)
+  services/
+    net-worth.service.ts      (новый, ~120 строк)
+
+FRONTEND:
+client/src/
+  pages/
+    assets.tsx                (новый, ~150 строк)
+    asset-detail.tsx          (новый, ~180 строк)
+  components/
+    assets/
+      asset-card.tsx          (новый, ~80 строк)
+      asset-list.tsx          (новый, ~100 строк)
+      asset-form.tsx          (новый, ~150 строк)
+      calibration-modal.tsx   (новый, ~80 строк)
+      net-worth-widget.tsx    (новый, ~100 строк)
+  lib/
+    types/assets.ts           (новый, ~40 строк)
+
+ВСЕГО: 11 новых файлов, ~1,290 строк
+Каждый файл <200 строк ✅📝 ПОШАГОВЫЙ ПЛАН (15 ШАГОВ)ШАГ 1: СОЗДАТЬ DATABASE SCHEMAtypescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Создать схему базы данных для активов
+ФАЙЛ: shared/schemas/assets.schema.ts
+СТРОК: ~80
+═══════════════════════════════════════════════════════
+
+СОЗДАЙ НОВЫЙ ФАЙЛ: shared/schemas/assets.schema.ts
+
+СОДЕРЖИМОЕ:
+
+import { pgTable, serial, integer, decimal, text, timestamp, boolean } from 'drizzle-orm/pg-core';
+import { users } from './users.schema';
+
+// Основная таблица активов и пассивов
+export const assets = pgTable('assets', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  
+  // Основная информация
+  name: text('name').notNull(), // "Квартира в Москве", "Toyota Camry"
+  type: text('type').notNull(), // 'asset' или 'liability'
+  category: text('category'), // 'real_estate', 'vehicle', 'investment', 'tech', 'other'
+  
+  // Стоимость
+  purchasePrice: decimal('purchase_price', { precision: 12, scale: 2 }),
+  purchaseDate: text('purchase_date'), // YYYY-MM-DD
+  
+  currentValue: decimal('current_value', { precision: 12, scale: 2 }).notNull(),
+  lastValuationDate: text('last_valuation_date'), // YYYY-MM-DD
+  
+  // Cashflow (доходы и расходы)
+  monthlyIncome: decimal('monthly_income', { precision: 10, scale: 2 }).default('0'), // +800 (аренда)
+  monthlyExpense: decimal('monthly_expense', { precision: 10, scale: 2 }).default('0'), // -200 (расходы)
+  
+  // Изменение цены (% в год)
+  depreciationRate: decimal('depreciation_rate', { precision: 5, scale: 2 }), // -8% (машина)
+  appreciationRate: decimal('appreciation_rate', { precision: 5, scale: 2 }), // +8% (недвижимость)
+  
+  // Медиа и детали
+  imageUrl: text('image_url'),
+  location: text('location'),
+  notes: text('notes'),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+});
+
+// История оценок (для графика)
+export const assetValuations = pgTable('asset_valuations', {
+  id: serial('id').primaryKey(),
+  assetId: integer('asset_id').references(() => assets.id, { onDelete: 'cascade' }).notNull(),
+  
+  value: decimal('value', { precision: 12, scale: 2 }).notNull(),
+  source: text('source'), // 'manual', 'ai_estimate', 'initial'
+  notes: text('notes'),
+  
+  valuationDate: text('valuation_date').notNull(), // YYYY-MM-DD
+  createdAt: timestamp('created_at').defaultNow()
+});
+
+// TypeScript типы
+export type Asset = typeof assets.$inferSelect;
+export type InsertAsset = typeof assets.$inferInsert;
+export type AssetValuation = typeof assetValuations.$inferSelect;
+export type InsertAssetValuation = typeof assetValuations.$inferInsert;
+
+ПОСЛЕ СОЗДАНИЯ ФАЙЛА ЗАПУСТИ:
+npm run db:push
+
+ПРОВЕРКА:
+✅ Файл создан в shared/schemas/assets.schema.ts
+✅ Таблицы assets и asset_valuations созданы в БД
+✅ Никаких ошибок при db:push

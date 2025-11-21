@@ -1,0 +1,82 @@
+📖 ОБЩАЯ КАРТИНА═══════════════════════════════════════════════════════
+ЧТО МЫ ДОБАВЛЯЕМ: СИСТЕМА АКТИВОВ И ПАССИВОВ
+═══════════════════════════════════════════════════════
+
+КОНЦЕПЦИЯ:
+Пользователь может добавлять свои вещи (квартира, машина, ноутбук)
+и отслеживать их стоимость.
+
+КЛЮЧЕВАЯ ИДЕЯ:
+📈 АКТИВЫ = вещи которые ПРИНОСЯТ деньги (квартира в аренде, акции)
+📉 ПАССИВЫ = вещи которые ЗАБИРАЮТ деньги (личная машина, техника)
+
+UI КАК В ИГРАХ RPG:
+- Инвентарь вещей с картинками
+- График изменения цены (растёт/падает)
+- Показываем доходы и расходы от каждой вещи
+- Группировка по ПОЛЬЗОВАТЕЛЬСКИМ категориям
+
+НОВЫЕ СТРАНИЦЫ:
+1. /assets - список всех активов и пассивов (с табами)
+2. /assets/:id - подробная страница конкретной вещи
+
+ИНТЕГРАЦИЯ:
+- Dashboard: график с линией "Активы и пассивы"
+- Categories: переиспользуем для активов (добавляем applicableTo)
+- AI Chat: используем существующий для советов
+- Не ломаем: wallets, transactions, goals
+
+ПРИНЦИПЫ:
+✅ Junior-Friendly Code
+✅ Модульная архитектура
+✅ Каждый файл <200 строк
+✅ Понятные имена
+✅ Один файл = одна ответственность
+
+ВАЖНО:
+- Мультивалютность (как транзакции)
+- Категории создаёт пользователь
+- AI советы через существующий чат
+- Реклама - заглушкаШАГ 1: ОБНОВИТЬ CATEGORIES SCHEMAtypescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Добавить поле applicableTo в таблицу categories
+ФАЙЛ: shared/schemas/categories.schema.ts (или где определена categories)
+ИЗМЕНЕНИЙ: ~3 строки
+═══════════════════════════════════════════════════════
+
+НАЙДИ ФАЙЛ С ОПРЕДЕЛЕНИЕМ ТАБЛИЦЫ categories
+
+НАЙДИ:
+export const categories = pgTable('categories', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')...
+  name: text('name').notNull(),
+  type: text('type').notNull(), // 'income' | 'expense'
+  // ... другие поля
+});
+
+ДОБАВЬ ПОСЛЕ ПОЛЯ type:
+  applicableTo: text('applicable_to').default('transaction'), // 'transaction' | 'asset' | 'both'
+
+ДОЛЖНО СТАТЬ:
+export const categories = pgTable('categories', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')...
+  name: text('name').notNull(),
+  type: text('type').notNull(), // 'income' | 'expense'
+  applicableTo: text('applicable_to').default('transaction'), // ← ДОБАВЬ ЭТУ СТРОКУ
+  icon: text('icon'),
+  color: text('color'),
+  // ... остальное
+});
+
+ОБНОВИ TypeScript ТИП:
+export type Category = typeof categories.$inferSelect;
+
+ПОСЛЕ ИЗМЕНЕНИЙ ЗАПУСТИ:
+npm run db:push
+
+ПРОВЕРКА:
+✅ Поле applicableTo добавлено
+✅ Дефолт 'transaction' установлен
+✅ Миграция прошла без ошибок
+✅ Старые категории остались с applicableTo='transaction'
