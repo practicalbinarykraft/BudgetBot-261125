@@ -1,0 +1,128 @@
+
+ШАГ 1: ОБНОВИТЬ CATEGORIES SCHEMA
+typescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Добавить поле applicableTo в таблицу categories
+ФАЙЛ: shared/schemas/categories.schema.ts (или где определена categories)
+ИЗМЕНЕНИЙ: ~3 строки
+═══════════════════════════════════════════════════════
+
+НАЙДИ ФАЙЛ С ОПРЕДЕЛЕНИЕМ ТАБЛИЦЫ categories
+
+НАЙДИ:
+export const categories = pgTable('categories', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')...
+  name: text('name').notNull(),
+  type: text('type').notNull(), // 'income' | 'expense'
+  // ... другие поля
+});
+
+ДОБАВЬ ПОСЛЕ ПОЛЯ type:
+  applicableTo: text('applicable_to').default('transaction'), // 'transaction' | 'asset' | 'both'
+
+ДОЛЖНО СТАТЬ:
+export const categories = pgTable('categories', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')...
+  name: text('name').notNull(),
+  type: text('type').notNull(), // 'income' | 'expense'
+  applicableTo: text('applicable_to').default('transaction'), // ← ДОБАВЬ ЭТУ СТРОКУ
+  icon: text('icon'),
+  color: text('color'),
+  // ... остальное
+});
+
+ОБНОВИ TypeScript ТИП:
+export type Category = typeof categories.$inferSelect;
+
+ПОСЛЕ ИЗМЕНЕНИЙ ЗАПУСТИ:
+npm run db:push
+
+ПРОВЕРКА:
+✅ Поле applicableTo добавлено
+✅ Дефолт 'transaction' установлен
+✅ Миграция прошла без ошибок
+✅ Старые категории остались с applicableTo='transaction'
+
+ШАГ 2: СОЗДАТЬ ASSETS SCHEMA
+typescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Создать схему базы данных для активов
+ФАЙЛ: shared/schemas/assets.schema.ts
+СТРОК: ~85
+═══════════════════════════════════════════════════════
+
+СОЗДАЙ НОВЫЙ ФАЙЛ: shared/schemas/assets.schema.ts
+
+СОДЕРЖИМОЕ:
+
+import { pgTable, serial, integer, decimal, text, timestamp, varchar } from 'drizzle-orm/pg-core';
+import { users } from './users.schema';
+
+// Основная таблица активов и пассивов
+export const assets = pgTable('assets', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  
+  // Основная информация
+  name: text('name').notNull(),
+  type: text('type').notNull(), // 'asset' или 'liability'
+  categoryId: integer('category_id'), // FK к categories (nullable)
+  
+  // Стоимость (мультивалюта как в транзакциях)
+  purchasePrice: decimal('purchase_price', { precision: 12, scale: 2 }),
+  purchasePriceOriginal: decimal('purchase_price_original', { precision: 12, scale: 2 }),
+  purchaseCurrency: varchar('purchase_currency', { length: 3 }),
+  purchaseDate: text('purchase_date'), // YYYY-MM-DD
+  
+  currentValue: decimal('current_value', { precision: 12, scale: 2 }).notNull(), // USD
+  currentValueOriginal: decimal('current_value_original', { precision: 12, scale: 2 }), // RUB/IDR
+  currency: varchar('currency', { length: 3 }).default('USD'),
+  currencyOriginal: varchar('currency_original', { length: 3 }),
+  exchangeRate: decimal('exchange_rate', { precision: 10, scale: 4 }),
+  lastValuationDate: text('last_valuation_date'),
+  
+  // Cashflow (доходы и расходы)
+  monthlyIncome: decimal('monthly_income', { precision: 10, scale: 2 }).default('0'),
+  monthlyExpense: decimal('monthly_expense', { precision: 10, scale: 2 }).default('0'),
+  
+  // Изменение цены (% в год)
+  depreciationRate: decimal('depreciation_rate', { precision: 5, scale: 2 }),
+  appreciationRate: decimal('appreciation_rate', { precision: 5, scale: 2 }),
+  
+  // Медиа и детали
+  imageUrl: text('image_url'),
+  location: text('location'),
+  notes: text('notes'),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+});
+
+// История оценок (для графика)
+export const assetValuations = pgTable('asset_valuations', {
+  id: serial('id').primaryKey(),
+  assetId: integer('asset_id').references(() => assets.id, { onDelete: 'cascade' }).notNull(),
+  
+  value: decimal('value', { precision: 12, scale: 2 }).notNull(),
+  valueOriginal: decimal('value_original', { precision: 12, scale: 2 }),
+  currency: varchar('currency', { length: 3 }).default('USD'),
+  source: text('source'), // 'manual', 'ai_estimate', 'initial'
+  notes: text('notes'),
+  
+  valuationDate: text('valuation_date').notNull(),
+  createdAt: timestamp('created_at').defaultNow()
+});
+
+// TypeScript типы
+export type Asset = typeof assets.$inferSelect;
+export type InsertAsset = typeof assets.$inferInsert;
+export type AssetValuation = typeof assetValuations.$inferSelect;
+export type InsertAssetValuation = typeof assetValuations.$inferInsert;
+
+ПОСЛЕ СОЗДАНИЯ ФАЙЛА ЗАПУСТИ:
+npm run db:push
+
+ПРОВЕРКА:
+✅ Файл создан в shared/schemas/assets.schema.ts
+✅ Таблицы assets и asset_valuations созданы
+✅ Никаких ошибок при db:push

@@ -754,3 +754,8 @@ export type OwnedInsert<T> = T & { userId: number };
 // PRODUCT CATALOG SCHEMAS (Modular)
 // ========================================
 export * from "./schemas/product-catalog";
+
+// ========================================
+// ASSETS & LIABILITIES SCHEMAS (Modular)
+// ========================================
+export * from "./schemas/assets.schema";
