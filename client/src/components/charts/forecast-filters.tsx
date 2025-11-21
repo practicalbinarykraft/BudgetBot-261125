@@ -15,6 +15,8 @@ export interface ForecastFilters {
   includeBudgetLimits: boolean;
   includeAssetIncome: boolean;
   includeLiabilityExpense: boolean;
+  includeAssetValue: boolean;
+  includeLiabilityValue: boolean;
 }
 
 interface ForecastFiltersProps {
@@ -44,6 +46,8 @@ export function ForecastFiltersCard({
     includeBudgetLimits: Boolean(filters.includeBudgetLimits),
     includeAssetIncome: Boolean(filters.includeAssetIncome),
     includeLiabilityExpense: Boolean(filters.includeLiabilityExpense),
+    includeAssetValue: Boolean(filters.includeAssetValue),
+    includeLiabilityValue: Boolean(filters.includeLiabilityValue),
   }));
 
   // Sync pending state when parent filters change (e.g., after Apply or localStorage restore)
@@ -56,6 +60,8 @@ export function ForecastFiltersCard({
       includeBudgetLimits: Boolean(filters.includeBudgetLimits),
       includeAssetIncome: Boolean(filters.includeAssetIncome),
       includeLiabilityExpense: Boolean(filters.includeLiabilityExpense),
+      includeAssetValue: Boolean(filters.includeAssetValue),
+      includeLiabilityValue: Boolean(filters.includeLiabilityValue),
     });
   }, [filters]);
 
@@ -197,6 +203,43 @@ export function ForecastFiltersCard({
               {expenseFilters.map(renderFilterOption)}
             </div>
           </div>
+          
+          <div className="border-t pt-4 mb-4 space-y-3">
+            <div className="text-sm font-medium text-muted-foreground mb-2">
+              {t('dashboard.capital_calculation_settings')}
+            </div>
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id="includeAssetValue"
+                checked={Boolean(pendingFilters.includeAssetValue)}
+                onCheckedChange={() => handlePendingFilterChange('includeAssetValue')}
+                data-testid="checkbox-includeAssetValue"
+              />
+              <Label
+                htmlFor="includeAssetValue"
+                className="cursor-pointer flex-1 text-sm"
+                data-testid="label-includeAssetValue"
+              >
+                {t('dashboard.filter_include_assets')}
+              </Label>
+            </div>
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id="includeLiabilityValue"
+                checked={Boolean(pendingFilters.includeLiabilityValue)}
+                onCheckedChange={() => handlePendingFilterChange('includeLiabilityValue')}
+                data-testid="checkbox-includeLiabilityValue"
+              />
+              <Label
+                htmlFor="includeLiabilityValue"
+                className="cursor-pointer flex-1 text-sm"
+                data-testid="label-includeLiabilityValue"
+              >
+                {t('dashboard.filter_subtract_liabilities')}
+              </Label>
+            </div>
+          </div>
+          
           <Button 
             onClick={handleApply} 
             className="w-full"

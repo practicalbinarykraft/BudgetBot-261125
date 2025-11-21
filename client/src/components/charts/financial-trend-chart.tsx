@@ -56,6 +56,8 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
           includeBudgetLimits: parsed.includeBudgetLimits ?? false,
           includeAssetIncome: parsed.includeAssetIncome ?? true,
           includeLiabilityExpense: parsed.includeLiabilityExpense ?? true,
+          includeAssetValue: parsed.includeAssetValue ?? true,
+          includeLiabilityValue: parsed.includeLiabilityValue ?? true,
         };
       } catch {
         return {
@@ -66,6 +68,8 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
           includeBudgetLimits: false,
           includeAssetIncome: true,
           includeLiabilityExpense: true,
+          includeAssetValue: true,
+          includeLiabilityValue: true,
         };
       }
     }
@@ -77,6 +81,8 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
       includeBudgetLimits: false,
       includeAssetIncome: true,
       includeLiabilityExpense: true,
+      includeAssetValue: true,
+      includeLiabilityValue: true,
     };
   });
   
@@ -97,6 +103,8 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
     includeBudgetLimits: filters.includeBudgetLimits,
     includeAssetIncome: filters.includeAssetIncome,
     includeLiabilityExpense: filters.includeLiabilityExpense,
+    includeAssetValue: filters.includeAssetValue,
+    includeLiabilityValue: filters.includeLiabilityValue,
   });
 
   // Fetch historical assets data

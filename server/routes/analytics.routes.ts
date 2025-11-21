@@ -57,6 +57,10 @@ function getPeriodDates(period: string = 'month'): { startDate: string; endDate:
  * - includePlannedIncome: include planned income in forecast (default: true)
  * - includePlannedExpenses: include planned expenses in forecast (default: true)
  * - includeBudgetLimits: include budget limits in forecast (default: false)
+ * - includeAssetIncome: include asset income in forecast (default: true)
+ * - includeLiabilityExpense: include liability expenses in forecast (default: true)
+ * - includeAssetValue: include asset value in capital calculation (default: true)
+ * - includeLiabilityValue: include liability value in capital calculation (default: true)
  */
 router.get("/trend", withAuth(async (req, res) => {
   try {
@@ -73,6 +77,10 @@ router.get("/trend", withAuth(async (req, res) => {
     const includePlannedIncome = req.query.includePlannedIncome !== 'false';
     const includePlannedExpenses = req.query.includePlannedExpenses !== 'false';
     const includeBudgetLimits = req.query.includeBudgetLimits === 'true';
+    const includeAssetIncome = req.query.includeAssetIncome !== 'false';
+    const includeLiabilityExpense = req.query.includeLiabilityExpense !== 'false';
+    const includeAssetValue = req.query.includeAssetValue !== 'false';
+    const includeLiabilityValue = req.query.includeLiabilityValue !== 'false';
 
     // ШАГ 2: Получить API ключ пользователя для AI прогноза
     const settings = await storage.getSettingsByUserId(userId);
@@ -90,6 +98,10 @@ router.get("/trend", withAuth(async (req, res) => {
       includePlannedIncome,
       includePlannedExpenses,
       includeBudgetLimits,
+      includeAssetIncome,
+      includeLiabilityExpense,
+      includeAssetValue,
+      includeLiabilityValue,
     });
     
     const { trendData, metadata } = result;

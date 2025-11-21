@@ -6,9 +6,12 @@
  * - Planned income
  * - Planned expenses  
  * - Budget limits
+ * - Asset income
+ * - Liability expenses
  */
 
 import { storage } from "../storage";
+import { assetsRepository } from "../repositories/assets.repository";
 
 /**
  * Check if recurring transaction should occur on given date
@@ -266,4 +269,40 @@ export async function getDailyBudgetTotal(
   }
   
   return total;
+}
+
+/**
+ * Get daily asset income (from all assets with monthlyIncome)
+ * Converts monthly income to daily equivalent
+ */
+export async function getAssetIncomeForDate(
+  userId: number,
+  date: Date
+): Promise<number> {
+  const assets = await assetsRepository.findByUserId(userId);
+  
+  return assets
+    .filter(a => a.type === 'asset' && a.monthlyIncome)
+    .reduce((sum, a) => {
+      const monthlyIncome = parseFloat(a.monthlyIncome as unknown as string);
+      return sum + (isNaN(monthlyIncome) ? 0 : monthlyIncome / 30);
+    }, 0);
+}
+
+/**
+ * Get daily liability expense (from all liabilities with monthlyExpense)
+ * Converts monthly expense to daily equivalent
+ */
+export async function getLiabilityExpenseForDate(
+  userId: number,
+  date: Date
+): Promise<number> {
+  const liabilities = await assetsRepository.findByUserId(userId);
+  
+  return liabilities
+    .filter(l => l.type === 'liability' && l.monthlyExpense)
+    .reduce((sum, l) => {
+      const monthlyExpense = parseFloat(l.monthlyExpense as unknown as string);
+      return sum + (isNaN(monthlyExpense) ? 0 : monthlyExpense / 30);
+    }, 0);
 }

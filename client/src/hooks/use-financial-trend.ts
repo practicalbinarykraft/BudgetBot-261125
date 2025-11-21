@@ -39,6 +39,8 @@ interface UseFinancialTrendOptions {
   includeBudgetLimits?: boolean;
   includeAssetIncome?: boolean;
   includeLiabilityExpense?: boolean;
+  includeAssetValue?: boolean;
+  includeLiabilityValue?: boolean;
 }
 
 /**
@@ -54,6 +56,8 @@ interface UseFinancialTrendOptions {
  * @param includeBudgetLimits Include budget limits in forecast (default: false)
  * @param includeAssetIncome Include asset income in forecast (default: true)
  * @param includeLiabilityExpense Include liability expenses in forecast (default: true)
+ * @param includeAssetValue Include asset value in capital calculation (default: true)
+ * @param includeLiabilityValue Include liability value in capital calculation (default: true)
  */
 export function useFinancialTrend({
   historyDays = 30,
@@ -66,6 +70,8 @@ export function useFinancialTrend({
   includeBudgetLimits = false,
   includeAssetIncome = true,
   includeLiabilityExpense = true,
+  includeAssetValue = true,
+  includeLiabilityValue = true,
 }: UseFinancialTrendOptions = {}) {
   const queryKey = [
     "/api/analytics/trend", 
@@ -79,6 +85,8 @@ export function useFinancialTrend({
     includeBudgetLimits,
     includeAssetIncome,
     includeLiabilityExpense,
+    includeAssetValue,
+    includeLiabilityValue,
   ];
 
   console.log('[useFinancialTrend] Query key:', queryKey);
@@ -97,6 +105,8 @@ export function useFinancialTrend({
         includeBudgetLimits: includeBudgetLimits.toString(),
         includeAssetIncome: includeAssetIncome.toString(),
         includeLiabilityExpense: includeLiabilityExpense.toString(),
+        includeAssetValue: includeAssetValue.toString(),
+        includeLiabilityValue: includeLiabilityValue.toString(),
       });
       
       console.log('[useFinancialTrend] Fetching with params:', params.toString());

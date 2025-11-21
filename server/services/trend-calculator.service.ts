@@ -22,6 +22,8 @@ import {
   getPlannedIncomeForDate,
   getPlannedExpenseForDate,
   getDailyBudgetTotal,
+  getAssetIncomeForDate,
+  getLiabilityExpenseForDate,
 } from "./forecast-filters.service";
 import { assetsRepository } from "../repositories/assets.repository";
 
@@ -50,6 +52,10 @@ export interface TrendCalculationParams {
   includePlannedIncome?: boolean;
   includePlannedExpenses?: boolean;
   includeBudgetLimits?: boolean;
+  includeAssetIncome?: boolean;
+  includeLiabilityExpense?: boolean;
+  includeAssetValue?: boolean;
+  includeLiabilityValue?: boolean;
 }
 
 /**
@@ -76,6 +82,10 @@ export async function calculateTrend(
     includePlannedIncome = true,
     includePlannedExpenses = true,
     includeBudgetLimits = false,
+    includeAssetIncome = true,
+    includeLiabilityExpense = true,
+    includeAssetValue = true,
+    includeLiabilityValue = true,
   } = params;
 
   // ШАГ 1: Получить данные из базы
@@ -98,9 +108,16 @@ export async function calculateTrend(
     .filter(a => a.type === 'liability')
     .reduce((sum, a) => sum + parseFloat(a.currentValue as unknown as string), 0);
     
-  const currentAssetsNet = currentAssetsValue - currentLiabilitiesValue;
+  // Рассчитать чистую стоимость активов с учётом фильтров
+  let currentAssetsNet = 0;
+  if (includeAssetValue) {
+    currentAssetsNet += currentAssetsValue;
+  }
+  if (includeLiabilityValue) {
+    currentAssetsNet -= currentLiabilitiesValue;
+  }
   
-  // Полный капитал = кошельки + активы - пассивы
+  // Полный капитал = кошельки + активы (опционально) - пассивы (опционально)
   const currentCapital = currentWalletsBalance + currentAssetsNet;
 
   // ШАГ 2: Рассчитать исторические данные
@@ -151,6 +168,10 @@ export async function calculateTrend(
     includePlannedIncome,
     includePlannedExpenses,
     includeBudgetLimits,
+    includeAssetIncome,
+    includeLiabilityExpense,
+    includeAssetValue,
+    includeLiabilityValue,
   });
 
   // ШАГ 5: Объединить историю + прогноз и вернуть с metadata
@@ -178,6 +199,10 @@ async function generateAndProcessForecast(params: {
   includePlannedIncome: boolean;
   includePlannedExpenses: boolean;
   includeBudgetLimits: boolean;
+  includeAssetIncome: boolean;
+  includeLiabilityExpense: boolean;
+  includeAssetValue: boolean;
+  includeLiabilityValue: boolean;
 }): Promise<{
   forecastData: TrendDataPoint[];
   metadata: {
@@ -200,6 +225,10 @@ async function generateAndProcessForecast(params: {
     includePlannedIncome,
     includePlannedExpenses,
     includeBudgetLimits,
+    includeAssetIncome,
+    includeLiabilityExpense,
+    includeAssetValue,
+    includeLiabilityValue,
   } = params;
 
   if (forecastDays === 0) {
@@ -265,6 +294,16 @@ async function generateAndProcessForecast(params: {
         if (includeBudgetLimits) {
           const budgetTotal = await getDailyBudgetTotal(userId, date);
           expense += budgetTotal;
+        }
+        
+        if (includeAssetIncome) {
+          const assetIncome = await getAssetIncomeForDate(userId, date);
+          income += assetIncome;
+        }
+        
+        if (includeLiabilityExpense) {
+          const liabilityExpense = await getLiabilityExpenseForDate(userId, date);
+          expense += liabilityExpense;
         }
         
         return {

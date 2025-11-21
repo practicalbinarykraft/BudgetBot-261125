@@ -197,4 +197,124 @@ export const webDashboardTranslations: Translations = {
     en: 'Manage Budgets',
     ru: 'Управление бюджетами',
   },
+  
+  // Forecast filters
+  'dashboard.forecast_filters': {
+    en: 'Include in forecast:',
+    ru: 'Включить в прогноз:',
+  },
+  'dashboard.filter_recurring_income': {
+    en: 'Recurring income',
+    ru: 'Повторяющиеся доходы',
+  },
+  'dashboard.filter_recurring_income_desc': {
+    en: 'Automatic income',
+    ru: 'Автоматические доходы',
+  },
+  'dashboard.filter_recurring_expense': {
+    en: 'Recurring expenses',
+    ru: 'Повторяющиеся расходы',
+  },
+  'dashboard.filter_recurring_expense_desc': {
+    en: 'Automatic expenses',
+    ru: 'Автоматические расходы',
+  },
+  'dashboard.filter_planned_income': {
+    en: 'Planned income',
+    ru: 'Запланированные доходы',
+  },
+  'dashboard.filter_planned_income_desc': {
+    en: 'Expected client payments',
+    ru: 'Ожидаемые поступления от клиентов',
+  },
+  'dashboard.filter_planned_expenses': {
+    en: 'Planned expenses',
+    ru: 'Планируемые расходы',
+  },
+  'dashboard.filter_planned_expenses_desc': {
+    en: 'Large purchases and payments',
+    ru: 'Крупные покупки и платежи',
+  },
+  'dashboard.filter_asset_income': {
+    en: 'Asset income',
+    ru: 'Доход от активов',
+  },
+  'dashboard.filter_asset_income_desc': {
+    en: 'Rent, dividends',
+    ru: 'Аренда, дивиденды',
+  },
+  'dashboard.filter_liability_expense': {
+    en: 'Liability expenses',
+    ru: 'Расходы на пассивы',
+  },
+  'dashboard.filter_liability_expense_desc': {
+    en: 'Loan payments, servicing',
+    ru: 'Платежи по кредитам, обслуживание',
+  },
+  'dashboard.filter_budget_limits': {
+    en: 'Budget limits',
+    ru: 'Бюджетные лимиты',
+  },
+  'dashboard.filter_budget_limits_desc': {
+    en: 'Worst-case scenario',
+    ru: 'Худший сценарий',
+  },
+  'dashboard.filter_include_assets': {
+    en: 'Include assets in capital',
+    ru: 'Включить активы в капитал',
+  },
+  'dashboard.filter_subtract_liabilities': {
+    en: 'Subtract liabilities from capital',
+    ru: 'Вычесть пассивы из капитала',
+  },
+  'dashboard.capital_calculation_settings': {
+    en: 'Capital calculation settings:',
+    ru: 'Настройки расчёта капитала:',
+  },
+  
+  // Capital formula tooltip
+  'dashboard.capital_formula_title': {
+    en: 'How is capital calculated?',
+    ru: 'Как рассчитывается капитал?',
+  },
+  'dashboard.capital_formula_desc': {
+    en: 'Blue line (Capital) =',
+    ru: 'Синяя линия (Капитал) =',
+  },
+  'dashboard.capital_wallet_money': {
+    en: 'Money in wallets',
+    ru: 'Деньги в кошельках',
+  },
+  'dashboard.capital_asset_value': {
+    en: 'Asset value (if included)',
+    ru: 'Стоимость активов (если включено)',
+  },
+  'dashboard.capital_liability_value': {
+    en: 'Liability value (if subtracted)',
+    ru: 'Стоимость пассивов (если вычитается)',
+  },
+  'dashboard.capital_cumulative_income': {
+    en: 'Cumulative income',
+    ru: 'Накопленные доходы',
+  },
+  'dashboard.capital_cumulative_expense': {
+    en: 'Cumulative expenses',
+    ru: 'Накопленные расходы',
+  },
+  'dashboard.capital_forecast_desc': {
+    en: 'Dashed line = forecast considering:',
+    ru: 'Пунктирная линия = прогноз с учётом:',
+  },
+  'dashboard.capital_forecast_item1': {
+    en: 'Asset value changes',
+    ru: 'Изменения стоимости активов',
+  },
+  'dashboard.capital_forecast_item2': {
+    en: 'Asset income (rent)',
+    ru: 'Доходов от активов (аренда)',
+  },
+  'dashboard.capital_forecast_item3': {
+    en: 'Liability expenses (loans)',
+    ru: 'Расходов на пассивы (кредиты)',
+  },
 };
