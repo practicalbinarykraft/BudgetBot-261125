@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceDot } from "recharts";
 import { useFinancialTrend } from "@/hooks/use-financial-trend";
+import { useAssetsHistory } from "@/hooks/use-assets-history";
 import { WishlistItemWithPrediction } from "@/types/goal-prediction";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -82,6 +83,14 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
     includeBudgetLimits: filters.includeBudgetLimits,
   });
 
+  // Fetch historical assets data
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - historyDays);
+  const { data: assetsHistory } = useAssetsHistory({
+    startDate: startDate.toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0],
+  });
+
   // Show error toast when query fails
   useEffect(() => {
     if (error) {
@@ -92,11 +101,32 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
         variant: "destructive",
       });
     }
-  }, [error, t]);
+  }, [error, t, toast]);
 
   // Destructure trend data and goals
-  const trendData = data?.trendData || [];
+  const rawTrendData = data?.trendData || [];
   const trendGoals = data?.goals || [];
+  
+  // Merge trend data with historical assets data
+  const trendData = rawTrendData.map((point) => {
+    if (point.isForecast || !assetsHistory) {
+      // For forecast points, keep original assetsNet
+      return point;
+    }
+    
+    // For historical points, find matching assets history entry
+    const assetsPoint = assetsHistory.find((a) => a.date === point.date);
+    
+    if (assetsPoint) {
+      // Replace assetsNet with historical value
+      return {
+        ...point,
+        assetsNet: assetsPoint.netWorth,
+      };
+    }
+    
+    return point;
+  });
   
   // Merge and normalize goals from both sources
   const goals = [
