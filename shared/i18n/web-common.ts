@@ -120,6 +120,10 @@ export const webCommonTranslations: Translations = {
     en: 'Close',
     ru: 'Закрыть',
   },
+  'common.change': {
+    en: 'Change',
+    ru: 'Изменить',
+  },
   'common.select_category': {
     en: 'Select category',
     ru: 'Выберите категорию',

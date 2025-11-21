@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Category } from "@shared/schema";
 import { useTranslation } from "@/i18n";
+import { ImageLibraryPicker } from "@/components/assets/image-library-picker";
+import { ImageIcon } from "lucide-react";
 
 interface AssetFormProps {
   open: boolean;
@@ -42,6 +45,7 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
+  const [showImagePicker, setShowImagePicker] = useState(false);
   
   const assetFormSchema = z.object({
     name: z.string().min(1, t("assets.form_name_required")),
@@ -54,8 +58,8 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
     purchasePriceOriginal: z.string().optional(),
     purchaseDate: z.string().optional(),
     
-    monthlyIncome: z.string().default('0'),
-    monthlyExpense: z.string().default('0'),
+    monthlyIncome: z.string().optional(),
+    monthlyExpense: z.string().optional(),
     
     depreciationRate: z.string().optional(),
     appreciationRate: z.string().optional(),
@@ -87,8 +91,8 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
       purchasePriceOriginal: asset?.purchasePriceOriginal || '',
       purchaseDate: asset?.purchaseDate || '',
       
-      monthlyIncome: asset?.monthlyIncome || '0',
-      monthlyExpense: asset?.monthlyExpense || '0',
+      monthlyIncome: asset?.monthlyIncome || '',
+      monthlyExpense: asset?.monthlyExpense || '',
       
       depreciationRate: asset?.depreciationRate || '',
       appreciationRate: asset?.appreciationRate || '',
@@ -129,9 +133,20 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
         purchasePrice: data.purchasePriceOriginal 
           ? convertToUSD(data.purchasePriceOriginal, data.currencyOriginal)
           : null,
-        // Convert monthly income/expense
-        monthlyIncome: convertToUSD(data.monthlyIncome || '0', data.currencyOriginal),
-        monthlyExpense: convertToUSD(data.monthlyExpense || '0', data.currencyOriginal),
+        // Convert monthly income/expense (empty string → null)
+        monthlyIncome: data.monthlyIncome && data.monthlyIncome.trim() !== '' 
+          ? convertToUSD(data.monthlyIncome, data.currencyOriginal)
+          : null,
+        monthlyExpense: data.monthlyExpense && data.monthlyExpense.trim() !== ''
+          ? convertToUSD(data.monthlyExpense, data.currencyOriginal)
+          : null,
+        // Convert appreciation/depreciation rates (empty string → null)
+        appreciationRate: data.appreciationRate && data.appreciationRate.trim() !== ''
+          ? data.appreciationRate
+          : null,
+        depreciationRate: data.depreciationRate && data.depreciationRate.trim() !== ''
+          ? data.depreciationRate
+          : null,
         // Save exchange rate
         exchangeRate: data.currencyOriginal !== 'USD' 
           ? rates[data.currencyOriginal]?.toString()
@@ -425,21 +440,40 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
               )}
             />
 
-            {/* URL изображения */}
+            {/* Изображение */}
             <FormField
               control={form.control}
               name="imageUrl"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("assets.form_image_url")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      type="url"
-                      placeholder={t("assets.form_image_url_placeholder")}
-                      data-testid="input-image-url"
+                  <div className="space-y-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowImagePicker(true)}
+                      className="w-full justify-start"
+                      data-testid="button-choose-image"
+                    >
+                      <ImageIcon className="w-4 h-4 mr-2" />
+                      {field.value ? t("common.change") : t("assets.choose_from_library")}
+                    </Button>
+                    {field.value && (
+                      <div className="relative aspect-video w-full max-w-xs rounded-md border overflow-hidden">
+                        <img
+                          src={field.value}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <ImageLibraryPicker
+                      open={showImagePicker}
+                      onOpenChange={setShowImagePicker}
+                      onSelect={(url) => field.onChange(url)}
+                      currentValue={field.value}
                     />
-                  </FormControl>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
