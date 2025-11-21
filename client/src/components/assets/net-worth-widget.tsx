@@ -19,13 +19,14 @@ export function NetWorthWidget({
   
   // Форматирование больших чисел
   const formatCurrency = (value: number) => {
-    if (Math.abs(value) >= 1000000) {
-      return `$${(value / 1000000).toFixed(1)}M`;
+    const safeValue = value ?? 0;
+    if (Math.abs(safeValue) >= 1000000) {
+      return `$${(safeValue / 1000000).toFixed(1)}M`;
     }
-    if (Math.abs(value) >= 1000) {
-      return `$${(value / 1000).toFixed(0)}K`;
+    if (Math.abs(safeValue) >= 1000) {
+      return `$${(safeValue / 1000).toFixed(0)}K`;
     }
-    return `$${value.toFixed(0)}`;
+    return `$${safeValue.toFixed(0)}`;
   };
   
   return (
@@ -64,7 +65,7 @@ export function NetWorthWidget({
                   <TrendingDown className="w-5 h-5" />
                 )}
                 <span className="text-sm font-medium">
-                  {isPositive ? '+' : ''}{summary.changePercent.toFixed(1)}% annual
+                  {isPositive ? '+' : ''}{(summary.changePercent ?? 0).toFixed(1)}% annual
                 </span>
               </div>
             </>

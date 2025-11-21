@@ -164,9 +164,9 @@ export default function DashboardPage() {
           className="border-l-4 border-l-primary"
           action={
             <div className="text-xs text-muted-foreground space-y-0.5" data-testid="capital-breakdown">
-              <div>{t("dashboard.wallets")}: ${stats?.balance?.toFixed(0) ?? "0"}</div>
+              <div>{t("dashboard.wallets")}: ${(stats?.balance ?? 0).toFixed(0)}</div>
               {netWorthSummary && (
-                <div>{t("dashboard.net_worth")}: ${netWorthSummary.netWorth.toFixed(0)}</div>
+                <div>{t("dashboard.net_worth")}: ${(netWorthSummary.netWorth ?? 0).toFixed(0)}</div>
               )}
             </div>
           }
