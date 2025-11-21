@@ -2,12 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
+import { useTranslation } from '@/i18n';
 
 interface UnsortedTabProps {
   period: string;
 }
 
 export function UnsortedTab({ period }: UnsortedTabProps) {
+  const { t } = useTranslation();
   const { data, isLoading } = useQuery({
     queryKey: ['/api/analytics/unsorted', period],
     queryFn: () => fetch(`/api/analytics/unsorted?period=${period}`).then(r => r.json()),
@@ -17,10 +19,10 @@ export function UnsortedTab({ period }: UnsortedTabProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Unsorted Transactions</CardTitle>
+          <CardTitle>{t('analytics.unsorted.title')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">{t('common.loading')}</p>
         </CardContent>
       </Card>
     );
@@ -33,7 +35,7 @@ export function UnsortedTab({ period }: UnsortedTabProps) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span>Unsorted Transactions</span>
+          <span>{t('analytics.unsorted.title')}</span>
           <Badge variant="secondary" data-testid="badge-unsorted-count">
             {count} {count === 1 ? 'transaction' : 'transactions'}
           </Badge>
@@ -42,15 +44,15 @@ export function UnsortedTab({ period }: UnsortedTabProps) {
       <CardContent>
         {transactions.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-lg font-medium text-muted-foreground">All transactions sorted!</p>
+            <p className="text-lg font-medium text-muted-foreground">{t('analytics.unsorted.no_data')}</p>
             <p className="text-sm text-muted-foreground mt-2">
-              Every transaction has a person tag assigned.
+              {t('analytics.unsorted.description')}
             </p>
           </div>
         ) : (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground mb-4">
-              These transactions need a person tag or financial type classification.
+              {t('analytics.unsorted.description')}
             </p>
             {transactions.map((transaction: any) => (
               <div

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { DollarSign, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
+import { useTranslation } from '@/i18n';
 
 interface TypeTabProps {
   period: string;
@@ -22,6 +23,7 @@ const TYPE_ICONS: Record<string, any> = {
 };
 
 export function TypeTab({ period }: TypeTabProps) {
+  const { t } = useTranslation();
   const { data, isLoading } = useQuery({
     queryKey: ['/api/analytics/by-type', period],
     queryFn: () => fetch(`/api/analytics/by-type?period=${period}`).then(r => r.json()),
@@ -31,10 +33,10 @@ export function TypeTab({ period }: TypeTabProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Spending by Financial Type</CardTitle>
+          <CardTitle>{t('analytics.type.title')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">{t('common.loading')}</p>
         </CardContent>
       </Card>
     );
@@ -47,10 +49,10 @@ export function TypeTab({ period }: TypeTabProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Spending by Financial Type</CardTitle>
+          <CardTitle>{t('analytics.type.title')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">No data for this period</p>
+          <p className="text-muted-foreground">{t('analytics.type.no_data')}</p>
         </CardContent>
       </Card>
     );
@@ -60,7 +62,7 @@ export function TypeTab({ period }: TypeTabProps) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span>Spending by Financial Type</span>
+          <span>{t('analytics.type.title')}</span>
           <span className="text-2xl font-mono" data-testid="text-total-amount">
             ${total.toFixed(2)}
           </span>

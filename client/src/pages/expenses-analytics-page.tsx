@@ -12,12 +12,14 @@ import { TypeTab } from '@/components/analytics/tabs/type-tab';
 import { UnsortedTab } from '@/components/analytics/tabs/unsorted-tab';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslation } from '@/i18n';
 
 export default function ExpensesAnalyticsPage() {
   const [period, setPeriod] = useState('month');
   const [activeTab, setActiveTab] = useState('category');
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const migrateMutation = useMutation({
     mutationFn: async () => {
@@ -28,13 +30,13 @@ export default function ExpensesAnalyticsPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/analytics'], exact: false });
       queryClient.invalidateQueries({ queryKey: ['/api/transactions'], exact: false });
       toast({
-        title: 'Migration Complete',
+        title: t('analytics.migration_complete'),
         description: data.message,
       });
     },
     onError: (error: Error) => {
       toast({
-        title: 'Migration Failed',
+        title: t('analytics.migration_failed'),
         description: error.message,
         variant: 'destructive',
       });
@@ -42,64 +44,63 @@ export default function ExpensesAnalyticsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-6 max-w-7xl">
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/app/dashboard">
-              <Button variant="ghost" size="icon" data-testid="button-back">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold" data-testid="text-page-title">
-                Expense Analytics
-              </h1>
-              <p className="text-muted-foreground">
-                Analyze your spending across categories, people, and types
-              </p>
-            </div>
-          </div>
-
-          <div className="flex gap-3 items-center">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => migrateMutation.mutate()}
-              disabled={migrateMutation.isPending}
-              data-testid="button-migrate"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${migrateMutation.isPending ? 'animate-spin' : ''}`} />
-              {migrateMutation.isPending ? 'Migrating...' : 'Fix Unsorted'}
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Link href="/app/dashboard">
+            <Button variant="ghost" size="icon" data-testid="button-back">
+              <ArrowLeft className="h-5 w-5" />
             </Button>
-            <Select value={period} onValueChange={setPeriod}>
-              <SelectTrigger className="w-[150px]" data-testid="select-period">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="week">This Week</SelectItem>
-                <SelectItem value="month">This Month</SelectItem>
-                <SelectItem value="year">This Year</SelectItem>
-              </SelectContent>
-            </Select>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold" data-testid="text-page-title">
+              {t('analytics.title')}
+            </h1>
+            <p className="text-muted-foreground">
+              {t('analytics.description')}
+            </p>
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4" data-testid="tabs-list">
-            <TabsTrigger value="category" data-testid="tab-category">
-              By Category
-            </TabsTrigger>
-            <TabsTrigger value="person" data-testid="tab-person">
-              By Person
-            </TabsTrigger>
-            <TabsTrigger value="type" data-testid="tab-type">
-              By Type
-            </TabsTrigger>
-            <TabsTrigger value="unsorted" data-testid="tab-unsorted">
-              Unsorted
-            </TabsTrigger>
-          </TabsList>
+        <div className="flex gap-3 items-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => migrateMutation.mutate()}
+            disabled={migrateMutation.isPending}
+            data-testid="button-migrate"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${migrateMutation.isPending ? 'animate-spin' : ''}`} />
+            {migrateMutation.isPending ? t('analytics.migrating') : t('analytics.fix_unsorted')}
+          </Button>
+          <Select value={period} onValueChange={setPeriod}>
+            <SelectTrigger className="w-[150px]" data-testid="select-period">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="week">{t('analytics.period.week')}</SelectItem>
+              <SelectItem value="month">{t('analytics.period.month')}</SelectItem>
+              <SelectItem value="year">{t('analytics.period.year')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4" data-testid="tabs-list">
+          <TabsTrigger value="category" data-testid="tab-category">
+            {t('analytics.tab.category')}
+          </TabsTrigger>
+          <TabsTrigger value="person" data-testid="tab-person">
+            {t('analytics.tab.person')}
+          </TabsTrigger>
+          <TabsTrigger value="type" data-testid="tab-type">
+            {t('analytics.tab.type')}
+          </TabsTrigger>
+          <TabsTrigger value="unsorted" data-testid="tab-unsorted">
+            {t('analytics.tab.unsorted')}
+          </TabsTrigger>
+        </TabsList>
 
           <TabsContent value="category" className="space-y-4">
             <CategoryTab period={period} />
@@ -117,7 +118,6 @@ export default function ExpensesAnalyticsPage() {
             <UnsortedTab period={period} />
           </TabsContent>
         </Tabs>
-      </div>
     </div>
   );
 }
