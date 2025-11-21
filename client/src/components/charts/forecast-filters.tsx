@@ -204,40 +204,44 @@ export function ForecastFiltersCard({
             </div>
           </div>
           
-          <div className="border-t pt-4 mb-4 space-y-3">
-            <div className="text-sm font-medium text-muted-foreground mb-2">
-              {t('dashboard.capital_calculation_settings')}
-            </div>
-            <div className="flex items-start gap-2">
-              <Checkbox
-                id="includeAssetValue"
-                checked={Boolean(pendingFilters.includeAssetValue)}
-                onCheckedChange={() => handlePendingFilterChange('includeAssetValue')}
-                data-testid="checkbox-includeAssetValue"
-              />
-              <Label
-                htmlFor="includeAssetValue"
-                className="cursor-pointer flex-1 text-sm"
-                data-testid="label-includeAssetValue"
-              >
-                {t('dashboard.filter_include_assets')}
-              </Label>
-            </div>
-            <div className="flex items-start gap-2">
-              <Checkbox
-                id="includeLiabilityValue"
-                checked={Boolean(pendingFilters.includeLiabilityValue)}
-                onCheckedChange={() => handlePendingFilterChange('includeLiabilityValue')}
-                data-testid="checkbox-includeLiabilityValue"
-              />
-              <Label
-                htmlFor="includeLiabilityValue"
-                className="cursor-pointer flex-1 text-sm"
-                data-testid="label-includeLiabilityValue"
-              >
-                {t('dashboard.filter_subtract_liabilities')}
-              </Label>
-            </div>
+          <div className="mt-4 mb-4" data-testid="section-capital-calculation">
+            <Card className="bg-muted/30">
+              <CardContent className="pt-4 space-y-3">
+                <div className="text-base font-semibold mb-3">
+                  {t('dashboard.capital_calculation_settings')}
+                </div>
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    id="includeAssetValue"
+                    checked={Boolean(pendingFilters.includeAssetValue)}
+                    onCheckedChange={() => handlePendingFilterChange('includeAssetValue')}
+                    data-testid="checkbox-includeAssetValue"
+                  />
+                  <Label
+                    htmlFor="includeAssetValue"
+                    className="cursor-pointer flex-1 text-sm"
+                    data-testid="label-includeAssetValue"
+                  >
+                    {t('dashboard.filter_include_assets')}
+                  </Label>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    id="includeLiabilityValue"
+                    checked={Boolean(pendingFilters.includeLiabilityValue)}
+                    onCheckedChange={() => handlePendingFilterChange('includeLiabilityValue')}
+                    data-testid="checkbox-includeLiabilityValue"
+                  />
+                  <Label
+                    htmlFor="includeLiabilityValue"
+                    className="cursor-pointer flex-1 text-sm"
+                    data-testid="label-includeLiabilityValue"
+                  >
+                    {t('dashboard.filter_subtract_liabilities')}
+                  </Label>
+                </div>
+              </CardContent>
+            </Card>
           </div>
           
           <Button 

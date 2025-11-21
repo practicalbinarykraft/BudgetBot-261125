@@ -100,13 +100,14 @@ export async function calculateTrend(
   );
   
   // Рассчитать чистую стоимость активов (assets - liabilities)
+  // Используем Number() вместо parseFloat для безопасного приведения типов
   const currentAssetsValue = assets
     .filter(a => a.type === 'asset')
-    .reduce((sum, a) => sum + parseFloat(a.currentValue as unknown as string), 0);
+    .reduce((sum, a) => sum + Number(a.currentValue ?? 0), 0);
     
   const currentLiabilitiesValue = assets
     .filter(a => a.type === 'liability')
-    .reduce((sum, a) => sum + parseFloat(a.currentValue as unknown as string), 0);
+    .reduce((sum, a) => sum + Number(a.currentValue ?? 0), 0);
     
   // Рассчитать чистую стоимость активов с учётом фильтров
   let currentAssetsNet = 0;

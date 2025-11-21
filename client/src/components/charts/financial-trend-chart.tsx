@@ -6,7 +6,8 @@ import { useAssetsForecast } from "@/hooks/use-assets-forecast";
 import { WishlistItemWithPrediction } from "@/types/goal-prediction";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { TrendingUp, Info } from "lucide-react";
 import { GoalTimelineMarker } from "@/components/budget/goal-timeline-marker";
 import { GoalTimelineTooltip } from "@/components/budget/goal-timeline-tooltip";
 import { useLocation } from "wouter";
@@ -22,6 +23,7 @@ import { useTranslation } from "@/i18n";
 import { ForecastFiltersCard, type ForecastFilters } from "@/components/charts/forecast-filters";
 import { CapitalWarning } from "@/components/charts/capital-warning";
 import { useToast } from "@/hooks/use-toast";
+import { Tooltip as UITooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 /**
  * Financial Trend Chart
@@ -193,6 +195,47 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
               {t("dashboard.financial_trend_title")}
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    size="icon" 
+                    variant="ghost"
+                    data-testid="button-capital-formula-info"
+                  >
+                    <Info className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-md p-4">
+                  <div className="space-y-3">
+                    <div className="font-semibold text-sm">{t("dashboard.capital_formula_title")}</div>
+                    <div className="space-y-2 text-xs">
+                      <div>
+                        <div className="font-medium text-primary">{t("dashboard.capital_formula_base")}</div>
+                        <ul className="list-disc list-inside mt-1 space-y-1 text-muted-foreground">
+                          <li>{t("dashboard.capital_wallet_money")}</li>
+                          <li>+ {t("dashboard.capital_cumulative_income")}</li>
+                          <li>- {t("dashboard.capital_cumulative_expense")}</li>
+                        </ul>
+                      </div>
+                      <div className="pt-2 border-t">
+                        <div className="font-medium">{t("dashboard.capital_optional_components")}</div>
+                        <ul className="list-disc list-inside mt-1 space-y-1 text-muted-foreground">
+                          <li>+ {t("dashboard.capital_asset_value")}</li>
+                          <li>- {t("dashboard.capital_liability_value")}</li>
+                        </ul>
+                      </div>
+                      <div className="pt-2 border-t">
+                        <div className="font-medium">{t("dashboard.capital_forecast_desc")}</div>
+                        <ul className="list-disc list-inside mt-1 space-y-1 text-muted-foreground">
+                          <li>{t("dashboard.capital_forecast_item1")}</li>
+                          <li>{t("dashboard.capital_forecast_item2")}</li>
+                          <li>{t("dashboard.capital_forecast_item3")}</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </TooltipContent>
+              </UITooltip>
             </CardTitle>
             <CardDescription>
               {t("dashboard.financial_trend_subtitle")}

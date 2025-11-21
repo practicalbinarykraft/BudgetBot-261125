@@ -277,21 +277,13 @@ export const webDashboardTranslations: Translations = {
     en: 'How is capital calculated?',
     ru: 'Как рассчитывается капитал?',
   },
-  'dashboard.capital_formula_desc': {
-    en: 'Blue line (Capital) =',
-    ru: 'Синяя линия (Капитал) =',
+  'dashboard.capital_formula_base': {
+    en: 'Base formula (always included):',
+    ru: 'Базовая формула (всегда включено):',
   },
   'dashboard.capital_wallet_money': {
     en: 'Money in wallets',
     ru: 'Деньги в кошельках',
-  },
-  'dashboard.capital_asset_value': {
-    en: 'Asset value (if included)',
-    ru: 'Стоимость активов (если включено)',
-  },
-  'dashboard.capital_liability_value': {
-    en: 'Liability value (if subtracted)',
-    ru: 'Стоимость пассивов (если вычитается)',
   },
   'dashboard.capital_cumulative_income': {
     en: 'Cumulative income',
@@ -301,20 +293,32 @@ export const webDashboardTranslations: Translations = {
     en: 'Cumulative expenses',
     ru: 'Накопленные расходы',
   },
+  'dashboard.capital_optional_components': {
+    en: 'Optional components (configure below):',
+    ru: 'Опциональные компоненты (настраивается ниже):',
+  },
+  'dashboard.capital_asset_value': {
+    en: 'Asset value (when "Include assets" enabled)',
+    ru: 'Стоимость активов (когда "Включить активы" включено)',
+  },
+  'dashboard.capital_liability_value': {
+    en: 'Liability value (when "Subtract liabilities" enabled)',
+    ru: 'Стоимость пассивов (когда "Вычесть пассивы" включено)',
+  },
   'dashboard.capital_forecast_desc': {
-    en: 'Dashed line = forecast considering:',
-    ru: 'Пунктирная линия = прогноз с учётом:',
+    en: 'Forecast considers selected filters:',
+    ru: 'Прогноз учитывает выбранные фильтры:',
   },
   'dashboard.capital_forecast_item1': {
-    en: 'Asset value changes',
-    ru: 'Изменения стоимости активов',
+    en: 'Recurring & planned income/expenses',
+    ru: 'Повторяющиеся и планируемые доходы/расходы',
   },
   'dashboard.capital_forecast_item2': {
-    en: 'Asset income (rent)',
-    ru: 'Доходов от активов (аренда)',
+    en: 'Asset income & liability expenses',
+    ru: 'Доходы от активов и расходы на пассивы',
   },
   'dashboard.capital_forecast_item3': {
-    en: 'Liability expenses (loans)',
-    ru: 'Расходов на пассивы (кредиты)',
+    en: 'Asset appreciation & liability amortization',
+    ru: 'Изменение стоимости активов и погашение пассивов',
   },
 };
