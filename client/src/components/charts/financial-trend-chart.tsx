@@ -39,7 +39,14 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
   const [historyDays, setHistoryDays] = useState(30);
   const [forecastDays, setForecastDays] = useState(365);
   const [useAI, setUseAI] = useState(false); // AI forecast opt-in (default: false)
-  const [showAssetsLine, setShowAssetsLine] = useState(true); // Assets & Liabilities line visibility
+  
+  // Line visibility toggles (only affect visual display, not calculations)
+  const [showIncome, setShowIncome] = useState(true);
+  const [showExpense, setShowExpense] = useState(true);
+  const [showCapital, setShowCapital] = useState(true);
+  const [showForecast, setShowForecast] = useState(true);
+  const [showAssetsLine, setShowAssetsLine] = useState(true);
+  
   const [hoveredGoal, setHoveredGoal] = useState<string | null>(null); // String only (all IDs normalized)
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [, setLocation] = useLocation();
@@ -329,40 +336,46 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
               />
 
               {/* Income Line */}
-              <Line
-                data={chartData}
-                dataKey="income"
-                stroke={CHART_COLORS.income}
-                strokeWidth={2}
-                dot={false}
-                name={t("dashboard.chart_income")}
-                connectNulls
-              />
+              {showIncome && (
+                <Line
+                  data={chartData}
+                  dataKey="income"
+                  stroke={CHART_COLORS.income}
+                  strokeWidth={2}
+                  dot={false}
+                  name={t("dashboard.chart_income")}
+                  connectNulls
+                />
+              )}
 
               {/* Expense Line */}
-              <Line
-                data={chartData}
-                dataKey="expense"
-                stroke={CHART_COLORS.expense}
-                strokeWidth={2}
-                dot={false}
-                name={t("dashboard.chart_expense")}
-                connectNulls
-              />
+              {showExpense && (
+                <Line
+                  data={chartData}
+                  dataKey="expense"
+                  stroke={CHART_COLORS.expense}
+                  strokeWidth={2}
+                  dot={false}
+                  name={t("dashboard.chart_expense")}
+                  connectNulls
+                />
+              )}
 
               {/* Capital Line (Historical - Solid) */}
-              <Line
-                data={historicalData}
-                dataKey="capital"
-                stroke={CHART_COLORS.capital}
-                strokeWidth={2}
-                dot={false}
-                name={t("dashboard.chart_capital")}
-                connectNulls
-              />
+              {showCapital && (
+                <Line
+                  data={historicalData}
+                  dataKey="capital"
+                  stroke={CHART_COLORS.capital}
+                  strokeWidth={2}
+                  dot={false}
+                  name={t("dashboard.chart_capital")}
+                  connectNulls
+                />
+              )}
 
               {/* Capital Line (Forecast - Dashed) */}
-              {forecastDays > 0 && forecastData.length > 0 && (
+              {showForecast && forecastDays > 0 && forecastData.length > 0 && (
                 <Line
                   data={forecastWithConnection}
                   dataKey="capital"
@@ -437,6 +450,14 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
         <ChartLegend
           hasForecast={forecastDays > 0 && forecastData.length > 0}
           hasGoals={goals.length > 0}
+          showIncome={showIncome}
+          onIncomeToggle={setShowIncome}
+          showExpense={showExpense}
+          onExpenseToggle={setShowExpense}
+          showCapital={showCapital}
+          onCapitalToggle={setShowCapital}
+          showForecast={showForecast}
+          onForecastToggle={setShowForecast}
           showAssetsLine={showAssetsLine}
           onAssetsLineToggle={setShowAssetsLine}
         />
