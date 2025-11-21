@@ -89,6 +89,18 @@ export default function DashboardPage() {
     },
   });
 
+  // Умное форматирование сумм
+  const formatCurrency = (value: number) => {
+    const safeValue = value ?? 0;
+    if (Math.abs(safeValue) >= 1000000) {
+      return `$${(safeValue / 1000000).toFixed(1)}M`;
+    }
+    if (Math.abs(safeValue) >= 1000) {
+      return `$${(safeValue / 1000).toFixed(0)}K`;
+    }
+    return `$${safeValue.toFixed(0)}`;
+  };
+
   const recentTransactions = transactions.slice(0, 5);
 
   if (isLoading) {
@@ -181,8 +193,8 @@ export default function DashboardPage() {
             action={
               <div className="space-y-1">
                 <div className="text-xs text-muted-foreground space-y-0.5" data-testid="assets-breakdown">
-                  <div>{t("assets.assets")}: ${((netWorthSummary.totalAssets ?? 0) / 1000).toFixed(0)}K</div>
-                  <div>{t("assets.liabilities")}: ${((netWorthSummary.totalLiabilities ?? 0) / 1000).toFixed(0)}K</div>
+                  <div>{t("assets.assets")}: {formatCurrency(netWorthSummary.totalAssets ?? 0)}</div>
+                  <div>{t("assets.liabilities")}: {formatCurrency(netWorthSummary.totalLiabilities ?? 0)}</div>
                 </div>
                 <Link href="/app/assets">
                   <span className="text-sm text-primary hover:underline flex items-center gap-1 cursor-pointer" data-testid="link-view-assets">
