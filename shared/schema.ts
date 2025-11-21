@@ -75,6 +75,7 @@ export const categories = pgTable("categories", {
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   type: text("type").notNull(), // 'income' or 'expense'
+  applicableTo: text("applicable_to").default("transaction"), // 'transaction' | 'asset' | 'both'
   icon: text("icon").default("Tag"),
   color: text("color").default("#3b82f6"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
