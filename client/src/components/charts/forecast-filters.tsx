@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTranslation } from "@/i18n";
-import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, AlertTriangle, Sparkles } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, AlertTriangle, Sparkles, Building2, CreditCard } from "lucide-react";
 import { AiForecastWarning } from "@/components/dialogs/ai-forecast-warning";
 
 export interface ForecastFilters {
@@ -13,6 +13,8 @@ export interface ForecastFilters {
   includePlannedIncome: boolean;
   includePlannedExpenses: boolean;
   includeBudgetLimits: boolean;
+  includeAssetIncome: boolean;
+  includeLiabilityExpense: boolean;
 }
 
 interface ForecastFiltersProps {
@@ -40,6 +42,8 @@ export function ForecastFiltersCard({
     includePlannedIncome: Boolean(filters.includePlannedIncome),
     includePlannedExpenses: Boolean(filters.includePlannedExpenses),
     includeBudgetLimits: Boolean(filters.includeBudgetLimits),
+    includeAssetIncome: Boolean(filters.includeAssetIncome),
+    includeLiabilityExpense: Boolean(filters.includeLiabilityExpense),
   }));
 
   // Sync pending state when parent filters change (e.g., after Apply or localStorage restore)
@@ -50,6 +54,8 @@ export function ForecastFiltersCard({
       includePlannedIncome: Boolean(filters.includePlannedIncome),
       includePlannedExpenses: Boolean(filters.includePlannedExpenses),
       includeBudgetLimits: Boolean(filters.includeBudgetLimits),
+      includeAssetIncome: Boolean(filters.includeAssetIncome),
+      includeLiabilityExpense: Boolean(filters.includeLiabilityExpense),
     });
   }, [filters]);
 
@@ -67,6 +73,13 @@ export function ForecastFiltersCard({
       description: t('dashboard.filter_planned_income_desc'),
       icon: DollarSign,
       checked: pendingFilters.includePlannedIncome,
+    },
+    {
+      id: 'includeAssetIncome',
+      label: t('dashboard.filter_asset_income'),
+      description: t('dashboard.filter_asset_income_desc'),
+      icon: Building2,
+      checked: pendingFilters.includeAssetIncome,
     },
   ];
 
@@ -91,6 +104,13 @@ export function ForecastFiltersCard({
       description: t('dashboard.filter_budget_limits_desc'),
       icon: AlertTriangle,
       checked: pendingFilters.includeBudgetLimits,
+    },
+    {
+      id: 'includeLiabilityExpense',
+      label: t('dashboard.filter_liability_expense'),
+      description: t('dashboard.filter_liability_expense_desc'),
+      icon: CreditCard,
+      checked: pendingFilters.includeLiabilityExpense,
     },
   ];
 

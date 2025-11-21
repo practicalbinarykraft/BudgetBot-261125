@@ -92,6 +92,22 @@ export const webDashboardChartsTranslations: Translations = {
     en: 'Worst case scenario',
     ru: 'Худший сценарий',
   },
+  'dashboard.filter_asset_income': {
+    en: 'Asset income',
+    ru: 'Доход от активов',
+  },
+  'dashboard.filter_asset_income_desc': {
+    en: 'Rental income, dividends',
+    ru: 'Аренда, дивиденды',
+  },
+  'dashboard.filter_liability_expense': {
+    en: 'Liability expenses',
+    ru: 'Расходы на пассивы',
+  },
+  'dashboard.filter_liability_expense_desc': {
+    en: 'Loan payments, maintenance',
+    ru: 'Платежи по кредитам, обслуживание',
+  },
   'dashboard.filter_apply_button': {
     en: 'Update chart',
     ru: 'Обновить график',

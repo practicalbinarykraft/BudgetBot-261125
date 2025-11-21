@@ -47,7 +47,16 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
     const saved = localStorage.getItem('forecastFilters');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        return {
+          includeRecurringIncome: parsed.includeRecurringIncome ?? true,
+          includeRecurringExpense: parsed.includeRecurringExpense ?? true,
+          includePlannedIncome: parsed.includePlannedIncome ?? true,
+          includePlannedExpenses: parsed.includePlannedExpenses ?? true,
+          includeBudgetLimits: parsed.includeBudgetLimits ?? false,
+          includeAssetIncome: parsed.includeAssetIncome ?? true,
+          includeLiabilityExpense: parsed.includeLiabilityExpense ?? true,
+        };
       } catch {
         return {
           includeRecurringIncome: true,
@@ -55,6 +64,8 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
           includePlannedIncome: true,
           includePlannedExpenses: true,
           includeBudgetLimits: false,
+          includeAssetIncome: true,
+          includeLiabilityExpense: true,
         };
       }
     }
@@ -64,6 +75,8 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
       includePlannedIncome: true,
       includePlannedExpenses: true,
       includeBudgetLimits: false,
+      includeAssetIncome: true,
+      includeLiabilityExpense: true,
     };
   });
   
@@ -82,6 +95,8 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
     includePlannedIncome: filters.includePlannedIncome,
     includePlannedExpenses: filters.includePlannedExpenses,
     includeBudgetLimits: filters.includeBudgetLimits,
+    includeAssetIncome: filters.includeAssetIncome,
+    includeLiabilityExpense: filters.includeLiabilityExpense,
   });
 
   // Fetch historical assets data
