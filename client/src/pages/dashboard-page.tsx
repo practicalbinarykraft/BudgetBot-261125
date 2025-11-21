@@ -1,11 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Transaction } from "@shared/schema";
 import { WishlistItemWithPrediction } from "@/types/goal-prediction";
+import { NetWorthSummary } from "@/lib/types/assets";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { TransactionList } from "@/components/dashboard/transaction-list";
 import { FinancialTrendChart } from "@/components/charts/financial-trend-chart";
 import { BudgetAlerts } from "@/components/dashboard/budget-alerts";
 import { DateFilter, DateFilterValue, getDateRange } from "@/components/dashboard/date-filter";
+import { NetWorthWidget } from "@/components/assets/net-worth-widget";
 import { TrendingUp, TrendingDown, Wallet, Settings2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -57,6 +59,10 @@ export default function DashboardPage() {
 
   const { data: wishlistItems = [] } = useQuery<WishlistItemWithPrediction[]>({
     queryKey: ["/api/wishlist"],
+  });
+
+  const { data: netWorthSummary } = useQuery<NetWorthSummary>({
+    queryKey: ["/api/assets/summary"],
   });
 
   const deleteMutation = useMutation({
@@ -158,6 +164,10 @@ export default function DashboardPage() {
           className="border-l-4 border-l-primary"
         />
       </div>
+
+      {netWorthSummary && (
+        <NetWorthWidget summary={netWorthSummary} />
+      )}
 
       <FinancialTrendChart wishlistPredictions={wishlistItems} />
 
