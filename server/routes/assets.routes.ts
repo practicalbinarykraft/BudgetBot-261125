@@ -133,14 +133,21 @@ router.get('/history', withAuth(async (req, res) => {
       for (const item of allAssets) {
         const asset = item.asset;
         
+        // Определить дату покупки (fallback: первая valuation или createdAt)
+        const valuations = valuationsMap.get(asset.id) || [];
+        const firstValuationDate = valuations.length > 0 
+          ? valuations[valuations.length - 1].valuationDate // последний элемент в DESC-sorted массиве
+          : null;
+        const purchaseDate = asset.purchaseDate 
+          ? new Date(asset.purchaseDate)
+          : (firstValuationDate ? new Date(firstValuationDate) : new Date(asset.createdAt));
+        
         // Пропустить если актив куплен после этой даты
-        const purchaseDate = asset.purchaseDate ? new Date(asset.purchaseDate) : new Date(asset.createdAt);
         if (purchaseDate > new Date(date)) {
           continue;
         }
         
         // Рассчитать стоимость актива на эту дату (используем предзагруженные valuations)
-        const valuations = valuationsMap.get(asset.id) || [];
         const value = calculateAssetValueAtDate(asset, date, valuations);
         
         if (asset.type === 'asset') {
@@ -189,7 +196,14 @@ function calculateAssetValueAtDate(asset: any, targetDate: string, valuations: a
   }
   
   // Если нет исторических оценок - рассчитать на основе appreciation/depreciation rate
-  const purchaseDate = asset.purchaseDate ? new Date(asset.purchaseDate) : new Date(asset.createdAt);
+  // Определить дату покупки (fallback: первая valuation или createdAt)
+  const firstValuationDate = valuations.length > 0 
+    ? valuations[valuations.length - 1].valuationDate 
+    : null;
+  const purchaseDate = asset.purchaseDate 
+    ? new Date(asset.purchaseDate)
+    : (firstValuationDate ? new Date(firstValuationDate) : new Date(asset.createdAt));
+  
   const purchaseValue = asset.purchasePrice 
     ? parseFloat(asset.purchasePrice as unknown as string) 
     : parseFloat(asset.currentValue as unknown as string);
@@ -213,8 +227,9 @@ function calculateAssetValueAtDate(asset: any, targetDate: string, valuations: a
     return purchaseValue * Math.pow(1 - rate, yearsElapsed);
   }
   
-  // Если нет изменения цены - текущая стоимость
-  return purchaseValue;
+  // Если нет изменения цены - использовать currentValue (отражает последние калибровки)
+  // вместо purchaseValue (может быть устаревшим)
+  return parseFloat(asset.currentValue as unknown as string);
 }
 
 // GET /api/assets/:id - получить конкретный актив
