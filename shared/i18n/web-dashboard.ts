@@ -25,6 +25,18 @@ export const webDashboardTranslations: Translations = {
     en: 'Balance',
     ru: 'Баланс',
   },
+  'dashboard.total_capital': {
+    en: 'Total Capital',
+    ru: 'Общий капитал',
+  },
+  'dashboard.wallets': {
+    en: 'Wallets',
+    ru: 'Кошельки',
+  },
+  'dashboard.net_worth': {
+    en: 'Net Worth',
+    ru: 'Чистая стоимость',
+  },
   'dashboard.this_month': {
     en: 'This Month',
     ru: 'В этом месяце',

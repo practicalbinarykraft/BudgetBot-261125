@@ -158,10 +158,18 @@ export default function DashboardPage() {
           }
         />
         <StatCard
-          title={t("dashboard.balance")}
-          value={`$${stats?.balance?.toFixed(2) ?? "0.00"}`}
+          title={t("dashboard.total_capital")}
+          value={`$${((stats?.balance ?? 0) + (netWorthSummary?.netWorth ?? 0)).toFixed(2)}`}
           icon={Wallet}
           className="border-l-4 border-l-primary"
+          action={
+            <div className="text-xs text-muted-foreground space-y-0.5" data-testid="capital-breakdown">
+              <div>{t("dashboard.wallets")}: ${stats?.balance?.toFixed(0) ?? "0"}</div>
+              {netWorthSummary && (
+                <div>{t("dashboard.net_worth")}: ${netWorthSummary.netWorth.toFixed(0)}</div>
+              )}
+            </div>
+          }
         />
       </div>
 
