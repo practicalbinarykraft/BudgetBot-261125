@@ -2,6 +2,7 @@ import {
   LayoutDashboard,
   CreditCard,
   Wallet,
+  Building2,
   Tag,
   Users,
   Repeat,
@@ -59,6 +60,12 @@ export function AppSidebar() {
       title: t("nav.wallets"),
       url: "/app/wallets",
       icon: Wallet,
+    },
+    {
+      id: 'assets',
+      title: t("nav.assets"),
+      url: "/app/assets",
+      icon: Building2,
     },
     {
       id: 'categories',

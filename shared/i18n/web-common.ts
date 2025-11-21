@@ -18,6 +18,10 @@ export const webCommonTranslations: Translations = {
     en: 'Wallets',
     ru: 'Кошельки',
   },
+  'nav.assets': {
+    en: 'Assets & Liabilities',
+    ru: 'Активы и пассивы',
+  },
   'nav.categories': {
     en: 'Categories',
     ru: 'Категории',

@@ -1,0 +1,211 @@
+ШАГ 11: СОЗДАТЬ СТРАНИЦУ ASSETS
+typescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Главная страница активов с табами
+ФАЙЛ: client/src/pages/assets.tsx
+СТРОК: ~180
+═══════════════════════════════════════════════════════
+
+СОЗДАЙ ФАЙЛ: client/src/pages/assets.tsx
+
+СОДЕРЖИМОЕ:
+
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Plus, TrendingUp, TrendingDown } from 'lucide-react';
+import { AssetList } from '@/components/assets/asset-list';
+import { AssetForm } from '@/components/assets/asset-form';
+import type { Asset, NetWorthSummary } from '@/lib/types/assets';
+
+export default function AssetsPage() {
+  const [activeTab, setActiveTab] = useState<'asset' | 'liability'>('asset');
+  const [showForm, setShowForm] = useState(false);
+  const queryClient = useQueryClient();
+  
+  // Получить все активы
+  const { data: assetsData, isLoading } = useQuery({
+    queryKey: ['/api/assets'],
+    queryFn: async () => {
+      const res = await fetch('/api/assets');
+      if (!res.ok) throw new Error('Failed to fetch assets');
+      const json = await res.json();
+      return json.data;
+    }
+  });
+  
+  // Получить сводку
+  const { data: summary } = useQuery<NetWorthSummary>({
+    queryKey: ['/api/assets/summary'],
+    queryFn: async () => {
+      const res = await fetch('/api/assets/summary');
+      if (!res.ok) throw new Error('Failed to fetch summary');
+      const json = await res.json();
+      return json.data;
+    }
+  });
+  
+  // Получить категории для активов
+  const { data: categories } = useQuery({
+    queryKey: ['/api/categories'],
+    queryFn: async () => {
+      const res = await fetch('/api/categories');
+      if (!res.ok) throw new Error('Failed to fetch categories');
+      const json = await res.json();
+      return json.data.filter((c: any) => 
+        c.applicableTo === 'asset' || c.applicableTo === 'both'
+      );
+    }
+  });
+  
+  // Создать актив
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch('/api/assets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('Failed to create asset');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/assets'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/assets/summary'] });
+    }
+  });
+  
+  // Фильтровать по табу
+  const filteredGrouped = assetsData?.grouped 
+    ? Object.fromEntries(
+        Object.entries(assetsData.grouped).map(([category, assets]: [string, any]) => [
+          category,
+          (assets as Asset[]).filter(a => a.type === activeTab)
+        ]).filter(([_, assets]) => (assets as Asset[]).length > 0)
+      )
+    : {};
+  
+  const isPositive = (summary?.changePercent || 0) >= 0;
+  
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* Заголовок с сводкой */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Активы и пассивы</h1>
+        <p className="text-gray-600 mb-4">
+          Управляйте своими вещами и отслеживайте их стоимость
+        </p>
+        
+        {/* Сводка */}
+        {summary && (
+          <div className="bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-sm opacity-80">Чистый капитал (Net Worth)</p>
+                <p className="text-4xl font-bold">
+                  ${summary.netWorth.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                </p>
+              </div>
+              
+              <div className={`flex items-center gap-2 text-lg ${
+                isPositive ? 'text-green-200' : 'text-red-200'
+              }`}>
+                {isPositive ? <TrendingUp size={24} /> : <TrendingDown size={24} />}
+                <span>{isPositive ? '+' : ''}{summary.changePercent.toFixed(1)}%</span>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-white/10 p-3 rounded">
+                <p className="text-xs opacity-80">Активы</p>
+                <p className="text-lg font-semibold">
+                  ${(summary.totalAssets / 1000).toFixed(0)}K
+                </p>
+              </div>
+              
+              <div className="bg-white/10 p-3 rounded">
+                <p className="text-xs opacity-80">Пассивы</p>
+                <p className="text-lg font-semibold">
+                  ${(summary.totalLiabilities / 1000).toFixed(0)}K
+                </p>
+              </div>
+              
+              <div className="bg-white/10 p-3 rounded">
+                <p className="text-xs opacity-80">Cashflow</p>
+                <p className={`text-lg font-semibold ${
+                  summary.monthlyCashflow >= 0 ? 'text-green-200' : 'text-red-200'
+                }`}>
+                  {summary.monthlyCashflow >= 0 ? '+' : ''}${summary.monthlyCashflow.toFixed(0)}/мес
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Табы и кнопки */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab('asset')}
+            className={`px-6 py-2 rounded-lg font-medium transition ${
+              activeTab === 'asset'
+                ? 'bg-green-100 text-green-700'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            📈 Активы
+          </button>
+          <button
+            onClick={() => setActiveTab('liability')}
+            className={`px-6 py-2 rounded-lg font-medium transition ${
+              activeTab === 'liability'
+                ? 'bg-red-100 text-red-700'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            📉 Пассивы
+          </button>
+        </div>
+        
+        <button
+          onClick={() => setShowForm(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          <Plus size={20} />
+          Добавить {activeTab === 'asset' ? 'актив' : 'пассив'}
+        </button>
+      </div>
+      
+      {/* Список */}
+      {isLoading ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500">Загрузка...</p>
+        </div>
+      ) : (
+        <AssetList 
+          groupedAssets={filteredGrouped}
+          emptyMessage={
+            activeTab === 'asset' 
+              ? 'Активов пока нет. Добавьте первый актив!' 
+              : 'Пассивов пока нет.'
+          }
+        />
+      )}
+      
+      {/* Форма */}
+      {showForm && (
+        <AssetForm
+          type={activeTab}
+          categories={categories || []}
+          onSubmit={(data) => createMutation.mutateAsync(data)}
+          onClose={() => setShowForm(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+ПРОВЕРКА:
+✅ Файл создан
+✅ Табы работают
+✅ Сводка отображается
+✅ Форма открывается

@@ -29,6 +29,7 @@ import SwipeSortPage from "@/pages/swipe-sort-page";
 import AiTrainingHistoryPage from "@/pages/ai-training-history-page";
 import ProductCatalogPage from "@/pages/product-catalog-page";
 import ProductDetailPage from "@/pages/product-detail-page";
+import AssetsPage from "@/pages/assets";
 import { useEffect } from "react";
 
 // Landing page with redirect logic for authenticated users
@@ -61,6 +62,7 @@ function Router() {
       <ProtectedRoute path="/app/transactions/sort" component={SwipeSortPage} />
       <ProtectedRoute path="/app/transactions" component={TransactionsPage} />
       <ProtectedRoute path="/app/wallets" component={WalletsPage} />
+      <ProtectedRoute path="/app/assets" component={AssetsPage} />
       <ProtectedRoute path="/app/categories" component={CategoriesPage} />
       <ProtectedRoute path="/app/recurring" component={RecurringPage} />
       <ProtectedRoute path="/app/wishlist" component={WishlistPage} />
