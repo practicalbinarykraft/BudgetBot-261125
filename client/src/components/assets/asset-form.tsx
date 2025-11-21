@@ -84,9 +84,45 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
+      // Fetch exchange rates
+      const ratesRes = await fetch('/api/exchange-rates');
+      const ratesData = await ratesRes.json();
+      const rates = ratesData.rates;
+      
+      // Helper: convert to USD
+      const convertToUSD = (amount: string, currency: string) => {
+        const num = parseFloat(amount);
+        if (!num || currency === 'USD') return num.toFixed(2);
+        
+        const rate = rates[currency];
+        if (!rate) {
+          throw new Error(`Unsupported currency: ${currency}. Please select a supported currency.`);
+        }
+        
+        return (num / rate).toFixed(2);
+      };
+      
+      // Prepare data with USD conversions
+      const dataToSubmit = {
+        ...data,
+        // Convert current value
+        currentValue: convertToUSD(data.currentValueOriginal, data.currencyOriginal),
+        // Convert purchase price (if provided)
+        purchasePrice: data.purchasePriceOriginal 
+          ? convertToUSD(data.purchasePriceOriginal, data.currencyOriginal)
+          : null,
+        // Convert monthly income/expense
+        monthlyIncome: convertToUSD(data.monthlyIncome || '0', data.currencyOriginal),
+        monthlyExpense: convertToUSD(data.monthlyExpense || '0', data.currencyOriginal),
+        // Save exchange rate
+        exchangeRate: data.currencyOriginal !== 'USD' 
+          ? rates[data.currencyOriginal]?.toString()
+          : null,
+      };
+      
       const endpoint = asset ? `/api/assets/${asset.id}` : '/api/assets';
       const method = asset ? 'PATCH' : 'POST';
-      const res = await apiRequest(method, endpoint, data);
+      const res = await apiRequest(method, endpoint, dataToSubmit);
       return res.json();
     },
     onSuccess: () => {
@@ -212,7 +248,8 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
                         <SelectItem value="RUB">RUB</SelectItem>
                         <SelectItem value="IDR">IDR</SelectItem>
                         <SelectItem value="EUR">EUR</SelectItem>
-                        <SelectItem value="GBP">GBP</SelectItem>
+                        <SelectItem value="KRW">KRW</SelectItem>
+                        <SelectItem value="CNY">CNY</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
