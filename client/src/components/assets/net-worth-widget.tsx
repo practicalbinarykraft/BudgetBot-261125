@@ -112,7 +112,7 @@ export function NetWorthWidget({
                 <span className="opacity-80">Income from assets:</span>
                 <span className="font-medium text-green-200">
                   <DollarSign className="w-3 h-3 inline" />
-                  {summary.monthlyIncome.toFixed(0)}/mo
+                  {(summary.monthlyIncome ?? 0).toFixed(0)}/mo
                 </span>
               </div>
               
@@ -120,7 +120,7 @@ export function NetWorthWidget({
                 <span className="opacity-80">Expense on liabilities:</span>
                 <span className="font-medium text-red-200">
                   <DollarSign className="w-3 h-3 inline" />
-                  {summary.monthlyExpense.toFixed(0)}/mo
+                  {(summary.monthlyExpense ?? 0).toFixed(0)}/mo
                 </span>
               </div>
             </div>
