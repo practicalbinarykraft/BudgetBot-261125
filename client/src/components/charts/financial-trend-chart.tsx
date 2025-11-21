@@ -358,52 +358,50 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
               />
 
               {/* Income Line */}
-              {showIncome && (
-                <Line
-                  data={chartData}
-                  dataKey="income"
-                  stroke={CHART_COLORS.income}
-                  strokeWidth={2}
-                  dot={false}
-                  name={t("dashboard.chart_income")}
-                  connectNulls
-                />
-              )}
+              <Line
+                data={chartData}
+                dataKey="income"
+                stroke={CHART_COLORS.income}
+                strokeWidth={2}
+                strokeOpacity={showIncome ? 1 : 0}
+                dot={false}
+                name={t("dashboard.chart_income")}
+                connectNulls
+              />
 
               {/* Expense Line */}
-              {showExpense && (
-                <Line
-                  data={chartData}
-                  dataKey="expense"
-                  stroke={CHART_COLORS.expense}
-                  strokeWidth={2}
-                  dot={false}
-                  name={t("dashboard.chart_expense")}
-                  connectNulls
-                />
-              )}
+              <Line
+                data={chartData}
+                dataKey="expense"
+                stroke={CHART_COLORS.expense}
+                strokeWidth={2}
+                strokeOpacity={showExpense ? 1 : 0}
+                dot={false}
+                name={t("dashboard.chart_expense")}
+                connectNulls
+              />
 
               {/* Capital Line (Historical - Solid) */}
-              {showCapital && (
-                <Line
-                  data={historicalData}
-                  dataKey="capital"
-                  stroke={CHART_COLORS.capital}
-                  strokeWidth={2}
-                  dot={false}
-                  name={t("dashboard.chart_capital")}
-                  connectNulls
-                />
-              )}
+              <Line
+                data={historicalData}
+                dataKey="capital"
+                stroke={CHART_COLORS.capital}
+                strokeWidth={2}
+                strokeOpacity={showCapital ? 1 : 0}
+                dot={false}
+                name={t("dashboard.chart_capital")}
+                connectNulls
+              />
 
               {/* Capital Line (Forecast - Dashed) */}
-              {showForecast && forecastDays > 0 && forecastData.length > 0 && (
+              {forecastDays > 0 && forecastData.length > 0 && (
                 <Line
                   data={forecastWithConnection}
                   dataKey="capital"
                   stroke={CHART_COLORS.forecast}
                   strokeWidth={2}
                   strokeDasharray="5 5"
+                  strokeOpacity={showForecast ? 1 : 0}
                   dot={false}
                   name={t("dashboard.chart_forecast")}
                   connectNulls
@@ -411,18 +409,17 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
               )}
 
               {/* Assets & Liabilities Line (Orange) */}
-              {showAssetsLine && (
-                <Line
-                  data={chartData}
-                  dataKey="assetsNet"
-                  stroke="hsl(var(--chart-4))"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  dot={false}
-                  name={t("dashboard.chart_assets_liabilities")}
-                  connectNulls
-                />
-              )}
+              <Line
+                data={chartData}
+                dataKey="assetsNet"
+                stroke="hsl(var(--chart-4))"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                strokeOpacity={showAssetsLine ? 1 : 0}
+                dot={false}
+                name={t("dashboard.chart_assets_liabilities")}
+                connectNulls
+              />
 
               {/* Long-term Total Capital Forecast (12 months, dashed purple line) */}
               {assetsForecastData.length > 0 && (
