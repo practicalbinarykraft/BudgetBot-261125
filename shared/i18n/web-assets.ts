@@ -20,6 +20,12 @@ export const webAssetsTranslations: Translations = {
   "assets.add_asset": { en: "Add Asset", ru: "Добавить актив" },
   "assets.add_liability": { en: "Add Liability", ru: "Добавить обязательство" },
   "assets.add_category": { en: "Add Category", ru: "Добавить категорию" },
+  "assets.add_asset_category": { en: "Add Asset Category", ru: "Добавить категорию актива" },
+  "assets.add_liability_category": { en: "Add Liability Category", ru: "Добавить категорию обязательства" },
+  "assets.category_name": { en: "Category Name", ru: "Название категории" },
+  "assets.category_name_placeholder": { en: "e.g., Real Estate, Vehicles", ru: "напр., Недвижимость, Транспорт" },
+  "assets.category_color": { en: "Color", ru: "Цвет" },
+  "assets.category_created": { en: "Category created successfully", ru: "Категория успешно создана" },
   
   "assets.no_assets": { en: "No assets yet. Add your first asset!", ru: "Пока нет активов. Добавьте первый актив!" },
   "assets.no_liabilities": { en: "No liabilities yet.", ru: "Пока нет обязательств." },

@@ -6,17 +6,17 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AssetList } from '@/components/assets/asset-list';
 import { AssetForm } from '@/components/assets/asset-form';
+import { AssetCategoryDialog } from '@/components/assets/asset-category-dialog';
 import { AdBlock } from '@/components/assets/ad-block';
 import { AIAdviceBlock } from '@/components/assets/ai-advice-block';
 import type { AssetWithCategory, NetWorthSummary } from '@/lib/types/assets';
 import { useTranslation } from '@/i18n';
-import { useToast } from '@/hooks/use-toast';
 
 export default function AssetsPage() {
   const { t } = useTranslation();
-  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'asset' | 'liability'>('asset');
   const [showForm, setShowForm] = useState(false);
+  const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   
   // Получить все активы
   const { data: assetsData, isLoading } = useQuery<{
@@ -124,12 +124,7 @@ export default function AssetsPage() {
           <div className="flex items-center justify-end gap-2">
             <Button
               variant="outline"
-              onClick={() => {
-                toast({
-                  title: t('common.coming_soon'),
-                  description: "Функция добавления категорий скоро будет доступна",
-                });
-              }}
+              onClick={() => setShowCategoryDialog(true)}
               data-testid="button-add-category"
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -177,6 +172,13 @@ export default function AssetsPage() {
         <AssetForm
           open={showForm}
           onOpenChange={setShowForm}
+          type={activeTab}
+        />
+        
+        {/* Диалог добавления категории */}
+        <AssetCategoryDialog
+          open={showCategoryDialog}
+          onOpenChange={setShowCategoryDialog}
           type={activeTab}
         />
       </div>
