@@ -29,6 +29,17 @@ export function TypeTab({ period }: TypeTabProps) {
     queryFn: () => fetch(`/api/analytics/by-type?period=${period}`).then(r => r.json()),
   });
 
+  // Map type names to translation keys
+  const getTypeTranslation = (typeName: string): string => {
+    const typeMap: Record<string, string> = {
+      'Essential': 'analytics.type.essential',
+      'Discretionary': 'analytics.type.discretionary',
+      'Assets': 'analytics.type.assets',
+      'Liabilities': 'analytics.type.liabilities',
+    };
+    return typeMap[typeName] ? t(typeMap[typeName]) : typeName;
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -78,7 +89,7 @@ export function TypeTab({ period }: TypeTabProps) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <IconComponent className="h-5 w-5" style={{ color }} />
-                  <span className="font-medium">{item.name}</span>
+                  <span className="font-medium">{getTypeTranslation(item.name)}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="font-mono text-sm">${item.amount.toFixed(2)}</span>

@@ -91,6 +91,24 @@ export const webAnalyticsTranslations: Translations = {
     ru: "Нет данных по типам за этот период" 
   },
   
+  // Financial Types (for type-tab)
+  "analytics.type.essential": { 
+    en: "Essential", 
+    ru: "Необходимое" 
+  },
+  "analytics.type.discretionary": { 
+    en: "Discretionary", 
+    ru: "Необязательное" 
+  },
+  "analytics.type.assets": { 
+    en: "Assets", 
+    ru: "Активы" 
+  },
+  "analytics.type.liabilities": { 
+    en: "Liabilities", 
+    ru: "Обязательства" 
+  },
+  
   // Unsorted Tab
   "analytics.unsorted.title": { 
     en: "Unsorted Transactions", 
