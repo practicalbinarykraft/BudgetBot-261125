@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import type { NetWorthSummary } from '@/lib/types/assets';
+import { useTranslation } from '@/i18n';
 
 interface NetWorthWidgetProps {
   summary: NetWorthSummary;
@@ -15,6 +16,7 @@ export function NetWorthWidget({
   visible = true,
   onToggleVisibility 
 }: NetWorthWidgetProps) {
+  const { t } = useTranslation();
   const isPositive = summary.changePercent >= 0;
   
   // Форматирование больших чисел
@@ -34,14 +36,14 @@ export function NetWorthWidget({
       <div className="p-6">
         {/* Заголовок */}
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-medium opacity-80">Net Worth</h3>
+          <h3 className="text-sm font-medium opacity-80">{t('assets.net_worth')}</h3>
           {onToggleVisibility && (
             <Button
               variant="ghost"
               size="icon"
               onClick={onToggleVisibility}
               className="h-8 w-8 hover:bg-white/10 text-white"
-              title={visible ? 'Hide' : 'Show'}
+              title={visible ? t('assets.hide') : t('assets.show')}
               data-testid="button-toggle-visibility"
             >
               {visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
@@ -65,7 +67,7 @@ export function NetWorthWidget({
                   <TrendingDown className="w-5 h-5" />
                 )}
                 <span className="text-sm font-medium">
-                  {isPositive ? '+' : ''}{(summary.changePercent ?? 0).toFixed(1)}% annual
+                  {isPositive ? '+' : ''}{(summary.changePercent ?? 0).toFixed(1)}% {t('assets.annual')}
                 </span>
               </div>
             </>
@@ -79,21 +81,21 @@ export function NetWorthWidget({
           <>
             <div className="grid grid-cols-3 gap-3 mb-4">
               <div className="bg-white/10 backdrop-blur-sm p-3 rounded-lg">
-                <p className="text-xs opacity-80 mb-1">Assets</p>
+                <p className="text-xs opacity-80 mb-1">{t('assets.assets')}</p>
                 <p className="text-lg font-semibold" data-testid="text-total-assets">
                   {formatCurrency(summary.totalAssets)}
                 </p>
               </div>
               
               <div className="bg-white/10 backdrop-blur-sm p-3 rounded-lg">
-                <p className="text-xs opacity-80 mb-1">Liabilities</p>
+                <p className="text-xs opacity-80 mb-1">{t('assets.liabilities')}</p>
                 <p className="text-lg font-semibold" data-testid="text-total-liabilities">
                   {formatCurrency(summary.totalLiabilities)}
                 </p>
               </div>
               
               <div className="bg-white/10 backdrop-blur-sm p-3 rounded-lg">
-                <p className="text-xs opacity-80 mb-1">Cashflow</p>
+                <p className="text-xs opacity-80 mb-1">{t('assets.cashflow')}</p>
                 <p 
                   className={`text-lg font-semibold ${
                     summary.monthlyCashflow >= 0 ? 'text-green-200' : 'text-red-200'
@@ -109,7 +111,7 @@ export function NetWorthWidget({
             {/* Детали */}
             <div className="space-y-2 mb-4 text-sm">
               <div className="flex justify-between items-center">
-                <span className="opacity-80">Income from assets:</span>
+                <span className="opacity-80">{t('assets.income_from_assets')}</span>
                 <span className="font-medium text-green-200">
                   <DollarSign className="w-3 h-3 inline" />
                   {(summary.monthlyIncome ?? 0).toFixed(0)}/mo
@@ -117,7 +119,7 @@ export function NetWorthWidget({
               </div>
               
               <div className="flex justify-between items-center">
-                <span className="opacity-80">Expense on liabilities:</span>
+                <span className="opacity-80">{t('assets.expense_on_liabilities')}</span>
                 <span className="font-medium text-red-200">
                   <DollarSign className="w-3 h-3 inline" />
                   {(summary.monthlyExpense ?? 0).toFixed(0)}/mo
@@ -134,7 +136,7 @@ export function NetWorthWidget({
             className="w-full bg-white/20 hover:bg-white/30 text-white"
             data-testid="button-view-details"
           >
-            View Details →
+            {t('assets.view_details')} →
           </Button>
         </Link>
       </div>

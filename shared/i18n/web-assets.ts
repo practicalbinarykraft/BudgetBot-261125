@@ -8,6 +8,12 @@ export const webAssetsTranslations: Translations = {
   "assets.assets": { en: "Assets", ru: "Активы" },
   "assets.liabilities": { en: "Liabilities", ru: "Обязательства" },
   "assets.cashflow": { en: "Cashflow", ru: "Денежный поток" },
+  "assets.annual": { en: "annual", ru: "годовых" },
+  "assets.income_from_assets": { en: "Income from assets:", ru: "Доход от активов:" },
+  "assets.expense_on_liabilities": { en: "Expense on liabilities:", ru: "Расходы на обязательства:" },
+  "assets.view_details": { en: "View Details", ru: "Подробнее" },
+  "assets.hide": { en: "Hide", ru: "Скрыть" },
+  "assets.show": { en: "Show", ru: "Показать" },
   
   "assets.tab_assets": { en: "Assets", ru: "Активы" },
   "assets.tab_liabilities": { en: "Liabilities", ru: "Обязательства" },
