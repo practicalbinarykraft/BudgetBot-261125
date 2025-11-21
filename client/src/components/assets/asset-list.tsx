@@ -144,7 +144,7 @@ function AssetListItem({ asset }: { asset: AssetWithCategory }) {
               }`}
               data-testid="text-price-change"
             >
-              {isPositive ? '+' : ''}{changePercent.toFixed(1)}%
+              {isPositive ? '+' : ''}{(changePercent ?? 0).toFixed(1)}%
             </p>
           )}
         </div>
@@ -161,7 +161,7 @@ function AssetListItem({ asset }: { asset: AssetWithCategory }) {
           >
             <DollarSign className="w-4 h-4" />
             <p className="text-sm font-medium">
-              {monthlyCashflow > 0 ? '+' : ''}${Math.abs(monthlyCashflow).toFixed(0)}/mo
+              {monthlyCashflow > 0 ? '+' : ''}${Math.abs(monthlyCashflow ?? 0).toFixed(0)}/mo
             </p>
           </div>
         )}

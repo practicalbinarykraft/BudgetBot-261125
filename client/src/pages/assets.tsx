@@ -58,7 +58,7 @@ export default function AssetsPage() {
                 <div>
                   <p className="text-sm opacity-80">Net Worth</p>
                   <p className="text-4xl font-bold" data-testid="text-net-worth">
-                    ${summary.netWorth.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                    ${(summary.netWorth ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
                   </p>
                 </div>
                 
@@ -69,7 +69,7 @@ export default function AssetsPage() {
                   data-testid="text-net-worth-change"
                 >
                   {isPositive ? <TrendingUp size={24} /> : <TrendingDown size={24} />}
-                  <span>{isPositive ? '+' : ''}{summary.changePercent.toFixed(1)}%</span>
+                  <span>{isPositive ? '+' : ''}{(summary.changePercent ?? 0).toFixed(1)}%</span>
                 </div>
               </div>
               
@@ -77,14 +77,14 @@ export default function AssetsPage() {
                 <div className="bg-white/10 p-3 rounded-lg">
                   <p className="text-xs opacity-80">Assets</p>
                   <p className="text-lg font-semibold" data-testid="text-total-assets">
-                    ${(summary.totalAssets / 1000).toFixed(0)}K
+                    ${((summary.totalAssets ?? 0) / 1000).toFixed(0)}K
                   </p>
                 </div>
                 
                 <div className="bg-white/10 p-3 rounded-lg">
                   <p className="text-xs opacity-80">Liabilities</p>
                   <p className="text-lg font-semibold" data-testid="text-total-liabilities">
-                    ${(summary.totalLiabilities / 1000).toFixed(0)}K
+                    ${((summary.totalLiabilities ?? 0) / 1000).toFixed(0)}K
                   </p>
                 </div>
                 
@@ -96,7 +96,7 @@ export default function AssetsPage() {
                     }`}
                     data-testid="text-monthly-cashflow"
                   >
-                    {summary.monthlyCashflow >= 0 ? '+' : ''}${summary.monthlyCashflow.toFixed(0)}/mo
+                    {summary.monthlyCashflow >= 0 ? '+' : ''}${(summary.monthlyCashflow ?? 0).toFixed(0)}/mo
                   </p>
                 </div>
               </div>

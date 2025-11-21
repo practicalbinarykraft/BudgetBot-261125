@@ -95,7 +95,7 @@ export function AssetCard({ asset }: AssetCardProps) {
             >
               {isPositive ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
               <span>
-                {isPositive ? '+' : ''}{changePercent.toFixed(1)}%
+                {isPositive ? '+' : ''}{(changePercent ?? 0).toFixed(1)}%
               </span>
               {ownershipYears > 0 && (
                 <span className="text-muted-foreground">
@@ -117,7 +117,7 @@ export function AssetCard({ asset }: AssetCardProps) {
             >
               <DollarSign size={14} />
               <span>
-                {monthlyCashflow > 0 ? '+' : ''}${Math.abs(monthlyCashflow).toFixed(0)}/mo
+                {monthlyCashflow > 0 ? '+' : ''}${Math.abs(monthlyCashflow ?? 0).toFixed(0)}/mo
               </span>
             </div>
           )}
