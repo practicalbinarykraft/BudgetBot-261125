@@ -1,0 +1,109 @@
+ШАГ 19: ОБНОВИТЬ ASSET FORM (КОНВЕРТАЦИЯ)
+typescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Добавить автоконвертацию в USD в форме
+ФАЙЛ: client/src/components/assets/asset-form.tsx
+ИЗМЕНЕНИЙ: ~30 строк
+═══════════════════════════════════════════════════════
+
+ОТКРОЙ ФАЙЛ: client/src/components/assets/asset-form.tsx
+
+НАЙДИ ФУНКЦИЮ handleSubmit
+
+ИЗМЕНИ ЕЁ:
+
+БЫЛО:
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  
+  try {
+    await onSubmit(formData);
+    onClose();
+  } catch (error) {
+    console.error('Error submitting form:', error);
+    alert('Ошибка при сохранении');
+  } finally {
+    setLoading(false);
+  }
+};
+
+ДОЛЖНО СТАТЬ:
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  
+  try {
+    // Получить курсы валют
+    const ratesRes = await fetch('/api/exchange-rates');
+    const ratesData = await ratesRes.json();
+    const rates = ratesData.rates;
+    
+    // Конвертировать в USD
+    const convertToUSD = (amount: string, currency: string) => {
+      const num = parseFloat(amount);
+      if (!num || currency === 'USD') return amount;
+      
+      const rate = rates[currency];
+      if (!rate) return amount;
+      
+      return (num / rate).toFixed(2);
+    };
+    
+    // Подготовить данные
+    const dataToSubmit = {
+      ...formData,
+      // Конвертировать текущую стоимость
+      currentValue: formData.currencyOriginal === 'USD' 
+        ? formData.currentValueOriginal 
+        : convertToUSD(formData.currentValueOriginal, formData.currencyOriginal),
+      // Конвертировать цену покупки
+      purchasePrice: formData.purchasePriceOriginal 
+        ? (formData.currencyOriginal === 'USD'
+          ? formData.purchasePriceOriginal
+          : convertToUSD(formData.purchasePriceOriginal, formData.currencyOriginal))
+        : null,
+      // Сохранить курс
+      exchangeRate: formData.currencyOriginal !== 'USD' 
+        ? rates[formData.currencyOriginal] 
+        : null
+    };
+    
+    await onSubmit(dataToSubmit);
+    onClose();
+  } catch (error) {
+    console.error('Error submitting form:', error);
+    alert('Ошибка при сохранении');
+  } finally {
+    setLoading(false);
+  }
+};
+
+ДОБАВЬ ENDPOINT В BACKEND (если нет):
+
+ФАЙЛ: server/routes/assets.routes.ts
+
+ДОБАВЬ ПЕРЕД ДРУГИМИ РОУТАМИ:
+// GET /api/exchange-rates - получить курсы валют
+router.get('/exchange-rates', async (req, res) => {
+  try {
+    const rates = await exchangeRateService.getRates();
+    res.json({
+      success: true,
+      rates
+    });
+  } catch (error: any) {
+    console.error('Error fetching rates:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch exchange rates'
+    });
+  }
+});
+
+НЕ ЗАБУДЬ ИМПОРТ:
+import { exchangeRateService } from '../services/exchange-rate.service';
+
+ПРОВЕРКА:
+✅ Форма конвертирует валюты
+✅ Курс сохраняется
+✅ Endpoint /api/exchange-rates работает
