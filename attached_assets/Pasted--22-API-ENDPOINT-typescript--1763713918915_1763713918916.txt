@@ -1,0 +1,128 @@
+ШАГ 22: СОЗДАТЬ API ENDPOINT ДЛЯ ИСТОРИИ АКТИВОВ
+typescript═══════════════════════════════════════════════════════
+ЗАДАЧА: API для получения исторических данных активов
+ФАЙЛ: server/routes/assets.routes.ts
+ДОБАВИТЬ: ~80 строк (новый endpoint)
+═══════════════════════════════════════════════════════
+
+ОТКРОЙ ФАЙЛ: server/routes/assets.routes.ts
+
+ДОБАВЬ НОВЫЙ ENDPOINT ПОСЛЕ СУЩЕСТВУЮЩИХ:
+
+// GET /api/assets/history - получить историю стоимости активов по датам
+router.get('/history', async (req: any, res) => {
+  try {
+    const userId = req.user.id;
+    const { startDate, endDate } = req.query;
+    
+    // Если даты не указаны - последние 6 месяцев
+    const end = endDate ? new Date(endDate) : new Date();
+    const start = startDate 
+      ? new Date(startDate) 
+      : new Date(end.getTime() - 180 * 24 * 60 * 60 * 1000); // 6 месяцев назад
+    
+    // Получить все активы пользователя
+    const allAssets = await assetsRepository.findByUserId(userId);
+    
+    // Генерируем даты для графика (каждый месяц)
+    const dates: string[] = [];
+    const current = new Date(start);
+    while (current <= end) {
+      dates.push(current.toISOString().split('T')[0]);
+      current.setMonth(current.getMonth() + 1);
+    }
+    
+    // Для каждой даты рассчитать стоимость активов и пассивов
+    const history = await Promise.all(dates.map(async (date) => {
+      let totalAssets = 0;
+      let totalLiabilities = 0;
+      
+      for (const item of allAssets) {
+        const asset = item.asset;
+        
+        // Пропустить если актив создан после этой даты
+        if (new Date(asset.createdAt) > new Date(date)) {
+          continue;
+        }
+        
+        // Рассчитать стоимость актива на эту дату
+        const value = await calculateAssetValueAtDate(asset, date);
+        
+        if (asset.type === 'asset') {
+          totalAssets += value;
+        } else {
+          totalLiabilities += value;
+        }
+      }
+      
+      return {
+        date,
+        assets: totalAssets,
+        liabilities: totalLiabilities,
+        netWorth: totalAssets - totalLiabilities
+      };
+    }));
+    
+    res.json({
+      success: true,
+      data: history
+    });
+  } catch (error: any) {
+    console.error('Error fetching assets history:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch assets history'
+    });
+  }
+});
+
+// Вспомогательная функция для расчета стоимости актива на конкретную дату
+async function calculateAssetValueAtDate(asset: Asset, targetDate: string): Promise<number> {
+  const target = new Date(targetDate);
+  
+  // Получить историю оценок до этой даты
+  const valuations = await assetsRepository.getValuations(asset.id);
+  
+  // Найти ближайшую оценку до target date
+  const relevantValuation = valuations.find(v => 
+    new Date(v.valuationDate) <= target
+  );
+  
+  if (relevantValuation) {
+    // Если есть историческая оценка - использовать её
+    return parseFloat(relevantValuation.value);
+  }
+  
+  // Если нет исторических оценок - рассчитать на основе appreciation/depreciation rate
+  const purchaseDate = asset.purchaseDate ? new Date(asset.purchaseDate) : new Date(asset.createdAt);
+  const purchaseValue = asset.purchasePrice ? parseFloat(asset.purchasePrice) : parseFloat(asset.currentValue);
+  
+  // Если target дата до покупки - вернуть 0
+  if (target < purchaseDate) {
+    return 0;
+  }
+  
+  // Рассчитать количество лет от покупки до target даты
+  const yearsElapsed = (target.getTime() - purchaseDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
+  
+  // Применить appreciation/depreciation rate
+  if (asset.appreciationRate) {
+    const rate = parseFloat(asset.appreciationRate) / 100;
+    return purchaseValue * Math.pow(1 + rate, yearsElapsed);
+  }
+  
+  if (asset.depreciationRate) {
+    const rate = parseFloat(asset.depreciationRate) / 100;
+    return purchaseValue * Math.pow(1 - rate, yearsElapsed);
+  }
+  
+  // Если нет изменения цены - текущая стоимость
+  return purchaseValue;
+}
+
+ПРОВЕРКА:
+✅ Endpoint создан
+✅ GET /api/assets/history возвращает данные
+✅ Формат ответа: [{ date, assets, liabilities, netWorth }]
+✅ Учитывается appreciation/depreciation rate
+✅ Используются исторические оценки если есть
