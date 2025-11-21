@@ -128,8 +128,23 @@ export default function PlannedExpensesPage() {
     },
   });
 
+  const toggleChartMutation = useMutation({
+    mutationFn: async ({ id, show }: { id: number; show: boolean }) => {
+      const res = await apiRequest("PATCH", `/api/planned/${id}`, { showOnChart: show });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/planned"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/trend"] });
+    },
+  });
+
   const handleAddPlanned = (data: { name: string; amount: string; targetDate: string; category?: string }) => {
     createMutation.mutate(data);
+  };
+
+  const handleToggleChart = (id: number, show: boolean) => {
+    toggleChartMutation.mutate({ id, show });
   };
 
   const tabCounts = useMemo(() => ({
@@ -161,6 +176,7 @@ export default function PlannedExpensesPage() {
               onDelete={deleteMutation.mutate}
               onPurchase={purchaseMutation.mutate}
               onCancel={cancelMutation.mutate}
+              onToggleChart={handleToggleChart}
             />
           ))}
         </div>

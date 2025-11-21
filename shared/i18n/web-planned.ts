@@ -39,4 +39,7 @@ export const webPlannedTranslations: Translations = {
   "planned.validation_name_required": { en: "Name is required", ru: "Название обязательно" },
   "planned.validation_amount_invalid": { en: "Invalid amount format", ru: "Неверный формат суммы" },
   "planned.validation_date_required": { en: "Target date is required", ru: "Дата обязательна" },
+  
+  // Chart display
+  "planned.show_on_chart": { en: "Show on chart", ru: "Показывать на графике" },
 };

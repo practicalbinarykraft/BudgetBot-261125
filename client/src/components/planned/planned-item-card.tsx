@@ -2,14 +2,17 @@ import { PlannedTransaction } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2, Check, X, Calendar } from "lucide-react";
 import { format, parseISO, isPast, differenceInDays } from "date-fns";
+import { useTranslation } from "@/i18n";
 
 interface PlannedItemCardProps {
   item: PlannedTransaction;
   onDelete: (id: number) => void;
   onPurchase: (id: number) => void;
   onCancel: (id: number) => void;
+  onToggleChart?: (id: number, show: boolean) => void;
 }
 
 const statusColors = {
@@ -18,7 +21,8 @@ const statusColors = {
   cancelled: "bg-gray-500",
 };
 
-export function PlannedItemCard({ item, onDelete, onPurchase, onCancel }: PlannedItemCardProps) {
+export function PlannedItemCard({ item, onDelete, onPurchase, onCancel, onToggleChart }: PlannedItemCardProps) {
+  const { t } = useTranslation();
   const targetDate = parseISO(item.targetDate);
   const isOverdue = isPast(targetDate) && item.status === "planned";
   const daysUntil = differenceInDays(targetDate, new Date());
@@ -47,6 +51,23 @@ export function PlannedItemCard({ item, onDelete, onPurchase, onCancel }: Planne
             {item.status}
           </Badge>
         </div>
+
+        {item.status === "planned" && onToggleChart && (
+          <div className="flex items-center gap-2 mb-3">
+            <Checkbox
+              id={`show-chart-${item.id}`}
+              checked={item.showOnChart ?? true}
+              onCheckedChange={(checked) => onToggleChart(item.id, !!checked)}
+              data-testid={`checkbox-show-chart-${item.id}`}
+            />
+            <label 
+              htmlFor={`show-chart-${item.id}`} 
+              className="text-sm text-muted-foreground cursor-pointer select-none"
+            >
+              {t("planned.show_on_chart")}
+            </label>
+          </div>
+        )}
 
         {item.status === "planned" && (
           <div className="flex gap-2 mt-3">
