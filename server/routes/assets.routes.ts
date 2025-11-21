@@ -3,6 +3,9 @@ import { z } from 'zod';
 import { assetsRepository } from '../repositories/assets.repository';
 import { netWorthService } from '../services/net-worth.service';
 import { withAuth } from '../middleware/auth-utils';
+import { db } from '../db';
+import { wallets } from '@shared/schema';
+import { eq } from 'drizzle-orm';
 
 const router = Router();
 
@@ -61,18 +64,10 @@ router.get('/summary', withAuth(async (req, res) => {
 // Validation schema for forecast query
 const forecastQuerySchema = z.object({
   months: z.string().optional().transform((val) => {
-    if (!val) return 6; // default 6 months
+    if (!val) return 12; // default 12 months (1 year)
     const num = parseInt(val, 10);
     if (isNaN(num) || num < 1 || num > 120) {
       throw new Error('months must be between 1 and 120');
-    }
-    return num;
-  }),
-  currentWalletsBalance: z.string().optional().transform((val) => {
-    if (!val) return 0;
-    const num = parseFloat(val);
-    if (isNaN(num)) {
-      throw new Error('currentWalletsBalance must be a valid number');
     }
     return num;
   })
@@ -93,8 +88,19 @@ router.get('/forecast', withAuth(async (req, res) => {
       });
     }
     
-    const { months, currentWalletsBalance } = validation.data;
+    const { months } = validation.data;
     
+    // Получить текущий баланс кошельков
+    const userWallets = await db
+      .select()
+      .from(wallets)
+      .where(eq(wallets.userId, userId));
+    
+    const currentWalletsBalance = userWallets.reduce((sum, wallet) => 
+      sum + parseFloat(wallet.balanceUsd || '0'), 0
+    );
+    
+    // Спрогнозировать общий капитал
     const forecast = await netWorthService.forecastTotalCapital({
       userId,
       months,
