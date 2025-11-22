@@ -121,6 +121,16 @@ export async function calculateTrend(
     currentAssetsNet -= currentLiabilitiesValue;
   }
   
+  // DEBUG: Логирование для отладки активов
+  console.log('[TrendCalculator] Assets debug:', {
+    assetsCount: assets.length,
+    currentAssetsValue,
+    currentLiabilitiesValue,
+    currentAssetsNet,
+    includeAssetValue,
+    includeLiabilityValue
+  });
+  
   // Полный капитал = кошельки + активы (опционально) - пассивы (опционально)
   const currentCapital = currentWalletsBalance + currentAssetsNet;
 
