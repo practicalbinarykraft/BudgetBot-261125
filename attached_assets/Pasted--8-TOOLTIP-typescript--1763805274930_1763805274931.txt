@@ -1,0 +1,83 @@
+ШАГ 8: ОБНОВИТЬ TOOLTIP
+typescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Разный tooltip для LITE/PRO
+ФАЙЛ: client/src/components/charts/financial-trend-chart.tsx
+ИЗМЕНЕНИЙ: ~40 строк
+═══════════════════════════════════════════════════════
+
+НАЙДИ CustomTooltip
+
+ОБНОВИ ТАК:
+
+const CustomTooltip = ({ active, payload }: any) => {
+  if (!active || !payload?.length) return null;
+  
+  const data = payload[0].payload;
+  const isForecast = new Date(data.date) > new Date();
+  
+  // LITE MODE - простой tooltip
+  if (graphMode === 'lite') {
+    return (
+      <div className="bg-white p-4 rounded-lg shadow-xl border-2 border-gray-200">
+        <p className="font-bold text-lg mb-2">
+          {formatDate(data.date)}
+          {isForecast && <span className="text-sm text-blue-600 ml-2">(прогноз)</span>}
+        </p>
+        
+        <div className="mb-3">
+          <p className="text-sm text-gray-600 mb-1">
+            {config.capitalMode === 'networth' ? '🏦 Полный капитал' : '💵 Денежный капитал'}
+          </p>
+          <p className="text-2xl font-bold text-blue-600">
+            ${(isForecast ? data.capitalProjected : data.capital).toLocaleString()}
+          </p>
+        </div>
+        
+        {config.capitalMode === 'networth' && data.assetsNet !== undefined && (
+          <div className="p-2 bg-gray-50 rounded text-sm space-y-1 mb-3">
+            <div className="flex justify-between">
+              <span>💵 Деньги:</span>
+              <span className="font-medium">${data.capitalCash.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>🏠 Имущество-Долги:</span>
+              <span className={`font-medium ${data.assetsNet >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {data.assetsNet >= 0 ? '+' : ''}${data.assetsNet.toLocaleString()}
+              </span>
+            </div>
+          </div>
+        )}
+        
+        <div className="space-y-1 text-sm">
+          <div className="flex justify-between">
+            <span className="text-green-600">💰 Доходы:</span>
+            <span className="font-medium">+${(isForecast ? data.incomeProjected : data.income).toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-red-600">💸 Расходы:</span>
+            <span className="font-medium">-${(isForecast ? data.expenseProjected : data.expense).toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  // PRO MODE - детальный tooltip
+  return (
+    <div className="bg-white p-4 rounded-lg shadow-xl border-2 border-gray-200 max-w-sm">
+      <p className="font-bold text-lg mb-3 pb-2 border-b">
+        {formatDate(data.date)}
+        {isForecast && <span className="text-sm text-blue-600 ml-2">(прогноз)</span>}
+      </p>
+      
+      {/* Полная детализация как в PRO примере выше */}
+      {/* ... */}
+    </div>
+  );
+};
+
+ПРОВЕРКА:
+✅ LITE показывает простой tooltip
+✅ PRO показывает детальный
+✅ Прогноз помечен
+✅ Цифры корректны
