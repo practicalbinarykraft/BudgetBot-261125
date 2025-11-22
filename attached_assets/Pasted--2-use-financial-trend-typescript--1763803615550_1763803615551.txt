@@ -1,0 +1,79 @@
+ШАГ 2: ОБНОВИТЬ ХУК use-financial-trend
+typescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Добавить поддержку LITE/PRO режима в хук
+ФАЙЛ: client/src/hooks/use-financial-trend.ts
+ИЗМЕНЕНИЙ: ~40 строк
+═══════════════════════════════════════════════════════
+
+ОТКРОЙ ФАЙЛ: client/src/hooks/use-financial-trend.ts
+
+ДОБАВЬ ИМПОРТЫ:
+import type { GraphMode, GraphConfig, LiteModeConfig, ProModeConfig } from '@shared/types/graph-mode';
+import { DEFAULT_LITE_CONFIG, DEFAULT_PRO_CONFIG } from '@shared/types/graph-mode';
+
+ДОБАВЬ STATE ДЛЯ РЕЖИМА:
+const [graphMode, setGraphMode] = useState<GraphMode>(() => {
+  // Загрузить из localStorage
+  const saved = localStorage.getItem('graphMode');
+  return (saved === 'pro' ? 'pro' : 'lite') as GraphMode;
+});
+
+const [config, setConfig] = useState<GraphConfig>(() => {
+  if (graphMode === 'lite') {
+    return DEFAULT_LITE_CONFIG;
+  }
+  return DEFAULT_PRO_CONFIG;
+});
+
+ДОБАВЬ ФУНКЦИЮ ПЕРЕКЛЮЧЕНИЯ:
+const toggleMode = () => {
+  const newMode = graphMode === 'lite' ? 'pro' : 'lite';
+  setGraphMode(newMode);
+  
+  // Сохранить в localStorage
+  localStorage.setItem('graphMode', newMode);
+  
+  // Обновить конфиг
+  if (newMode === 'lite') {
+    setConfig(DEFAULT_LITE_CONFIG);
+  } else {
+    setConfig(DEFAULT_PRO_CONFIG);
+  }
+};
+
+ОБНОВИТЬ ФУНКЦИЮ updateFilter:
+const updateFilter = (key: string, value: any) => {
+  if (config.mode === 'lite') {
+    // В LITE можно менять только capitalMode и forecastType
+    if (key === 'capitalMode' || key === 'forecastType') {
+      setConfig({ ...config, [key]: value });
+    }
+  } else {
+    // В PRO можно менять всё
+    setConfig({ ...config, [key]: value });
+  }
+};
+
+ОБНОВИТЬ QUERY:
+const queryKey = graphMode === 'lite' 
+  ? ['/api/analytics/trend', { 
+      capitalMode: config.capitalMode,
+      forecastType: config.forecastType,
+      // Всё остальное включено автоматически
+    }]
+  : ['/api/analytics/trend', config]; // Весь конфиг
+
+ВЕРНУТЬ ИЗ ХУКА:
+return {
+  // ... existing
+  graphMode,
+  toggleMode,
+  config,
+  updateFilter,
+};
+
+ПРОВЕРКА:
+✅ Режим сохраняется в localStorage
+✅ toggleMode работает
+✅ В LITE нельзя менять галочки
+✅ В PRO можно всё

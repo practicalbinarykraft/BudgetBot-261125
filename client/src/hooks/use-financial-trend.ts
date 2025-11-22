@@ -1,11 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import type { GraphMode, GraphConfig, LiteModeConfig, ProModeConfig } from '@shared/types/graph-mode';
+import { DEFAULT_LITE_CONFIG, DEFAULT_PRO_CONFIG } from '@shared/types/graph-mode';
 
 export interface TrendDataPoint {
   date: string;
   income: number;
   expense: number;
   capital: number;
-  assetsNet: number; // assets - liabilities (net worth from assets)
+  assetsNet: number;
   isToday: boolean;
   isForecast: boolean;
 }
@@ -31,91 +34,92 @@ export interface TrendWithGoals {
 interface UseFinancialTrendOptions {
   historyDays?: number;
   forecastDays?: number;
-  useAI?: boolean;
-  includeRecurringIncome?: boolean;
-  includeRecurringExpense?: boolean;
-  includePlannedIncome?: boolean;
-  includePlannedExpenses?: boolean;
-  includeBudgetLimits?: boolean;
-  includeAssetIncome?: boolean;
-  includeLiabilityExpense?: boolean;
-  includeAssetValue?: boolean;
-  includeLiabilityValue?: boolean;
-  capitalMode?: 'cash' | 'networth';
 }
 
 /**
- * Hook to fetch financial trend data (historical + forecast) + goal markers
- * 
- * @param historyDays Number of historical days to fetch (default: 30)
- * @param forecastDays Number of forecast days to generate (default: 365)
- * @param useAI Use AI forecast (opt-in, default: false)
- * @param includeRecurringIncome Include recurring income in forecast (default: true)
- * @param includeRecurringExpense Include recurring expenses in forecast (default: true)
- * @param includePlannedIncome Include planned income in forecast (default: true)
- * @param includePlannedExpenses Include planned expenses in forecast (default: true)
- * @param includeBudgetLimits Include budget limits in forecast (default: false)
- * @param includeAssetIncome Include asset income in forecast (default: true)
- * @param includeLiabilityExpense Include liability expenses in forecast (default: true)
- * @param includeAssetValue Include asset value in capital calculation (default: true)
- * @param includeLiabilityValue Include liability value in capital calculation (default: true)
+ * Hook to fetch financial trend data with LITE/PRO modes
  */
 export function useFinancialTrend({
   historyDays = 30,
   forecastDays = 365,
-  useAI = false,
-  includeRecurringIncome = true,
-  includeRecurringExpense = true,
-  includePlannedIncome = true,
-  includePlannedExpenses = true,
-  includeBudgetLimits = false,
-  includeAssetIncome = true,
-  includeLiabilityExpense = true,
-  includeAssetValue = true,
-  includeLiabilityValue = true,
-  capitalMode = 'networth',
 }: UseFinancialTrendOptions = {}) {
-  const queryKey = [
-    "/api/analytics/trend", 
-    historyDays, 
-    forecastDays,
-    useAI,
-    includeRecurringIncome,
-    includeRecurringExpense,
-    includePlannedIncome,
-    includePlannedExpenses,
-    includeBudgetLimits,
-    includeAssetIncome,
-    includeLiabilityExpense,
-    includeAssetValue,
-    includeLiabilityValue,
-    capitalMode,
-  ];
+  const [graphMode, setGraphMode] = useState<GraphMode>(() => {
+    const saved = localStorage.getItem('graphMode');
+    return (saved === 'pro' ? 'pro' : 'lite') as GraphMode;
+  });
 
-  console.log('[useFinancialTrend] Query key:', queryKey);
+  const [config, setConfig] = useState<GraphConfig>(() => {
+    if (graphMode === 'lite') {
+      return DEFAULT_LITE_CONFIG;
+    }
+    return DEFAULT_PRO_CONFIG;
+  });
 
-  return useQuery<TrendWithGoals>({
+  const toggleMode = () => {
+    const newMode = graphMode === 'lite' ? 'pro' : 'lite';
+    setGraphMode(newMode);
+    localStorage.setItem('graphMode', newMode);
+    
+    if (newMode === 'lite') {
+      setConfig(DEFAULT_LITE_CONFIG);
+    } else {
+      setConfig(DEFAULT_PRO_CONFIG);
+    }
+  };
+
+  const updateFilter = (key: string, value: any) => {
+    if (config.mode === 'lite') {
+      if (key === 'capitalMode' || key === 'forecastType') {
+        setConfig({ ...config, [key]: value });
+      }
+    } else {
+      setConfig({ ...config, [key]: value });
+    }
+  };
+
+  const buildQueryParams = (cfg: GraphConfig) => {
+    const params: Record<string, string> = {
+      historyDays: historyDays.toString(),
+      forecastDays: forecastDays.toString(),
+      capitalMode: cfg.capitalMode,
+    };
+
+    if (cfg.mode === 'lite') {
+      params.useAI = (cfg.forecastType === 'ai').toString();
+      params.includeRecurringIncome = 'true';
+      params.includeRecurringExpense = 'true';
+      params.includePlannedIncome = 'true';
+      params.includePlannedExpenses = 'true';
+      params.includeBudgetLimits = 'true';
+      params.includeAssetIncome = 'true';
+      params.includeLiabilityExpense = 'true';
+      params.includeAssetValue = 'true';
+      params.includeLiabilityValue = 'true';
+    } else {
+      params.useAI = (cfg.forecastType === 'ai').toString();
+      params.includeRecurringIncome = cfg.includeRecurringIncome.toString();
+      params.includeRecurringExpense = cfg.includeRecurringExpense.toString();
+      params.includePlannedIncome = 'true';
+      params.includePlannedExpenses = cfg.includePlannedExpense.toString();
+      params.includeBudgetLimits = cfg.includeBudgetLimits.toString();
+      params.includeAssetIncome = cfg.includeAssetIncome.toString();
+      params.includeLiabilityExpense = cfg.includeLiabilityExpense.toString();
+      params.includeAssetValue = cfg.includeAssetValueChange.toString();
+      params.includeLiabilityValue = cfg.includeAssetValueChange.toString();
+    }
+
+    return params;
+  };
+
+  const queryKey = ['/api/analytics/trend', graphMode, config];
+
+  const query = useQuery<TrendWithGoals>({
     queryKey,
     queryFn: async () => {
-      const params = new URLSearchParams({
-        historyDays: historyDays.toString(),
-        forecastDays: forecastDays.toString(),
-        useAI: useAI.toString(),
-        includeRecurringIncome: includeRecurringIncome.toString(),
-        includeRecurringExpense: includeRecurringExpense.toString(),
-        includePlannedIncome: includePlannedIncome.toString(),
-        includePlannedExpenses: includePlannedExpenses.toString(),
-        includeBudgetLimits: includeBudgetLimits.toString(),
-        includeAssetIncome: includeAssetIncome.toString(),
-        includeLiabilityExpense: includeLiabilityExpense.toString(),
-        includeAssetValue: includeAssetValue.toString(),
-        includeLiabilityValue: includeLiabilityValue.toString(),
-        capitalMode: capitalMode,
-      });
+      const params = buildQueryParams(config);
+      const searchParams = new URLSearchParams(params);
       
-      console.log('[useFinancialTrend] Fetching with params:', params.toString());
-      
-      const res = await fetch(`/api/analytics/trend?${params}`, {
+      const res = await fetch(`/api/analytics/trend?${searchParams}`, {
         cache: 'no-store',
       });
       
@@ -125,11 +129,16 @@ export function useFinancialTrend({
       
       return res.json();
     },
-    // Keep previous data while fetching new
     placeholderData: (prev) => prev,
-    // Consider data immediately stale to allow refetch on param change
     staleTime: 0,
-    // Force refetch when query key changes
     refetchOnMount: 'always',
   });
+
+  return {
+    ...query,
+    graphMode,
+    toggleMode,
+    config,
+    updateFilter,
+  };
 }
