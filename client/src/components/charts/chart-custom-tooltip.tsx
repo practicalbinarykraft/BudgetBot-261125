@@ -5,6 +5,7 @@ interface TrendDataPoint {
   income?: number | null;
   expense?: number | null;
   capital?: number | null;
+  assetsNet?: number | null;
   isForecast?: boolean;
 }
 
@@ -49,6 +50,12 @@ export function createChartTooltip(trendData: TrendDataPoint[], t: TranslateFn) 
         {dataPoint.capital != null && (
           <p style={{ color: CHART_COLORS.capital, margin: "4px 0" }}>
             {dataPoint.isForecast ? t("dashboard.chart_forecast") : t("dashboard.chart_capital")}: {formatFullCurrency(dataPoint.capital)}
+          </p>
+        )}
+        
+        {dataPoint.assetsNet != null && dataPoint.assetsNet !== 0 && (
+          <p style={{ color: CHART_COLORS.assetsNet, margin: "4px 0" }}>
+            {t("dashboard.chart_assets_net")}: {formatFullCurrency(dataPoint.assetsNet)}
           </p>
         )}
       </div>
