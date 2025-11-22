@@ -321,4 +321,30 @@ export const webDashboardTranslations: Translations = {
     en: 'Asset appreciation & liability amortization',
     ru: 'Изменение стоимости активов и погашение пассивов',
   },
+  
+  // Graph mode (LITE/PRO)
+  'dashboard.graph_mode_lite': {
+    en: 'LITE mode',
+    ru: 'LITE режим',
+  },
+  'dashboard.graph_mode_pro': {
+    en: 'PRO mode',
+    ru: 'PRO режим',
+  },
+  'dashboard.my_capital': {
+    en: 'My Capital',
+    ru: 'Мой капитал',
+  },
+  'dashboard.detailed_analysis': {
+    en: 'Detailed Analysis',
+    ru: 'Детальный анализ',
+  },
+  'dashboard.forecast_type_ai': {
+    en: 'AI Forecast (smart)',
+    ru: 'AI прогноз (умный)',
+  },
+  'dashboard.forecast_type_linear': {
+    en: 'Linear forecast (simple)',
+    ru: 'Линейный прогноз (простой)',
+  },
 };

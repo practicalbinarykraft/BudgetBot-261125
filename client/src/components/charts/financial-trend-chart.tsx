@@ -163,7 +163,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
       <CardHeader>
         <div className="flex items-center justify-between mb-4">
           <CardTitle>
-            {graphMode === 'lite' ? '📊 Мой капитал' : '📊 Детальный анализ'}
+            {graphMode === 'lite' ? t('dashboard.my_capital') : t('dashboard.detailed_analysis')}
           </CardTitle>
           
           <GraphModeToggle mode={graphMode} onToggle={toggleMode} />

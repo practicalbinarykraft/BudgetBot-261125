@@ -82,6 +82,7 @@ export function useFinancialTrend({
       historyDays: historyDays.toString(),
       forecastDays: forecastDays.toString(),
       capitalMode: cfg.capitalMode,
+      graphMode: cfg.mode,
     };
 
     if (cfg.mode === 'lite') {
