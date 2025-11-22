@@ -344,18 +344,20 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                 />
               )}
 
-              {/* Assets & Liabilities Line (Orange) */}
-              <Line
-                data={chartData}
-                dataKey="assetsNet"
-                stroke="hsl(var(--chart-4))"
-                strokeWidth={2}
-                strokeDasharray="5 5"
-                strokeOpacity={config.mode === 'lite' ? 0 : (config.mode === 'pro' && config.showAssetsLine ? 1 : 0)}
-                dot={false}
-                name={t("dashboard.chart_assets_liabilities")}
-                connectNulls
-              />
+              {/* Стоимость имущества - только в PRO */}
+              {graphMode === 'pro' && config.mode === 'pro' && config.showAssetsLine && (
+                <Line 
+                  type="monotone"
+                  data={chartData}
+                  dataKey="assetsNet"
+                  stroke="hsl(var(--chart-4))"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  dot={false}
+                  name="Имущество - Долги"
+                  connectNulls
+                />
+              )}
 
               {/* Long-term Total Capital Forecast (12 months, dashed purple line) */}
               {assetsForecastData.length > 0 && (
