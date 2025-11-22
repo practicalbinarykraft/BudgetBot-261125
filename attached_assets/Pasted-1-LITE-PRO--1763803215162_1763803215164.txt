@@ -1,0 +1,205 @@
+1. Переключатель LITE ↔ PROРасположение: В правом верхнем углу карточки графика, на одной линии с заголовкомВизуально:
+LITE MODE:
+┌────────────────────────────────────────┐
+│ 📊 Мой капитал         [⚙️ PRO режим] │
+└────────────────────────────────────────┘
+
+PRO MODE:
+┌────────────────────────────────────────┐
+│ 📊 Детальный анализ    [◄ LITE режим] │
+└────────────────────────────────────────┘Компонент:
+tsx<Button 
+  variant="outline" 
+  size="sm"
+  onClick={toggleMode}
+>
+  {mode === 'lite' ? (
+    <><Settings className="w-4 h-4 mr-1" /> PRO режим</>
+  ) : (
+    <><ArrowLeft className="w-4 h-4 mr-1" /> LITE режим</>
+  )}
+</Button>2. Дефолтный режимПри первом входе: LITE режим ✅Сохранение:
+typescript// При переключении
+localStorage.setItem('graphMode', mode); // 'lite' | 'pro'
+
+// При загрузке
+const savedMode = localStorage.getItem('graphMode') || 'lite';Логика:
+
+Новый пользователь → LITE
+Переключился на PRO → запомнить
+При следующем визите → открыть тот что выбрал
+3. Вертикальная линия "Сегодня"Да, через ReferenceLine:
+tsx<ReferenceLine 
+  x={new Date().toISOString().split('T')[0]} 
+  stroke="#94a3b8" 
+  strokeWidth={2}
+  strokeDasharray="3 3"
+  label={{ 
+    value: 'Сегодня', 
+    position: 'top',
+    fill: '#64748b',
+    fontSize: 12
+  }}
+/>Визуально:
+         │ Сегодня
+         │
+─────────┼┈┈┈┈┈┈┈→
+  Факт   │ Прогноз4. Стиль прогнозных линийДа, пунктир + прозрачность:
+tsx// Прогнозные линии
+<Line 
+  type="monotone"
+  dataKey="incomeProjected"
+  stroke="hsl(var(--chart-1))"
+  strokeWidth={2}
+  strokeDasharray="5 5"  // ← Пунктир
+  opacity={0.7}          // ← Прозрачность
+  dot={false}            // ← Без точек
+/>Легенда:
+🟢 ──── Доходы       🟢 ┈┈┈ Прогноз
+🔴 ──── Расходы      🔴 ┈┈┈ Прогноз  
+🔵 ──── Капитал      🔵 ┈┈┈ Прогноз5. AI прогноз в LITEЛогика:
+ЕСТЬ API ключ?
+├─ ДА → Показать кнопку переключателя прогноза
+│        [🤖 AI прогноз] ←──● (по умолчанию)
+│        [📊 Линейный прогноз]
+│
+└─ НЕТ → Только линейный прогноз
+         Без переключателяВизуально в LITE:
+┌────────────────────────────────────────┐
+│ 📊 Мой капитал         [⚙️ PRO режим] │
+├────────────────────────────────────────┤
+│                                        │
+│ [График]                               │
+│                                        │
+│ Режим капитала:                        │
+│ ● Полный ($49,843)                     │
+│ ○ Только деньги ($29,782)              │
+│                                        │
+│ ─────────────────────────────────      │
+│                                        │
+│ Тип прогноза:                          │
+│ ● 🤖 AI прогноз (умный)                │
+│ ○ 📊 Линейный прогноз (простой)        │
+│                                        │
+└────────────────────────────────────────┘Важно: Даже в LITE оставляем выбор типа прогноза!6. Золотая линия имуществаВ LITE: Скрыта, но данные в tooltip ✅Tooltip LITE:
+┌─────────────────────────────────┐
+│ 🏦 Полный капитал: $49,843      │
+│ ├─ 💵 Деньги: $29,782           │
+│ └─ 🏠 Имущество-Долги: +$20,061 │ ← ЕСТЬ!
+└─────────────────────────────────┘В PRO: Опциональная галочка ✅PRO MODE:
+☑️ Доходы
+☑️ Расходы
+☑️ Капитал
+□  Стоимость имущества (отдельная линия)7. Текущие фильтры прогнозаВ LITE: Всё включено автоматически, без галочек ✅Автоматически учитывается:
+✅ Зарплата и повторяющиеся доходы
+✅ Аренда и доход от активов
+✅ Обычные расходы
+✅ Платежи по кредитам
+✅ Запланированные покупки
+✅ Бюджетные лимиты
+✅ Рост/падение стоимости имуществаВ PRO: 7 галочек для контроля ✅Включить в прогноз:
+☑️ Зарплата и повторяющиеся доходы
+☑️ Аренда и доход от активов
+☑️ Обычные расходы
+☑️ Платежи по кредитам
+☑️ Запланированные покупки
+☑️ Бюджетные лимиты
+☑️ Изменение стоимости имущества📋 ПОЛНОЕ ТЗ ДЛЯ REPLITШАГ 1: СОЗДАТЬ ТИПЫ И КОНСТАНТЫtypescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Определить типы для LITE/PRO режима
+ФАЙЛЫ: 
+- shared/types/graph-mode.ts (новый, ~30 строк)
+ИЗМЕНЕНИЙ: 0
+═══════════════════════════════════════════════════════
+
+СОЗДАЙ ФАЙЛ: shared/types/graph-mode.ts
+
+СОДЕРЖИМОЕ:
+
+/**
+ * Режимы отображения графика
+ */
+export type GraphMode = 'lite' | 'pro';
+
+/**
+ * Типы прогноза
+ */
+export type ForecastType = 'linear' | 'ai';
+
+/**
+ * Режимы капитала
+ */
+export type CapitalMode = 'cash' | 'networth';
+
+/**
+ * Конфигурация LITE режима
+ */
+export interface LiteModeConfig {
+  mode: 'lite';
+  capitalMode: CapitalMode;
+  forecastType: ForecastType;
+  // Всё остальное включено автоматически
+}
+
+/**
+ * Конфигурация PRO режима
+ */
+export interface ProModeConfig {
+  mode: 'pro';
+  capitalMode: CapitalMode;
+  forecastType: ForecastType;
+  
+  // Что включить в прогноз
+  includeRecurringIncome: boolean;
+  includeAssetIncome: boolean;
+  includeRecurringExpense: boolean;
+  includeLiabilityExpense: boolean;
+  includePlannedExpense: boolean;
+  includeBudgetLimits: boolean;
+  includeAssetValueChange: boolean;
+  
+  // Какие линии показывать
+  showIncome: boolean;
+  showExpense: boolean;
+  showCapital: boolean;
+  showAssetsLine: boolean; // Золотая линия
+}
+
+export type GraphConfig = LiteModeConfig | ProModeConfig;
+
+/**
+ * Дефолтные настройки LITE
+ */
+export const DEFAULT_LITE_CONFIG: LiteModeConfig = {
+  mode: 'lite',
+  capitalMode: 'networth',
+  forecastType: 'linear', // Или 'ai' если есть ключ
+};
+
+/**
+ * Дефолтные настройки PRO
+ */
+export const DEFAULT_PRO_CONFIG: ProModeConfig = {
+  mode: 'pro',
+  capitalMode: 'networth',
+  forecastType: 'linear',
+  
+  // Прогноз - всё включено
+  includeRecurringIncome: true,
+  includeAssetIncome: true,
+  includeRecurringExpense: true,
+  includeLiabilityExpense: true,
+  includePlannedExpense: true,
+  includeBudgetLimits: true,
+  includeAssetValueChange: true,
+  
+  // Линии - основные включены
+  showIncome: true,
+  showExpense: true,
+  showCapital: true,
+  showAssetsLine: false, // Золотая линия по умолчанию скрыта
+};
+
+ПРОВЕРКА:
+✅ Файл создан
+✅ Типы экспортированы
+✅ Дефолтные конфиги есть
