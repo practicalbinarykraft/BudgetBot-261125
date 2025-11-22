@@ -32,7 +32,7 @@ export function NetWorthWidget({
   };
   
   return (
-    <Card className="bg-gradient-to-br from-purple-500 to-indigo-600 text-white border-0 overflow-hidden">
+    <Card className="bg-gradient-to-br from-yellow-500 to-amber-600 text-white border-0 overflow-hidden">
       <div className="p-6">
         {/* Заголовок */}
         <div className="flex items-center justify-between mb-4">
