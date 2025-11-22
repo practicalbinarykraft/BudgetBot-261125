@@ -22,13 +22,19 @@ router.get('/', withAuth(async (req, res) => {
       assetsData = await assetsRepository.findByUserId(userId);
     }
     
+    // Распаковать структуру {asset, category} в плоский объект
+    const flatAssets = assetsData.map(item => ({
+      ...item.asset,
+      category: item.category || undefined
+    }));
+    
     // Группировать по категориям
     const grouped = assetsRepository.groupByCategory(assetsData);
     
     res.json({
       success: true,
       data: {
-        assets: assetsData,
+        assets: flatAssets,
         grouped
       }
     });
