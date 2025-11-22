@@ -19,17 +19,26 @@ export default function AssetsPage() {
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   
   // Получить все активы
-  const { data: assetsData, isLoading } = useQuery<{
-    assets: AssetWithCategory[];
-    grouped: Record<string, AssetWithCategory[]>;
+  const { data: assetsResponse, isLoading } = useQuery<{
+    success: boolean;
+    data: {
+      assets: AssetWithCategory[];
+      grouped: Record<string, AssetWithCategory[]>;
+    };
   }>({
     queryKey: ['/api/assets'],
   });
   
   // Получить сводку
-  const { data: summary } = useQuery<NetWorthSummary>({
+  const { data: summaryResponse } = useQuery<{
+    success: boolean;
+    data: NetWorthSummary;
+  }>({
     queryKey: ['/api/assets/summary'],
   });
+  
+  const assetsData = assetsResponse?.data;
+  const summary = summaryResponse?.data;
   
   // Фильтровать по табу
   const filteredGrouped = assetsData?.grouped 
