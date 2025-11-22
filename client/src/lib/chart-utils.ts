@@ -3,7 +3,7 @@ export const CHART_COLORS = {
   expense: "hsl(0, 84%, 60%)",
   capital: "hsl(221, 83%, 53%)",
   forecast: "hsl(221, 83%, 53%)",
-  assetsNet: "hsl(271, 81%, 56%)",
+  assetsNet: "hsl(45, 93%, 47%)",
   grid: "hsl(var(--border))",
   today: "hsl(var(--muted-foreground))",
 };
