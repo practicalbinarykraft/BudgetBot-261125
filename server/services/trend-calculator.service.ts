@@ -26,6 +26,8 @@ import {
   getLiabilityExpenseForDate,
 } from "./forecast-filters.service";
 import { assetsRepository } from "../repositories/assets.repository";
+import { assetValueCalculator } from './asset-value-calculator.service';
+import { liabilityCalculator } from './liability-calculator.service';
 
 export type { TrendDataPoint };
 
@@ -151,10 +153,30 @@ export async function calculateTrend(
   }
   
   // Capital для каждого дня = баланс кошельков на начало периода + cumulative income - cumulative expense + assetsNet
-  // AssetsNet остается постоянным для исторических данных (текущее значение)
+  // AssetsNet теперь ДИНАМИЧЕН - рассчитывается для каждой даты с учётом роста/падения/платежей
   historicalCumulative.forEach(point => {
-    point.assetsNet = currentAssetsNet;
-    point.capital = walletsBalanceAtPeriodStart + point.income - point.expense + currentAssetsNet;
+    const pointDate = new Date(point.date);
+    let totalAssetsValue = 0;
+    let totalLiabilitiesValue = 0;
+    
+    // Рассчитать стоимость каждого актива/обязательства на эту дату
+    for (const item of assetsRaw) {
+      const asset = item.asset;
+      
+      if (asset.type === 'asset' && includeAssetValue) {
+        // Актив (квартира, машина) - растёт или падает
+        const value = assetValueCalculator.calculateValueAtDate(asset, pointDate);
+        totalAssetsValue += value;
+      } else if (asset.type === 'liability' && includeLiabilityValue) {
+        // Обязательство (кредит) - уменьшается с платежами
+        const value = liabilityCalculator.calculateValueAtDate(asset, pointDate);
+        totalLiabilitiesValue += value; // Уже отрицательное!
+      }
+    }
+    
+    // Чистая стоимость = активы + обязательства (обязательства отрицательные)
+    point.assetsNet = totalAssetsValue + totalLiabilitiesValue;
+    point.capital = walletsBalanceAtPeriodStart + point.income - point.expense + point.assetsNet;
   });
 
   // ШАГ 4: Получить прогноз от AI (если есть API ключ)
@@ -166,6 +188,7 @@ export async function calculateTrend(
     currentWalletsBalance,
     walletsBalanceAtPeriodStart,
     currentAssetsNet,
+    assetsRaw,
     historicalCumulative,
     includeRecurringIncome,
     includeRecurringExpense,
@@ -197,6 +220,7 @@ async function generateAndProcessForecast(params: {
   currentWalletsBalance: number;
   walletsBalanceAtPeriodStart: number;
   currentAssetsNet: number;
+  assetsRaw: Array<{ asset: any; category: any }>;
   historicalCumulative: TrendDataPoint[];
   includeRecurringIncome: boolean;
   includeRecurringExpense: boolean;
@@ -223,6 +247,7 @@ async function generateAndProcessForecast(params: {
     currentWalletsBalance,
     walletsBalanceAtPeriodStart,
     currentAssetsNet,
+    assetsRaw,
     historicalCumulative,
     includeRecurringIncome,
     includeRecurringExpense,
@@ -342,16 +367,65 @@ async function generateAndProcessForecast(params: {
       
       // Since makeCumulativeFromBase adds lastHistorical to each forecast point,
       // we compute delta from lastHistorical and add to baseWalletsForForecast
+      const lastHistoricalDate = new Date(lastHistorical.date);
+      
       forecastData.forEach((point: TrendDataPoint) => {
-        point.assetsNet = currentAssetsNet; // Assets value stays constant in forecast
+        // Рассчитать реальное количество месяцев от последней исторической точки
+        const pointDate = new Date(point.date);
+        const milliseconds = pointDate.getTime() - lastHistoricalDate.getTime();
+        const days = milliseconds / (1000 * 60 * 60 * 24);
+        const monthsAhead = days / 30.44; // Среднее количество дней в месяце
+        
+        let totalAssetsValue = 0;
+        let totalLiabilitiesValue = 0;
+        
+        // Спрогнозировать стоимость каждого актива/обязательства
+        for (const item of assetsRaw) {
+          const asset = item.asset;
+          
+          if (asset.type === 'asset' && includeAssetValue) {
+            const projectedValue = assetValueCalculator.projectValue(asset, monthsAhead);
+            totalAssetsValue += projectedValue;
+          } else if (asset.type === 'liability' && includeLiabilityValue) {
+            const projectedValue = liabilityCalculator.projectValue(asset, monthsAhead);
+            totalLiabilitiesValue += projectedValue; // Уже отрицательное!
+          }
+        }
+        
+        point.assetsNet = totalAssetsValue + totalLiabilitiesValue;
         const walletsDelta = (point.income - lastHistorical.income) - (point.expense - lastHistorical.expense);
-        point.capital = baseWalletsForForecast + walletsDelta + currentAssetsNet;
+        point.capital = baseWalletsForForecast + walletsDelta + point.assetsNet;
       });
     } else {
       forecastData = makeCumulativeFromBase(forecastData, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
       forecastData.forEach((point: TrendDataPoint) => {
-        point.assetsNet = currentAssetsNet;
-        point.capital = currentWalletsBalance + point.income - point.expense + currentAssetsNet;
+        // Рассчитать реальное количество месяцев от сегодня до даты прогноза
+        const pointDate = new Date(point.date);
+        const milliseconds = pointDate.getTime() - today.getTime();
+        const days = milliseconds / (1000 * 60 * 60 * 24);
+        const monthsAhead = days / 30.44; // Среднее количество дней в месяце
+        
+        let totalAssetsValue = 0;
+        let totalLiabilitiesValue = 0;
+        
+        // Спрогнозировать стоимость каждого актива/обязательства
+        for (const item of assetsRaw) {
+          const asset = item.asset;
+          
+          if (asset.type === 'asset' && includeAssetValue) {
+            const projectedValue = assetValueCalculator.projectValue(asset, monthsAhead);
+            totalAssetsValue += projectedValue;
+          } else if (asset.type === 'liability' && includeLiabilityValue) {
+            const projectedValue = liabilityCalculator.projectValue(asset, monthsAhead);
+            totalLiabilitiesValue += projectedValue; // Уже отрицательное!
+          }
+        }
+        
+        point.assetsNet = totalAssetsValue + totalLiabilitiesValue;
+        point.capital = currentWalletsBalance + point.income - point.expense + point.assetsNet;
       });
     }
 
