@@ -35,6 +35,13 @@ export const webAnalysisTranslations: Translations = {
   "analysis.ask_about_spending": { en: "Ask about your spending, budgets, or savings...", ru: "Спросите о расходах, бюджетах или сбережениях..." },
   "analysis.chat_error": { en: "Chat Error", ru: "Ошибка чата" },
   "analysis.failed_to_send_message": { en: "Failed to send message. Please try again.", ru: "Не удалось отправить сообщение. Попробуйте снова." },
+  "analysis.info_banner_title": { en: "Helpful to know", ru: "Полезно знать" },
+  "analysis.info_money": { en: "Money", ru: "Деньги" },
+  "analysis.info_money_desc": { en: "cash in wallets (can spend now)", ru: "наличные в кошельках (можно потратить сейчас)" },
+  "analysis.info_capital": { en: "Capital", ru: "Капитал" },
+  "analysis.info_capital_desc": { en: "money + assets - debts", ru: "деньги + активы - долги" },
+  "analysis.info_see_on": { en: "see on", ru: "смотрите на" },
+  "analysis.info_graph": { en: "graph", ru: "графике" },
   
   // Price Recommendations
   "analysis.price_comparisons": { en: "Price Comparisons", ru: "Сравнение цен" },

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MessageCircle, Send } from "lucide-react";
+import { MessageCircle, Send, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ChatMessage } from "./chat-message";
@@ -12,6 +12,7 @@ import { TypingIndicator } from "./typing-indicator";
 import { QuickActions } from "./quick-actions";
 import type { AiChatMessage } from "@shared/schema";
 import { useTranslation } from "@/i18n/context";
+import { Link } from "wouter";
 
 interface ChatResponse {
   success: boolean;
@@ -87,6 +88,28 @@ export function AIChat() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800" data-testid="info-banner-money-capital">
+          <div className="flex items-start gap-2">
+            <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">
+                {t("analysis.info_banner_title")}
+              </p>
+              <ul className="text-blue-700 dark:text-blue-300 space-y-1 text-xs">
+                <li>
+                  <strong>{t("analysis.info_money")}</strong> = {t("analysis.info_money_desc")}
+                </li>
+                <li>
+                  <strong>{t("analysis.info_capital")}</strong> = {t("analysis.info_capital_desc")} ({t("analysis.info_see_on")}{" "}
+                  <Link to="/dashboard" className="underline hover-elevate" data-testid="link-to-dashboard">
+                    {t("analysis.info_graph")}
+                  </Link>)
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
         <div 
           className="space-y-4 max-h-96 overflow-y-auto p-4 border rounded-md bg-muted/30"
           data-testid="container-chat-messages"
