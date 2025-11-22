@@ -26,9 +26,13 @@ export function createChartTooltip(
     if (!dataPoint) return null;
     
     const showNetWorth = capitalMode === 'networth';
-    const capitalCash = dataPoint.capital ?? 0;
     const assetsNet = dataPoint.assetsNet ?? 0;
-    const capitalFull = capitalCash + assetsNet;
+    
+    // Backend returns correct capital based on mode:
+    // - networth: capital = wallets + income - expenses + assetsNet
+    // - cash: capital = wallets + income - expenses
+    const capitalFull = dataPoint.capital ?? 0;
+    const capitalCash = showNetWorth ? capitalFull - assetsNet : capitalFull;
     
     return (
       <div
