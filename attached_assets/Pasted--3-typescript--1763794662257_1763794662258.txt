@@ -1,0 +1,108 @@
+ШАГ 3: СОЗДАТЬ КАЛЬКУЛЯТОР ОБЯЗАТЕЛЬСТВ
+typescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Рассчитывать остаток долга на конкретную дату
+ФАЙЛ: server/services/liability-calculator.service.ts
+СТРОК: ~120
+═══════════════════════════════════════════════════════
+
+СОЗДАЙ НОВЫЙ ФАЙЛ: server/services/liability-calculator.service.ts
+
+СОДЕРЖИМОЕ:
+
+import type { Asset } from '@shared/schemas/assets.schema';
+
+/**
+ * Калькулятор обязательств (долгов)
+ * 
+ * Отвечает за:
+ * - Расчёт остатка долга на конкретную дату
+ * - Учёт ежемесячных платежей
+ * - Прогнозирование погашения
+ */
+export class LiabilityCalculator {
+  
+  /**
+   * Рассчитать остаток долга на конкретную дату
+   * 
+   * @param liability - Обязательство (кредит, ипотека)
+   * @param targetDate - Дата на которую считаем
+   * @returns Остаток долга в USD (отрицательное число)
+   */
+  calculateValueAtDate(liability: Asset, targetDate: Date): number {
+    // Обязательство должно быть типа 'liability'
+    if (liability.type !== 'liability') {
+      return 0;
+    }
+    
+    // Если создано после целевой даты - ещё нет долга
+    const createdAt = new Date(liability.createdAt);
+    if (targetDate < createdAt) {
+      return 0;
+    }
+    
+    // Начальная сумма долга (текущая стоимость = остаток долга)
+    const initialDebt = parseFloat(liability.currentValue);
+    
+    // Если нет ежемесячного платежа - долг не уменьшается
+    const monthlyPayment = parseFloat(liability.monthlyExpense || '0');
+    if (monthlyPayment === 0) {
+      return -initialDebt; // Отрицательное число
+    }
+    
+    // Рассчитать сколько месяцев прошло
+    const monthsElapsed = this.calculateMonthsElapsed(createdAt, targetDate);
+    
+    // Рассчитать остаток долга
+    const paidAmount = monthlyPayment * monthsElapsed;
+    const remainingDebt = Math.max(0, initialDebt - paidAmount);
+    
+    return -remainingDebt; // Отрицательное число
+  }
+  
+  /**
+   * Спрогнозировать остаток долга через N месяцев
+   * 
+   * @param liability - Обязательство
+   * @param months - Количество месяцев вперёд
+   * @returns Прогнозный остаток в USD (отрицательное число)
+   */
+  projectValue(liability: Asset, months: number): number {
+    if (liability.type !== 'liability') {
+      return 0;
+    }
+    
+    const currentDebt = parseFloat(liability.currentValue);
+    const monthlyPayment = parseFloat(liability.monthlyExpense || '0');
+    
+    if (monthlyPayment === 0) {
+      return -currentDebt;
+    }
+    
+    const paidAmount = monthlyPayment * months;
+    const remainingDebt = Math.max(0, currentDebt - paidAmount);
+    
+    return -remainingDebt;
+  }
+  
+  /**
+   * Рассчитать количество месяцев между датами
+   */
+  private calculateMonthsElapsed(startDate: Date, endDate: Date): number {
+    const years = endDate.getFullYear() - startDate.getFullYear();
+    const months = endDate.getMonth() - startDate.getMonth();
+    
+    const totalMonths = years * 12 + months;
+    return Math.max(0, totalMonths);
+  }
+}
+
+// Singleton instance
+export const liabilityCalculator = new LiabilityCalculator();
+
+ПРОВЕРКА:
+✅ Файл создан
+✅ Класс называется LiabilityCalculator
+✅ Возвращает ОТРИЦАТЕЛЬНЫЕ числа (это долги!)
+✅ Учитывает ежемесячные платежи
+✅ Долг уменьшается со временем
+✅ Экспортирован singleton

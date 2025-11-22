@@ -1,0 +1,90 @@
+ШАГ 4: ОБНОВИТЬ TREND CALCULATOR
+typescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Использовать новые калькуляторы в trend-calculator
+ФАЙЛ: server/services/trend-calculator.service.ts
+ИЗМЕНЕНИЙ: ~60 строк
+═══════════════════════════════════════════════════════
+
+ОТКРОЙ ФАЙЛ: server/services/trend-calculator.service.ts
+
+ДОБАВЬ ИМПОРТЫ В НАЧАЛЕ ФАЙЛА:
+import { assetValueCalculator } from './asset-value-calculator.service';
+import { liabilityCalculator } from './liability-calculator.service';
+import { assetsRepository } from '../repositories/assets.repository';
+
+НАЙДИ МЕТОД calculateHistoricalTrend() ИЛИ АНАЛОГИЧНЫЙ
+
+НАЙДИ КОД КОТОРЫЙ РАССЧИТЫВАЕТ assetsNet:
+// ❌ СТАРЫЙ КОД (примерно так):
+const currentAssetsNet = await netWorthService.calculateNetWorth(userId);
+historicalData.forEach(point => {
+  point.assetsNet = currentAssetsNet.netWorth; // КОНСТАНТА!
+});
+
+ЗАМЕНИ НА:
+// ✅ НОВЫЙ КОД:
+// Получить все активы и обязательства пользователя
+const allAssets = await assetsRepository.findByUserId(userId);
+
+// Для каждой точки на графике рассчитать стоимость
+historicalData.forEach(point => {
+  const pointDate = new Date(point.date);
+  let totalAssetsValue = 0;
+  let totalLiabilitiesValue = 0;
+  
+  // Рассчитать стоимость каждого актива/обязательства на эту дату
+  for (const item of allAssets) {
+    const asset = item.asset;
+    
+    if (asset.type === 'asset') {
+      // Актив (квартира, машина) - растёт или падает
+      const value = assetValueCalculator.calculateValueAtDate(asset, pointDate);
+      totalAssetsValue += value;
+    } else {
+      // Обязательство (кредит) - уменьшается с платежами
+      const value = liabilityCalculator.calculateValueAtDate(asset, pointDate);
+      totalLiabilitiesValue += value; // Уже отрицательное!
+    }
+  }
+  
+  // Чистая стоимость = активы + обязательства (обязательства отрицательные)
+  point.assetsNet = totalAssetsValue + totalLiabilitiesValue;
+});
+
+НАЙДИ МЕТОД calculateForecast() ИЛИ АНАЛОГИЧНЫЙ
+
+НАЙДИ КОД ПРОГНОЗА assetsNet:
+// ❌ СТАРЫЙ КОД:
+forecastData.forEach(point => {
+  point.assetsNet = currentAssetsNet; // КОНСТАНТА!
+});
+
+ЗАМЕНИ НА:
+// ✅ НОВЫЙ КОД:
+forecastData.forEach((point, index) => {
+  const monthsAhead = index + 1;
+  let totalAssetsValue = 0;
+  let totalLiabilitiesValue = 0;
+  
+  // Спрогнозировать стоимость каждого актива/обязательства
+  for (const item of allAssets) {
+    const asset = item.asset;
+    
+    if (asset.type === 'asset') {
+      const projectedValue = assetValueCalculator.projectValue(asset, monthsAhead);
+      totalAssetsValue += projectedValue;
+    } else {
+      const projectedValue = liabilityCalculator.projectValue(asset, monthsAhead);
+      totalLiabilitiesValue += projectedValue; // Уже отрицательное!
+    }
+  }
+  
+  point.assetsNet = totalAssetsValue + totalLiabilitiesValue;
+});
+
+ПРОВЕРКА:
+✅ Импорты добавлены
+✅ Исторические данные используют calculateValueAtDate()
+✅ Прогноз использует projectValue()
+✅ assetsNet теперь ДИНАМИЧЕН (не константа)
+✅ Учитывается рост активов и уменьшение долгов
