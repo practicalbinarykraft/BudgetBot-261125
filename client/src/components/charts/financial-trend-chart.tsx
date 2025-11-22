@@ -263,9 +263,9 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                 strokeOpacity={0.5}
               />
 
-              {/* Income Line */}
+              {/* Income Line (Historical - Solid) */}
               <Line
-                data={chartData}
+                data={historicalData}
                 dataKey="income"
                 stroke={CHART_COLORS.income}
                 strokeWidth={2}
@@ -275,9 +275,24 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                 connectNulls
               />
 
-              {/* Expense Line */}
+              {/* Income Line (Forecast - Dashed) */}
+              {forecastDays > 0 && forecastData.length > 0 && (
+                <Line
+                  data={forecastWithConnection}
+                  dataKey="income"
+                  stroke={CHART_COLORS.income}
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  opacity={0.7}
+                  dot={false}
+                  name="Доходы (прогноз)"
+                  connectNulls
+                />
+              )}
+
+              {/* Expense Line (Historical - Solid) */}
               <Line
-                data={chartData}
+                data={historicalData}
                 dataKey="expense"
                 stroke={CHART_COLORS.expense}
                 strokeWidth={2}
@@ -286,6 +301,21 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                 name={t("dashboard.chart_expense")}
                 connectNulls
               />
+
+              {/* Expense Line (Forecast - Dashed) */}
+              {forecastDays > 0 && forecastData.length > 0 && (
+                <Line
+                  data={forecastWithConnection}
+                  dataKey="expense"
+                  stroke={CHART_COLORS.expense}
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  opacity={0.7}
+                  dot={false}
+                  name="Расходы (прогноз)"
+                  connectNulls
+                />
+              )}
 
               {/* Capital Line (Historical - Solid) */}
               <Line
@@ -304,12 +334,12 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                 <Line
                   data={forecastWithConnection}
                   dataKey="capital"
-                  stroke={CHART_COLORS.forecast}
+                  stroke={CHART_COLORS.capital}
                   strokeWidth={2}
                   strokeDasharray="5 5"
-                  strokeOpacity={showForecast ? 1 : 0}
+                  opacity={0.7}
                   dot={false}
-                  name={t("dashboard.chart_forecast")}
+                  name="Капитал (прогноз)"
                   connectNulls
                 />
               )}
