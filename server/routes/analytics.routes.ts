@@ -51,7 +51,15 @@ function getPeriodDates(period: string = 'month'): { startDate: string; endDate:
  * Query params:
  * - historyDays: number of historical days (default: 30)
  * - forecastDays: number of forecast days (default: 365)
+ * - graphMode: 'lite' (all filters auto-enabled) or 'pro' (manual control, default: lite)
+ * - capitalMode: 'cash' (only money) or 'networth' (money + assets - liabilities, default: networth)
  * - useAI: use AI forecast (opt-in, default: false)
+ * 
+ * LITE MODE (graphMode='lite'):
+ * - All forecast filters are automatically enabled (true)
+ * - User sees simplified UI with zero configuration
+ * 
+ * PRO MODE (graphMode='pro'):
  * - includeRecurringIncome: include recurring income in forecast (default: true)
  * - includeRecurringExpense: include recurring expenses in forecast (default: true)
  * - includePlannedIncome: include planned income in forecast (default: true)
@@ -61,7 +69,6 @@ function getPeriodDates(period: string = 'month'): { startDate: string; endDate:
  * - includeLiabilityExpense: include liability expenses in forecast (default: true)
  * - includeAssetValue: include asset value in capital calculation (default: true)
  * - includeLiabilityValue: include liability value in capital calculation (default: true)
- * - capitalMode: 'cash' (only money) or 'networth' (money + assets - liabilities, default)
  */
 router.get("/trend", withAuth(async (req, res) => {
   try {
@@ -70,21 +77,46 @@ router.get("/trend", withAuth(async (req, res) => {
     // ШАГ 1: Распарсить и валидировать параметры
     const historyDays = parseInt(req.query.historyDays as string) || 30;
     const forecastDays = parseInt(req.query.forecastDays as string) || 365;
+    const graphMode = (req.query.graphMode as 'lite' | 'pro') || 'lite';
+    
+    // ШАГ 1.5: Capital Mode и Forecast Type
+    const capitalMode = (req.query.capitalMode as 'cash' | 'networth') || 'networth';
     const useAI = req.query.useAI === 'true'; // Opt-in для AI прогноза
     
-    // ШАГ 1.5: Распарсить фильтры прогноза
-    const includeRecurringIncome = req.query.includeRecurringIncome !== 'false';
-    const includeRecurringExpense = req.query.includeRecurringExpense !== 'false';
-    const includePlannedIncome = req.query.includePlannedIncome !== 'false';
-    const includePlannedExpenses = req.query.includePlannedExpenses !== 'false';
-    const includeBudgetLimits = req.query.includeBudgetLimits === 'true';
-    const includeAssetIncome = req.query.includeAssetIncome !== 'false';
-    const includeLiabilityExpense = req.query.includeLiabilityExpense !== 'false';
+    // ШАГ 1.6: Распарсить фильтры прогноза в зависимости от graphMode
+    let includeRecurringIncome: boolean;
+    let includeRecurringExpense: boolean;
+    let includePlannedIncome: boolean;
+    let includePlannedExpenses: boolean;
+    let includeBudgetLimits: boolean;
+    let includeAssetIncome: boolean;
+    let includeLiabilityExpense: boolean;
+    let includeAssetValue: boolean;
+    let includeLiabilityValue: boolean;
     
-    // ШАГ 1.6: Capital Mode - управляет включением активов/пассивов в расчёт капитала
-    const capitalMode = (req.query.capitalMode as 'cash' | 'networth') || 'networth';
-    const includeAssetValue = capitalMode === 'networth' ? (req.query.includeAssetValue !== 'false') : false;
-    const includeLiabilityValue = capitalMode === 'networth' ? (req.query.includeLiabilityValue !== 'false') : false;
+    if (graphMode === 'lite') {
+      // В LITE всё включено автоматически
+      includeRecurringIncome = true;
+      includeRecurringExpense = true;
+      includePlannedIncome = true;
+      includePlannedExpenses = true;
+      includeBudgetLimits = true;
+      includeAssetIncome = true;
+      includeLiabilityExpense = true;
+      includeAssetValue = capitalMode === 'networth';
+      includeLiabilityValue = capitalMode === 'networth';
+    } else {
+      // В PRO берём из query параметров
+      includeRecurringIncome = req.query.includeRecurringIncome !== 'false';
+      includeRecurringExpense = req.query.includeRecurringExpense !== 'false';
+      includePlannedIncome = req.query.includePlannedIncome !== 'false';
+      includePlannedExpenses = req.query.includePlannedExpenses !== 'false';
+      includeBudgetLimits = req.query.includeBudgetLimits === 'true';
+      includeAssetIncome = req.query.includeAssetIncome !== 'false';
+      includeLiabilityExpense = req.query.includeLiabilityExpense !== 'false';
+      includeAssetValue = capitalMode === 'networth' ? (req.query.includeAssetValue !== 'false') : false;
+      includeLiabilityValue = capitalMode === 'networth' ? (req.query.includeLiabilityValue !== 'false') : false;
+    }
 
     // ШАГ 2: Получить API ключ пользователя для AI прогноза
     const settings = await storage.getSettingsByUserId(userId);
