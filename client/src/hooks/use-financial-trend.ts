@@ -41,6 +41,7 @@ interface UseFinancialTrendOptions {
   includeLiabilityExpense?: boolean;
   includeAssetValue?: boolean;
   includeLiabilityValue?: boolean;
+  capitalMode?: 'cash' | 'networth';
 }
 
 /**
@@ -72,6 +73,7 @@ export function useFinancialTrend({
   includeLiabilityExpense = true,
   includeAssetValue = true,
   includeLiabilityValue = true,
+  capitalMode = 'networth',
 }: UseFinancialTrendOptions = {}) {
   const queryKey = [
     "/api/analytics/trend", 
@@ -87,6 +89,7 @@ export function useFinancialTrend({
     includeLiabilityExpense,
     includeAssetValue,
     includeLiabilityValue,
+    capitalMode,
   ];
 
   console.log('[useFinancialTrend] Query key:', queryKey);
@@ -107,6 +110,7 @@ export function useFinancialTrend({
         includeLiabilityExpense: includeLiabilityExpense.toString(),
         includeAssetValue: includeAssetValue.toString(),
         includeLiabilityValue: includeLiabilityValue.toString(),
+        capitalMode: capitalMode,
       });
       
       console.log('[useFinancialTrend] Fetching with params:', params.toString());
