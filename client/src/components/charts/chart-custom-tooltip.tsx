@@ -55,7 +55,7 @@ export function createChartTooltip(trendData: TrendDataPoint[], t: TranslateFn) 
         
         {dataPoint.assetsNet != null && dataPoint.assetsNet !== 0 && (
           <p style={{ color: CHART_COLORS.assetsNet, margin: "4px 0" }}>
-            {t("dashboard.chart_assets_net")}: {formatFullCurrency(dataPoint.assetsNet)}
+            {t("dashboard.chart_assets_liabilities")}: {formatFullCurrency(dataPoint.assetsNet)}
           </p>
         )}
       </div>
