@@ -341,7 +341,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                 stroke="hsl(var(--muted-foreground))"
               />
               
-              <Tooltip key={forecastDays} content={createChartTooltip(chartData, t)} />
+              <Tooltip key={forecastDays} content={createChartTooltip(chartData, t, filters.capitalMode)} />
 
               {/* "Today" vertical line */}
               {todayDate && (

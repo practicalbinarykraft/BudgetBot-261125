@@ -206,4 +206,26 @@ export const webDashboardChartsTranslations: Translations = {
     en: 'Failed to load forecast data. Please try again.',
     ru: 'Не удалось загрузить прогноз. Попробуйте снова.',
   },
+  
+  // Tooltip
+  'dashboard.tooltip_cash_capital': {
+    en: 'Cash Capital',
+    ru: 'Денежный капитал',
+  },
+  'dashboard.tooltip_full_capital': {
+    en: 'Full Capital',
+    ru: 'Полный капитал',
+  },
+  'dashboard.tooltip_breakdown': {
+    en: 'Breakdown',
+    ru: 'Детализация',
+  },
+  'dashboard.tooltip_cash': {
+    en: 'Cash',
+    ru: 'Деньги',
+  },
+  'dashboard.tooltip_assets_minus_liabilities': {
+    en: 'Assets - Liabilities',
+    ru: 'Имущество - Долги',
+  },
 };
