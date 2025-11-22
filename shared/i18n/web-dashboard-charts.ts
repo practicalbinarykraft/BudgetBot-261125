@@ -113,6 +113,32 @@ export const webDashboardChartsTranslations: Translations = {
     ru: 'Обновить график',
   },
   
+  // Capital Mode
+  'dashboard.capital_mode_title': {
+    en: 'Capital calculation mode:',
+    ru: 'Режим расчёта капитала:',
+  },
+  'dashboard.capital_mode_cash': {
+    en: 'Cash only',
+    ru: 'Только деньги',
+  },
+  'dashboard.capital_mode_cash_desc': {
+    en: 'Cash + income - expenses',
+    ru: 'Деньги + доходы - расходы',
+  },
+  'dashboard.capital_mode_networth': {
+    en: 'Full net worth',
+    ru: 'Полный капитал',
+  },
+  'dashboard.capital_mode_networth_desc': {
+    en: 'Cash + asset value - liabilities',
+    ru: 'Деньги + стоимость имущества - долги',
+  },
+  'dashboard.capital_mode_networth_hint': {
+    en: 'Gold line shows asset value changes including property appreciation, equipment depreciation, and loan repayments.',
+    ru: 'Золотая линия показывает изменение стоимости имущества: рост недвижимости, падение техники и погашение кредитов.',
+  },
+  
   // AI Forecast Toggle
   'dashboard.ai_forecast_toggle': {
     en: 'AI Forecast',

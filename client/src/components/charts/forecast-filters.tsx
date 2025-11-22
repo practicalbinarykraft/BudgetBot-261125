@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTranslation } from "@/i18n";
-import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, AlertTriangle, Sparkles, Building2, CreditCard } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, AlertTriangle, Sparkles, Building2, CreditCard, Info } from "lucide-react";
 import { AiForecastWarning } from "@/components/dialogs/ai-forecast-warning";
 
 export interface ForecastFilters {
@@ -17,6 +17,7 @@ export interface ForecastFilters {
   includeLiabilityExpense: boolean;
   includeAssetValue: boolean;
   includeLiabilityValue: boolean;
+  capitalMode: 'cash' | 'networth';
 }
 
 interface ForecastFiltersProps {
@@ -48,6 +49,7 @@ export function ForecastFiltersCard({
     includeLiabilityExpense: Boolean(filters.includeLiabilityExpense),
     includeAssetValue: Boolean(filters.includeAssetValue),
     includeLiabilityValue: Boolean(filters.includeLiabilityValue),
+    capitalMode: filters.capitalMode || 'networth',
   }));
 
   // Sync pending state when parent filters change (e.g., after Apply or localStorage restore)
@@ -62,6 +64,7 @@ export function ForecastFiltersCard({
       includeLiabilityExpense: Boolean(filters.includeLiabilityExpense),
       includeAssetValue: Boolean(filters.includeAssetValue),
       includeLiabilityValue: Boolean(filters.includeLiabilityValue),
+      capitalMode: filters.capitalMode || 'networth',
     });
   }, [filters]);
 
@@ -202,6 +205,72 @@ export function ForecastFiltersCard({
             <div className="space-y-3">
               {expenseFilters.map(renderFilterOption)}
             </div>
+          </div>
+          
+          {/* Capital Mode Selector */}
+          <div className="mt-4 mb-4" data-testid="section-capital-mode">
+            <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+              <CardContent className="pt-4 space-y-3">
+                <div className="text-base font-semibold mb-3">
+                  {t('dashboard.capital_mode_title')}
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="flex items-start gap-3 cursor-pointer hover-elevate p-2 rounded-md">
+                    <input
+                      type="radio"
+                      name="capitalMode"
+                      value="cash"
+                      checked={pendingFilters.capitalMode === 'cash'}
+                      onChange={(e) => setPendingFilters({ ...pendingFilters, capitalMode: e.target.value as 'cash' | 'networth' })}
+                      className="mt-0.5"
+                      data-testid="radio-capital-mode-cash"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium text-sm flex items-center gap-2">
+                        <DollarSign className="w-4 h-4" />
+                        {t('dashboard.capital_mode_cash')}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {t('dashboard.capital_mode_cash_desc')}
+                      </div>
+                    </div>
+                  </label>
+                  
+                  <label className="flex items-start gap-3 cursor-pointer hover-elevate p-2 rounded-md">
+                    <input
+                      type="radio"
+                      name="capitalMode"
+                      value="networth"
+                      checked={pendingFilters.capitalMode === 'networth'}
+                      onChange={(e) => setPendingFilters({ ...pendingFilters, capitalMode: e.target.value as 'cash' | 'networth' })}
+                      className="mt-0.5"
+                      data-testid="radio-capital-mode-networth"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium text-sm flex items-center gap-2">
+                        <Building2 className="w-4 h-4" />
+                        {t('dashboard.capital_mode_networth')}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {t('dashboard.capital_mode_networth_desc')}
+                      </div>
+                    </div>
+                  </label>
+                </div>
+                
+                {pendingFilters.capitalMode === 'networth' && (
+                  <div className="mt-3 p-2 bg-white dark:bg-gray-900 rounded-md text-xs text-muted-foreground">
+                    <div className="flex items-start gap-2">
+                      <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                      <div>
+                        {t('dashboard.capital_mode_networth_hint')}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
           
           <div className="mt-4 mb-4" data-testid="section-capital-calculation">

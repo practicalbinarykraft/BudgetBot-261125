@@ -67,6 +67,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
           includeLiabilityExpense: parsed.includeLiabilityExpense ?? true,
           includeAssetValue: parsed.includeAssetValue ?? true,
           includeLiabilityValue: parsed.includeLiabilityValue ?? true,
+          capitalMode: parsed.capitalMode ?? 'networth',
         };
       } catch {
         return {
@@ -79,6 +80,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
           includeLiabilityExpense: true,
           includeAssetValue: true,
           includeLiabilityValue: true,
+          capitalMode: 'networth',
         };
       }
     }
@@ -92,6 +94,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
       includeLiabilityExpense: true,
       includeAssetValue: true,
       includeLiabilityValue: true,
+      capitalMode: 'networth',
     };
   });
   
@@ -114,6 +117,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
     includeLiabilityExpense: filters.includeLiabilityExpense,
     includeAssetValue: filters.includeAssetValue,
     includeLiabilityValue: filters.includeLiabilityValue,
+    capitalMode: filters.capitalMode,
   });
 
   // Fetch historical assets data

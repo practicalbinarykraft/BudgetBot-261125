@@ -1,0 +1,102 @@
+ШАГ 6: ОБНОВИТЬ UI С ПЕРЕКЛЮЧАТЕЛЕМ
+typescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Добавить переключатель режима капитала
+ФАЙЛ: client/src/components/charts/financial-trend-chart.tsx
+ИЗМЕНЕНИЙ: ~40 строк
+═══════════════════════════════════════════════════════
+
+ОТКРОЙ ФАЙЛ: client/src/components/charts/financial-trend-chart.tsx
+
+НАЙДИ БЛОК С ЧЕКБОКСАМИ ФИЛЬТРОВ (примерно строка 200-300)
+
+НАЙДИ СЕКЦИЮ "Включить в прогноз:" ИЛИ АНАЛОГИЧНУЮ
+
+ДОБАВЬ НОВЫЙ БЛОК ПЕРЕД СУЩЕСТВУЮЩИМИ ФИЛЬТРАМИ:
+
+{/* Режим расчёта капитала */}
+<div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+  <h3 className="font-semibold text-sm mb-3 text-gray-700">
+    Режим расчёта капитала:
+  </h3>
+  
+  <div className="space-y-2">
+    <label className="flex items-center gap-3 cursor-pointer">
+      <input
+        type="radio"
+        name="capitalMode"
+        value="cash"
+        checked={filters.capitalMode === 'cash'}
+        onChange={(e) => updateFilter('capitalMode', e.target.value)}
+        className="w-4 h-4"
+      />
+      <div>
+        <div className="font-medium text-sm">💵 Денежный капитал</div>
+        <div className="text-xs text-gray-600">
+          Только деньги + доходы - расходы
+        </div>
+      </div>
+    </label>
+    
+    <label className="flex items-center gap-3 cursor-pointer">
+      <input
+        type="radio"
+        name="capitalMode"
+        value="networth"
+        checked={filters.capitalMode === 'networth'}
+        onChange={(e) => updateFilter('capitalMode', e.target.value)}
+        className="w-4 h-4"
+      />
+      <div>
+        <div className="font-medium text-sm">🏦 Полный капитал</div>
+        <div className="text-xs text-gray-600">
+          Деньги + стоимость имущества - долги
+        </div>
+      </div>
+    </label>
+  </div>
+  
+  {/* Подсказка */}
+  {filters.capitalMode === 'networth' && (
+    <div className="mt-3 p-2 bg-white rounded text-xs text-gray-600">
+      💡 Золотая линия показывает изменение стоимости имущества с учётом:
+      <ul className="list-disc ml-4 mt-1">
+        <li>Роста недвижимости (appreciation)</li>
+        <li>Падения техники (depreciation)</li>
+        <li>Погашения кредитов</li>
+      </ul>
+    </div>
+  )}
+</div>
+
+НАЙДИ ГДЕ РАССЧИТЫВАЕТСЯ point.capital ДЛЯ ГРАФИКА:
+
+НАЙДИ КОД (примерно):
+const chartData = combinedData.map(point => ({
+  date: point.date,
+  income: point.income,
+  expense: point.expense,
+  capital: point.capital,
+  assetsNet: point.assetsNet
+}));
+
+ЗАМЕНИ НА:
+const chartData = combinedData.map(point => ({
+  date: point.date,
+  income: point.income,
+  expense: point.expense,
+  // Капитал зависит от режима
+  capital: filters.capitalMode === 'networth' 
+    ? point.capital + (point.assetsNet || 0)  // С имуществом
+    : point.capital,                          // Только деньги
+  assetsNet: point.assetsNet,
+  // Для tooltip
+  capitalCash: point.capital,
+  capitalFull: point.capital + (point.assetsNet || 0)
+}));
+
+ПРОВЕРКА:
+✅ Переключатель добавлен
+✅ Два режима: cash / networth
+✅ Подсказка показывается
+✅ Капитал рассчитывается по режиму
+✅ Дизайн красивый (голубая рамка)
