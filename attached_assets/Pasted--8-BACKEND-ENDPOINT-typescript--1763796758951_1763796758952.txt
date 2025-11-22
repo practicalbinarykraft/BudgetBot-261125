@@ -1,0 +1,76 @@
+ШАГ 8: ОБНОВИТЬ BACKEND ENDPOINT
+typescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Принимать параметр capitalMode в API
+ФАЙЛ: server/routes/analytics.routes.ts (или где endpoint /api/analytics/trend)
+ИЗМЕНЕНИЙ: ~10 строк
+═══════════════════════════════════════════════════════
+
+НАЙДИ ФАЙЛ С ENDPOINT /api/analytics/trend
+
+НАЙДИ КОД ОБРАБОТКИ ЗАПРОСА:
+router.get('/trend', async (req: any, res) => {
+  const userId = req.user.id;
+  const filters = {
+    includeRecurringIncome: req.query.includeRecurringIncome === 'true',
+    includeRecurringExpense: req.query.includeRecurringExpense === 'true',
+    // ...
+  };
+
+ДОБАВЬ:
+  const filters = {
+    // ... existing filters
+    capitalMode: (req.query.capitalMode as 'cash' | 'networth') || 'networth',
+  };
+
+ПЕРЕДАЙ В trendCalculator:
+  const trendData = await trendCalculator.calculateTrend(userId, filters);
+
+ВНУТРИ trendCalculator МОЖНО ИСПОЛЬЗОВАТЬ filters.capitalMode
+ДЛЯ ДОПОЛНИТЕЛЬНОЙ ЛОГИКИ (если нужно)
+
+ПРОВЕРКА:
+✅ Параметр capitalMode принимается
+✅ Дефолтное значение 'networth'
+✅ Передаётся в сервис
+
+ШАГ 9: ДОБАВИТЬ ПЕРЕВОДЫ
+typescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Добавить переводы для UI
+ФАЙЛ: shared/i18n/web-dashboard.ts (или аналогичный)
+ИЗМЕНЕНИЙ: ~20 строк
+═══════════════════════════════════════════════════════
+
+НАЙДИ ФАЙЛ С ПЕРЕВОДАМИ
+
+НАЙДИ СЕКЦИЮ С ПЕРЕВОДАМИ ДЛЯ ГРАФИКА/DASHBOARD
+
+ДОБАВЬ:
+  capital_mode: {
+    en: 'Capital calculation mode',
+    ru: 'Режим расчёта капитала'
+  },
+  capital_mode_cash: {
+    en: 'Cash capital',
+    ru: 'Денежный капитал'
+  },
+  capital_mode_cash_desc: {
+    en: 'Money only + income - expenses',
+    ru: 'Только деньги + доходы - расходы'
+  },
+  capital_mode_networth: {
+    en: 'Full capital',
+    ru: 'Полный капитал'
+  },
+  capital_mode_networth_desc: {
+    en: 'Money + assets - liabilities',
+    ru: 'Деньги + стоимость имущества - долги'
+  },
+  assets_line_tooltip: {
+    en: 'Assets value changes over time considering appreciation, depreciation, and debt payments',
+    ru: 'Изменение стоимости имущества с учётом роста, падения и погашения долгов'
+  },
+
+ПРОВЕРКА:
+✅ Переводы добавлены
+✅ Есть RU и EN версии
+✅ Описания понятны

@@ -61,6 +61,7 @@ function getPeriodDates(period: string = 'month'): { startDate: string; endDate:
  * - includeLiabilityExpense: include liability expenses in forecast (default: true)
  * - includeAssetValue: include asset value in capital calculation (default: true)
  * - includeLiabilityValue: include liability value in capital calculation (default: true)
+ * - capitalMode: 'cash' (only money) or 'networth' (money + assets - liabilities, default)
  */
 router.get("/trend", withAuth(async (req, res) => {
   try {
@@ -79,8 +80,11 @@ router.get("/trend", withAuth(async (req, res) => {
     const includeBudgetLimits = req.query.includeBudgetLimits === 'true';
     const includeAssetIncome = req.query.includeAssetIncome !== 'false';
     const includeLiabilityExpense = req.query.includeLiabilityExpense !== 'false';
-    const includeAssetValue = req.query.includeAssetValue !== 'false';
-    const includeLiabilityValue = req.query.includeLiabilityValue !== 'false';
+    
+    // ШАГ 1.6: Capital Mode - управляет включением активов/пассивов в расчёт капитала
+    const capitalMode = (req.query.capitalMode as 'cash' | 'networth') || 'networth';
+    const includeAssetValue = capitalMode === 'networth' ? (req.query.includeAssetValue !== 'false') : false;
+    const includeLiabilityValue = capitalMode === 'networth' ? (req.query.includeLiabilityValue !== 'false') : false;
 
     // ШАГ 2: Получить API ключ пользователя для AI прогноза
     const settings = await storage.getSettingsByUserId(userId);
