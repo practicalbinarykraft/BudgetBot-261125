@@ -61,9 +61,14 @@ export default function DashboardPage() {
     queryKey: ["/api/wishlist"],
   });
 
-  const { data: netWorthSummary } = useQuery<NetWorthSummary>({
+  const { data: netWorthResponse } = useQuery<{
+    success: boolean;
+    data: NetWorthSummary;
+  }>({
     queryKey: ["/api/assets/summary"],
   });
+  
+  const netWorthSummary = netWorthResponse?.data;
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
