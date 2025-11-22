@@ -240,15 +240,20 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
               
               <Tooltip key={forecastDays} content={createChartTooltip(chartData, t, config.capitalMode)} />
 
-              {/* "Today" vertical line */}
-              {todayDate && (
-                <ReferenceLine
-                  x={todayDate}
-                  stroke={CHART_COLORS.today}
-                  strokeDasharray="3 3"
-                  label={{ value: t("dashboard.chart_today"), position: "top", fill: CHART_COLORS.today }}
-                />
-              )}
+              {/* "Today" vertical line - Разделение факт/прогноз */}
+              <ReferenceLine 
+                x={new Date().toISOString().split('T')[0]} 
+                stroke="#94a3b8" 
+                strokeWidth={2}
+                strokeDasharray="3 3"
+                label={{ 
+                  value: 'Сегодня', 
+                  position: 'top',
+                  fill: '#64748b',
+                  fontSize: 12,
+                  fontWeight: 600
+                }}
+              />
 
               {/* Zero baseline horizontal line */}
               <ReferenceLine
