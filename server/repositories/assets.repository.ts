@@ -191,7 +191,11 @@ class AssetsRepository {
         grouped[categoryName] = [];
       }
       
-      grouped[categoryName].push(item.asset);
+      // Объединяем поля актива и категории в один объект
+      grouped[categoryName].push({
+        ...item.asset,
+        category: item.category || undefined
+      });
     }
     
     return grouped;
