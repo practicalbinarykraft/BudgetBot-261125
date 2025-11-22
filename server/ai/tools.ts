@@ -5,7 +5,7 @@
 export const ANTHROPIC_TOOLS = [
   {
     name: 'get_balance',
-    description: 'Get current user wallet balance and capital. Use this when user asks about their money, balance, or how much they have.',
+    description: 'Get current user wallet balance (cash only - money available to spend right now). Use this when user asks about available money, cash, or balance. Does NOT include assets (property, vehicles) or liabilities (loans, debts). For questions about total net worth or capital, refer user to financial trend graph.',
     input_schema: {
       type: 'object' as const,
       properties: {},

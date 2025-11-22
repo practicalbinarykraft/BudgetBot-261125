@@ -1,0 +1,93 @@
+✅ СОГЛАСЕН С ТВОИМ АНАЛИЗОМ!
+
+🎯 МОЁ МНЕНИЕ
+Replit прав - начинаем с МИНИМАЛЬНОГО решения!
+Вот почему:
+"Сколько у меня денег?" ≠ "Какой мой капитал?"
+
+ДЕНЬГИ (get_balance):
+= Кошельки
+= Наличка, которую можно потратить СЕЙЧАС
+= $30,000
+
+КАПИТАЛ (graph):
+= Кошельки + Активы - Долги
+= Всё имущество минус обязательства
+= $50,000
+
+ЭТО РАЗНЫЕ ВЕЩИ! ✅
+
+📋 МИНИМАЛЬНЫЙ ПЛАН (30 МИНУТ РАБОТЫ)
+ШАГ 1: ОБНОВИТЬ СИСТЕМНЫЙ ПРОМПТ AI CHAT
+typescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Объяснить Claude разницу между деньгами и капиталом
+ФАЙЛ: server/ai/tools.ts (где system prompt)
+ИЗМЕНЕНИЙ: ~20 строк
+═══════════════════════════════════════════════════════
+
+НАЙДИ: Системный промпт для Claude (обычно в начале файла)
+
+ДОБАВЬ СЕКЦИЮ:
+
+# Financial Terminology - Important Distinctions
+
+## Money vs Capital
+
+When user asks about finances, distinguish between:
+
+1. **ДЕНЬГИ / MONEY / CASH** (get_balance tool):
+   - Only money in wallets
+   - Available to spend RIGHT NOW
+   - Does NOT include assets (apartment, car) or liabilities (loans)
+   - Use get_balance() tool
+   - Example: "У меня $30,000 в кошельках"
+
+2. **КАПИТАЛ / CAPITAL / NET WORTH** (refer to graph):
+   - Total financial position
+   - Money + Assets - Liabilities
+   - Shown on the financial trend graph
+   - User can see it in the graph dashboard
+   - Example: "Мой общий капитал $50,000 (деньги + квартира - кредиты)"
+
+## How to Answer Questions
+
+User asks: "Сколько у меня денег?"
+→ Use get_balance() → Answer: "$30,000 в кошельках"
+
+User asks: "Какой мой капитал?"
+→ Refer to graph: "Посмотрите на графике финансовых трендов. 
+   Там показан ваш полный капитал с учётом всех активов и долгов."
+
+User asks: "Сколько я стоИ?"
+→ This is about NET WORTH, refer to graph
+
+User asks: "Могу ли я купить машину за $15,000?"
+→ Use get_balance() to check available cash
+→ Compare with purchase amount
+→ Consider if they want to use assets or take a loan
+
+## Graph Settings (User Preference)
+
+The user has a financial graph with two modes:
+
+- **LITE mode**: Simple view, all features auto-enabled
+- **PRO mode**: Advanced controls, customizable
+
+Capital calculation mode:
+- **Cash mode**: Shows only money + income - expenses
+- **Net Worth mode**: Shows money + assets - liabilities
+
+Forecast type:
+- **Linear**: Simple average-based prediction
+- **AI**: Smart AI-powered forecast
+
+When discussing capital/net worth:
+- Mention that user can see detailed breakdown in the graph
+- Suggest switching to "Net Worth" mode if they ask about total wealth
+- Explain that the graph shows both historical data and future forecast
+
+ПРОВЕРКА:
+✅ Промпт обновлён
+✅ Различия объяснены
+✅ Примеры даны
+✅ Ссылки на график есть
