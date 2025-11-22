@@ -20,10 +20,10 @@ import { ChartLegend } from "@/components/charts/chart-legend";
 import { GoalMarkersLayer } from "@/components/charts/goal-markers-layer";
 import { ChartLoadingState, ChartErrorState, ChartEmptyState } from "@/components/charts/chart-loading-states";
 import { useTranslation } from "@/i18n";
-import { ForecastFiltersCard, type ForecastFilters } from "@/components/charts/forecast-filters";
 import { CapitalWarning } from "@/components/charts/capital-warning";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip as UITooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { GraphModeToggle } from "./graph-mode-toggle";
 
 /**
  * Financial Trend Chart
@@ -38,86 +38,25 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
   const { toast } = useToast();
   const [historyDays, setHistoryDays] = useState(30);
   const [forecastDays, setForecastDays] = useState(365);
-  const [useAI, setUseAI] = useState(false); // AI forecast opt-in (default: false)
   
-  // Line visibility toggles (only affect visual display, not calculations)
-  const [showIncome, setShowIncome] = useState(true);
-  const [showExpense, setShowExpense] = useState(true);
-  const [showCapital, setShowCapital] = useState(true);
   const [showForecast, setShowForecast] = useState(true);
-  const [showAssetsLine, setShowAssetsLine] = useState(true);
   
-  const [hoveredGoal, setHoveredGoal] = useState<string | null>(null); // String only (all IDs normalized)
+  const [hoveredGoal, setHoveredGoal] = useState<string | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [, setLocation] = useLocation();
-  
-  // Forecast filters with localStorage persistence
-  const [filters, setFilters] = useState<ForecastFilters>(() => {
-    const saved = localStorage.getItem('forecastFilters');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        return {
-          includeRecurringIncome: parsed.includeRecurringIncome ?? true,
-          includeRecurringExpense: parsed.includeRecurringExpense ?? true,
-          includePlannedIncome: parsed.includePlannedIncome ?? true,
-          includePlannedExpenses: parsed.includePlannedExpenses ?? true,
-          includeBudgetLimits: parsed.includeBudgetLimits ?? false,
-          includeAssetIncome: parsed.includeAssetIncome ?? true,
-          includeLiabilityExpense: parsed.includeLiabilityExpense ?? true,
-          includeAssetValue: parsed.includeAssetValue ?? true,
-          includeLiabilityValue: parsed.includeLiabilityValue ?? true,
-          capitalMode: parsed.capitalMode ?? 'networth',
-        };
-      } catch {
-        return {
-          includeRecurringIncome: true,
-          includeRecurringExpense: true,
-          includePlannedIncome: true,
-          includePlannedExpenses: true,
-          includeBudgetLimits: false,
-          includeAssetIncome: true,
-          includeLiabilityExpense: true,
-          includeAssetValue: true,
-          includeLiabilityValue: true,
-          capitalMode: 'networth',
-        };
-      }
-    }
-    return {
-      includeRecurringIncome: true,
-      includeRecurringExpense: true,
-      includePlannedIncome: true,
-      includePlannedExpenses: true,
-      includeBudgetLimits: false,
-      includeAssetIncome: true,
-      includeLiabilityExpense: true,
-      includeAssetValue: true,
-      includeLiabilityValue: true,
-      capitalMode: 'networth',
-    };
-  });
-  
-  // Save filters to localStorage when they change and log for debugging
-  useEffect(() => {
-    console.log('[FinancialTrendChart] Filters changed:', filters);
-    localStorage.setItem('forecastFilters', JSON.stringify(filters));
-  }, [filters]);
 
-  const { data, isLoading, isFetching, error } = useFinancialTrend({
+  const { 
+    data, 
+    isLoading, 
+    isFetching, 
+    error,
+    graphMode,
+    toggleMode,
+    config,
+    updateFilter,
+  } = useFinancialTrend({
     historyDays,
     forecastDays,
-    useAI,
-    includeRecurringIncome: filters.includeRecurringIncome,
-    includeRecurringExpense: filters.includeRecurringExpense,
-    includePlannedIncome: filters.includePlannedIncome,
-    includePlannedExpenses: filters.includePlannedExpenses,
-    includeBudgetLimits: filters.includeBudgetLimits,
-    includeAssetIncome: filters.includeAssetIncome,
-    includeLiabilityExpense: filters.includeLiabilityExpense,
-    includeAssetValue: filters.includeAssetValue,
-    includeLiabilityValue: filters.includeLiabilityValue,
-    capitalMode: filters.capitalMode,
   });
 
   // Fetch historical assets data
@@ -222,58 +161,16 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
   return (
     <Card data-testid="card-financial-trend">
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              {t("dashboard.financial_trend_title")}
-              <UITooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    size="icon" 
-                    variant="ghost"
-                    data-testid="button-capital-formula-info"
-                  >
-                    <Info className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="max-w-md p-4">
-                  <div className="space-y-3">
-                    <div className="font-semibold text-sm">{t("dashboard.capital_formula_title")}</div>
-                    <div className="space-y-2 text-xs">
-                      <div>
-                        <div className="font-medium text-primary">{t("dashboard.capital_formula_base")}</div>
-                        <ul className="list-disc list-inside mt-1 space-y-1 text-muted-foreground">
-                          <li>{t("dashboard.capital_wallet_money")}</li>
-                          <li>+ {t("dashboard.capital_cumulative_income")}</li>
-                          <li>- {t("dashboard.capital_cumulative_expense")}</li>
-                        </ul>
-                      </div>
-                      <div className="pt-2 border-t">
-                        <div className="font-medium">{t("dashboard.capital_optional_components")}</div>
-                        <ul className="list-disc list-inside mt-1 space-y-1 text-muted-foreground">
-                          <li>+ {t("dashboard.capital_asset_value")}</li>
-                          <li>- {t("dashboard.capital_liability_value")}</li>
-                        </ul>
-                      </div>
-                      <div className="pt-2 border-t">
-                        <div className="font-medium">{t("dashboard.capital_forecast_desc")}</div>
-                        <ul className="list-disc list-inside mt-1 space-y-1 text-muted-foreground">
-                          <li>{t("dashboard.capital_forecast_item1")}</li>
-                          <li>{t("dashboard.capital_forecast_item2")}</li>
-                          <li>{t("dashboard.capital_forecast_item3")}</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </TooltipContent>
-              </UITooltip>
-            </CardTitle>
-            <CardDescription>
-              {t("dashboard.financial_trend_subtitle")}
-            </CardDescription>
-          </div>
+        <div className="flex items-center justify-between mb-4">
+          <CardTitle>
+            {graphMode === 'lite' ? '📊 Мой капитал' : '📊 Детальный анализ'}
+          </CardTitle>
+          
+          <GraphModeToggle mode={graphMode} onToggle={toggleMode} />
         </div>
+        <CardDescription>
+          {t("dashboard.financial_trend_subtitle")}
+        </CardDescription>
       </CardHeader>
       
       <CardContent className="space-y-4">
@@ -341,7 +238,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                 stroke="hsl(var(--muted-foreground))"
               />
               
-              <Tooltip key={forecastDays} content={createChartTooltip(chartData, t, filters.capitalMode)} />
+              <Tooltip key={forecastDays} content={createChartTooltip(chartData, t, config.capitalMode)} />
 
               {/* "Today" vertical line */}
               {todayDate && (
@@ -367,7 +264,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                 dataKey="income"
                 stroke={CHART_COLORS.income}
                 strokeWidth={2}
-                strokeOpacity={showIncome ? 1 : 0}
+                strokeOpacity={config.mode === 'lite' ? 1 : (config.mode === 'pro' && config.showIncome ? 1 : 0)}
                 dot={false}
                 name={t("dashboard.chart_income")}
                 connectNulls
@@ -379,7 +276,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                 dataKey="expense"
                 stroke={CHART_COLORS.expense}
                 strokeWidth={2}
-                strokeOpacity={showExpense ? 1 : 0}
+                strokeOpacity={config.mode === 'lite' ? 1 : (config.mode === 'pro' && config.showExpense ? 1 : 0)}
                 dot={false}
                 name={t("dashboard.chart_expense")}
                 connectNulls
@@ -391,7 +288,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                 dataKey="capital"
                 stroke={CHART_COLORS.capital}
                 strokeWidth={2}
-                strokeOpacity={showCapital ? 1 : 0}
+                strokeOpacity={config.mode === 'lite' ? 1 : (config.mode === 'pro' && config.showCapital ? 1 : 0)}
                 dot={false}
                 name={t("dashboard.chart_capital")}
                 connectNulls
@@ -419,7 +316,7 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                 stroke="hsl(var(--chart-4))"
                 strokeWidth={2}
                 strokeDasharray="5 5"
-                strokeOpacity={showAssetsLine ? 1 : 0}
+                strokeOpacity={config.mode === 'lite' ? 0 : (config.mode === 'pro' && config.showAssetsLine ? 1 : 0)}
                 dot={false}
                 name={t("dashboard.chart_assets_liabilities")}
                 connectNulls
@@ -469,30 +366,23 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
           </>
         )}
 
-        {/* Legend */}
-        <ChartLegend
-          hasForecast={forecastDays > 0 && forecastData.length > 0}
-          hasGoals={goals.length > 0}
-          showIncome={showIncome}
-          onIncomeToggle={setShowIncome}
-          showExpense={showExpense}
-          onExpenseToggle={setShowExpense}
-          showCapital={showCapital}
-          onCapitalToggle={setShowCapital}
-          showForecast={showForecast}
-          onForecastToggle={setShowForecast}
-          showAssetsLine={showAssetsLine}
-          onAssetsLineToggle={setShowAssetsLine}
-        />
-        
-        {/* Forecast Filters */}
-        <ForecastFiltersCard
-          filters={filters}
-          onChange={setFilters}
-          useAI={useAI}
-          onUseAIChange={setUseAI}
-          isLoading={isFetching}
-        />
+        {/* Legend (только для PRO режима) */}
+        {config.mode === 'pro' && config.showIncome !== undefined && (
+          <ChartLegend
+            hasForecast={forecastDays > 0 && forecastData.length > 0}
+            hasGoals={goals.length > 0}
+            showIncome={config.showIncome}
+            onIncomeToggle={(val) => updateFilter('showIncome', val)}
+            showExpense={config.showExpense}
+            onExpenseToggle={(val) => updateFilter('showExpense', val)}
+            showCapital={config.showCapital}
+            onCapitalToggle={(val) => updateFilter('showCapital', val)}
+            showForecast={showForecast}
+            onForecastToggle={setShowForecast}
+            showAssetsLine={config.showAssetsLine}
+            onAssetsLineToggle={(val) => updateFilter('showAssetsLine', val)}
+          />
+        )}
         
         {/* Capital Warning */}
         <CapitalWarning hasNegativeCapital={hasNegativeCapital} />

@@ -1,0 +1,272 @@
+ШАГ 4: ОБНОВИТЬ ГРАФИК - ДОБАВИТЬ LITE/PRO UI
+typescript═══════════════════════════════════════════════════════
+ЗАДАЧА: Условный рендеринг настроек в зависимости от режима
+ФАЙЛ: client/src/components/charts/financial-trend-chart.tsx
+ИЗМЕНЕНИЙ: ~100 строк
+═══════════════════════════════════════════════════════
+
+ОТКРОЙ ФАЙЛ: financial-trend-chart.tsx
+
+ДОБАВЬ ИМПОРТ:
+import { GraphModeToggle } from './graph-mode-toggle';
+
+ОБНОВИ ЗАГОЛОВОК:
+<div className="flex items-center justify-between mb-4">
+  <h2 className="text-xl font-semibold">
+    {graphMode === 'lite' ? '📊 Мой капитал' : '📊 Детальный анализ'}
+  </h2>
+  
+  <GraphModeToggle mode={graphMode} onToggle={toggleMode} />
+</div>
+
+УСЛОВНЫЙ РЕНДЕРИНГ НАСТРОЕК:
+
+{/* LITE MODE - Минимальные настройки */}
+{graphMode === 'lite' && (
+  <div className="space-y-4 mb-6">
+    {/* Режим капитала */}
+    <div className="p-4 bg-gray-50 rounded-lg">
+      <h3 className="font-semibold text-sm mb-3">Показывать капитал как:</h3>
+      
+      <div className="space-y-2">
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="radio"
+            name="capitalMode"
+            value="networth"
+            checked={config.capitalMode === 'networth'}
+            onChange={(e) => updateFilter('capitalMode', e.target.value)}
+            className="w-4 h-4"
+          />
+          <div>
+            <div className="font-medium text-sm">● Полный ($49,843)</div>
+            <div className="text-xs text-gray-600">
+              Деньги + Имущество - Долги
+            </div>
+          </div>
+        </label>
+        
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="radio"
+            name="capitalMode"
+            value="cash"
+            checked={config.capitalMode === 'cash'}
+            onChange={(e) => updateFilter('capitalMode', e.target.value)}
+            className="w-4 h-4"
+          />
+          <div>
+            <div className="font-medium text-sm">○ Только деньги ($29,782)</div>
+            <div className="text-xs text-gray-600">
+              Без недвижимости и кредитов
+            </div>
+          </div>
+        </label>
+      </div>
+    </div>
+    
+    {/* Тип прогноза - если есть AI ключ */}
+    {hasAnthropicKey && (
+      <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <h3 className="font-semibold text-sm mb-3">Тип прогноза:</h3>
+        
+        <div className="space-y-2">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="radio"
+              name="forecastType"
+              value="ai"
+              checked={config.forecastType === 'ai'}
+              onChange={(e) => updateFilter('forecastType', e.target.value)}
+              className="w-4 h-4"
+            />
+            <div>
+              <div className="font-medium text-sm">🤖 AI прогноз (умный)</div>
+              <div className="text-xs text-gray-600">
+                Учитывает паттерны ваших трат
+              </div>
+            </div>
+          </label>
+          
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="radio"
+              name="forecastType"
+              value="linear"
+              checked={config.forecastType === 'linear'}
+              onChange={(e) => updateFilter('forecastType', e.target.value)}
+              className="w-4 h-4"
+            />
+            <div>
+              <div className="font-medium text-sm">📊 Линейный (простой)</div>
+              <div className="text-xs text-gray-600">
+                На основе средних значений
+              </div>
+            </div>
+          </label>
+        </div>
+      </div>
+    )}
+  </div>
+)}
+
+{/* PRO MODE - Все настройки */}
+{graphMode === 'pro' && (
+  <div className="space-y-4 mb-6">
+    {/* Режим капитала */}
+    <div className="p-4 bg-gray-50 rounded-lg">
+      <h3 className="font-semibold text-sm mb-3">Режим капитала:</h3>
+      {/* ... такие же радио-кнопки как в LITE */}
+    </div>
+    
+    {/* Тип прогноза */}
+    {hasAnthropicKey && (
+      <div className="p-4 bg-blue-50 rounded-lg">
+        <h3 className="font-semibold text-sm mb-3">Тип прогноза:</h3>
+        {/* ... такие же радио-кнопки как в LITE */}
+      </div>
+    )}
+    
+    {/* Что включить в прогноз */}
+    <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+      <h3 className="font-semibold text-sm mb-3">Включить в прогноз:</h3>
+      
+      <div className="grid grid-cols-2 gap-2">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={config.includeRecurringIncome}
+            onChange={(e) => updateFilter('includeRecurringIncome', e.target.checked)}
+            className="w-4 h-4"
+          />
+          <span className="text-sm">Зарплата и доходы</span>
+        </label>
+        
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={config.includeAssetIncome}
+            onChange={(e) => updateFilter('includeAssetIncome', e.target.checked)}
+            className="w-4 h-4"
+          />
+          <span className="text-sm">Доход от активов</span>
+        </label>
+        
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={config.includeRecurringExpense}
+            onChange={(e) => updateFilter('includeRecurringExpense', e.target.checked)}
+            className="w-4 h-4"
+          />
+          <span className="text-sm">Обычные расходы</span>
+        </label>
+        
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={config.includeLiabilityExpense}
+            onChange={(e) => updateFilter('includeLiabilityExpense', e.target.checked)}
+            className="w-4 h-4"
+          />
+          <span className="text-sm">Платежи по долгам</span>
+        </label>
+        
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={config.includePlannedExpense}
+            onChange={(e) => updateFilter('includePlannedExpense', e.target.checked)}
+            className="w-4 h-4"
+          />
+          <span className="text-sm">Запланированные покупки</span>
+        </label>
+        
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={config.includeBudgetLimits}
+            onChange={(e) => updateFilter('includeBudgetLimits', e.target.checked)}
+            className="w-4 h-4"
+          />
+          <span className="text-sm">Бюджетные лимиты</span>
+        </label>
+        
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={config.includeAssetValueChange}
+            onChange={(e) => updateFilter('includeAssetValueChange', e.target.checked)}
+            className="w-4 h-4"
+          />
+          <span className="text-sm">Рост имущества</span>
+        </label>
+      </div>
+    </div>
+    
+    {/* Какие линии показывать */}
+    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+      <h3 className="font-semibold text-sm mb-3">Линии на графике:</h3>
+      
+      <div className="space-y-2">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={config.showIncome}
+            onChange={(e) => updateFilter('showIncome', e.target.checked)}
+            className="w-4 h-4"
+          />
+          <span className="flex items-center gap-1">
+            <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+            <span className="text-sm">Доходы</span>
+          </span>
+        </label>
+        
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={config.showExpense}
+            onChange={(e) => updateFilter('showExpense', e.target.checked)}
+            className="w-4 h-4"
+          />
+          <span className="flex items-center gap-1">
+            <span className="w-3 h-3 bg-red-500 rounded-full"></span>
+            <span className="text-sm">Расходы</span>
+          </span>
+        </label>
+        
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={config.showCapital}
+            onChange={(e) => updateFilter('showCapital', e.target.checked)}
+            className="w-4 h-4"
+          />
+          <span className="flex items-center gap-1">
+            <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+            <span className="text-sm">Капитал</span>
+          </span>
+        </label>
+        
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={config.showAssetsLine}
+            onChange={(e) => updateFilter('showAssetsLine', e.target.checked)}
+            className="w-4 h-4"
+          />
+          <span className="flex items-center gap-1">
+            <span className="w-3 h-3 bg-yellow-500 rounded-full"></span>
+            <span className="text-sm">Стоимость имущества (отдельно)</span>
+          </span>
+        </label>
+      </div>
+    </div>
+  </div>
+)}
+
+ПРОВЕРКА:
+✅ В LITE только 2-3 настройки
+✅ В PRO все настройки видны
+✅ Переключение работает
+✅ Дизайн чистый
