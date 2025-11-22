@@ -19,19 +19,23 @@ export default function AssetDetailPage() {
   const [showCalibration, setShowCalibration] = useState(false);
   
   // Получить актив
-  const { data, isLoading } = useQuery<{
-    asset: AssetWithCategory;
-    valuations: AssetValuation[];
-    change: {
-      changeAmount: number;
-      changePercent: number;
-      ownershipYears: number;
-    } | null;
+  const { data: response, isLoading } = useQuery<{
+    success: boolean;
+    data: {
+      asset: AssetWithCategory;
+      valuations: AssetValuation[];
+      change: {
+        changeAmount: number;
+        changePercent: number;
+        ownershipYears: number;
+      } | null;
+    };
   }>({
     queryKey: [`/api/assets/${assetId}`],
     enabled: !!assetId
   });
   
+  const data = response?.data;
   const asset = data?.asset;
   const valuations = data?.valuations || [];
   const change = data?.change;
