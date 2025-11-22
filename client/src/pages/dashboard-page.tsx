@@ -194,7 +194,7 @@ export default function DashboardPage() {
             title={t("assets.net_worth")}
             value={`$${(netWorthSummary.netWorth ?? 0).toFixed(0)}`}
             icon={Wallet}
-            className="border-l-4 border-l-purple-500"
+            className="border-l-4 border-l-yellow-500"
             action={
               <div className="space-y-1">
                 <div className="text-xs text-muted-foreground space-y-0.5" data-testid="assets-breakdown">
