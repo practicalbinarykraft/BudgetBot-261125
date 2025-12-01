@@ -54,8 +54,11 @@ RUN npm install --omit=dev --legacy-peer-deps && \
 # Copy built artifacts from builder
 COPY --from=builder --chown=budgetbot:nodejs /app/dist ./dist
 
-# Copy database files (needed for drizzle schema)
-COPY --from=builder --chown=budgetbot:nodejs /app/db ./db
+# Copy shared schema (needed for drizzle)
+COPY --from=builder --chown=budgetbot:nodejs /app/shared ./shared
+
+# Copy drizzle config
+COPY --from=builder --chown=budgetbot:nodejs /app/drizzle.config.ts ./
 
 # Switch to non-root user
 USER budgetbot
