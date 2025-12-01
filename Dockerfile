@@ -60,6 +60,9 @@ COPY --from=builder --chown=budgetbot:nodejs /app/shared ./shared
 # Copy drizzle config
 COPY --from=builder --chown=budgetbot:nodejs /app/drizzle.config.ts ./
 
+# Create logs directory with correct permissions
+RUN mkdir -p /app/logs && chown budgetbot:nodejs /app/logs
+
 # Switch to non-root user
 USER budgetbot
 
