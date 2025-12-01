@@ -35,7 +35,10 @@ export default function DashboardPage() {
     ? `?from=${dateRange.from}&to=${dateRange.to}` 
     : "";
 
-  const { data: transactions = [], isLoading } = useQuery<Transaction[]>({
+  const { data: transactionsResponse, isLoading } = useQuery<{
+    data: Transaction[];
+    pagination: { total: number; limit: number; offset: number };
+  }>({
     queryKey: ["/api/transactions", dateRange],
     queryFn: async () => {
       const res = await fetch(`/api/transactions${queryParams}`);
@@ -43,6 +46,8 @@ export default function DashboardPage() {
       return res.json();
     },
   });
+
+  const transactions = transactionsResponse?.data ?? [];
 
   const { data: stats } = useQuery<{
     totalIncome: number;
