@@ -1,5 +1,4 @@
 import winston from 'winston';
-import DailyRotateFile from 'winston-daily-rotate-file';
 import { env } from './env';
 
 /**
@@ -41,48 +40,61 @@ const jsonFormat = winston.format.combine(
 const logFormat = env.NODE_ENV === 'production' ? jsonFormat : customFormat;
 
 /**
- * Console transport for development
+ * Console transport - used in all environments
+ * In production/Docker, logs go to stdout which is captured by the platform
  */
 const consoleTransport = new winston.transports.Console({
-  format: winston.format.combine(
-    winston.format.colorize(),
-    customFormat
-  ),
+  format: env.NODE_ENV === 'production'
+    ? jsonFormat  // JSON for production (easier to parse in log aggregators)
+    : winston.format.combine(winston.format.colorize(), customFormat),
 });
 
 /**
- * File transport for errors
+ * Build transports array based on environment
+ * In production (Docker/Render): only console (stdout)
+ * In development: console + file transports
  */
-const errorFileTransport = new winston.transports.File({
-  filename: 'logs/error.log',
-  level: 'error',
-  format: logFormat,
-  maxsize: 5242880, // 5MB
-  maxFiles: 5,
-});
+function buildTransports(): winston.transport[] {
+  const transports: winston.transport[] = [consoleTransport];
 
-/**
- * Rotating file transport for all logs
- */
-const combinedFileTransport: DailyRotateFile = new DailyRotateFile({
-  filename: 'logs/combined-%DATE%.log',
-  datePattern: 'YYYY-MM-DD',
-  maxSize: '20m',
-  maxFiles: '14d', // Keep logs for 14 days
-  format: logFormat,
-});
+  // Only add file transports in development (not in Docker/production)
+  if (env.NODE_ENV !== 'production') {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fs = require('fs');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const path = require('path');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const DailyRotateFile = require('winston-daily-rotate-file');
 
-/**
- * Rotating file transport for HTTP requests
- */
-const httpFileTransport: DailyRotateFile = new DailyRotateFile({
-  filename: 'logs/http-%DATE%.log',
-  datePattern: 'YYYY-MM-DD',
-  maxSize: '20m',
-  maxFiles: '7d', // Keep HTTP logs for 7 days
-  format: logFormat,
-  level: 'http',
-});
+    // Create logs directory if it doesn't exist
+    const logsDir = path.join(process.cwd(), 'logs');
+    if (!fs.existsSync(logsDir)) {
+      fs.mkdirSync(logsDir, { recursive: true });
+    }
+
+    // File transport for errors
+    const errorFileTransport = new winston.transports.File({
+      filename: 'logs/error.log',
+      level: 'error',
+      format: logFormat,
+      maxsize: 5242880, // 5MB
+      maxFiles: 5,
+    });
+
+    // Rotating file transport for all logs
+    const combinedFileTransport = new DailyRotateFile({
+      filename: 'logs/combined-%DATE%.log',
+      datePattern: 'YYYY-MM-DD',
+      maxSize: '20m',
+      maxFiles: '14d',
+      format: logFormat,
+    });
+
+    transports.push(errorFileTransport, combinedFileTransport);
+  }
+
+  return transports;
+}
 
 /**
  * Create Winston logger instance
@@ -94,34 +106,9 @@ const logger = winston.createLogger({
     service: 'budgetbot',
     environment: env.NODE_ENV,
   },
-  transports: [
-    errorFileTransport,
-    combinedFileTransport,
-  ],
-  // Don't exit on uncaught exceptions
+  transports: buildTransports(),
   exitOnError: false,
 });
-
-// Add console transport in development
-if (env.NODE_ENV !== 'production') {
-  logger.add(consoleTransport);
-}
-
-// Add HTTP log transport if needed
-if (env.LOG_LEVEL === 'debug') {
-  logger.add(httpFileTransport);
-}
-
-/**
- * Create logs directory if it doesn't exist
- */
-import fs from 'fs';
-import path from 'path';
-
-const logsDir = path.join(process.cwd(), 'logs');
-if (!fs.existsSync(logsDir)) {
-  fs.mkdirSync(logsDir, { recursive: true });
-}
 
 /**
  * Helper functions for common log patterns
