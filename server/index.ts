@@ -25,6 +25,11 @@ import { isAppError, toAppError } from "./lib/errors";
 const app = express();
 const server = createServer(app);
 
+// Render.com requires longer timeouts for free tier
+// https://render.com/docs/troubleshooting-deploys
+server.keepAliveTimeout = 120000; // 120 seconds
+server.headersTimeout = 120000; // 120 seconds
+
 declare module 'http' {
   interface IncomingMessage {
     rawBody: unknown
