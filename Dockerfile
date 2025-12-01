@@ -1,6 +1,6 @@
 # ===== BudgetBot Production Dockerfile =====
 # Multi-stage build for optimal image size
-# Builds both client and server in a single container
+# Monorepo: client builds from root with Vite
 
 # ===== Stage 1: Base =====
 FROM node:20-alpine AS base
@@ -12,30 +12,22 @@ RUN apk add --no-cache libc6-compat
 # ===== Stage 2: Dependencies =====
 FROM base AS deps
 
-# Copy package files
+# Copy package files (monorepo - all deps in root)
 COPY package.json package-lock.json* ./
-COPY client/package.json client/package-lock.json* ./client/
 
-# Install dependencies
-RUN npm ci --only=production --legacy-peer-deps && \
-    cd client && npm ci --only=production --legacy-peer-deps
+# Install ALL dependencies (need devDependencies for build)
+RUN npm ci --legacy-peer-deps
 
 # ===== Stage 3: Builder =====
 FROM base AS builder
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/client/node_modules ./client/node_modules
 
 # Copy source code
 COPY . .
 
-# Build client (Vite)
-WORKDIR /app/client
-RUN npm run build
-
-# Build server (TypeScript)
-WORKDIR /app
+# Build everything (vite build && esbuild server)
 RUN npm run build
 
 # ===== Stage 4: Runner (Production) =====
@@ -58,20 +50,19 @@ RUN npm ci --only=production --legacy-peer-deps && \
 
 # Copy built artifacts from builder
 COPY --from=builder --chown=budgetbot:nodejs /app/dist ./dist
-COPY --from=builder --chown=budgetbot:nodejs /app/client/dist ./client/dist
 
-# Copy database files (if needed for migrations)
+# Copy database files (needed for drizzle schema)
 COPY --from=builder --chown=budgetbot:nodejs /app/db ./db
 
 # Switch to non-root user
 USER budgetbot
 
-# Expose port
-EXPOSE 5000
+# Expose port (Render uses PORT env var, default 10000)
+EXPOSE 10000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:5000/api/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); })"
+  CMD node -e "const http = require('http'); http.get('http://localhost:' + (process.env.PORT || 10000) + '/api/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1));"
 
 # Start the application
 CMD ["node", "dist/index.js"]
