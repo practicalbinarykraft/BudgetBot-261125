@@ -32,10 +32,10 @@ export default function CategoriesPage() {
     queryKey: ["/api/categories"],
   });
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(insertCategorySchema),
+  // userId is added by server from session - don't include in client form
+  const form = useForm<Omit<FormData, "userId">>({
+    resolver: zodResolver(insertCategorySchema.omit({ userId: true })),
     defaultValues: {
-      userId: user?.id || 0,
       name: "",
       type: "expense",
       icon: "Tag",
@@ -44,7 +44,7 @@ export default function CategoriesPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: FormData) => {
+    mutationFn: async (data: Omit<FormData, "userId">) => {
       const res = await apiRequest("POST", "/api/categories", data);
       return res.json();
     },
@@ -89,7 +89,7 @@ export default function CategoriesPage() {
     },
   });
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = (data: Omit<FormData, "userId">) => {
     createMutation.mutate(data);
   };
 
