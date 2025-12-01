@@ -41,15 +41,34 @@ export const CACHE_TTL = {
 let redisClient: Redis | null = null;
 
 /**
- * Initialize Redis connection
+ * Check if Redis is configured
  */
-export function initRedis(): Redis {
+export function isRedisConfigured(): boolean {
+  return !!(process.env.REDIS_URL || process.env.REDIS_HOST);
+}
+
+/**
+ * Initialize Redis connection
+ * Returns null if Redis is not configured
+ */
+export function initRedis(): Redis | null {
+  // Skip Redis initialization if not configured
+  if (!isRedisConfigured()) {
+    logger.info('Redis: Not configured, skipping initialization');
+    return null;
+  }
+
   if (redisClient) {
     return redisClient;
   }
 
   try {
-    redisClient = new Redis(REDIS_CONFIG);
+    // Use REDIS_URL if available, otherwise use individual config
+    const connectionConfig = process.env.REDIS_URL
+      ? process.env.REDIS_URL
+      : REDIS_CONFIG;
+
+    redisClient = new Redis(connectionConfig as any);
 
     redisClient.on('connect', () => {
       logger.info('Redis: Connected successfully');
@@ -74,7 +93,7 @@ export function initRedis(): Redis {
     return redisClient;
   } catch (error) {
     logger.error('Redis: Failed to initialize', { error });
-    throw error;
+    return null;
   }
 }
 
