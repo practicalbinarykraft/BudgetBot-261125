@@ -50,17 +50,29 @@ export function parseTransactionText(
   let currency: string = defaultCurrency;
   let description = '';
 
-  const amountMatch = cleaned.match(/(\d+(?:[.,]\d+)?[kк]?)\s*([₽₹$]|руб|rub|idr|rp|usd)?/i);
-  
+  // Match amounts with thousand separators: 200.000, 200,000, 1.500.000
+  const amountMatch = cleaned.match(/(\d+(?:[.,]\d{3})*(?:[.,]\d{1,2})?[kк]?)\s*([₽₹$]|руб|rub|idr|rp|usd)?/i);
+
   if (!amountMatch) {
     return null;
   }
 
   const amountStr = amountMatch[1].toLowerCase();
-  
-  // Remove ALL commas (thousand separators) before parsing
-  const cleanedAmount = amountStr.replace(/,/g, '');
-  
+
+  // Detect if dots/commas are thousand separators or decimal separators
+  // Pattern: if we have .XXX or ,XXX (3 digits after separator) - it's a thousand separator
+  let cleanedAmount = amountStr;
+
+  // Check for thousand separator pattern (e.g., 200.000 or 1.500.000 or 200,000)
+  const thousandSepPattern = /[.,]\d{3}(?:[.,]|$|[kк])/;
+  if (thousandSepPattern.test(cleanedAmount)) {
+    // Remove all dots and commas (they are thousand separators)
+    cleanedAmount = cleanedAmount.replace(/[.,]/g, '');
+  } else {
+    // It's a decimal separator - replace comma with dot for parseFloat
+    cleanedAmount = cleanedAmount.replace(/,/g, '.');
+  }
+
   // Handle "k" or "к" suffix (thousands)
   let parsedAmount: number;
   if (cleanedAmount.endsWith('k') || cleanedAmount.endsWith('к')) {
