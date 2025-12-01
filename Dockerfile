@@ -16,7 +16,7 @@ FROM base AS deps
 COPY package.json package-lock.json* ./
 
 # Install ALL dependencies (need devDependencies for build)
-RUN npm ci --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 
 # ===== Stage 3: Builder =====
 FROM base AS builder
@@ -45,7 +45,7 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json* ./
 
 # Install production dependencies only
-RUN npm ci --only=production --legacy-peer-deps && \
+RUN npm install --omit=dev --legacy-peer-deps && \
     npm cache clean --force
 
 # Copy built artifacts from builder
