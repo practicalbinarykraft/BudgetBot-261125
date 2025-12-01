@@ -45,7 +45,10 @@ export default function TagDetailPage() {
   });
 
   // Load transactions filtered by this tag
-  const { data: transactions = [], isLoading: isLoadingTransactions } = useQuery<Transaction[]>({
+  const { data: transactionsResponse, isLoading: isLoadingTransactions } = useQuery<{
+    data: Transaction[];
+    pagination: { total: number; limit: number; offset: number };
+  }>({
     queryKey: ["/api/transactions", { personalTagId: tagId }],
     queryFn: async () => {
       const res = await fetch(`/api/transactions?personalTagId=${tagId}`);
@@ -54,6 +57,8 @@ export default function TagDetailPage() {
     },
     enabled: !!tagId,
   });
+
+  const transactions = transactionsResponse?.data ?? [];
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {

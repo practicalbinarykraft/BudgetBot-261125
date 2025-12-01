@@ -37,9 +37,14 @@ export default function BudgetsPage() {
     queryKey: ["/api/categories"],
   });
 
-  const { data: transactions = [] } = useQuery<Transaction[]>({
+  const { data: transactionsResponse } = useQuery<{
+    data: Transaction[];
+    pagination: { total: number; limit: number; offset: number };
+  }>({
     queryKey: ["/api/transactions"],
   });
+
+  const transactions = transactionsResponse?.data ?? [];
 
   // 🔒 Security: userId is NOT sent from client anymore!
   // Backend adds userId from authenticated session (req.user.id)

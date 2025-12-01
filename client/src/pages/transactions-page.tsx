@@ -22,10 +22,15 @@ export default function TransactionsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: transactions = [], isLoading } = useQuery<Transaction[]>({
+  const { data: transactionsResponse, isLoading } = useQuery<{
+    data: Transaction[];
+    pagination: { total: number; limit: number; offset: number };
+  }>({
     queryKey: ["/api/transactions"],
     enabled: !!user,
   });
+
+  const transactions = transactionsResponse?.data ?? [];
 
   const { data: sortingStats } = useQuery<{ unsortedCount: number }>({
     queryKey: ['/api/sorting/stats'],

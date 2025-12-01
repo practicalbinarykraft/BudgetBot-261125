@@ -26,9 +26,14 @@ export function BudgetAlerts() {
     queryKey: ["/api/categories"],
   });
 
-  const { data: transactions = [] } = useQuery<Transaction[]>({
+  const { data: transactionsResponse } = useQuery<{
+    data: Transaction[];
+    pagination: { total: number; limit: number; offset: number };
+  }>({
     queryKey: ["/api/transactions"],
   });
+
+  const transactions = transactionsResponse?.data ?? [];
 
   if (budgets.length === 0) {
     return null;
