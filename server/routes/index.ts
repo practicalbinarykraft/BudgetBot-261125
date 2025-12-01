@@ -48,8 +48,8 @@ export function registerRoutes(app: Express) {
   // Health check endpoints (no auth required)
   app.use("/api", healthRouter);
 
-  // Telegram webhook (must be before other routes)
-  app.use("/telegram", telegramWebhookRouter);
+  // Telegram webhook (must be before other routes, matches TELEGRAM_WEBHOOK_URL)
+  app.use("/api/telegram", telegramWebhookRouter);
 
   // Domain-specific routes
   app.use("/api/transactions", transactionsRouter);
