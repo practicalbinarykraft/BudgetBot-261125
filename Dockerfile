@@ -22,7 +22,7 @@ RUN npm install --legacy-peer-deps
 FROM base AS builder
 
 # Increase Node memory for build (Render free tier has limited RAM)
-ENV NODE_OPTIONS="--max-old-space-size=512"
+ENV NODE_OPTIONS="--max-old-space-size=1024"
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
