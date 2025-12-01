@@ -22,11 +22,15 @@ export async function calculateFinancialHealth(
   const previousStartDate = startOfDay(subDays(today, daysWindow * 2));
 
   // Fetch data once for both periods
-  const [allTransactions, budgets, categories] = await Promise.all([
+  const [transactionsResult, budgetsResult, categoriesResult] = await Promise.all([
     storage.getTransactionsByUserId(userId),
     storage.getBudgetsByUserId(userId),
     storage.getCategoriesByUserId(userId),
   ]);
+
+  const allTransactions = transactionsResult.transactions;
+  const budgets = budgetsResult.budgets;
+  const categories = categoriesResult.categories;
 
   // Filter transactions by date
   const current: Transaction[] = allTransactions.filter((t: Transaction) => new Date(t.date) >= startDate);

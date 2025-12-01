@@ -55,8 +55,11 @@ router.post("/", withAuth(async (req, res) => {
       });
     }
     
-    const settings = await storage.getSettingsByUserId(userId);
-    if (!settings?.anthropicApiKey) {
+    // 🔐 Get decrypted API key
+    const { settingsRepository } = await import('../../repositories/settings.repository');
+    const apiKey = await settingsRepository.getAnthropicApiKey(userId);
+
+    if (!apiKey) {
       return res.status(400).json({
         error: "Anthropic API key not configured. Please add it in Settings."
       });

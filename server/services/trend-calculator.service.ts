@@ -9,7 +9,7 @@
  */
 
 import { storage } from "../storage";
-import { generateForecast } from "./forecast.service";
+import { generateForecast } from "./forecast";
 import { makeCumulative } from "../lib/charts/cumulative";
 import { 
   calculateHistoricalData, 
@@ -91,13 +91,13 @@ export async function calculateTrend(
   } = params;
 
   // ШАГ 1: Получить данные из базы
-  const transactions = await storage.getTransactionsByUserId(userId);
-  const wallets = await storage.getWalletsByUserId(userId);
+  const { transactions } = await storage.getTransactionsByUserId(userId);
+  const { wallets } = await storage.getWalletsByUserId(userId);
   const assetsRaw = await assetsRepository.findByUserId(userId);
-  
+
   // Распаковать структуру {asset, category} в плоский массив
   const assets = assetsRaw.map(item => item.asset);
-  
+
   // Защита от NaN: нормализовать балансы перед суммированием
   const currentWalletsBalance = wallets.reduce(
     (sum, w) => sum + Number(w.balanceUsd ?? 0),

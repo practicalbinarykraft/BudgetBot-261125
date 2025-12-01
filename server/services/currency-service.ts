@@ -4,10 +4,12 @@
 import { db } from '../db';
 import { settings } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import { cache } from '../lib/redis';
+import { getCurrentRates } from './currency-update.service';
 
-// Static exchange rates (fallback values)
+// Static exchange rates (fallback values if API fails)
 // Format: "X units of currency = 1 USD"
-const EXCHANGE_RATES: Record<string, number> = {
+const EXCHANGE_RATES_FALLBACK: Record<string, number> = {
   USD: 1,
   RUB: 92.5,   // 1 USD = 92.5 RUB (fallback)
   IDR: 15750,  // 1 USD = 15,750 IDR (fallback)
@@ -15,6 +17,16 @@ const EXCHANGE_RATES: Record<string, number> = {
   EUR: 0.92,   // 1 USD = 0.92 EUR (fallback)
   CNY: 7.24,   // 1 USD = 7.24 CNY (fallback)
 };
+
+// Get current rates (live if available, fallback if not)
+function getBaseRates(): Record<string, number> {
+  try {
+    const liveRates = getCurrentRates();
+    return liveRates;
+  } catch {
+    return EXCHANGE_RATES_FALLBACK;
+  }
+}
 
 // In-memory cache for user-specific exchange rates
 interface UserRateCache {
@@ -24,33 +36,44 @@ interface UserRateCache {
 }
 
 const userRateCache = new Map<number, UserRateCache>();
-const CACHE_TTL = 3600000; // 1 hour in milliseconds
+const USER_CACHE_TTL = 3600000; // 1 hour in milliseconds
 
 /**
  * Invalidate cache for a specific user (call when settings are updated)
  */
-export function invalidateUserRateCache(userId: number): void {
+export async function invalidateUserRateCache(userId: number): Promise<void> {
+  // Invalidate both in-memory and Redis cache
   userRateCache.delete(userId);
+  await cache.del(`exchange-rates:user:${userId}`);
 }
 
 /**
  * Get exchange rates for a user (custom rates > static fallback)
  */
 export async function getUserExchangeRates(userId: number): Promise<Record<string, number>> {
-  // Check cache first
+  const cacheKey = `exchange-rates:user:${userId}`;
+
+  // Try Redis cache first
+  const cachedRates = await cache.get<Record<string, number>>(cacheKey);
+  if (cachedRates) {
+    return cachedRates;
+  }
+
+  // Check in-memory cache (fallback)
   const cached = userRateCache.get(userId);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+  if (cached && Date.now() - cached.timestamp < USER_CACHE_TTL) {
     return cached.rates;
   }
 
-  // Fetch user settings
+  // Fetch user settings from database
   const [userSettings] = await db
     .select()
     .from(settings)
     .where(eq(settings.userId, userId))
     .limit(1);
 
-  const rates: Record<string, number> = { ...EXCHANGE_RATES };
+  // Start with live rates (or fallback)
+  const rates: Record<string, number> = { ...getBaseRates() };
 
   if (userSettings) {
     // Override with custom rates if set
@@ -71,7 +94,8 @@ export async function getUserExchangeRates(userId: number): Promise<Record<strin
     }
   }
 
-  // Update cache
+  // Update both caches (Redis: 1 hour, in-memory: 1 hour)
+  await cache.set(cacheKey, rates, USER_CACHE_TTL);
   userRateCache.set(userId, {
     userId,
     rates,
@@ -86,23 +110,23 @@ export async function getUserExchangeRates(userId: number): Promise<Record<strin
  * @param rates - Optional custom rates, defaults to static EXCHANGE_RATES
  */
 export function convertToUSD(amount: number, currency: string, rates?: Record<string, number>): number {
-  const exchangeRates = rates || EXCHANGE_RATES;
+  const exchangeRates = rates || getBaseRates();
   const rate = exchangeRates[currency] || 1;
   return amount / rate;
 }
 
 export function convertFromUSD(amount: number, currency: string, rates?: Record<string, number>): number {
-  const exchangeRates = rates || EXCHANGE_RATES;
+  const exchangeRates = rates || getBaseRates();
   const rate = exchangeRates[currency] || 1;
   return amount * rate;
 }
 
 export function getSupportedCurrencies(): string[] {
-  return Object.keys(EXCHANGE_RATES);
+  return Object.keys(getBaseRates());
 }
 
 export function getExchangeRate(currency: string, rates?: Record<string, number>): number {
-  const exchangeRates = rates || EXCHANGE_RATES;
+  const exchangeRates = rates || getBaseRates();
   return exchangeRates[currency] || 1;
 }
 
@@ -113,6 +137,9 @@ export interface ExchangeRateInfo {
 }
 
 export async function getExchangeRateInfo(userId?: number): Promise<ExchangeRateInfo> {
+  // Import rate info from update service
+  const { getRateInfo } = await import('./currency-update.service');
+
   if (userId) {
     const rates = await getUserExchangeRates(userId);
     const cached = userRateCache.get(userId);
@@ -122,13 +149,9 @@ export async function getExchangeRateInfo(userId?: number): Promise<ExchangeRate
       source: cached ? "user_cache" : "user_settings",
     };
   }
-  
-  // Return static rates
-  return {
-    rates: { ...EXCHANGE_RATES },
-    lastUpdated: new Date().toISOString(),
-    source: "static",
-  };
+
+  // Return live rates with update info
+  return getRateInfo();
 }
 
 // Helper to get conversion with rate info

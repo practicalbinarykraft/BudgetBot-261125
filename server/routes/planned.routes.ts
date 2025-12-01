@@ -72,7 +72,7 @@ router.post("/:id/purchase", withAuth(async (req, res) => {
       return res.status(400).json({ error: "Only planned items can be purchased" });
     }
     
-    const wallets = await storage.getWalletsByUserId(req.user.id);
+    const { wallets } = await storage.getWalletsByUserId(req.user.id);
     const primaryWallet = wallets.find(w => w.type === "card") || wallets[0];
     
     const transactionData = insertTransactionSchema.parse({

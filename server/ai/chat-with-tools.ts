@@ -8,58 +8,62 @@ export async function chatWithTools(
   message: string,
   userId: number
 ) {
-  // Get user's Anthropic API key from settings (BYOK)
-  const settings = await storage.getSettingsByUserId(userId);
-  
-  if (!settings?.anthropicApiKey) {
+  // 🔐 Get user's decrypted Anthropic API key from settings (BYOK)
+  const { settingsRepository } = await import('../repositories/settings.repository');
+  const apiKey = await settingsRepository.getAnthropicApiKey(userId);
+
+  if (!apiKey) {
     throw new Error(
       'API key not configured. Please add your Anthropic API key in Settings.'
     );
   }
-  
+
+  // Get settings for other config (currency, etc)
+  const settings = await storage.getSettingsByUserId(userId);
+
   // Get user categories for smart categorization
   const categories = await getUserCategories(userId);
-  
+
   // Build categories list for prompt
   const categoriesList = categories.length > 0
     ? categories.map(c => `- ${c.name} (${c.type})`).join('\n')
     : '(No categories yet)';
-  
+
   // User's default currency
-  const defaultCurrency = settings.currency || 'USD';
-  
+  const defaultCurrency = settings?.currency || 'USD';
+
   // Build available currencies list (USD + default + configured)
   const availableCurrencies: string[] = ['USD']; // USD is always available
-  
+
   // Always add default currency (even without rate - prevents AI from rejecting default)
   if (defaultCurrency && !availableCurrencies.includes(defaultCurrency)) {
     availableCurrencies.push(defaultCurrency);
   }
-  
+
   const currencyRules: string[] = [];
   const currencyExamples: string[] = [];
-  
-  if (settings.exchangeRateRUB) {
+
+  if (settings?.exchangeRateRUB) {
     availableCurrencies.push('RUB');
     currencyRules.push('- "р", "руб", "₽", "rub" → RUB');
     currencyExamples.push('"100р" → 100 RUB');
   }
-  if (settings.exchangeRateIDR) {
+  if (settings?.exchangeRateIDR) {
     availableCurrencies.push('IDR');
     currencyRules.push('- "idr", "rupiah" → IDR');
     currencyExamples.push('"50000 rupiah" → 50000 IDR');
   }
-  if (settings.exchangeRateKRW) {
+  if (settings?.exchangeRateKRW) {
     availableCurrencies.push('KRW');
     currencyRules.push('- "к", "won", "₩", ending with "k" (Korean context) → KRW');
     currencyExamples.push('"220k" (Korean) → 220000 KRW');
   }
-  if (settings.exchangeRateEUR) {
+  if (settings?.exchangeRateEUR) {
     availableCurrencies.push('EUR');
     currencyRules.push('- "€", "eur", "euro" → EUR');
     currencyExamples.push('"€50" → 50 EUR');
   }
-  if (settings.exchangeRateCNY) {
+  if (settings?.exchangeRateCNY) {
     availableCurrencies.push('CNY');
     currencyRules.push('- "¥", "cny", "yuan", "rmb" → CNY');
     currencyExamples.push('"¥100" → 100 CNY');
@@ -72,9 +76,9 @@ export async function chatWithTools(
   const currencyDetectionRules = currencyRules.join('\n');
   const currencyExamplesStr = currencyExamples.join(', ');
   
-  // Initialize Anthropic client with user's key
-  const anthropic = new Anthropic({ 
-    apiKey: settings.anthropicApiKey 
+  // Initialize Anthropic client with user's decrypted key
+  const anthropic = new Anthropic({
+    apiKey
   });
   
   // System prompt for financial assistant with tool calling

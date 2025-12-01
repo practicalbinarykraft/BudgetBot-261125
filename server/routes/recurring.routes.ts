@@ -7,10 +7,47 @@ import { convertToUSD, getExchangeRate } from "../services/currency-service";
 const router = Router();
 
 // GET /api/recurring
+// Supports pagination: ?limit=100&offset=0
 router.get("/", withAuth(async (req, res) => {
   try {
-    const recurring = await storage.getRecurringByUserId(req.user.id);
-    res.json(recurring);
+    const { limit, offset } = req.query;
+    const filters: { limit?: number; offset?: number } = {};
+
+    // Parse and validate pagination parameters
+    if (limit) {
+      const limitNum = parseInt(String(limit));
+      if (isNaN(limitNum) || limitNum <= 0) {
+        return res.status(400).json({ error: "Invalid limit parameter. Must be a positive integer." });
+      }
+      if (limitNum > 1000) {
+        return res.status(400).json({ error: "Limit cannot exceed 1000. Please use pagination for large datasets." });
+      }
+      filters.limit = limitNum;
+    }
+
+    if (offset) {
+      const offsetNum = parseInt(String(offset));
+      if (isNaN(offsetNum) || offsetNum < 0) {
+        return res.status(400).json({ error: "Invalid offset parameter. Must be a non-negative integer." });
+      }
+      filters.offset = offsetNum;
+    }
+
+    const result = await storage.getRecurringByUserId(req.user.id, filters);
+
+    // Backward compatibility: return array if no pagination params, object with metadata if paginated
+    const response = filters.limit !== undefined || filters.offset !== undefined
+      ? {
+          data: result.recurring,
+          pagination: {
+            total: result.total,
+            limit: filters.limit,
+            offset: filters.offset || 0,
+          },
+        }
+      : result.recurring;
+
+    res.json(response);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

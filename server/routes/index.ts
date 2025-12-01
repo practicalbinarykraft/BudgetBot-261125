@@ -34,9 +34,23 @@ import personalTagsRouter from "./personal-tags.routes";
 import migrationRouter from "./admin/migration.routes";
 import sortingRouter from "./sorting.routes";
 import productCatalogRouter from "./product-catalog.routes";
-import assetsRouter from "./assets.routes";
+import assetsRouter from "./assets";
+import telegramWebhookRouter from "./telegram-webhook.routes";
+import healthRouter from "./health.routes";
+import swaggerRouter from "./swagger.routes";
+import auditLogRouter from "./audit-log.routes";
+import advancedAnalyticsRouter from "./advanced-analytics.routes";
 
 export function registerRoutes(app: Express) {
+  // API Documentation (Swagger UI)
+  app.use("/api-docs", swaggerRouter);
+
+  // Health check endpoints (no auth required)
+  app.use("/api", healthRouter);
+
+  // Telegram webhook (must be before other routes)
+  app.use("/telegram", telegramWebhookRouter);
+
   // Domain-specific routes
   app.use("/api/transactions", transactionsRouter);
   app.use("/api/wallets", walletsRouter);
@@ -54,10 +68,12 @@ export function registerRoutes(app: Express) {
   app.use("/api/tags", personalTagsRouter);
   app.use("/api/sorting", sortingRouter);
   app.use("/api/product-catalog", productCatalogRouter);
+  app.use("/api/audit-logs", auditLogRouter);
   
   // Stats and analytics (mounted on /api for /api/stats and /api/financial-health)
   app.use("/api", statsRouter);
   app.use("/api/analytics", analyticsRouter);
+  app.use("/api/analytics/advanced", advancedAnalyticsRouter);
   
   // Currency exchange rates and conversions
   app.use("/api", currencyRouter);

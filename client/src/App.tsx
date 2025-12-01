@@ -9,29 +9,38 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { I18nProvider } from "@/i18n";
 import { AIChatSidebar } from "@/components/ai-chat-sidebar";
+import { PageLoading } from "@/components/loading-spinner";
+import { WebSocketProvider } from "@/components/WebSocketProvider";
+import { useEffect, lazy, Suspense } from "react";
+
+// ===== Lazy Load Pages for Better Performance =====
+// Critical pages (loaded immediately)
 import LandingPage from "@/pages/landing-page";
 import AuthPage from "@/pages/auth-page";
 import DashboardPage from "@/pages/dashboard-page";
-import TransactionsPage from "@/pages/transactions-page";
-import WalletsPage from "@/pages/wallets-page";
-import CategoriesPage from "@/pages/categories-page";
-import RecurringPage from "@/pages/recurring-page";
-import WishlistPage from "@/pages/wishlist-page";
-import PlannedExpensesPage from "@/pages/planned-expenses-page";
-import PlannedIncomePage from "@/pages/planned-income-page";
-import BudgetsPage from "@/pages/budgets-page";
-import AIAnalysisPage from "@/pages/ai-analysis-page";
-import SettingsPage from "@/pages/settings-page";
-import TagsSettingsPage from "@/pages/tags-settings-page";
-import TagDetailPage from "@/pages/tag-detail-page";
-import ExpensesAnalyticsPage from "@/pages/expenses-analytics-page";
-import SwipeSortPage from "@/pages/swipe-sort-page";
-import AiTrainingHistoryPage from "@/pages/ai-training-history-page";
-import ProductCatalogPage from "@/pages/product-catalog-page";
-import ProductDetailPage from "@/pages/product-detail-page";
-import AssetsPage from "@/pages/assets";
-import AssetDetailPage from "@/pages/asset-detail";
-import { useEffect } from "react";
+
+// Non-critical pages (lazy loaded on demand)
+const TransactionsPage = lazy(() => import("@/pages/transactions-page"));
+const WalletsPage = lazy(() => import("@/pages/wallets-page"));
+const CategoriesPage = lazy(() => import("@/pages/categories-page"));
+const RecurringPage = lazy(() => import("@/pages/recurring-page"));
+const WishlistPage = lazy(() => import("@/pages/wishlist-page"));
+const PlannedExpensesPage = lazy(() => import("@/pages/planned-expenses-page"));
+const PlannedIncomePage = lazy(() => import("@/pages/planned-income-page"));
+const BudgetsPage = lazy(() => import("@/pages/budgets-page"));
+const AIAnalysisPage = lazy(() => import("@/pages/ai-analysis-page"));
+const SettingsPage = lazy(() => import("@/pages/settings"));
+const TagsSettingsPage = lazy(() => import("@/pages/tags-settings-page"));
+const CurrencyHistoryPage = lazy(() => import("@/pages/currency-history-page"));
+const TagDetailPage = lazy(() => import("@/pages/tag-detail-page"));
+const ExpensesAnalyticsPage = lazy(() => import("@/pages/expenses-analytics-page"));
+const SwipeSortPage = lazy(() => import("@/pages/swipe-sort-page"));
+const AiTrainingHistoryPage = lazy(() => import("@/pages/ai-training-history-page"));
+const ProductCatalogPage = lazy(() => import("@/pages/product-catalog-page"));
+const ProductDetailPage = lazy(() => import("@/pages/product-detail-page"));
+const AssetsPage = lazy(() => import("@/pages/assets"));
+const AssetDetailPage = lazy(() => import("@/pages/asset-detail"));
+const AdvancedAnalyticsPage = lazy(() => import("@/pages/advanced-analytics-page"));
 
 // Landing page with redirect logic for authenticated users
 function LandingPageWrapper() {
@@ -53,38 +62,42 @@ function LandingPageWrapper() {
 
 function Router() {
   return (
-    <Switch>
-      {/* Public routes */}
-      <Route path="/" component={LandingPageWrapper} />
-      <Route path="/login" component={AuthPage} />
-      
-      {/* Protected app routes */}
-      <ProtectedRoute path="/app/dashboard" component={DashboardPage} />
-      <ProtectedRoute path="/app/transactions/sort" component={SwipeSortPage} />
-      <ProtectedRoute path="/app/transactions" component={TransactionsPage} />
-      <ProtectedRoute path="/app/wallets" component={WalletsPage} />
-      <ProtectedRoute path="/app/assets/:id" component={AssetDetailPage} />
-      <ProtectedRoute path="/app/assets" component={AssetsPage} />
-      <ProtectedRoute path="/app/categories" component={CategoriesPage} />
-      <ProtectedRoute path="/app/recurring" component={RecurringPage} />
-      <ProtectedRoute path="/app/wishlist" component={WishlistPage} />
-      <ProtectedRoute path="/app/planned-expenses" component={PlannedExpensesPage} />
-      <ProtectedRoute path="/app/planned-income" component={PlannedIncomePage} />
-      <ProtectedRoute path="/app/budgets" component={BudgetsPage} />
-      <ProtectedRoute path="/app/ai-analysis" component={AIAnalysisPage} />
-      <ProtectedRoute path="/app/ai-training/history" component={AiTrainingHistoryPage} />
-      <ProtectedRoute path="/app/expenses/analytics" component={ExpensesAnalyticsPage} />
-      <ProtectedRoute path="/app/tags/:id" component={TagDetailPage} />
-      <ProtectedRoute path="/app/tags" component={TagsSettingsPage} />
-      <ProtectedRoute path="/app/settings" component={SettingsPage} />
-      <ProtectedRoute path="/app/product-catalog/:id" component={ProductDetailPage} />
-      <ProtectedRoute path="/app/product-catalog" component={ProductCatalogPage} />
-      
-      {/* 404 redirect */}
-      <Route>
-        <Redirect to="/" />
-      </Route>
-    </Switch>
+    <Suspense fallback={<PageLoading />}>
+      <Switch>
+        {/* Public routes */}
+        <Route path="/" component={LandingPageWrapper} />
+        <Route path="/login" component={AuthPage} />
+
+        {/* Protected app routes */}
+        <ProtectedRoute path="/app/dashboard" component={DashboardPage} />
+        <ProtectedRoute path="/app/transactions/sort" component={SwipeSortPage} />
+        <ProtectedRoute path="/app/transactions" component={TransactionsPage} />
+        <ProtectedRoute path="/app/wallets" component={WalletsPage} />
+        <ProtectedRoute path="/app/assets/:id" component={AssetDetailPage} />
+        <ProtectedRoute path="/app/assets" component={AssetsPage} />
+        <ProtectedRoute path="/app/categories" component={CategoriesPage} />
+        <ProtectedRoute path="/app/recurring" component={RecurringPage} />
+        <ProtectedRoute path="/app/wishlist" component={WishlistPage} />
+        <ProtectedRoute path="/app/planned-expenses" component={PlannedExpensesPage} />
+        <ProtectedRoute path="/app/planned-income" component={PlannedIncomePage} />
+        <ProtectedRoute path="/app/budgets" component={BudgetsPage} />
+        <ProtectedRoute path="/app/ai-analysis" component={AIAnalysisPage} />
+        <ProtectedRoute path="/app/ai-training/history" component={AiTrainingHistoryPage} />
+        <ProtectedRoute path="/app/expenses/analytics" component={ExpensesAnalyticsPage} />
+        <ProtectedRoute path="/app/tags/:id" component={TagDetailPage} />
+        <ProtectedRoute path="/app/tags" component={TagsSettingsPage} />
+        <ProtectedRoute path="/app/settings" component={SettingsPage} />
+        <ProtectedRoute path="/app/currency/history" component={CurrencyHistoryPage} />
+        <ProtectedRoute path="/app/product-catalog/:id" component={ProductDetailPage} />
+        <ProtectedRoute path="/app/product-catalog" component={ProductCatalogPage} />
+        <ProtectedRoute path="/app/analytics/advanced" component={AdvancedAnalyticsPage} />
+
+        {/* 404 redirect */}
+        <Route>
+          <Redirect to="/" />
+        </Route>
+      </Switch>
+    </Suspense>
   );
 }
 
@@ -130,9 +143,11 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
-          <I18nProvider>
-            <AppContent />
-          </I18nProvider>
+          <WebSocketProvider>
+            <I18nProvider>
+              <AppContent />
+            </I18nProvider>
+          </WebSocketProvider>
         </AuthProvider>
         <Toaster />
       </TooltipProvider>

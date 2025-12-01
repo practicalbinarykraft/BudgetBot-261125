@@ -170,8 +170,15 @@ export const settings = pgTable("settings", {
   telegramNotifications: boolean("telegram_notifications").default(true).notNull(),
   timezone: text("timezone").default("UTC"), // User's timezone (IANA format, e.g., "Europe/Moscow", "Asia/Jakarta")
   notificationTime: text("notification_time").default("09:00"), // Time for daily notifications in HH:MM format
-  anthropicApiKey: text("anthropic_api_key"), // User's BYOK for AI features (forecast, analysis)
-  openaiApiKey: text("openai_api_key"), // User's BYOK for Whisper voice transcription
+
+  // 🔐 API Keys - ENCRYPTED (AES-256-GCM)
+  // Legacy fields (deprecated - will be removed after migration)
+  anthropicApiKey: text("anthropic_api_key"), // DEPRECATED: Use anthropicApiKeyEncrypted
+  openaiApiKey: text("openai_api_key"), // DEPRECATED: Use openaiApiKeyEncrypted
+
+  // New encrypted fields (format: "iv:authTag:encrypted" in hex)
+  anthropicApiKeyEncrypted: text("anthropic_api_key_encrypted"), // User's BYOK for AI features (encrypted)
+  openaiApiKeyEncrypted: text("openai_api_key_encrypted"), // User's BYOK for Whisper (encrypted)
   exchangeRateRUB: decimal("exchange_rate_rub", { precision: 10, scale: 4 }), // Custom exchange rate: 1 USD = X RUB
   exchangeRateIDR: decimal("exchange_rate_idr", { precision: 10, scale: 2 }), // Custom exchange rate: 1 USD = X IDR
   exchangeRateKRW: decimal("exchange_rate_krw", { precision: 10, scale: 2 }), // Custom exchange rate: 1 USD = X KRW
@@ -750,6 +757,54 @@ export interface TrainingStats {
 // 🔐 Helper type for storage layer: public insert schemas omit userId for security,
 // but storage needs userId from authenticated session
 export type OwnedInsert<T> = T & { userId: number };
+
+// ========================================
+// AUDIT LOG
+// ========================================
+export const auditLog = pgTable("audit_log", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+  action: varchar("action", { length: 100 }).notNull(), // 'create', 'update', 'delete', 'login', etc.
+  entityType: varchar("entity_type", { length: 50 }).notNull(), // 'transaction', 'wallet', 'budget', etc.
+  entityId: integer("entity_id"), // ID of affected entity (null for login, etc.)
+  metadata: text("metadata"), // JSON with additional details
+  ipAddress: varchar("ip_address", { length: 45 }), // IPv4 or IPv6
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertAuditLogSchema = createInsertSchema(auditLog, {
+  action: z.string().min(1).max(100),
+  entityType: z.string().min(1).max(50),
+  entityId: z.number().int().positive().optional(),
+  metadata: z.string().optional(),
+  ipAddress: z.string().max(45).optional(),
+  userAgent: z.string().optional(),
+});
+
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+export type AuditLog = typeof auditLog.$inferSelect;
+
+// ========================================
+// EXCHANGE RATE HISTORY
+// ========================================
+
+export const exchangeRateHistory = pgTable("exchange_rate_history", {
+  id: serial("id").primaryKey(),
+  currencyCode: varchar("currency_code", { length: 3 }).notNull(), // USD, EUR, RUB, etc.
+  rate: decimal("rate", { precision: 18, scale: 6 }).notNull(), // Exchange rate to USD
+  source: varchar("source", { length: 50 }).notNull(), // 'api', 'manual', 'fallback'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertExchangeRateHistorySchema = createInsertSchema(exchangeRateHistory, {
+  currencyCode: z.string().length(3).toUpperCase(),
+  rate: z.string().or(z.number()),
+  source: z.string().min(1).max(50),
+});
+
+export type InsertExchangeRateHistory = z.infer<typeof insertExchangeRateHistorySchema>;
+export type ExchangeRateHistory = typeof exchangeRateHistory.$inferSelect;
 
 // ========================================
 // PRODUCT CATALOG SCHEMAS (Modular)

@@ -1,15 +1,19 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { storage } from "./storage";
-import { insertUserSchema, categories } from "@shared/schema";
+import { userRepository } from "./repositories/user.repository";
+import { categoryRepository } from "./repositories/category.repository";
+import { insertUserSchema } from "@shared/schema";
 import type { Express } from "express";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import connectPgSimple from "connect-pg-simple";
 import bcrypt from "bcryptjs";
-import { db } from "./db";
 import { createDefaultTags } from "./services/tag.service";
+import { pool } from "./db";
+import { authRateLimiter } from "./middleware/rate-limit";
+import { logError, logWarning } from "./lib/logger";
+import { logAuditEvent, AuditAction, AuditEntityType } from "./services/audit-log.service";
 
-const MemoryStore = createMemoryStore(session);
+const PgSession = connectPgSimple(session);
 
 /**
  * Create default categories for new user
@@ -25,32 +29,58 @@ async function createDefaultCategories(userId: number) {
     { name: 'Freelance', type: 'income', icon: '💻', color: '#06b6d4' },
     { name: 'Unaccounted', type: 'expense', icon: '❓', color: '#dc2626' }
   ];
-  
+
   try {
     for (const category of defaultCategories) {
-      await db.insert(categories).values({
+      await categoryRepository.createCategory({
         userId,
         name: category.name,
-        type: category.type,
+        type: category.type as "income" | "expense",
         icon: category.icon,
         color: category.color
       });
     }
   } catch (error) {
-    console.error('Failed to create default categories:', error);
+    logError('Failed to create default categories', error as Error, { userId });
   }
 }
 
 export function setupAuth(app: Express) {
+  // 🔒 Validate SESSION_SECRET
+  if (!process.env.SESSION_SECRET) {
+    throw new Error(
+      'SESSION_SECRET environment variable is required. ' +
+      'Generate with: openssl rand -base64 32'
+    );
+  }
+
+  if (process.env.SESSION_SECRET.length < 32) {
+    logWarning(
+      'SESSION_SECRET is too short (< 32 characters). ' +
+      'Generate a stronger secret with: openssl rand -base64 32'
+    );
+  }
+
+  // 💾 PostgreSQL Session Store (persistent, survives restarts)
+  const sessionStore = new PgSession({
+    pool: pool, // Use existing database connection pool
+    tableName: 'session', // Table created by migration
+    createTableIfMissing: false, // Require explicit migration
+    pruneSessionInterval: 60 * 15, // Cleanup expired sessions every 15 minutes
+    errorLog: (error) => {
+      logError('Session store error', error as Error);
+    }
+  });
+
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "budget-buddy-secret-key-change-in-production",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    store: new MemoryStore({
-      checkPeriod: 86400000, // 24h
-    }),
+    store: sessionStore,
     cookie: {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      httpOnly: true, // Prevent XSS attacks
+      sameSite: 'lax', // CSRF protection
     },
   };
 
@@ -58,7 +88,7 @@ export function setupAuth(app: Express) {
     app.set("trust proxy", 1);
     sessionSettings.cookie = {
       ...sessionSettings.cookie,
-      secure: true,
+      secure: true, // HTTPS only in production
     };
   }
 
@@ -75,7 +105,7 @@ export function setupAuth(app: Express) {
       },
       async (email, password, done) => {
         try {
-          const user = await storage.getUserByEmail(email);
+          const user = await userRepository.getUserByEmail(email);
           if (!user) {
             return done(null, false, { message: "Incorrect email or password" });
           }
@@ -99,25 +129,25 @@ export function setupAuth(app: Express) {
 
   passport.deserializeUser(async (id: number, done) => {
     try {
-      const user = await storage.getUserById(id);
+      const user = await userRepository.getUserById(id);
       done(null, user);
     } catch (error) {
       done(error);
     }
   });
 
-  // Auth routes
-  app.post("/api/register", async (req, res, next) => {
+  // Auth routes with rate limiting
+  app.post("/api/register", authRateLimiter, async (req, res, next) => {
     try {
       const { email, password, name } = insertUserSchema.parse(req.body);
 
-      const existingUser = await storage.getUserByEmail(email);
+      const existingUser = await userRepository.getUserByEmail(email);
       if (existingUser) {
         return res.status(400).json({ error: "Email already registered" });
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
-      const user = await storage.createUser({
+      const user = await userRepository.createUser({
         email,
         password: hashedPassword,
         name,
@@ -125,6 +155,18 @@ export function setupAuth(app: Express) {
 
       await createDefaultCategories(user.id);
       await createDefaultTags(user.id);
+
+      // Log registration audit event
+      await logAuditEvent({
+        userId: user.id,
+        action: AuditAction.REGISTER,
+        entityType: AuditEntityType.USER,
+        entityId: user.id,
+        metadata: {
+          email: user.email,
+        },
+        req,
+      });
 
       req.login(user, (err) => {
         if (err) {
@@ -141,7 +183,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", (req, res, next) => {
+  app.post("/api/login", authRateLimiter, (req, res, next) => {
     passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) {
         return next(err);
@@ -151,10 +193,22 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ error: info?.message || "Login failed" });
       }
 
-      req.login(user, (err) => {
+      req.login(user, async (err) => {
         if (err) {
           return next(err);
         }
+
+        // Log login audit event
+        await logAuditEvent({
+          userId: user.id,
+          action: AuditAction.LOGIN,
+          entityType: AuditEntityType.USER,
+          entityId: user.id,
+          metadata: {
+            email: user.email,
+          },
+          req,
+        });
 
         return res.json({
           id: user.id,
@@ -165,11 +219,25 @@ export function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  app.post("/api/logout", (req, res) => {
-    req.logout((err) => {
+  app.post("/api/logout", async (req, res) => {
+    const userId = (req.user as any)?.id;
+
+    req.logout(async (err) => {
       if (err) {
         return res.status(500).json({ error: "Logout failed" });
       }
+
+      // Log logout audit event
+      if (userId) {
+        await logAuditEvent({
+          userId,
+          action: AuditAction.LOGOUT,
+          entityType: AuditEntityType.USER,
+          entityId: userId,
+          req,
+        });
+      }
+
       res.json({ success: true });
     });
   });

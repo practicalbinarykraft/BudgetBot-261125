@@ -105,7 +105,8 @@ router.post("/:id/receive", withAuth(async (req, res) => {
       return res.status(400).json({ error: "Only pending income can be received" });
     }
     
-    const wallets = await storage.getWalletsByUserId(req.user.id);
+    const walletsResult = await storage.getWalletsByUserId(req.user.id);
+    const wallets = walletsResult.wallets;
     const primaryWallet = wallets.find(w => w.type === "card") || wallets[0];
     
     const transactionData = insertTransactionSchema.parse({

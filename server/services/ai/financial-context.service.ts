@@ -45,18 +45,23 @@ export async function buildFinancialContext(
   const fromDateStr = fromDate.toISOString().split('T')[0];
   
   // Fetch all data in parallel
-  const [transactions, budgets, wallets, categories] = await Promise.all([
+  const [transactionsResult, budgetsResult, walletsResult, categoriesResult] = await Promise.all([
     includeTransactions
       ? storage.getTransactionsByUserId(userId, { from: fromDateStr })
-      : Promise.resolve([]),
+      : Promise.resolve({ transactions: [], total: 0 }),
     includeBudgets
       ? storage.getBudgetsByUserId(userId)
-      : Promise.resolve([]),
+      : Promise.resolve({ budgets: [], total: 0 }),
     includeWallets
       ? storage.getWalletsByUserId(userId)
-      : Promise.resolve([]),
+      : Promise.resolve({ wallets: [], total: 0 }),
     storage.getCategoriesByUserId(userId)
   ]);
+
+  const transactions = transactionsResult.transactions;
+  const budgets = budgetsResult.budgets;
+  const wallets = walletsResult.wallets;
+  const categories = categoriesResult.categories;
 
   // Build context sections
   if (includeWallets && wallets.length > 0) {

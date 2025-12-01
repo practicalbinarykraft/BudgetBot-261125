@@ -27,7 +27,8 @@ export async function handleAddTransaction(
     }
 
     // Get primary wallet for this user (needed for walletId)
-    const wallets = await storage.getWalletsByUserId(userId);
+    const walletsResult = await storage.getWalletsByUserId(userId);
+    const wallets = walletsResult.wallets;
     const primaryWallet = wallets.find(w => w.isPrimary === 1) || wallets[0];
 
     // Get user settings for default currency
@@ -53,8 +54,8 @@ export async function handleAddTransaction(
     // Resolve personal tag name to ID if provided (case-insensitive)
     let personalTagId: number | undefined = undefined;
     if (params.personal_tag) {
-      const tags = await storage.getPersonalTagsByUserId(userId);
-      const matchedTag = tags.find(t => 
+      const { tags } = await storage.getPersonalTagsByUserId(userId);
+      const matchedTag = tags.find(t =>
         t.name.toLowerCase() === params.personal_tag!.toLowerCase()
       );
       personalTagId = matchedTag?.id;

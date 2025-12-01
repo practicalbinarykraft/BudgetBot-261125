@@ -11,8 +11,12 @@ import { type ToolName } from "../../ai/tool-types";
 import { ANTHROPIC_TOOLS } from "../../ai/tools";
 import { validateToolParams } from "../../ai/tool-schemas";
 import { storage } from "../../storage";
+import { aiRateLimiter } from "../../middleware/rate-limit";
 
 const router = Router();
+
+// Apply rate limiting to all AI routes
+router.use(aiRateLimiter);
 
 // POST /api/ai/confirm-tool - execute confirmed tool action
 router.post("/confirm-tool", withAuth(async (req, res) => {

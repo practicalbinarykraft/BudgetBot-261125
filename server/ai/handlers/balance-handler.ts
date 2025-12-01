@@ -7,8 +7,9 @@ export async function handleGetBalance(
 ): Promise<ToolResult> {
   try {
     // Get all user's wallets
-    const wallets = await storage.getWalletsByUserId(userId);
-    
+    const walletsResult = await storage.getWalletsByUserId(userId);
+    const wallets = walletsResult.wallets;
+
     // Calculate total balance in USD
     const totalBalance = wallets.reduce(
       (sum, wallet) => {
@@ -17,7 +18,7 @@ export async function handleGetBalance(
       },
       0
     );
-    
+
     // Get wallet statistics
     const walletCount = wallets.length;
     const primaryWallet = wallets.find(w => w.isPrimary === 1);

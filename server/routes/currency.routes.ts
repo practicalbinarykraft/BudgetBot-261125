@@ -15,6 +15,9 @@ import { Router } from "express";
 import { storage } from "../storage";
 import { getExchangeRateInfo, convertToUSD } from "../services/currency-service";
 import { withAuth } from "../middleware/auth-utils";
+import { cache } from "../lib/redis";
+import { getRateHistory, getAllRatesHistory } from "../services/currency-update.service";
+import { z } from "zod";
 
 const router = Router();
 
@@ -31,8 +34,9 @@ router.get("/exchange-rates", async (req, res) => {
 // POST /api/wallets/refresh-rates
 router.post("/wallets/refresh-rates", withAuth(async (req, res) => {
   try {
-    const wallets = await storage.getWalletsByUserId(req.user.id);
-    
+    const walletsResult = await storage.getWalletsByUserId(req.user.id);
+    const wallets = walletsResult.wallets;
+
     // Update each wallet's USD balance
     const updates = wallets.map(async (wallet) => {
       const balance = parseFloat(wallet.balance);
@@ -56,6 +60,10 @@ router.post("/wallets/refresh-rates", withAuth(async (req, res) => {
     });
     
     const updatedWallets = await Promise.all(updates);
+
+    // Invalidate wallets cache since balances were updated
+    await cache.del(`wallets:user:${req.user.id}`);
+
     res.json({
       message: "Wallet balances refreshed successfully",
       wallets: updatedWallets,
@@ -64,5 +72,77 @@ router.post("/wallets/refresh-rates", withAuth(async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 }));
+
+// GET /api/exchange-rates/history/:currencyCode
+router.get("/exchange-rates/history/:currencyCode", async (req, res) => {
+  try {
+    const { currencyCode } = req.params;
+    const { days, limit } = req.query;
+
+    // Validate query parameters
+    const querySchema = z.object({
+      days: z.string().regex(/^\d+$/).optional(),
+      limit: z.string().regex(/^\d+$/).optional(),
+    });
+
+    const validated = querySchema.safeParse({ days, limit });
+    if (!validated.success) {
+      return res.status(400).json({ error: "Invalid query parameters" });
+    }
+
+    const history = await getRateHistory({
+      currencyCode: currencyCode.toUpperCase(),
+      days: days ? parseInt(String(days)) : undefined,
+      limit: limit ? parseInt(String(limit)) : undefined,
+    });
+
+    res.json({
+      currencyCode: currencyCode.toUpperCase(),
+      history,
+      count: history.length,
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/exchange-rates/history
+router.get("/exchange-rates/history", async (req, res) => {
+  try {
+    const { days, limit } = req.query;
+
+    // Validate query parameters
+    const querySchema = z.object({
+      days: z.string().regex(/^\d+$/).optional(),
+      limit: z.string().regex(/^\d+$/).optional(),
+    });
+
+    const validated = querySchema.safeParse({ days, limit });
+    if (!validated.success) {
+      return res.status(400).json({ error: "Invalid query parameters" });
+    }
+
+    const history = await getAllRatesHistory({
+      days: days ? parseInt(String(days)) : undefined,
+      limit: limit ? parseInt(String(limit)) : undefined,
+    });
+
+    // Group by currency code
+    const grouped = history.reduce((acc, entry) => {
+      if (!acc[entry.currencyCode]) {
+        acc[entry.currencyCode] = [];
+      }
+      acc[entry.currencyCode].push(entry);
+      return acc;
+    }, {} as Record<string, typeof history>);
+
+    res.json({
+      history: grouped,
+      count: history.length,
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 export default router;

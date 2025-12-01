@@ -47,7 +47,8 @@ export async function suggestCategory(
 export async function getUserCategories(
   userId: number
 ): Promise<Category[]> {
-  return storage.getCategoriesByUserId(userId);
+  const { categories } = await storage.getCategoriesByUserId(userId);
+  return categories;
 }
 
 /**
@@ -67,5 +68,6 @@ export async function trainCategory(
 export async function getUserPersonalTags(
   userId: number
 ): Promise<PersonalTag[]> {
-  return storage.getPersonalTagsByUserId(userId);
+  const { tags } = await storage.getPersonalTagsByUserId(userId);
+  return tags;
 }

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { storage } from "../storage";
 import { withAuth } from "../middleware/auth-utils";
+import { heavyOperationRateLimiter } from "../middleware/rate-limit";
 import { calculateTrend } from "../services/trend-calculator.service";
 import { getCategoryBreakdown } from "../services/analytics/category-breakdown.service";
 import { getPersonBreakdown } from "../services/analytics/person-breakdown.service";
@@ -12,6 +13,9 @@ import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYea
 import type { PlannedTransaction } from "@shared/schema";
 
 const router = Router();
+
+// Apply rate limiting to all analytics routes (computationally expensive)
+router.use(heavyOperationRateLimiter);
 
 function getPeriodDates(period: string = 'month'): { startDate: string; endDate: string } {
   const now = new Date();
@@ -150,7 +154,8 @@ router.get("/trend", withAuth(async (req, res) => {
     const today = new Date();
     
     // Получить текущий капитал (сумма всех кошельков)
-    const wallets = await storage.getWalletsByUserId(userId);
+    const walletsResult = await storage.getWalletsByUserId(userId);
+    const wallets = walletsResult.wallets;
     const currentCapital = wallets.reduce((sum, w) => {
       const balance = parseFloat(w.balanceUsd || w.balance || "0");
       return sum + (isNaN(balance) ? 0 : balance);

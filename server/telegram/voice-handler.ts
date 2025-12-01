@@ -6,7 +6,7 @@ import { transcribeVoiceMessage, getTelegramFileUrl } from "../services/whisper-
 import { voiceTransactionNormalizer } from "../services/voice-transaction-normalizer.service";
 import { t } from "@shared/i18n";
 import { getUserLanguageByTelegramId } from "./language";
-import { handleTextMessage } from "./commands";
+import { handleTextMessage } from "./commands/index";
 
 /**
  * Voice Message Handler for Telegram Bot
@@ -51,14 +51,10 @@ export async function handleVoiceMessage(bot: TelegramBot, msg: TelegramBot.Mess
       return;
     }
 
-    // Get user's OpenAI API key from settings
-    const [userSettings] = await db
-      .select()
-      .from(settings)
-      .where(eq(settings.userId, user.id))
-      .limit(1);
-
-    const openaiApiKey = userSettings?.openaiApiKey;
+    // 🔐 Get user's settings and decrypted OpenAI API key
+    const { settingsRepository } = await import('../repositories/settings.repository');
+    const userSettings = await settingsRepository.getSettingsByUserId(user.id);
+    const openaiApiKey = await settingsRepository.getOpenAiApiKey(user.id);
 
     if (!openaiApiKey) {
       await bot.sendMessage(
@@ -134,7 +130,7 @@ export async function handleVoiceMessage(bot: TelegramBot, msg: TelegramBot.Mess
     );
 
     // Try AI normalization (if Anthropic API key available)
-    const anthropicApiKey = userSettings?.anthropicApiKey;
+    const anthropicApiKey = await settingsRepository.getAnthropicApiKey(user.id);
     let processedText = result.text;
 
     if (anthropicApiKey) {

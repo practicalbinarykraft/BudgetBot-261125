@@ -1,427 +1,186 @@
-import { 
-  User, 
-  InsertUser, 
-  Transaction, 
-  InsertTransaction,
-  Wallet,
-  InsertWallet,
-  Category,
-  InsertCategory,
-  PersonalTag,
-  Recurring,
-  InsertRecurring,
-  WishlistItem,
-  InsertWishlist,
-  PlannedTransaction,
-  InsertPlannedTransaction,
-  PlannedIncome,
-  InsertPlannedIncome,
-  Settings,
-  InsertSettings,
-  Budget,
-  InsertBudget,
-  AiChatMessage,
-  InsertAiChatMessage,
-  OwnedInsert
+import {
+  User, InsertUser, Transaction, InsertTransaction, Wallet, InsertWallet,
+  Category, InsertCategory, PersonalTag, Recurring, InsertRecurring,
+  WishlistItem, InsertWishlist, PlannedTransaction, InsertPlannedTransaction,
+  PlannedIncome, InsertPlannedIncome, Settings, InsertSettings,
+  Budget, InsertBudget, AiChatMessage, InsertAiChatMessage, OwnedInsert
 } from "@shared/schema";
 
+import { userRepository } from "./repositories/user.repository";
+import { transactionRepository } from "./repositories/transaction.repository";
+import { walletRepository } from "./repositories/wallet.repository";
+import { categoryRepository } from "./repositories/category.repository";
+import { tagRepository } from "./repositories/tag.repository";
+import { recurringRepository } from "./repositories/recurring.repository";
+import { wishlistRepository } from "./repositories/wishlist.repository";
+import { plannedRepository } from "./repositories/planned.repository";
+import { plannedIncomeRepository } from "./repositories/planned-income.repository";
+import { settingsRepository } from "./repositories/settings.repository";
+import { budgetRepository } from "./repositories/budget.repository";
+import { aiChatRepository } from "./repositories/ai-chat.repository";
+
+/**
+ * Интерфейс хранилища данных
+ *
+ * Для джуна: Это контракт, который описывает все методы работы с БД.
+ * Методы getXxxByUserId возвращают объект с данными и total для пагинации.
+ */
 export interface IStorage {
   // Users
   getUserByEmail(email: string): Promise<User | null>;
   getUserById(id: number): Promise<User | null>;
   createUser(user: InsertUser): Promise<User>;
-  
+
   // Transactions
-  getTransactionsByUserId(userId: number, filters?: { personalTagId?: number; from?: string; to?: string }): Promise<Transaction[]>;
+  getTransactionsByUserId(userId: number, filters?: { personalTagId?: number; from?: string; to?: string; limit?: number; offset?: number }): Promise<{ transactions: Transaction[]; total: number }>;
   getTransactionById(id: number): Promise<Transaction | null>;
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
   updateTransaction(id: number, transaction: Partial<InsertTransaction>): Promise<Transaction>;
   deleteTransaction(id: number): Promise<void>;
-  
+
   // Wallets
-  getWalletsByUserId(userId: number): Promise<Wallet[]>;
+  getWalletsByUserId(userId: number, filters?: { limit?: number; offset?: number }): Promise<{ wallets: Wallet[]; total: number }>;
   getWalletById(id: number): Promise<Wallet | null>;
   createWallet(wallet: InsertWallet): Promise<Wallet>;
   updateWallet(id: number, wallet: Partial<InsertWallet>): Promise<Wallet>;
   deleteWallet(id: number): Promise<void>;
-  
+
   // Categories
-  getCategoriesByUserId(userId: number): Promise<Category[]>;
+  getCategoriesByUserId(userId: number, filters?: { limit?: number; offset?: number }): Promise<{ categories: Category[]; total: number }>;
   getCategoryById(id: number): Promise<Category | null>;
   getCategoryByNameAndUserId(name: string, userId: number): Promise<Category | null>;
   createCategory(category: InsertCategory): Promise<Category>;
   updateCategory(id: number, category: Partial<InsertCategory>): Promise<Category>;
   deleteCategory(id: number): Promise<void>;
-  
+
   // Personal Tags
-  getPersonalTagsByUserId(userId: number): Promise<PersonalTag[]>;
-  
+  getPersonalTagsByUserId(userId: number, filters?: { limit?: number; offset?: number }): Promise<{ tags: PersonalTag[]; total: number }>;
+
   // Recurring
-  getRecurringByUserId(userId: number): Promise<Recurring[]>;
+  getRecurringByUserId(userId: number, filters?: { limit?: number; offset?: number }): Promise<{ recurring: Recurring[]; total: number }>;
   getRecurringById(id: number): Promise<Recurring | null>;
   createRecurring(recurring: InsertRecurring): Promise<Recurring>;
   updateRecurring(id: number, recurring: Partial<InsertRecurring>): Promise<Recurring>;
   deleteRecurring(id: number): Promise<void>;
-  
+
   // Wishlist
   getWishlistByUserId(userId: number): Promise<WishlistItem[]>;
   getWishlistById(id: number): Promise<WishlistItem | null>;
   createWishlist(wishlist: InsertWishlist): Promise<WishlistItem>;
   updateWishlist(id: number, wishlist: Partial<InsertWishlist>): Promise<WishlistItem>;
   deleteWishlist(id: number): Promise<void>;
-  
+
   // Planned Transactions
   getPlannedByUserId(userId: number): Promise<PlannedTransaction[]>;
   getPlannedById(id: number): Promise<PlannedTransaction | null>;
   createPlanned(planned: InsertPlannedTransaction): Promise<PlannedTransaction>;
   updatePlanned(id: number, planned: Partial<InsertPlannedTransaction>): Promise<PlannedTransaction>;
   deletePlanned(id: number): Promise<void>;
-  
+
   // Planned Income
   getPlannedIncomeByUserId(userId: number, filters?: { status?: string }): Promise<PlannedIncome[]>;
   getPlannedIncomeById(id: number): Promise<PlannedIncome | null>;
   createPlannedIncome(income: OwnedInsert<InsertPlannedIncome>): Promise<PlannedIncome>;
   updatePlannedIncome(id: number, income: Partial<InsertPlannedIncome>): Promise<PlannedIncome>;
   deletePlannedIncome(id: number): Promise<void>;
-  
+
   // Settings
   getSettingsByUserId(userId: number): Promise<Settings | null>;
   createSettings(settings: InsertSettings): Promise<Settings>;
   updateSettings(userId: number, settings: Partial<InsertSettings>): Promise<Settings>;
-  
+
   // Budgets
-  getBudgetsByUserId(userId: number): Promise<Budget[]>;
+  getBudgetsByUserId(userId: number, filters?: { limit?: number; offset?: number }): Promise<{ budgets: Budget[]; total: number }>;
   getBudgetById(id: number): Promise<Budget | null>;
   createBudget(budget: OwnedInsert<InsertBudget>): Promise<Budget>;
   updateBudget(id: number, budget: Partial<InsertBudget>): Promise<Budget>;
   deleteBudget(id: number): Promise<void>;
-  
+
   // AI Chat Messages
   getAIChatMessages(userId: number, limit?: number): Promise<AiChatMessage[]>;
   createAIChatMessage(message: OwnedInsert<InsertAiChatMessage>): Promise<number>;
 }
 
-import { db } from "./db";
-import { 
-  users, 
-  transactions, 
-  wallets, 
-  categories,
-  personalTags,
-  recurring, 
-  wishlist, 
-  plannedTransactions,
-  plannedIncome,
-  settings,
-  budgets,
-  aiChatMessages
-} from "@shared/schema";
-import { eq, and, desc, asc, gte, lte } from "drizzle-orm";
-
+/**
+ * Реализация хранилища через PostgreSQL/Drizzle
+ *
+ * Для джуна: Этот класс делегирует вызовы в отдельные репозитории.
+ * Каждый репозиторий отвечает за свою таблицу в БД.
+ */
 export class DatabaseStorage implements IStorage {
   // Users
-  async getUserByEmail(email: string): Promise<User | null> {
-    const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
-    return result[0] || null;
-  }
-
-  async getUserById(id: number): Promise<User | null> {
-    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
-    return result[0] || null;
-  }
-
-  async createUser(user: InsertUser): Promise<User> {
-    const result = await db.insert(users).values(user).returning();
-    return result[0];
-  }
+  getUserByEmail(email: string) { return userRepository.getUserByEmail(email); }
+  getUserById(id: number) { return userRepository.getUserById(id); }
+  createUser(user: InsertUser) { return userRepository.createUser(user); }
 
   // Transactions
-  async getTransactionsByUserId(userId: number, filters?: { personalTagId?: number; from?: string; to?: string }): Promise<Transaction[]> {
-    const conditions = [eq(transactions.userId, userId)];
-    
-    if (filters?.personalTagId !== undefined) {
-      conditions.push(eq(transactions.personalTagId, filters.personalTagId));
-    }
-    
-    if (filters?.from) {
-      conditions.push(gte(transactions.date, filters.from));
-    }
-    
-    if (filters?.to) {
-      conditions.push(lte(transactions.date, filters.to));
-    }
-    
-    return db.select()
-      .from(transactions)
-      .where(and(...conditions))
-      .orderBy(desc(transactions.date), desc(transactions.id));
-  }
-
-  async getTransactionById(id: number): Promise<Transaction | null> {
-    const result = await db.select().from(transactions).where(eq(transactions.id, id)).limit(1);
-    return result[0] || null;
-  }
-
-  async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
-    const result = await db.insert(transactions).values(transaction).returning();
-    return result[0];
-  }
-
-  async updateTransaction(id: number, transaction: Partial<InsertTransaction>): Promise<Transaction> {
-    const result = await db.update(transactions).set(transaction).where(eq(transactions.id, id)).returning();
-    return result[0];
-  }
-
-  async deleteTransaction(id: number): Promise<void> {
-    await db.delete(transactions).where(eq(transactions.id, id));
-  }
+  getTransactionsByUserId(userId: number, filters?: { personalTagId?: number; from?: string; to?: string; limit?: number; offset?: number }) { return transactionRepository.getTransactionsByUserId(userId, filters); }
+  getTransactionById(id: number) { return transactionRepository.getTransactionById(id); }
+  createTransaction(transaction: InsertTransaction) { return transactionRepository.createTransaction(transaction); }
+  updateTransaction(id: number, transaction: Partial<InsertTransaction>) { return transactionRepository.updateTransaction(id, transaction); }
+  deleteTransaction(id: number) { return transactionRepository.deleteTransaction(id); }
 
   // Wallets
-  async getWalletsByUserId(userId: number): Promise<Wallet[]> {
-    return db.select().from(wallets).where(eq(wallets.userId, userId));
-  }
-
-  async getWalletById(id: number): Promise<Wallet | null> {
-    const result = await db.select().from(wallets).where(eq(wallets.id, id)).limit(1);
-    return result[0] || null;
-  }
-
-  async createWallet(wallet: InsertWallet): Promise<Wallet> {
-    const result = await db.insert(wallets).values(wallet).returning();
-    return result[0];
-  }
-
-  async updateWallet(id: number, wallet: Partial<InsertWallet>): Promise<Wallet> {
-    const result = await db.update(wallets).set(wallet).where(eq(wallets.id, id)).returning();
-    return result[0];
-  }
-
-  async deleteWallet(id: number): Promise<void> {
-    await db.delete(wallets).where(eq(wallets.id, id));
-  }
+  getWalletsByUserId(userId: number, filters?: { limit?: number; offset?: number }) { return walletRepository.getWalletsByUserId(userId, filters); }
+  getWalletById(id: number) { return walletRepository.getWalletById(id); }
+  createWallet(wallet: InsertWallet) { return walletRepository.createWallet(wallet); }
+  updateWallet(id: number, wallet: Partial<InsertWallet>) { return walletRepository.updateWallet(id, wallet); }
+  deleteWallet(id: number) { return walletRepository.deleteWallet(id); }
 
   // Categories
-  async getCategoriesByUserId(userId: number): Promise<Category[]> {
-    return db.select().from(categories).where(eq(categories.userId, userId));
-  }
-
-  async getCategoryById(id: number): Promise<Category | null> {
-    const result = await db.select().from(categories).where(eq(categories.id, id)).limit(1);
-    return result[0] || null;
-  }
-
-  async getCategoryByNameAndUserId(name: string, userId: number): Promise<Category | null> {
-    const result = await db
-      .select()
-      .from(categories)
-      .where(and(eq(categories.name, name), eq(categories.userId, userId)))
-      .limit(1);
-    return result[0] || null;
-  }
-
-  async createCategory(category: InsertCategory): Promise<Category> {
-    const result = await db.insert(categories).values(category).returning();
-    return result[0];
-  }
-
-  async updateCategory(id: number, category: Partial<InsertCategory>): Promise<Category> {
-    const result = await db.update(categories).set(category).where(eq(categories.id, id)).returning();
-    return result[0];
-  }
-
-  async deleteCategory(id: number): Promise<void> {
-    await db.delete(categories).where(eq(categories.id, id));
-  }
+  getCategoriesByUserId(userId: number, filters?: { limit?: number; offset?: number }) { return categoryRepository.getCategoriesByUserId(userId, filters); }
+  getCategoryById(id: number) { return categoryRepository.getCategoryById(id); }
+  getCategoryByNameAndUserId(name: string, userId: number) { return categoryRepository.getCategoryByNameAndUserId(name, userId); }
+  createCategory(category: InsertCategory) { return categoryRepository.createCategory(category); }
+  updateCategory(id: number, category: Partial<InsertCategory>) { return categoryRepository.updateCategory(id, category); }
+  deleteCategory(id: number) { return categoryRepository.deleteCategory(id); }
 
   // Personal Tags
-  async getPersonalTagsByUserId(userId: number): Promise<PersonalTag[]> {
-    return db.select().from(personalTags).where(eq(personalTags.userId, userId));
-  }
+  getPersonalTagsByUserId(userId: number, filters?: { limit?: number; offset?: number }) { return tagRepository.getPersonalTagsByUserId(userId, filters); }
 
   // Recurring
-  async getRecurringByUserId(userId: number): Promise<Recurring[]> {
-    return db.select().from(recurring).where(eq(recurring.userId, userId));
-  }
-
-  async getRecurringById(id: number): Promise<Recurring | null> {
-    const result = await db.select().from(recurring).where(eq(recurring.id, id)).limit(1);
-    return result[0] || null;
-  }
-
-  async createRecurring(recurringData: InsertRecurring): Promise<Recurring> {
-    const result = await db.insert(recurring).values(recurringData).returning();
-    return result[0];
-  }
-
-  async updateRecurring(id: number, recurringData: Partial<InsertRecurring>): Promise<Recurring> {
-    const result = await db.update(recurring).set(recurringData).where(eq(recurring.id, id)).returning();
-    return result[0];
-  }
-
-  async deleteRecurring(id: number): Promise<void> {
-    await db.delete(recurring).where(eq(recurring.id, id));
-  }
+  getRecurringByUserId(userId: number, filters?: { limit?: number; offset?: number }) { return recurringRepository.getRecurringByUserId(userId, filters); }
+  getRecurringById(id: number) { return recurringRepository.getRecurringById(id); }
+  createRecurring(recurring: InsertRecurring) { return recurringRepository.createRecurring(recurring); }
+  updateRecurring(id: number, recurring: Partial<InsertRecurring>) { return recurringRepository.updateRecurring(id, recurring); }
+  deleteRecurring(id: number) { return recurringRepository.deleteRecurring(id); }
 
   // Wishlist
-  async getWishlistByUserId(userId: number): Promise<WishlistItem[]> {
-    return db.select().from(wishlist).where(eq(wishlist.userId, userId));
-  }
-
-  async getWishlistById(id: number): Promise<WishlistItem | null> {
-    const result = await db.select().from(wishlist).where(eq(wishlist.id, id)).limit(1);
-    return result[0] || null;
-  }
-
-  async createWishlist(wishlistData: InsertWishlist): Promise<WishlistItem> {
-    const result = await db.insert(wishlist).values(wishlistData).returning();
-    return result[0];
-  }
-
-  async updateWishlist(id: number, wishlistData: Partial<InsertWishlist>): Promise<WishlistItem> {
-    const result = await db.update(wishlist).set(wishlistData).where(eq(wishlist.id, id)).returning();
-    return result[0];
-  }
-
-  async deleteWishlist(id: number): Promise<void> {
-    await db.delete(wishlist).where(eq(wishlist.id, id));
-  }
+  getWishlistByUserId(userId: number) { return wishlistRepository.getWishlistByUserId(userId); }
+  getWishlistById(id: number) { return wishlistRepository.getWishlistById(id); }
+  createWishlist(wishlist: InsertWishlist) { return wishlistRepository.createWishlist(wishlist); }
+  updateWishlist(id: number, wishlist: Partial<InsertWishlist>) { return wishlistRepository.updateWishlist(id, wishlist); }
+  deleteWishlist(id: number) { return wishlistRepository.deleteWishlist(id); }
 
   // Planned Transactions
-  async getPlannedByUserId(userId: number): Promise<PlannedTransaction[]> {
-    return db.select().from(plannedTransactions).where(eq(plannedTransactions.userId, userId));
-  }
-
-  async getPlannedById(id: number): Promise<PlannedTransaction | null> {
-    const result = await db.select().from(plannedTransactions).where(eq(plannedTransactions.id, id)).limit(1);
-    return result[0] || null;
-  }
-
-  async createPlanned(plannedData: InsertPlannedTransaction): Promise<PlannedTransaction> {
-    const result = await db.insert(plannedTransactions).values(plannedData).returning();
-    return result[0];
-  }
-
-  async updatePlanned(id: number, plannedData: Partial<InsertPlannedTransaction>): Promise<PlannedTransaction> {
-    const result = await db.update(plannedTransactions).set({ 
-      ...plannedData, 
-      updatedAt: new Date() 
-    }).where(eq(plannedTransactions.id, id)).returning();
-    return result[0];
-  }
-
-  async deletePlanned(id: number): Promise<void> {
-    await db.delete(plannedTransactions).where(eq(plannedTransactions.id, id));
-  }
+  getPlannedByUserId(userId: number) { return plannedRepository.getPlannedByUserId(userId); }
+  getPlannedById(id: number) { return plannedRepository.getPlannedById(id); }
+  createPlanned(planned: InsertPlannedTransaction) { return plannedRepository.createPlanned(planned); }
+  updatePlanned(id: number, planned: Partial<InsertPlannedTransaction>) { return plannedRepository.updatePlanned(id, planned); }
+  deletePlanned(id: number) { return plannedRepository.deletePlanned(id); }
 
   // Planned Income
-  async getPlannedIncomeByUserId(userId: number, filters?: { status?: string }): Promise<PlannedIncome[]> {
-    if (filters?.status) {
-      return db.select()
-        .from(plannedIncome)
-        .where(and(
-          eq(plannedIncome.userId, userId),
-          eq(plannedIncome.status, filters.status)
-        ))
-        .orderBy(asc(plannedIncome.expectedDate));
-    }
-    return db.select()
-      .from(plannedIncome)
-      .where(eq(plannedIncome.userId, userId))
-      .orderBy(asc(plannedIncome.expectedDate));
-  }
-
-  async getPlannedIncomeById(id: number): Promise<PlannedIncome | null> {
-    const result = await db.select().from(plannedIncome).where(eq(plannedIncome.id, id)).limit(1);
-    return result[0] || null;
-  }
-
-  async createPlannedIncome(incomeData: OwnedInsert<InsertPlannedIncome>): Promise<PlannedIncome> {
-    const result = await db.insert(plannedIncome).values(incomeData as any).returning();
-    return result[0];
-  }
-
-  async updatePlannedIncome(id: number, incomeData: Partial<InsertPlannedIncome>): Promise<PlannedIncome> {
-    const result = await db.update(plannedIncome).set({
-      ...incomeData,
-      updatedAt: new Date()
-    }).where(eq(plannedIncome.id, id)).returning();
-    
-    if (!result[0]) {
-      throw new Error("Planned income not found or update failed");
-    }
-    return result[0];
-  }
-
-  async deletePlannedIncome(id: number): Promise<void> {
-    const result = await db.delete(plannedIncome).where(eq(plannedIncome.id, id)).returning();
-    if (!result[0]) {
-      throw new Error("Planned income not found or delete failed");
-    }
-  }
+  getPlannedIncomeByUserId(userId: number, filters?: { status?: string }) { return plannedIncomeRepository.getPlannedIncomeByUserId(userId, filters); }
+  getPlannedIncomeById(id: number) { return plannedIncomeRepository.getPlannedIncomeById(id); }
+  createPlannedIncome(income: OwnedInsert<InsertPlannedIncome>) { return plannedIncomeRepository.createPlannedIncome(income); }
+  updatePlannedIncome(id: number, income: Partial<InsertPlannedIncome>) { return plannedIncomeRepository.updatePlannedIncome(id, income); }
+  deletePlannedIncome(id: number) { return plannedIncomeRepository.deletePlannedIncome(id); }
 
   // Settings
-  async getSettingsByUserId(userId: number): Promise<Settings | null> {
-    const result = await db.select().from(settings).where(eq(settings.userId, userId)).limit(1);
-    return result[0] || null;
-  }
-
-  async createSettings(settingsData: InsertSettings): Promise<Settings> {
-    const result = await db.insert(settings).values(settingsData).returning();
-    return result[0];
-  }
-
-  async updateSettings(userId: number, settingsData: Partial<InsertSettings>): Promise<Settings> {
-    const result = await db.update(settings).set(settingsData).where(eq(settings.userId, userId)).returning();
-    return result[0];
-  }
+  getSettingsByUserId(userId: number) { return settingsRepository.getSettingsByUserId(userId); }
+  createSettings(settings: InsertSettings) { return settingsRepository.createSettings(settings); }
+  updateSettings(userId: number, settings: Partial<InsertSettings>) { return settingsRepository.updateSettings(userId, settings); }
 
   // Budgets
-  async getBudgetsByUserId(userId: number): Promise<Budget[]> {
-    return db.select().from(budgets).where(eq(budgets.userId, userId));
-  }
-
-  async getBudgetById(id: number): Promise<Budget | null> {
-    const result = await db.select().from(budgets).where(eq(budgets.id, id)).limit(1);
-    return result[0] || null;
-  }
-
-  async createBudget(budgetData: OwnedInsert<InsertBudget>): Promise<Budget> {
-    const payload: typeof budgets.$inferInsert = {
-      ...budgetData,
-      limitAmount: budgetData.limitAmount.toFixed(2),
-    };
-    const result = await db.insert(budgets).values(payload).returning();
-    return result[0];
-  }
-
-  async updateBudget(id: number, budgetData: Partial<InsertBudget>): Promise<Budget> {
-    const { limitAmount, ...rest } = budgetData;
-    const payload: Partial<typeof budgets.$inferInsert> = { ...rest };
-    if (limitAmount !== undefined && limitAmount !== null) {
-      payload.limitAmount = limitAmount.toFixed(2);
-    }
-    const result = await db.update(budgets).set(payload).where(eq(budgets.id, id)).returning();
-    return result[0];
-  }
-
-  async deleteBudget(id: number): Promise<void> {
-    await db.delete(budgets).where(eq(budgets.id, id));
-  }
+  getBudgetsByUserId(userId: number, filters?: { limit?: number; offset?: number }) { return budgetRepository.getBudgetsByUserId(userId, filters); }
+  getBudgetById(id: number) { return budgetRepository.getBudgetById(id); }
+  createBudget(budget: OwnedInsert<InsertBudget>) { return budgetRepository.createBudget(budget); }
+  updateBudget(id: number, budget: Partial<InsertBudget>) { return budgetRepository.updateBudget(id, budget); }
+  deleteBudget(id: number) { return budgetRepository.deleteBudget(id); }
 
   // AI Chat Messages
-  async getAIChatMessages(userId: number, limit: number = 50): Promise<AiChatMessage[]> {
-    return db
-      .select()
-      .from(aiChatMessages)
-      .where(eq(aiChatMessages.userId, userId))
-      .orderBy(asc(aiChatMessages.createdAt))
-      .limit(limit);
-  }
-
-  async createAIChatMessage(messageData: OwnedInsert<InsertAiChatMessage>): Promise<number> {
-    const result = await db.insert(aiChatMessages).values(messageData).returning();
-    return result[0].id;
-  }
+  getAIChatMessages(userId: number, limit?: number) { return aiChatRepository.getAIChatMessages(userId, limit); }
+  createAIChatMessage(message: OwnedInsert<InsertAiChatMessage>) { return aiChatRepository.createAIChatMessage(message); }
 }
 
 export const storage = new DatabaseStorage();

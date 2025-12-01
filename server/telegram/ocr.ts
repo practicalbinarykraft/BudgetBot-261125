@@ -43,9 +43,9 @@ export async function processReceiptImage(
   try {
     console.log('1️⃣ Starting OCR process for user:', userId);
     
-    // 1. Загрузить настройки пользователя
-    const settings = await storage.getSettingsByUserId(userId);
-    const apiKey = settings?.anthropicApiKey;
+    // 1. Загрузить настройки пользователя (с автоматической дешифровкой)
+    const { settingsRepository } = await import('../repositories/settings.repository');
+    const apiKey = await settingsRepository.getAnthropicApiKey(userId);
 
     if (!apiKey) {
       console.error('❌ OCR failed: User has no Anthropic API key in Settings');

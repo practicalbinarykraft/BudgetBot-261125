@@ -144,10 +144,10 @@ export async function getRecurringIncomeForDate(
   userId: number,
   date: Date
 ): Promise<number> {
-  const recurring = await storage.getRecurringByUserId(userId);
-  
+  const { recurring } = await storage.getRecurringByUserId(userId);
+
   let income = 0;
-  
+
   for (const r of recurring) {
     if (!r.isActive || r.type !== 'income') continue;
     
@@ -168,10 +168,10 @@ export async function getRecurringExpenseForDate(
   userId: number,
   date: Date
 ): Promise<number> {
-  const recurring = await storage.getRecurringByUserId(userId);
-  
+  const { recurring } = await storage.getRecurringByUserId(userId);
+
   let expense = 0;
-  
+
   for (const r of recurring) {
     if (!r.isActive || r.type !== 'expense') continue;
     
@@ -238,10 +238,10 @@ export async function getDailyBudgetTotal(
   userId: number,
   date: Date
 ): Promise<number> {
-  const budgets = await storage.getBudgetsByUserId(userId);
-  
+  const { budgets } = await storage.getBudgetsByUserId(userId);
+
   let total = 0;
-  
+
   for (const b of budgets) {
     if (b.startDate) {
       const startDate = new Date(b.startDate);

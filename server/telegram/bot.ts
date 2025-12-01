@@ -1,340 +1,271 @@
+/**
+ * Главный модуль Telegram бота
+ *
+ * Для джуна: Этот файл отвечает ТОЛЬКО за:
+ * 1. Инициализацию бота (polling или webhook)
+ * 2. Подключение обработчиков сообщений
+ * 3. Обработку ошибок
+ *
+ * Вся бизнес-логика вынесена в:
+ * - handlers/command-registry.ts — команды (/start, /help, etc.)
+ * - handlers/callbacks/ — inline-кнопки
+ * - middleware/with-user.ts — авторизация
+ */
+
 import TelegramBot from 'node-telegram-bot-api';
-import {
-  handleStartCommand,
-  handleVerifyCommand,
-  handleHelpCommand,
-  handleBalanceCommand,
-  handleLanguageCommand,
-  handleLastCommand,
-  handleIncomeCommand,
-  handleStatusCommand,
-  handleTextMessage,
-  handlePhotoMessage,
-  handleCallbackQuery,
-} from './commands';
-import { handleCurrencyCommand, handleCurrencyCallback } from './currency-command';
-import { handleVoiceMessage } from './voice-handler';
 import { TELEGRAM_BOT_TOKEN } from './config';
+import { logInfo, logError, logWarning } from '../lib/logger';
+
+// Хендлеры
+import { dispatchCommand, isCommand, parseCommand } from './handlers/command-registry';
+import { routeCallback } from './handlers/callbacks';
+import { withUser, withUserCallback, findUserByTelegramId } from './middleware/with-user';
+
+// Специализированные хендлеры
+import { handleTextMessage, handlePhotoMessage } from './commands/index';
+import { handleVoiceMessage } from './voice-handler';
 import { getUserLanguageByTelegramId } from './language';
 import { t } from '@shared/i18n';
+
+// Меню
 import { isMainMenuButton, getMenuSection } from './menu/keyboards';
-import { showAiChatWelcome, handleAiChatMessage, endAiChat, isAiChatActive } from './menu/ai-chat-handler';
+import { showAiChatWelcome, handleAiChatMessage, isAiChatActive } from './menu/ai-chat-handler';
 import { showWallets } from './menu/wallets-handler';
 import { showTransactions } from './menu/transactions-handler';
-import { showSettings, showLanguageMenu, showCurrencyMenu, showTimezoneMenu } from './menu/settings-handler';
-import { db } from '../db';
-import { users, settings as settingsTable } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { showSettings } from './menu/settings-handler';
 
 let bot: TelegramBot | null = null;
 
+/**
+ * Получить экземпляр бота
+ *
+ * Для джуна: Используется в webhook route для обработки входящих сообщений
+ */
+export function getTelegramBot(): TelegramBot | null {
+  return bot;
+}
+
+/**
+ * Инициализировать Telegram бота
+ *
+ * Для джуна: Два режима работы:
+ * 1. Polling — бот сам опрашивает Telegram (dev)
+ * 2. Webhook — Telegram отправляет сообщения нам (prod)
+ */
 export function initTelegramBot(): TelegramBot | null {
   if (!TELEGRAM_BOT_TOKEN) {
-    console.warn('⚠️ TELEGRAM_BOT_TOKEN not set. Telegram bot will not start.');
+    logWarning('TELEGRAM_BOT_TOKEN not set. Telegram bot will not start.');
     return null;
   }
 
   try {
-    bot = new TelegramBot(TELEGRAM_BOT_TOKEN, {
-      polling: {
-        interval: 300,
-        autoStart: true,
-        params: {
-          timeout: 10
-        }
-      }
-    });
-
-    console.log('✅ Telegram bot initialized successfully');
-
-    bot.on('message', async (msg) => {
-      try {
-        if (msg.text?.startsWith('/')) {
-          const parts = msg.text.split(' ');
-          const command = parts[0].toLowerCase();
-          const args = parts.slice(1);
-
-          switch (command) {
-            case '/start':
-              await handleStartCommand(bot!, msg);
-              break;
-            case '/verify':
-              await handleVerifyCommand(bot!, msg, args[0] || '');
-              break;
-            case '/help':
-              await handleHelpCommand(bot!, msg);
-              break;
-            case '/balance':
-              await handleBalanceCommand(bot!, msg);
-              break;
-            case '/language':
-            case '/lang':
-              await handleLanguageCommand(bot!, msg);
-              break;
-            case '/last':
-              await handleLastCommand(bot!, msg);
-              break;
-            case '/income':
-              await handleIncomeCommand(bot!, msg, args.join(' '));
-              break;
-            case '/status':
-              await handleStatusCommand(bot!, msg);
-              break;
-            case '/currency':
-              await handleCurrencyCommand(bot!, msg);
-              break;
-            default:
-              // Get user's language for error message
-              const telegramId = msg.from?.id.toString();
-              const lang = telegramId ? await getUserLanguageByTelegramId(telegramId) : 'en';
-              
-              await bot!.sendMessage(
-                msg.chat.id,
-                t('error.unknown_command', lang)
-              );
-          }
-        } else if (msg.photo && msg.photo.length > 0) {
-          await handlePhotoMessage(bot!, msg);
-        } else if (msg.voice || msg.audio) {
-          await handleVoiceMessage(bot!, msg);
-        } else if (msg.text) {
-          // Получить userId для проверки состояния AI чата
-          const telegramId = msg.from?.id.toString();
-          if (!telegramId) return;
-          
-          const [user] = await db
-            .select()
-            .from(users)
-            .where(eq(users.telegramId, telegramId))
-            .limit(1);
-          
-          if (!user) {
-            await handleTextMessage(bot!, msg);
-            return;
-          }
-          
-          // Проверка на кнопки главного меню
-          if (isMainMenuButton(msg.text)) {
-            const section = getMenuSection(msg.text);
-            
-            switch (section) {
-              case 'ai_chat':
-                await showAiChatWelcome(bot!, msg.chat.id, user.id);
-                break;
-              case 'wallets':
-                await showWallets(bot!, msg.chat.id, user.id);
-                break;
-              case 'transactions':
-                await showTransactions(bot!, msg.chat.id, user.id);
-                break;
-              case 'settings':
-                await showSettings(bot!, msg.chat.id, user.id);
-                break;
-            }
-            return;
-          }
-          
-          // Если AI чат активен - отправить сообщение в AI
-          if (await isAiChatActive(user.id)) {
-            await handleAiChatMessage(bot!, msg.chat.id, user.id, msg.text);
-            return;
-          }
-          
-          // Обычная обработка (парсинг транзакций и т.д.)
-          await handleTextMessage(bot!, msg);
-        }
-      } catch (error) {
-        console.error('Error handling message:', error);
-        try {
-          const telegramId = msg.from?.id.toString();
-          const lang = telegramId ? await getUserLanguageByTelegramId(telegramId) : 'en';
-          
-          await bot!.sendMessage(
-            msg.chat.id,
-            t('error.generic', lang)
-          );
-        } catch (sendError) {
-          console.error('Error sending error message:', sendError);
-        }
-      }
-    });
-
-    bot.on('callback_query', async (query) => {
-      try {
-        const data = query.data;
-        const chatId = query.message?.chat.id;
-        const telegramId = query.from.id.toString();
-        
-        if (!chatId || !data) return;
-        
-        // Получить userId
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.telegramId, telegramId))
-          .limit(1);
-        
-        if (!user) {
-          // Get language from telegramId for error message
-          const lang = await getUserLanguageByTelegramId(telegramId);
-          const errorText = lang === 'ru' 
-            ? 'Пользователь не найден. Используй /verify для подключения.'
-            : 'User not found. Use /verify to connect.';
-          
-          await bot!.answerCallbackQuery(query.id, { text: errorText, show_alert: true });
-          return;
-        }
-        
-        // AI Chat callbacks
-        if (data === 'ai_chat:end') {
-          await endAiChat(bot!, chatId, user.id);
-          await bot!.answerCallbackQuery(query.id);
-          return;
-        }
-        
-        // Главное меню
-        if (data === 'main_menu') {
-          const { getMainMenuKeyboard, getMainMenuHint } = await import('./menu/keyboards');
-          const { getUserLanguageByUserId } = await import('./language');
-          const lang = await getUserLanguageByUserId(user.id);
-          
-          await bot!.sendMessage(chatId, getMainMenuHint(lang), {
-            parse_mode: 'Markdown',
-            reply_markup: getMainMenuKeyboard()
-          });
-          await bot!.answerCallbackQuery(query.id);
-          return;
-        }
-        
-        // Транзакции фильтры
-        if (data.startsWith('transactions:filter:')) {
-          const filter = data.split(':')[2] as 'all' | 'expense' | 'income';
-          await showTransactions(bot!, chatId, user.id, filter);
-          await bot!.answerCallbackQuery(query.id);
-          return;
-        }
-        
-        // Настройки callbacks
-        if (data === 'settings') {
-          await showSettings(bot!, chatId, user.id);
-          await bot!.answerCallbackQuery(query.id);
-          return;
-        }
-        
-        if (data === 'settings:language') {
-          await showLanguageMenu(bot!, chatId, user.id);
-          await bot!.answerCallbackQuery(query.id);
-          return;
-        }
-        
-        if (data === 'settings:currency') {
-          await showCurrencyMenu(bot!, chatId, user.id);
-          await bot!.answerCallbackQuery(query.id);
-          return;
-        }
-        
-        if (data === 'settings:timezone') {
-          await showTimezoneMenu(bot!, chatId, user.id);
-          await bot!.answerCallbackQuery(query.id);
-          return;
-        }
-        
-        // Сохранение настроек языка
-        if (data.startsWith('settings:language:')) {
-          const newLang = data.split(':')[2] as 'en' | 'ru';
-          
-          await db
-            .insert(settingsTable)
-            .values({ userId: user.id, language: newLang })
-            .onConflictDoUpdate({
-              target: settingsTable.userId,
-              set: { language: newLang }
-            });
-          
-          await showSettings(bot!, chatId, user.id);
-          await bot!.answerCallbackQuery(query.id, { 
-            text: newLang === 'ru' ? '✅ Язык изменён' : '✅ Language changed'
-          });
-          return;
-        }
-        
-        // Сохранение настроек валюты
-        if (data.startsWith('settings:currency:')) {
-          const newCurrency = data.split(':')[2] as 'USD' | 'RUB' | 'IDR';
-          
-          await db
-            .insert(settingsTable)
-            .values({ userId: user.id, currency: newCurrency })
-            .onConflictDoUpdate({
-              target: settingsTable.userId,
-              set: { currency: newCurrency }
-            });
-          
-          await showSettings(bot!, chatId, user.id);
-          await bot!.answerCallbackQuery(query.id, { 
-            text: `✅ Currency: ${newCurrency}`
-          });
-          return;
-        }
-        
-        // Сохранение часового пояса
-        if (data.startsWith('settings:timezone:')) {
-          const newTimezone = data.split(':')[2];
-          
-          await db
-            .insert(settingsTable)
-            .values({ userId: user.id, timezone: newTimezone })
-            .onConflictDoUpdate({
-              target: settingsTable.userId,
-              set: { timezone: newTimezone }
-            });
-          
-          await showSettings(bot!, chatId, user.id);
-          await bot!.answerCallbackQuery(query.id, { 
-            text: `✅ Timezone: ${newTimezone}`
-          });
-          return;
-        }
-        
-        // Legacy currency callback (от старой команды /currency)
-        if (data.startsWith('currency:')) {
-          await handleCurrencyCallback(bot!, query);
-          return;
-        }
-        
-        // Другие callbacks
-        await handleCallbackQuery(bot!, query);
-      } catch (error) {
-        console.error('Error handling callback query:', error);
-      }
-    });
-
-    bot.on('polling_error', (error) => {
-      console.error('Telegram polling error:', error);
-    });
-
-    bot.on('error', (error) => {
-      console.error('Telegram bot error:', error);
-    });
-
+    bot = createBotInstance();
+    if (bot) {
+      setupMessageHandlers();
+    }
     return bot;
   } catch (error) {
-    console.error('Failed to initialize Telegram bot:', error);
+    logError('Failed to initialize Telegram bot', error as Error);
     return null;
   }
 }
 
+/**
+ * Создать экземпляр бота (webhook или polling)
+ */
+function createBotInstance(): TelegramBot | null {
+  const useWebhook = process.env.TELEGRAM_USE_WEBHOOK === 'true';
+  const webhookUrl = process.env.TELEGRAM_WEBHOOK_URL;
+
+  // Webhook режим (production)
+  if (useWebhook && webhookUrl) {
+    const instance = new TelegramBot(TELEGRAM_BOT_TOKEN!, { polling: false });
+    const webhookPath = `/telegram/webhook/${TELEGRAM_BOT_TOKEN!.split(':')[1]}`;
+    const fullWebhookUrl = `${webhookUrl}${webhookPath}`;
+
+    instance.setWebHook(fullWebhookUrl)
+      .then(() => logInfo('Telegram webhook set successfully', { mode: 'webhook' }))
+      .catch((error) => logError('Failed to set Telegram webhook', error as Error));
+
+    logInfo('Telegram bot initialized in WEBHOOK mode');
+    return instance;
+  }
+
+  // Polling режим (development)
+  const instance = new TelegramBot(TELEGRAM_BOT_TOKEN!, {
+    polling: { interval: 300, autoStart: true, params: { timeout: 10 } }
+  });
+
+  logInfo('Telegram bot initialized in POLLING mode');
+  return instance;
+}
+
+/**
+ * Подключить обработчики сообщений
+ *
+ * Для джуна: Здесь подключаются все типы сообщений:
+ * - Команды (/start, /help)
+ * - Текст (парсинг транзакций)
+ * - Фото (OCR чеков)
+ * - Голос (распознавание речи)
+ * - Callback (inline-кнопки)
+ */
+function setupMessageHandlers(): void {
+  if (!bot) return;
+
+  // Обработка входящих сообщений
+  bot.on('message', handleIncomingMessage);
+
+  // Обработка нажатий на inline-кнопки
+  bot.on('callback_query', handleIncomingCallback);
+
+  // Обработка ошибок
+  bot.on('polling_error', (error) => logError('Telegram polling error', error as Error));
+  bot.on('error', (error) => logError('Telegram bot error', error as Error));
+}
+
+/**
+ * Обработать входящее сообщение
+ *
+ * Для джуна: Порядок проверок важен:
+ * 1. Команда? → dispatchCommand
+ * 2. Фото? → OCR
+ * 3. Голос? → Speech-to-text
+ * 4. Текст? → Меню или парсинг транзакции
+ */
+async function handleIncomingMessage(msg: TelegramBot.Message): Promise<void> {
+  try {
+    // 1. Команды
+    if (msg.text && isCommand(msg.text)) {
+      const { command, args } = parseCommand(msg.text);
+      await dispatchCommand(bot!, msg, command, args);
+      return;
+    }
+
+    // 2. Фото (OCR)
+    if (msg.photo && msg.photo.length > 0) {
+      await handlePhotoMessage(bot!, msg);
+      return;
+    }
+
+    // 3. Голосовые сообщения
+    if (msg.voice || msg.audio) {
+      await handleVoiceMessage(bot!, msg);
+      return;
+    }
+
+    // 4. Текстовые сообщения
+    if (msg.text) {
+      await handleTextMessageWithContext(msg);
+      return;
+    }
+  } catch (error) {
+    await handleMessageError(msg, error as Error);
+  }
+}
+
+/**
+ * Обработать текстовое сообщение с учётом контекста
+ *
+ * Для джуна: Текст может быть:
+ * - Кнопка главного меню → показать раздел
+ * - Сообщение в AI чат → отправить в AI
+ * - Обычный текст → парсить как транзакцию
+ */
+async function handleTextMessageWithContext(msg: TelegramBot.Message): Promise<void> {
+  const telegramId = msg.from?.id.toString();
+  if (!telegramId || !msg.text) return;
+
+  const user = await findUserByTelegramId(telegramId);
+
+  // Пользователь не авторизован → парсить как транзакцию
+  if (!user) {
+    await handleTextMessage(bot!, msg);
+    return;
+  }
+
+  // Кнопка главного меню
+  if (isMainMenuButton(msg.text)) {
+    await handleMenuButton(msg, user.id);
+    return;
+  }
+
+  // AI чат активен → отправить в AI
+  if (await isAiChatActive(user.id)) {
+    await handleAiChatMessage(bot!, msg.chat.id, user.id, msg.text);
+    return;
+  }
+
+  // Обычная обработка (парсинг транзакций)
+  await handleTextMessage(bot!, msg);
+}
+
+/**
+ * Обработать нажатие кнопки меню
+ */
+async function handleMenuButton(msg: TelegramBot.Message, userId: number): Promise<void> {
+  const section = getMenuSection(msg.text!);
+
+  switch (section) {
+    case 'ai_chat':
+      await showAiChatWelcome(bot!, msg.chat.id, userId);
+      break;
+    case 'wallets':
+      await showWallets(bot!, msg.chat.id, userId);
+      break;
+    case 'transactions':
+      await showTransactions(bot!, msg.chat.id, userId);
+      break;
+    case 'settings':
+      await showSettings(bot!, msg.chat.id, userId);
+      break;
+  }
+}
+
+/**
+ * Обработать callback query (inline-кнопки)
+ */
+async function handleIncomingCallback(query: TelegramBot.CallbackQuery): Promise<void> {
+  try {
+    await withUserCallback(bot!, query, async (_, q, user) => {
+      await routeCallback(bot!, q, user);
+    });
+  } catch (error) {
+    logError('Error handling Telegram callback query', error as Error, {
+      queryId: query.id,
+      data: query.data,
+    });
+  }
+}
+
+/**
+ * Обработать ошибку в сообщении
+ */
+async function handleMessageError(msg: TelegramBot.Message, error: Error): Promise<void> {
+  logError('Error handling Telegram message', error, {
+    chatId: msg.chat.id,
+    messageId: msg.message_id,
+  });
+
+  try {
+    const telegramId = msg.from?.id.toString();
+    const lang = telegramId ? await getUserLanguageByTelegramId(telegramId) : 'en';
+    await bot!.sendMessage(msg.chat.id, t('error.generic', lang));
+  } catch (sendError) {
+    logError('Error sending error message to user', sendError as Error);
+  }
+}
+
+/**
+ * Остановить Telegram бота
+ */
 export function stopTelegramBot(): void {
   if (bot) {
     try {
       bot.stopPolling();
-      console.log('🛑 Telegram bot stopped');
+      logInfo('Telegram bot stopped');
     } catch (error) {
-      console.error('Error stopping Telegram bot:', error);
+      logError('Error stopping Telegram bot', error as Error);
     }
   }
-}
-
-export function getTelegramBot(): TelegramBot | null {
-  return bot;
 }

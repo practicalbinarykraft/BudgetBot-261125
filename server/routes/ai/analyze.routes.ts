@@ -21,8 +21,8 @@ router.post("/analyze", withAuth(async (req, res) => {
       });
     }
     
-    const transactions = await storage.getTransactionsByUserId(userId);
-    const analysis = await analyzeSpending(transactions, anthropicApiKey);
+    const result = await storage.getTransactionsByUserId(userId);
+    const analysis = await analyzeSpending(result.transactions, anthropicApiKey);
     res.json({ analysis });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

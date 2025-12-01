@@ -1,23 +1,19 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { visualizer } from "rollup-plugin-visualizer";
 import path from "path";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
 export default defineConfig({
   plugins: [
     react(),
-    runtimeErrorOverlay(),
-    ...(process.env.NODE_ENV !== "production" &&
-    process.env.REPL_ID !== undefined
-      ? [
-          await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer(),
-          ),
-          await import("@replit/vite-plugin-dev-banner").then((m) =>
-            m.devBanner(),
-          ),
-        ]
-      : []),
+    // Bundle analyzer - generates stats.html after build
+    visualizer({
+      filename: path.resolve(import.meta.dirname, "dist/stats.html"),
+      open: false, // Set to true to auto-open in browser
+      gzipSize: true,
+      brotliSize: true,
+      template: "treemap", // sunburst, treemap, network
+    }),
   ],
   resolve: {
     alias: {
@@ -30,6 +26,38 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    // Optimization settings
+    minify: "esbuild", // Fast minification
+    target: "es2020", // Modern browsers only
+    cssCodeSplit: true, // Split CSS per chunk
+    sourcemap: false, // Disable sourcemaps in production for smaller size
+    rollupOptions: {
+      output: {
+        // Manual chunks for better caching
+        manualChunks: {
+          // Vendor chunks
+          'react-vendor': ['react', 'react-dom', 'react/jsx-runtime'],
+          'router': ['wouter'],
+          'query': ['@tanstack/react-query'],
+          'ui-core': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-select',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-toast',
+            '@radix-ui/react-tooltip',
+          ],
+          'charts': ['recharts'],
+          'utils': ['clsx', 'tailwind-merge', 'date-fns'],
+        },
+        // Optimize chunk file names
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash][extname]',
+      },
+    },
+    // Chunk size warnings
+    chunkSizeWarningLimit: 1000, // Warn if chunk > 1MB
   },
   server: {
     fs: {

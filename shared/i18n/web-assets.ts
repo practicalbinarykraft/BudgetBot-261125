@@ -4,7 +4,7 @@ export const webAssetsTranslations: Translations = {
   "assets.title": { en: "Assets & Liabilities", ru: "Активы и обязательства" },
   "assets.subtitle": { en: "Manage your possessions and track their value", ru: "Управляйте имуществом и отслеживайте его стоимость" },
   
-  "assets.net_worth": { en: "Net Worth", ru: "Чистая стоимость" },
+  "assets.net_worth": { en: "Net Worth", ru: "Стоимость активов" },
   "assets.assets": { en: "Assets", ru: "Активы" },
   "assets.liabilities": { en: "Liabilities", ru: "Обязательства" },
   "assets.cashflow": { en: "Cashflow", ru: "Денежный поток" },
