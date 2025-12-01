@@ -74,7 +74,7 @@ router.post("/", withAuth(async (req, res) => {
   try {
     const data = insertCategorySchema.parse({
       ...req.body,
-      userId: req.user.id,
+      userId: Number(req.user.id),
     });
     const category = await storage.createCategory(data);
 

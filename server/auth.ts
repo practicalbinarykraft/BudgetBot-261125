@@ -127,9 +127,11 @@ export function setupAuth(app: Express) {
     done(null, user.id);
   });
 
-  passport.deserializeUser(async (id: number, done) => {
+  passport.deserializeUser(async (id: number | string, done) => {
     try {
-      const user = await userRepository.getUserById(id);
+      // Ensure id is always a number (session storage may serialize as string)
+      const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+      const user = await userRepository.getUserById(numericId);
       done(null, user);
     } catch (error) {
       done(error);
