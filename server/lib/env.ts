@@ -84,6 +84,13 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug', 'trace'])
     .default('info')
     .describe('Logging level'),
+
+  // ===== Cookie Security (Optional) =====
+  // Set to "false" for HTTP-only deployments (e.g., VPS without HTTPS)
+  SECURE_COOKIES: z.string()
+    .optional()
+    .transform(val => val !== 'false') // Default true unless explicitly "false"
+    .describe('Set to "false" for HTTP-only deployments'),
 });
 
 /**
@@ -115,6 +122,7 @@ export const env = (() => {
     console.log(`   TELEGRAM_BOT_TOKEN: ${parsed.TELEGRAM_BOT_TOKEN ? '✅ Set' : '❌ Not set'}`);
     console.log(`   REDIS_URL: ${parsed.REDIS_URL ? '✅ Set' : '❌ Not set'}`);
     console.log(`   SENTRY_DSN: ${parsed.SENTRY_DSN ? '✅ Set' : '❌ Not set'}`);
+    console.log(`   SECURE_COOKIES: ${parsed.SECURE_COOKIES ? '✅ Enabled' : '❌ Disabled (HTTP mode)'}`);
 
     return parsed;
   } catch (error) {

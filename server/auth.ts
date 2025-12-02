@@ -10,8 +10,9 @@ import bcrypt from "bcryptjs";
 import { createDefaultTags } from "./services/tag.service";
 import { pool } from "./db";
 import { authRateLimiter } from "./middleware/rate-limit";
-import { logError, logWarning } from "./lib/logger";
+import { logError, logWarning, logInfo } from "./lib/logger";
 import { logAuditEvent, AuditAction, AuditEntityType } from "./services/audit-log.service";
+import { env } from "./lib/env";
 
 const PgSession = connectPgSimple(session);
 
@@ -86,10 +87,16 @@ export function setupAuth(app: Express) {
 
   if (app.get("env") === "production") {
     app.set("trust proxy", 1);
-    sessionSettings.cookie = {
-      ...sessionSettings.cookie,
-      secure: true, // HTTPS only in production
-    };
+    // Only enable secure cookies if SECURE_COOKIES is not explicitly disabled
+    // For HTTP-only deployments (VPS without HTTPS), set SECURE_COOKIES=false
+    if (env.SECURE_COOKIES) {
+      sessionSettings.cookie = {
+        ...sessionSettings.cookie,
+        secure: true, // HTTPS only
+      };
+    } else {
+      logWarning('⚠️  Running in production without secure cookies (SECURE_COOKIES=false). Sessions will work over HTTP but this is not recommended for production.');
+    }
   }
 
   app.use(session(sessionSettings));

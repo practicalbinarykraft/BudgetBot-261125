@@ -105,8 +105,8 @@ export const heavyOperationRateLimiter = rateLimit({
     if (userId) {
       return `heavy:user:${userId}`;
     }
-    // For unauthenticated requests (shouldn't happen on these routes)
-    return `heavy:ip:${req.ip || 'unknown'}`;
+    // For unauthenticated requests - use fixed key to avoid IPv6 issues
+    return 'heavy:unauthenticated';
   },
   skipSuccessfulRequests: false,
   skipFailedRequests: false,
