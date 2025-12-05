@@ -8,7 +8,7 @@ import { Router } from "express";
 import { withAuth } from "../middleware/auth-utils";
 import { getUserAuditLogs, getEntityAuditLogs } from "../services/audit-log.service";
 import { z } from "zod";
-import { BadRequestError } from "../lib/errors";
+import { BadRequestError, getErrorMessage } from "../lib/errors";
 
 const router = Router();
 
@@ -54,7 +54,7 @@ router.get("/", withAuth(async (req, res) => {
     });
 
     res.json(logs);
-  } catch (error: any) {
+  } catch (error: unknown) {
     throw error;
   }
 }));
@@ -83,7 +83,7 @@ router.get("/:entityType/:entityId", withAuth(async (req, res) => {
     const userLogs = logs.filter(log => log.userId === req.user.id);
 
     res.json(userLogs);
-  } catch (error: any) {
+  } catch (error: unknown) {
     throw error;
   }
 }));

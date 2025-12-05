@@ -8,7 +8,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import type { Recurring } from "@shared/schema";
-import type { ForecastDataPoint, ForecastResult, HistoricalStats } from "./types";
+import type { ForecastDataPoint, ForecastResult, HistoricalStats, ForecastFilters } from "./types";
 import { buildForecastPrompt } from "./prompt-builder";
 import { buildForecastFromCache } from "./simple-forecast";
 import {
@@ -42,7 +42,7 @@ export async function generateAIForecast(
   currentCapital: number,
   stats: HistoricalStats,
   activeRecurring: Recurring[],
-  filters: any,
+  filters: ForecastFilters = {},
   historicalDays: number
 ): Promise<ForecastResult> {
   // Check cache first (before making expensive API call)
@@ -156,7 +156,7 @@ export async function generateAIForecast(
         cacheExpiresAt: cacheExpiresAt.toISOString(),
       },
     };
-  } catch (innerError: any) {
+  } catch (innerError: unknown) {
     // Clear timeout on error
     clearTimeout(timeoutId);
     throw innerError;
@@ -183,8 +183,9 @@ function parseAIResponse(text: string): ForecastDataPoint[] {
     forecast = JSON.parse(cleanedText);
     console.log(`[Forecast] Successfully parsed ${forecast.length} data points`);
     return forecast;
-  } catch (parseError: any) {
-    console.warn('[Forecast] Direct JSON parse failed, trying cleanup strategies:', parseError.message);
+  } catch (parseError: unknown) {
+    const msg = parseError instanceof Error ? parseError.message : String(parseError);
+    console.warn('[Forecast] Direct JSON parse failed, trying cleanup strategies:', msg);
 
     try {
       // Strategy 2: Clean up common JSON issues
@@ -198,8 +199,9 @@ function parseAIResponse(text: string): ForecastDataPoint[] {
       forecast = JSON.parse(cleanedText);
       console.log(`[Forecast] Cleanup successful, parsed ${forecast.length} data points`);
       return forecast;
-    } catch (cleanupError: any) {
-      console.warn('[Forecast] Cleanup strategy failed, trying JSON extraction:', cleanupError.message);
+    } catch (cleanupError: unknown) {
+      const msg = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+      console.warn('[Forecast] Cleanup strategy failed, trying JSON extraction:', msg);
 
       try {
         // Strategy 3: Extract first valid JSON array from response
@@ -211,8 +213,9 @@ function parseAIResponse(text: string): ForecastDataPoint[] {
         } else {
           throw new Error('No JSON array found in response');
         }
-      } catch (extractError: any) {
-        console.error('[Forecast] All JSON parsing strategies failed:', extractError.message);
+      } catch (extractError: unknown) {
+        const msg = extractError instanceof Error ? extractError.message : String(extractError);
+        console.error('[Forecast] All JSON parsing strategies failed:', msg);
         console.error('[Forecast] Raw response text:', text.substring(0, 500));
         console.error('[Forecast] Response length:', text.length);
         throw new Error('AI response could not be parsed. The forecast data may be incomplete.');

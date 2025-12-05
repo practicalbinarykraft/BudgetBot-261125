@@ -35,7 +35,7 @@ async function migrateEncryptKeys() {
 
   for (const setting of allSettings) {
     try {
-      const updates: any = {};
+      const updates: Record<string, string> = {};
       let needsUpdate = false;
 
       // Migrate Anthropic API key
@@ -75,9 +75,9 @@ async function migrateEncryptKeys() {
         console.log(`  ✅ [User ${setting.userId}] Migration successful\n`);
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       errorCount++;
-      console.error(`  ❌ [User ${setting.userId}] Migration failed: ${error.message}\n`);
+      console.error(`  ❌ [User ${setting.userId}] Migration failed: ${error instanceof Error ? error.message : String(error)}\n`);
     }
   }
 

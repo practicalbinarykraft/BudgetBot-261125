@@ -1,0 +1,201 @@
+# Transactions Endpoints Documentation
+
+paths:
+  /transactions:
+    get:
+      tags:
+        - Transactions
+      summary: Get transactions
+      description: Returns transactions with optional filters
+      parameters:
+        - name: walletId
+          in: query
+          schema:
+            type: integer
+          description: Filter by wallet
+        - name: categoryId
+          in: query
+          schema:
+            type: integer
+          description: Filter by category
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [income, expense, transfer]
+          description: Filter by type
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter from date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter to date
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+          description: Max results
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Skip results
+      responses:
+        '200':
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transactions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+                  total:
+                    type: integer
+                  hasMore:
+                    type: boolean
+
+    post:
+      tags:
+        - Transactions
+      summary: Create transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - walletId
+                - amount
+                - type
+              properties:
+                walletId:
+                  type: integer
+                amount:
+                  type: number
+                  example: 50.00
+                type:
+                  type: string
+                  enum: [income, expense, transfer]
+                categoryId:
+                  type: integer
+                description:
+                  type: string
+                  example: Grocery shopping
+                date:
+                  type: string
+                  format: date
+      responses:
+        '201':
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        '400':
+          description: Invalid input
+        '402':
+          description: Insufficient funds
+
+  /transactions/{id}:
+    get:
+      tags:
+        - Transactions
+      summary: Get transaction by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Transaction details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        '404':
+          description: Transaction not found
+
+    put:
+      tags:
+        - Transactions
+      summary: Update transaction
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                categoryId:
+                  type: integer
+                description:
+                  type: string
+      responses:
+        '200':
+          description: Transaction updated
+        '404':
+          description: Transaction not found
+
+    delete:
+      tags:
+        - Transactions
+      summary: Delete transaction
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Transaction deleted
+        '404':
+          description: Transaction not found
+
+components:
+  schemas:
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        walletId:
+          type: integer
+        categoryId:
+          type: integer
+        amount:
+          type: number
+          example: 50.00
+        type:
+          type: string
+          enum: [income, expense, transfer]
+        description:
+          type: string
+        date:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time

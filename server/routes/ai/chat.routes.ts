@@ -10,6 +10,7 @@ import type { ToolName } from "../../ai/tool-types";
 import { suggestCategory, getUserCategories } from "../../services/categorization.service";
 import { validateToolParams } from "../../ai/tool-schemas";
 import { ZodError } from "zod";
+import { getErrorMessage } from "../../lib/errors";
 
 const router = Router();
 
@@ -28,9 +29,9 @@ router.get("/history", withAuth(async (req, res) => {
     
     const messages = await storage.getAIChatMessages(userId, limit);
     res.json(messages);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Chat history error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -178,11 +179,11 @@ router.post("/", withAuth(async (req, res) => {
       content: aiMessage
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("AI chat error:", error);
     return res.status(500).json({
       error: "Failed to process chat",
-      details: error.message || "Unknown error"
+      details: getErrorMessage(error)
     });
   }
 }));

@@ -3,6 +3,7 @@ import { storage } from "../storage";
 import { insertPlannedIncomeSchema, insertTransactionSchema } from "@shared/schema";
 import { withAuth } from "../middleware/auth-utils";
 import { convertToUSD, getUserExchangeRates } from "../services/currency-service";
+import { getErrorMessage } from "../lib/errors";
 
 const router = Router();
 
@@ -14,8 +15,8 @@ router.get("/", withAuth(async (req, res) => {
       status ? { status } : undefined
     );
     res.json(planned);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -37,8 +38,8 @@ router.post("/", withAuth(async (req, res) => {
       userId: req.user.id,
     } as any);
     res.json(plannedItem);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -73,8 +74,8 @@ router.patch("/:id", withAuth(async (req, res) => {
     const updated = await storage.updatePlannedIncome(id, updateData);
     
     res.json(updated);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -87,8 +88,8 @@ router.delete("/:id", withAuth(async (req, res) => {
     }
     await storage.deletePlannedIncome(id);
     res.json({ success: true });
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -153,8 +154,8 @@ router.post("/:id/receive", withAuth(async (req, res) => {
     
     const updated = await storage.getPlannedIncomeById(id);
     res.json(updated);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -175,8 +176,8 @@ router.post("/:id/cancel", withAuth(async (req, res) => {
     const updated = await storage.getPlannedIncomeById(id);
     
     res.json(updated);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
 

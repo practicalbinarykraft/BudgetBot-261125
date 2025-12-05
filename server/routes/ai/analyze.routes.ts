@@ -3,6 +3,7 @@ import { storage } from "../../storage";
 import { analyzeSpending, scanReceipt } from "../../services/ai-service";
 import { withAuth } from "../../middleware/auth-utils";
 import { predictForTransaction, enrichPrediction } from "../../services/ai/prediction.service";
+import { getErrorMessage } from "../../lib/errors";
 
 const router = Router();
 
@@ -24,8 +25,8 @@ router.post("/analyze", withAuth(async (req, res) => {
     const result = await storage.getTransactionsByUserId(userId);
     const analysis = await analyzeSpending(result.transactions, anthropicApiKey);
     res.json({ analysis });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -51,8 +52,8 @@ router.post("/scan-receipt", withAuth(async (req, res) => {
     
     const result = await scanReceipt(image, anthropicApiKey);
     res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -68,9 +69,9 @@ router.get("/predict/:transactionId", withAuth(async (req, res) => {
     const enriched = await enrichPrediction(prediction, req.user.id);
     
     res.json(enriched);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("AI prediction error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 

@@ -3,6 +3,7 @@ import { storage } from "../storage";
 import { insertRecurringSchema } from "@shared/schema";
 import { withAuth } from "../middleware/auth-utils";
 import { convertToUSD, getExchangeRate } from "../services/currency-service";
+import { getErrorMessage } from "../lib/errors";
 
 const router = Router();
 
@@ -48,8 +49,8 @@ router.get("/", withAuth(async (req, res) => {
       : result.recurring;
 
     res.json(response);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -92,8 +93,8 @@ router.post("/", withAuth(async (req, res) => {
     
     const recurringItem = await storage.createRecurring(data);
     res.json(recurringItem);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -107,8 +108,8 @@ router.delete("/:id", withAuth(async (req, res) => {
     }
     await storage.deleteRecurring(id);
     res.json({ success: true });
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
 

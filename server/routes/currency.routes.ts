@@ -18,6 +18,7 @@ import { withAuth } from "../middleware/auth-utils";
 import { cache } from "../lib/redis";
 import { getRateHistory, getAllRatesHistory } from "../services/currency-update.service";
 import { z } from "zod";
+import { getErrorMessage } from "../lib/errors";
 
 const router = Router();
 
@@ -26,8 +27,8 @@ router.get("/exchange-rates", async (req, res) => {
   try {
     const rateInfo = await getExchangeRateInfo();
     res.json(rateInfo);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 });
 
@@ -68,8 +69,8 @@ router.post("/wallets/refresh-rates", withAuth(async (req, res) => {
       message: "Wallet balances refreshed successfully",
       wallets: updatedWallets,
     });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -101,8 +102,8 @@ router.get("/exchange-rates/history/:currencyCode", async (req, res) => {
       history,
       count: history.length,
     });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 });
 
@@ -140,8 +141,8 @@ router.get("/exchange-rates/history", async (req, res) => {
       history: grouped,
       count: history.length,
     });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 });
 

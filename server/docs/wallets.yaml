@@ -1,0 +1,144 @@
+# Wallets Endpoints Documentation
+
+paths:
+  /wallets:
+    get:
+      tags:
+        - Wallets
+      summary: Get all wallets
+      description: Returns all wallets for authenticated user
+      responses:
+        '200':
+          description: List of wallets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Wallet'
+        '401':
+          description: Not authenticated
+
+    post:
+      tags:
+        - Wallets
+      summary: Create wallet
+      description: Create a new wallet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - currency
+              properties:
+                name:
+                  type: string
+                  example: Main Wallet
+                currency:
+                  type: string
+                  example: USD
+                initialBalance:
+                  type: number
+                  example: 1000.00
+      responses:
+        '201':
+          description: Wallet created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+        '400':
+          description: Invalid input
+
+  /wallets/{id}:
+    get:
+      tags:
+        - Wallets
+      summary: Get wallet by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Wallet details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+        '404':
+          description: Wallet not found
+
+    put:
+      tags:
+        - Wallets
+      summary: Update wallet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                currency:
+                  type: string
+      responses:
+        '200':
+          description: Wallet updated
+        '404':
+          description: Wallet not found
+
+    delete:
+      tags:
+        - Wallets
+      summary: Delete wallet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Wallet deleted
+        '404':
+          description: Wallet not found
+
+components:
+  schemas:
+    Wallet:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        userId:
+          type: integer
+        name:
+          type: string
+          example: Main Wallet
+        currency:
+          type: string
+          example: USD
+        balance:
+          type: number
+          example: 1500.50
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time

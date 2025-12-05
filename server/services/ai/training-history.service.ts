@@ -36,11 +36,11 @@ export async function getTrainingHistory(
     .offset(offset);
 
   const categoryIds = examples
-    .map((e: any) => e.categoryId)
-    .filter((id: any): id is number => id !== null);
+    .map(e => e.categoryId)
+    .filter((id): id is number => id !== null);
   const tagIds = examples
-    .map((e: any) => e.tagId)
-    .filter((id: any): id is number => id !== null);
+    .map(e => e.tagId)
+    .filter((id): id is number => id !== null);
 
   const categoriesData =
     categoryIds.length > 0
@@ -58,10 +58,10 @@ export async function getTrainingHistory(
           .where(eq(personalTags.userId, userId))
       : [];
 
-  const categoryMap = new Map(categoriesData.map((c: any) => [c.id, c.name]));
-  const tagMap = new Map(tagsData.map((t: any) => [t.id, t.name]));
+  const categoryMap = new Map(categoriesData.map(c => [c.id, c.name]));
+  const tagMap = new Map(tagsData.map(t => [t.id, t.name]));
 
-  return examples.map((ex: any) => ({
+  return examples.map(ex => ({
     id: ex.id,
     transactionDescription: ex.transactionDescription,
     transactionAmount: ex.transactionAmount,

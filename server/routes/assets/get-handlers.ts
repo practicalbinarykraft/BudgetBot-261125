@@ -13,6 +13,7 @@ import { wallets } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { forecastQuerySchema, historyQuerySchema } from './validation';
 import { calculateAssetValueAtDate } from './utils';
+import { getErrorMessage } from '../../lib/errors';
 
 /**
  * GET /api/assets - Get all user assets
@@ -46,7 +47,7 @@ export async function getAssets(req: Request, res: Response) {
         grouped
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching assets:', error);
     res.status(500).json({
       success: false,
@@ -68,7 +69,7 @@ export async function getSummary(req: Request, res: Response) {
       success: true,
       data: summary
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error calculating net worth:', error);
     res.status(500).json({
       success: false,
@@ -118,7 +119,7 @@ export async function getForecast(req: Request, res: Response) {
       success: true,
       data: forecast
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error forecasting total capital:', error);
     res.status(500).json({
       success: false,
@@ -223,7 +224,7 @@ export async function getHistory(req: Request, res: Response) {
       success: true,
       data: history
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching assets history:', error);
     res.status(500).json({
       success: false,
@@ -272,7 +273,7 @@ export async function getAssetById(req: Request, res: Response) {
         change
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching asset:', error);
     res.status(500).json({
       success: false,

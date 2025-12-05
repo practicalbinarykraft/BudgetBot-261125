@@ -75,7 +75,7 @@ export function getIO(): SocketIOServer {
 /**
  * Send notification to a specific user
  */
-export function sendNotificationToUser(userId: number, event: string, data: any) {
+export function sendNotificationToUser(userId: number, event: string, data: unknown) {
   try {
     if (!io) {
       logger.warn('Cannot send notification: WebSocket not initialized');
@@ -89,9 +89,9 @@ export function sendNotificationToUser(userId: number, event: string, data: any)
       event,
       data,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to send WebSocket notification', {
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
       userId,
       event,
     });
@@ -101,7 +101,7 @@ export function sendNotificationToUser(userId: number, event: string, data: any)
 /**
  * Broadcast notification to all connected clients
  */
-export function broadcastNotification(event: string, data: any) {
+export function broadcastNotification(event: string, data: unknown) {
   try {
     if (!io) {
       logger.warn('Cannot broadcast: WebSocket not initialized');
@@ -114,9 +114,9 @@ export function broadcastNotification(event: string, data: any) {
       event,
       data,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to broadcast notification', {
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
       event,
     });
   }

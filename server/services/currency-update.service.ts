@@ -74,10 +74,10 @@ export async function fetchLatestRates(): Promise<boolean> {
           rates: latestRates,
           timestamp: lastUpdated.toISOString(),
         });
-      } catch (historyError: any) {
+      } catch (historyError: unknown) {
         // Don't fail the whole update if history save fails
         logger.error('Failed to save rate history', {
-          error: historyError.message,
+          error: historyError instanceof Error ? historyError.message : String(historyError),
         });
       }
 
@@ -85,11 +85,11 @@ export async function fetchLatestRates(): Promise<boolean> {
     }
 
     throw new Error('Invalid API response');
-  } catch (error: any) {
+  } catch (error: unknown) {
     isApiAvailable = false;
 
     logger.error('❌ Failed to fetch exchange rates', {
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
       fallback: 'Using static rates',
     });
 
@@ -178,9 +178,9 @@ export async function getRateHistory(params: {
       .limit(limit);
 
     return history;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to fetch rate history', {
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
       currencyCode,
     });
     return [];
@@ -210,9 +210,9 @@ export async function getAllRatesHistory(params: {
       .limit(limit);
 
     return history;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to fetch all rates history', {
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     });
     return [];
   }

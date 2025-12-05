@@ -17,19 +17,22 @@ export class AppError extends Error {
     public statusCode: number,
     public message: string,
     public code: string,
-    public details?: any
+    public details?: unknown
   ) {
     super(message);
     this.name = this.constructor.name;
     Error.captureStackTrace(this, this.constructor);
   }
 
-  toJSON() {
-    return {
+  toJSON(): { error: string; code: string; details?: unknown } {
+    const result: { error: string; code: string; details?: unknown } = {
       error: this.message,
       code: this.code,
-      ...(this.details && { details: this.details }),
     };
+    if (this.details !== undefined) {
+      result.details = this.details;
+    }
+    return result;
   }
 }
 
@@ -37,7 +40,7 @@ export class AppError extends Error {
  * 400 Bad Request - Client sent invalid data
  */
 export class BadRequestError extends AppError {
-  constructor(message: string = 'Invalid request data', details?: any) {
+  constructor(message: string = 'Invalid request data', details?: unknown) {
     super(400, message, 'BAD_REQUEST', details);
   }
 }
@@ -85,7 +88,7 @@ export class ConflictError extends AppError {
  * 422 Unprocessable Entity - Validation failed
  */
 export class ValidationError extends AppError {
-  constructor(message: string = 'Validation failed', details?: any) {
+  constructor(message: string = 'Validation failed', details?: unknown) {
     super(422, message, 'VALIDATION_ERROR', details);
   }
 }
@@ -122,19 +125,19 @@ export class ServiceUnavailableError extends AppError {
  */
 
 export class TransactionError extends AppError {
-  constructor(message: string, details?: any) {
+  constructor(message: string, details?: unknown) {
     super(400, message, 'TRANSACTION_ERROR', details);
   }
 }
 
 export class WalletError extends AppError {
-  constructor(message: string, details?: any) {
+  constructor(message: string, details?: unknown) {
     super(400, message, 'WALLET_ERROR', details);
   }
 }
 
 export class BudgetError extends AppError {
-  constructor(message: string, details?: any) {
+  constructor(message: string, details?: unknown) {
     super(400, message, 'BUDGET_ERROR', details);
   }
 }
@@ -160,8 +163,21 @@ export class BudgetExceededError extends BudgetError {
 /**
  * Helper function to check if error is an AppError
  */
-export function isAppError(error: any): error is AppError {
+export function isAppError(error: unknown): error is AppError {
   return error instanceof AppError;
+}
+
+/**
+ * Extract error message from unknown error type
+ */
+export function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  return 'An unknown error occurred';
 }
 
 /**

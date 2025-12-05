@@ -66,9 +66,11 @@ async function cleanupExpiredSessions(): Promise<void> {
     const stats = statsResult.rows[0];
     console.log(`   - Remaining: ${stats.total} total, ${stats.active} active`);
 
-  } catch (error: any) {
-    console.error('❌ Session cleanup failed:', error.message);
-    console.error('   Stack:', error.stack);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : undefined;
+    console.error('❌ Session cleanup failed:', msg);
+    if (stack) console.error('   Stack:', stack);
   } finally {
     isRunning = false;
   }
@@ -118,12 +120,12 @@ export async function manualSessionCleanup(): Promise<{
       deletedCount: result.rowCount || 0,
       duration: Date.now() - startTime,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
       deletedCount: 0,
       duration: Date.now() - startTime,
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     };
   }
 }

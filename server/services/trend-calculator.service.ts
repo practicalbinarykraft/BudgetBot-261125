@@ -433,8 +433,8 @@ async function generateAndProcessForecast(params: {
       forecastData,
       metadata: result.metadata,
     };
-  } catch (error: any) {
-    console.error("Forecast generation failed:", error.message);
+  } catch (error: unknown) {
+    console.error("Forecast generation failed:", error instanceof Error ? error.message : String(error));
     return {
       forecastData: [],
       metadata: {

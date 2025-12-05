@@ -1,183 +1,57 @@
-# ===== BudgetBot CI/CD Pipeline =====
-# Continuous Integration and Deployment using GitHub Actions
-
-name: CI/CD
+name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, master]
   pull_request:
-    branches: [main, develop]
-
-env:
-  NODE_VERSION: '20'
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+    branches: [main, master]
 
 jobs:
-  # ===== Lint & Type Check =====
-  lint:
-    name: Lint & Type Check
+  test:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: npm ci
 
-      - name: Install client dependencies
-        run: cd client && npm ci --legacy-peer-deps
+      - name: Type check
+        run: npm run check
 
-      - name: Run ESLint (server)
-        run: npm run lint
-        continue-on-error: true
-
-      - name: Run TypeScript check (server)
-        run: npm run build
-        continue-on-error: false
-
-      - name: Run TypeScript check (client)
-        run: cd client && npm run build
-        continue-on-error: false
-
-  # ===== Build & Test =====
-  build:
-    name: Build & Test
-    runs-on: ubuntu-latest
-    needs: lint
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
-
-      - name: Install client dependencies
-        run: cd client && npm ci --legacy-peer-deps
-
-      - name: Build server
-        run: npm run build
-
-      - name: Build client
-        run: cd client && npm run build
+      - name: Run tests
+        run: npm run test:run
         env:
-          VITE_API_URL: ''
+          NODE_ENV: test
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
+          SESSION_SECRET: test-session-secret-must-be-32-chars
+          ENCRYPTION_KEY: U4rnuZd9jFqJb5yokp5e1DrI8QCmSZx8HpDX4lLZUqI=
 
-      - name: Run tests (if available)
-        run: npm test
+      - name: Build
+        run: npm run build
+
+  metrics:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run metrics
+        run: npm run metrics || true
         continue-on-error: true
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifacts
-          path: |
-            dist/
-            client/dist/
-          retention-days: 7
-
-  # ===== Docker Build =====
-  docker:
-    name: Build Docker Image
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.event_name == 'push'
-
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,prefix={{branch}}-
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # ===== Deploy to Production =====
-  deploy:
-    name: Deploy to Production
-    runs-on: ubuntu-latest
-    needs: [build, docker]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-    environment:
-      name: production
-      url: https://your-app.com
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy notification
-        run: |
-          echo "🚀 Deploying to production..."
-          echo "Branch: ${{ github.ref }}"
-          echo "Commit: ${{ github.sha }}"
-
-      # Add your deployment steps here
-      # Examples:
-      # - Deploy to Heroku
-      # - Deploy to AWS ECS
-      # - Deploy to Digital Ocean
-      # - Deploy to your VPS via SSH
-
-      # Example: Deploy via SSH
-      # - name: Deploy via SSH
-      #   uses: appleboy/ssh-action@master
-      #   with:
-      #     host: ${{ secrets.DEPLOY_HOST }}
-      #     username: ${{ secrets.DEPLOY_USER }}
-      #     key: ${{ secrets.DEPLOY_KEY }}
-      #     script: |
-      #       cd /app/budgetbot
-      #       docker-compose pull
-      #       docker-compose up -d
-      #       docker-compose logs --tail=50
-
-      - name: Deployment complete
-        run: echo "✅ Deployment successful!"

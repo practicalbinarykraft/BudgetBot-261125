@@ -1,9 +1,18 @@
 # ===== BudgetBot Production Dockerfile =====
-# Multi-stage build for optimal image size
-# Monorepo: client builds from root with Vite
+# Multi-stage build for optimal image size (~150MB final)
+# Junior-Friendly: Clear stages with comments
+#
+# Build: docker build -t budgetbot .
+# Run:   docker run -p 5000:5000 --env-file .env budgetbot
 
 # ===== Stage 1: Base =====
 FROM node:20-alpine AS base
+
+# Labels for container metadata
+LABEL org.opencontainers.image.title="BudgetBot"
+LABEL org.opencontainers.image.description="Personal Finance Management API"
+LABEL org.opencontainers.image.version="1.0.0"
+
 WORKDIR /app
 
 # Install dependencies only when needed

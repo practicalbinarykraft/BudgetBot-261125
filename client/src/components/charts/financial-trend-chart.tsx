@@ -1,15 +1,22 @@
+/**
+ * Financial Trend Chart
+ *
+ * Shows income, expenses, and capital over time with AI forecast + goal markers.
+ * ~200 lines - composed of smaller chart components.
+ *
+ * Junior-Friendly:
+ * - Was 429 lines, now ~200 lines
+ * - Chart lines extracted to TrendChartLines component
+ * - Forecast banner extracted to AssetsForecastBanner component
+ */
+
 import { useState, useEffect } from "react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceDot } from "recharts";
+import { LineChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useFinancialTrend } from "@/hooks/use-financial-trend";
 import { useAssetsHistory } from "@/hooks/use-assets-history";
 import { useAssetsForecast } from "@/hooks/use-assets-forecast";
 import { WishlistItemWithPrediction } from "@/types/goal-prediction";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { TrendingUp, Info } from "lucide-react";
-import { GoalTimelineMarker } from "@/components/budget/goal-timeline-marker";
-import { GoalTimelineTooltip } from "@/components/budget/goal-timeline-tooltip";
 import { useLocation } from "wouter";
 import { CHART_COLORS, formatCompactCurrency, formatChartDate } from "@/lib/chart-utils";
 import { createChartTooltip } from "@/components/charts/chart-custom-tooltip";
@@ -22,13 +29,11 @@ import { ChartLoadingState, ChartErrorState, ChartEmptyState } from "@/component
 import { useTranslation } from "@/i18n";
 import { CapitalWarning } from "@/components/charts/capital-warning";
 import { useToast } from "@/hooks/use-toast";
-import { Tooltip as UITooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { GoalTimelineTooltip } from "@/components/budget/goal-timeline-tooltip";
 import { GraphModeToggle } from "./graph-mode-toggle";
+import { AssetsForecastBanner } from "./assets-forecast-banner";
+import { TrendChartLines } from "./trend-chart-lines";
 
-/**
- * Financial Trend Chart
- * Shows income, expenses, and capital over time with AI forecast + goal markers
- */
 interface FinancialTrendChartProps {
   wishlistPredictions?: WishlistItemWithPrediction[];
 }
@@ -38,120 +43,81 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
   const { toast } = useToast();
   const [historyDays, setHistoryDays] = useState(30);
   const [forecastDays, setForecastDays] = useState(365);
-  
   const [showForecast, setShowForecast] = useState(true);
-  
   const [hoveredGoal, setHoveredGoal] = useState<string | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [, setLocation] = useLocation();
 
-  const { 
-    data, 
-    isLoading, 
-    isFetching, 
-    error,
-    graphMode,
-    toggleMode,
-    config,
-    updateFilter,
-  } = useFinancialTrend({
+  const { data, isLoading, error, graphMode, toggleMode, config, updateFilter } = useFinancialTrend({
     historyDays,
     forecastDays,
   });
 
-  // Fetch historical assets data
+  // Fetch historical and forecast assets data
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - historyDays);
   const { data: assetsHistory } = useAssetsHistory({
-    startDate: startDate.toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0],
+    startDate: startDate.toISOString().split("T")[0],
+    endDate: new Date().toISOString().split("T")[0],
   });
-
-  // Fetch long-term assets forecast (12 months)
   const { data: assetsForecast } = useAssetsForecast({ months: 12 });
 
-  // Show error toast when query fails
+  // Show error toast
   useEffect(() => {
     if (error) {
-      console.error('[FinancialTrendChart] Query failed:', error);
       toast({
-        title: t('common.error'),
-        description: error instanceof Error ? error.message : t('dashboard.forecast_error_generic'),
+        title: t("common.error"),
+        description: error instanceof Error ? error.message : t("dashboard.forecast_error_generic"),
         variant: "destructive",
       });
     }
   }, [error, t, toast]);
 
-  // Destructure trend data and goals
+  // Process data
   const rawTrendData = data?.trendData || [];
   const trendGoals = data?.goals || [];
-  
-  // Merge trend data with historical assets data
+
+  // Merge trend data with historical assets
   const trendData = rawTrendData.map((point) => {
-    if (point.isForecast || !assetsHistory) {
-      // For forecast points, keep original assetsNet
-      return point;
-    }
-    
-    // For historical points, find matching assets history entry
+    if (point.isForecast || !assetsHistory) return point;
     const assetsPoint = assetsHistory.find((a) => a.date === point.date);
-    
-    if (assetsPoint) {
-      // Replace assetsNet with historical value
-      return {
-        ...point,
-        assetsNet: assetsPoint.netWorth,
-      };
-    }
-    
-    return point;
+    return assetsPoint ? { ...point, assetsNet: assetsPoint.netWorth } : point;
   });
-  
-  // Merge and normalize goals from both sources
-  const goals = [
-    ...normalizeTrendGoals(trendGoals),
-    ...normalizeWishlistGoals(wishlistPredictions),
-  ];
+
+  const goals = [...normalizeTrendGoals(trendGoals), ...normalizeWishlistGoals(wishlistPredictions)];
 
   if (isLoading) return <ChartLoadingState />;
   if (error) return <ChartErrorState error={error as Error} />;
   if (trendData.length === 0) return <ChartEmptyState />;
 
-  // Always process full trendData for proper forecast connection
-  const { todayDate, historicalData, forecastData, forecastWithConnection } = 
-    processChartData(trendData);
-
-  // Filter chart data for rendering: show only historical when forecastDays = 0
+  const { historicalData, forecastData, forecastWithConnection } = processChartData(trendData);
   const chartData = forecastDays > 0 ? trendData : historicalData;
-  
-  // Check if capital goes negative in forecast
-  const hasNegativeCapital = forecastData.some(d => d.capital < 0);
+  const hasNegativeCapital = forecastData.some((d) => d.capital < 0);
 
-  // Prepare long-term assets forecast data (12 months from last point)
-  const assetsForecastData = assetsForecast && chartData.length > 0 ? [
-    chartData[chartData.length - 1], // Последняя точка
-    {
-      date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      totalCapital: assetsForecast.projected,
-      isForecast: true,
-    }
-  ] : [];
+  // Assets forecast line data
+  const assetsForecastData = assetsForecast && chartData.length > 0
+    ? [
+        chartData[chartData.length - 1],
+        {
+          date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+          totalCapital: assetsForecast.projected,
+          isForecast: true,
+        },
+      ]
+    : [];
 
-  // Calculate fixed Y-axis domain to prevent chart "jumping" when toggling lines
+  // Calculate Y-axis domain
   const yDomain = (() => {
     const allValues: number[] = [];
-    chartData.forEach(point => {
-      if (point.income !== undefined) allValues.push(point.income);
-      if (point.expense !== undefined) allValues.push(point.expense);
-      if (point.capital !== undefined) allValues.push(point.capital);
-      if (point.assetsNet !== undefined) allValues.push(point.assetsNet);
+    chartData.forEach((p) => {
+      if (p.income !== undefined) allValues.push(p.income);
+      if (p.expense !== undefined) allValues.push(p.expense);
+      if (p.capital !== undefined) allValues.push(p.capital);
+      if (p.assetsNet !== undefined) allValues.push(p.assetsNet);
     });
-    if (assetsForecastData.length > 0) {
-      assetsForecastData.forEach(point => {
-        const totalCapital = (point as any).totalCapital;
-        if (totalCapital !== undefined) allValues.push(totalCapital);
-      });
-    }
+    assetsForecastData.forEach((p: any) => {
+      if (p.totalCapital !== undefined) allValues.push(p.totalCapital);
+    });
     const min = Math.min(...allValues, 0);
     const max = Math.max(...allValues, 0);
     const padding = (max - min) * 0.1;
@@ -161,20 +127,16 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
   return (
     <Card data-testid="card-financial-trend">
       <CardHeader>
-        <div className="flex items-center justify-between mb-4">
-          <CardTitle>
-            {graphMode === 'lite' ? t('dashboard.my_capital') : t('dashboard.detailed_analysis')}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <CardTitle className="text-lg md:text-xl">
+            {graphMode === "lite" ? t("dashboard.my_capital") : t("dashboard.detailed_analysis")}
           </CardTitle>
-          
           <GraphModeToggle mode={graphMode} onToggle={toggleMode} />
         </div>
-        <CardDescription>
-          {t("dashboard.financial_trend_subtitle")}
-        </CardDescription>
+        <CardDescription>{t("dashboard.financial_trend_subtitle")}</CardDescription>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
-        {/* Time Range Controls */}
         <ChartTimeControls
           historyDays={historyDays}
           forecastDays={forecastDays}
@@ -182,198 +144,27 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
           onForecastChange={setForecastDays}
         />
 
-        {/* Assets Forecast Info (12 months) */}
-        {assetsForecast && (
-          <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border" data-testid="assets-forecast-info">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            <div className="flex-1 space-y-1">
-              <div className="flex items-baseline gap-2">
-                <span className="text-sm font-medium">
-                  {t("dashboard.forecast_12_months")}:
-                </span>
-                <span className="text-lg font-bold text-primary" data-testid="forecast-projected-value">
-                  ${assetsForecast.projected.toLocaleString('en-US', { maximumFractionDigits: 0 })}
-                </span>
-                <span className={`text-xs font-medium ${
-                  assetsForecast.projected > assetsForecast.current 
-                    ? 'text-green-600 dark:text-green-400' 
-                    : 'text-red-600 dark:text-red-400'
-                }`}>
-                  ({assetsForecast.projected > assetsForecast.current ? '+' : ''}
-                  {((assetsForecast.projected - assetsForecast.current) / assetsForecast.current * 100).toFixed(1)}%)
-                </span>
-              </div>
-              <div className="flex gap-4 text-xs text-muted-foreground">
-                <span>
-                  {t("dashboard.wallets")}: ${assetsForecast.breakdown.wallets.toFixed(0)}
-                </span>
-                <span>
-                  {t("dashboard.assets")}: ${assetsForecast.breakdown.assets.toFixed(0)}
-                </span>
-                <span>
-                  {t("dashboard.liabilities")}: ${assetsForecast.breakdown.liabilities.toFixed(0)}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
+        {assetsForecast && <AssetsForecastBanner forecast={assetsForecast} />}
 
-        {/* Chart */}
-        <div className="h-[400px]">
+        <div className="h-[300px] md:h-[400px]" role="img" aria-label="Financial trend chart">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
-              
-              <XAxis
-                dataKey="date"
-                type="category"
-                allowDuplicatedCategory={false}
-                tickFormatter={formatChartDate}
-                stroke="hsl(var(--muted-foreground))"
-              />
-              
-              <YAxis
-                domain={yDomain}
-                tickFormatter={formatCompactCurrency}
-                stroke="hsl(var(--muted-foreground))"
-              />
-              
-              <Tooltip key={forecastDays} content={createChartTooltip(chartData, t, config.capitalMode, graphMode)} />
+              <XAxis dataKey="date" tickFormatter={formatChartDate} stroke="hsl(var(--muted-foreground))" />
+              <YAxis domain={yDomain} tickFormatter={formatCompactCurrency} stroke="hsl(var(--muted-foreground))" />
+              <Tooltip content={createChartTooltip(chartData, t, config.capitalMode, graphMode)} />
 
-              {/* "Today" vertical line - Разделение факт/прогноз */}
-              <ReferenceLine 
-                x={new Date().toISOString().split('T')[0]} 
-                stroke="#94a3b8" 
-                strokeWidth={2}
-                strokeDasharray="3 3"
-                label={{ 
-                  value: 'Сегодня', 
-                  position: 'top',
-                  fill: '#64748b',
-                  fontSize: 12,
-                  fontWeight: 600
-                }}
+              <TrendChartLines
+                historicalData={historicalData}
+                forecastData={forecastData}
+                forecastWithConnection={forecastWithConnection}
+                chartData={chartData}
+                forecastDays={forecastDays}
+                config={config}
+                graphMode={graphMode}
+                assetsForecastData={assetsForecastData}
               />
 
-              {/* Zero baseline horizontal line */}
-              <ReferenceLine
-                y={0}
-                stroke="hsl(var(--foreground))"
-                strokeDasharray="3 3"
-                strokeOpacity={0.5}
-              />
-
-              {/* Income Line (Historical - Solid) */}
-              <Line
-                data={historicalData}
-                dataKey="income"
-                stroke={CHART_COLORS.income}
-                strokeWidth={2}
-                strokeOpacity={config.mode === 'lite' ? 1 : (config.mode === 'pro' && config.showIncome ? 1 : 0)}
-                dot={false}
-                name={t("dashboard.chart_income")}
-                connectNulls
-              />
-
-              {/* Income Line (Forecast - Dashed) */}
-              {forecastDays > 0 && forecastData.length > 0 && (
-                <Line
-                  data={forecastWithConnection}
-                  dataKey="income"
-                  stroke={CHART_COLORS.income}
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  opacity={0.7}
-                  dot={false}
-                  name="Доходы (прогноз)"
-                  connectNulls
-                />
-              )}
-
-              {/* Expense Line (Historical - Solid) */}
-              <Line
-                data={historicalData}
-                dataKey="expense"
-                stroke={CHART_COLORS.expense}
-                strokeWidth={2}
-                strokeOpacity={config.mode === 'lite' ? 1 : (config.mode === 'pro' && config.showExpense ? 1 : 0)}
-                dot={false}
-                name={t("dashboard.chart_expense")}
-                connectNulls
-              />
-
-              {/* Expense Line (Forecast - Dashed) */}
-              {forecastDays > 0 && forecastData.length > 0 && (
-                <Line
-                  data={forecastWithConnection}
-                  dataKey="expense"
-                  stroke={CHART_COLORS.expense}
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  opacity={0.7}
-                  dot={false}
-                  name="Расходы (прогноз)"
-                  connectNulls
-                />
-              )}
-
-              {/* Capital Line (Historical - Solid) */}
-              <Line
-                data={historicalData}
-                dataKey="capital"
-                stroke={CHART_COLORS.capital}
-                strokeWidth={2}
-                strokeOpacity={config.mode === 'lite' ? 1 : (config.mode === 'pro' && config.showCapital ? 1 : 0)}
-                dot={false}
-                name={t("dashboard.chart_capital")}
-                connectNulls
-              />
-
-              {/* Capital Line (Forecast - Dashed) */}
-              {forecastDays > 0 && forecastData.length > 0 && (
-                <Line
-                  data={forecastWithConnection}
-                  dataKey="capital"
-                  stroke={CHART_COLORS.capital}
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  opacity={0.7}
-                  dot={false}
-                  name="Капитал (прогноз)"
-                  connectNulls
-                />
-              )}
-
-              {/* Стоимость имущества - только в PRO */}
-              {graphMode === 'pro' && config.mode === 'pro' && config.showAssetsLine && (
-                <Line 
-                  type="monotone"
-                  data={chartData}
-                  dataKey="assetsNet"
-                  stroke="hsl(var(--chart-4))"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  dot={false}
-                  name="Имущество - Долги"
-                  connectNulls
-                />
-              )}
-
-              {/* Long-term Total Capital Forecast (12 months, dashed purple line) */}
-              {assetsForecastData.length > 0 && (
-                <Line
-                  data={assetsForecastData}
-                  dataKey="totalCapital"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={3}
-                  strokeDasharray="8 4"
-                  dot={{ r: 6, strokeWidth: 2, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))" }}
-                  name={t("dashboard.forecast_12_months")}
-                  connectNulls
-                />
-              )}
-
-              {/* Goal Markers on Timeline */}
               <GoalMarkersLayer
                 goals={goals}
                 trendData={chartData}
@@ -382,46 +173,37 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                   setTooltipPosition({ x, y });
                 }}
                 onGoalLeave={() => setHoveredGoal(null)}
-                onGoalClick={(status) => 
-                  setLocation(status === "wishlist" ? "/wishlist" : "/planned")
-                }
+                onGoalClick={(status) => setLocation(status === "wishlist" ? "/wishlist" : "/planned")}
               />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
-        {/* HTML Tooltip Overlay (Safari compatible) */}
-        {hoveredGoal !== null && (
+        {hoveredGoal && (
           <>
-            {goals.filter(g => g.id === hoveredGoal).map((goal) => (
-              <GoalTimelineTooltip 
-                key={goal.id}
-                goal={goal} 
-                position={tooltipPosition}
-              />
+            {goals.filter((g) => g.id === hoveredGoal).map((goal) => (
+              <GoalTimelineTooltip key={goal.id} goal={goal} position={tooltipPosition} />
             ))}
           </>
         )}
 
-        {/* Legend (только для PRO режима) */}
-        {config.mode === 'pro' && config.showIncome !== undefined && (
+        {config.mode === "pro" && config.showIncome !== undefined && (
           <ChartLegend
             hasForecast={forecastDays > 0 && forecastData.length > 0}
             hasGoals={goals.length > 0}
             showIncome={config.showIncome}
-            onIncomeToggle={(val) => updateFilter('showIncome', val)}
+            onIncomeToggle={(val) => updateFilter("showIncome", val)}
             showExpense={config.showExpense}
-            onExpenseToggle={(val) => updateFilter('showExpense', val)}
+            onExpenseToggle={(val) => updateFilter("showExpense", val)}
             showCapital={config.showCapital}
-            onCapitalToggle={(val) => updateFilter('showCapital', val)}
+            onCapitalToggle={(val) => updateFilter("showCapital", val)}
             showForecast={showForecast}
             onForecastToggle={setShowForecast}
             showAssetsLine={config.showAssetsLine}
-            onAssetsLineToggle={(val) => updateFilter('showAssetsLine', val)}
+            onAssetsLineToggle={(val) => updateFilter("showAssetsLine", val)}
           />
         )}
-        
-        {/* Capital Warning */}
+
         <CapitalWarning hasNegativeCapital={hasNegativeCapital} />
       </CardContent>
     </Card>

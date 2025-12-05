@@ -53,8 +53,8 @@ Keep the response concise and actionable.`;
     }
 
     return "Unable to analyze spending at this time.";
-  } catch (error: any) {
-    throw new Error(`AI analysis failed: ${error.message}`);
+  } catch (error: unknown) {
+    throw new Error(`AI analysis failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -128,7 +128,7 @@ Return ONLY JSON, no markdown:
     }
 
     throw new Error("Unable to parse receipt");
-  } catch (error: any) {
-    throw new Error(`Receipt scanning failed: ${error.message}`);
+  } catch (error: unknown) {
+    throw new Error(`Receipt scanning failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }

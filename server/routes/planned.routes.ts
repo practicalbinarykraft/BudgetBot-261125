@@ -2,6 +2,7 @@ import { Router } from "express";
 import { storage } from "../storage";
 import { insertPlannedTransactionSchema, insertTransactionSchema } from "@shared/schema";
 import { withAuth } from "../middleware/auth-utils";
+import { getErrorMessage } from "../lib/errors";
 
 const router = Router();
 
@@ -9,8 +10,8 @@ router.get("/", withAuth(async (req, res) => {
   try {
     const planned = await storage.getPlannedByUserId(req.user.id);
     res.json(planned);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -22,8 +23,8 @@ router.post("/", withAuth(async (req, res) => {
     });
     const plannedItem = await storage.createPlanned(data);
     res.json(plannedItem);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -38,10 +39,10 @@ router.patch("/:id", withAuth(async (req, res) => {
     const { userId, ...sanitizedBody } = req.body;
     const data = insertPlannedTransactionSchema.partial().parse(sanitizedBody);
     const updated = await storage.updatePlanned(id, data);
-    
+
     res.json(updated);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -54,8 +55,8 @@ router.delete("/:id", withAuth(async (req, res) => {
     }
     await storage.deletePlanned(id);
     res.json({ success: true });
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -106,8 +107,8 @@ router.post("/:id/purchase", withAuth(async (req, res) => {
     
     const updated = await storage.getPlannedById(id);
     res.json(updated);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -128,8 +129,8 @@ router.post("/:id/cancel", withAuth(async (req, res) => {
     const updated = await storage.getPlannedById(id);
     
     res.json(updated);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
 

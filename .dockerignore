@@ -1,86 +1,56 @@
-# ===== Docker Ignore File =====
+# ===== BudgetBot .dockerignore =====
 # Excludes files from Docker build context for faster builds
 
-# ===== Dependencies =====
+# Dependencies (will be installed fresh in container)
 node_modules
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+.pnpm-store
 
-# ===== Build Output =====
+# Build outputs (built in container)
 dist
-build
-.next
-out
+.vite
 *.tsbuildinfo
 
-# ===== Client Build =====
-client/dist
-client/build
-client/node_modules
-
-# ===== Environment =====
+# Development files
 .env
 .env.local
-.env.development
-.env.test
-.env.production
 .env.*.local
+*.log
+logs/
 
-# ===== Git =====
-.git
-.gitignore
-.gitattributes
-
-# ===== IDE =====
-.vscode
+# IDE and OS
 .idea
+.vscode
 *.swp
 *.swo
-*~
-
-# ===== Testing =====
-coverage
-.nyc_output
-*.test.ts
-*.test.tsx
-*.spec.ts
-*.spec.tsx
-__tests__
-__mocks__
-
-# ===== Logs =====
-logs
-*.log
-
-# ===== Docker =====
-Dockerfile*
-docker-compose*.yml
-.dockerignore
-
-# ===== CI/CD =====
-.github
-.gitlab-ci.yml
-.travis.yml
-.circleci
-
-# ===== Documentation =====
-docs
-CHANGELOG.md
-CONTRIBUTING.md
-LICENSE.md
-
-# ===== Temporary =====
-tmp
-temp
-.cache
-
-# ===== OS =====
 .DS_Store
 Thumbs.db
-Desktop.ini
 
-# ===== Misc =====
-.editorconfig
+# Git
+.git
+.gitignore
+
+# Tests (not needed in production)
+**/*.test.ts
+**/*.spec.ts
+**/__tests__
+coverage
+.nyc_output
+load-tests
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# Docker files (prevent recursive copy)
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Misc
+*.tgz
+*.tar.gz
+.eslintcache
 .prettierrc
-.eslintrc*
+tsconfig*.json
+vitest.config.ts

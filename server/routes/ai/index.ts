@@ -12,6 +12,7 @@ import { ANTHROPIC_TOOLS } from "../../ai/tools";
 import { validateToolParams } from "../../ai/tool-schemas";
 import { storage } from "../../storage";
 import { aiRateLimiter } from "../../middleware/rate-limit";
+import { getErrorMessage } from "../../lib/errors";
 
 const router = Router();
 
@@ -94,12 +95,14 @@ router.post("/confirm-tool", withAuth(async (req, res) => {
       data: result.data
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("💥 ERROR in /api/ai/confirm-tool:", error);
-    console.error("Stack trace:", error.stack);
+    if (error instanceof Error) {
+      console.error("Stack trace:", error.stack);
+    }
     return res.status(500).json({
       error: "Failed to execute action",
-      details: error.message || "Unknown error"
+      details: getErrorMessage(error)
     });
   }
 }));

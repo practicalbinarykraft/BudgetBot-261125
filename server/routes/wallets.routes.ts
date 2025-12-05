@@ -6,6 +6,7 @@ import { convertToUSD } from "../services/currency-service";
 import { calibrateWallet } from "../services/calibration.service";
 import { cache, CACHE_TTL } from "../lib/redis";
 import { logAuditEvent, AuditAction, AuditEntityType } from "../services/audit-log.service";
+import { getErrorMessage } from "../lib/errors";
 
 const router = Router();
 
@@ -121,8 +122,8 @@ router.get("/", withAuth(async (req, res) => {
     await cache.set(cacheKey, response, CACHE_TTL.LONG);
 
     res.json(response);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -164,8 +165,8 @@ router.post("/", withAuth(async (req, res) => {
     await cache.del(`wallets:user:${req.user.id}`);
 
     res.json(wallet);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -213,8 +214,8 @@ router.patch("/:id", withAuth(async (req, res) => {
     await cache.del(`wallets:user:${req.user.id}`);
 
     res.json(updated);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -244,8 +245,8 @@ router.delete("/:id", withAuth(async (req, res) => {
     await cache.del(`wallets:user:${req.user.id}`);
 
     res.json({ success: true });
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -270,10 +271,8 @@ router.post("/:id/calibrate", withAuth(async (req, res) => {
     await cache.del(`wallets:user:${req.user.id}`);
 
     res.json(result);
-  } catch (error: any) {
-    res.status(500).json({
-      error: error instanceof Error ? error.message : 'Calibration failed'
-    });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 

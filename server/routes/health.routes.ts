@@ -3,12 +3,44 @@
  *
  * Provides health check endpoints for monitoring and load balancers.
  * Used by Docker healthcheck, Kubernetes probes, and monitoring tools.
+ * Junior-Friendly: ~100 lines, clear health check patterns
  */
 
 import { Router } from 'express';
 import { db } from '../db';
+import { isRedisAvailable, cache } from '../lib/redis';
+import { metrics } from '../lib/metrics';
+import { getAlertStatus } from '../lib/alerts';
+import os from 'os';
 
 const router = Router();
+
+/**
+ * Get system metrics for monitoring
+ */
+function getSystemMetrics() {
+  const memUsage = process.memoryUsage();
+  const cpuUsage = process.cpuUsage();
+
+  return {
+    memory: {
+      heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024), // MB
+      heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024), // MB
+      external: Math.round(memUsage.external / 1024 / 1024), // MB
+      rss: Math.round(memUsage.rss / 1024 / 1024), // MB
+    },
+    cpu: {
+      user: Math.round(cpuUsage.user / 1000), // ms
+      system: Math.round(cpuUsage.system / 1000), // ms
+    },
+    system: {
+      loadAvg: os.loadavg().map(n => Math.round(n * 100) / 100),
+      freeMemory: Math.round(os.freemem() / 1024 / 1024), // MB
+      totalMemory: Math.round(os.totalmem() / 1024 / 1024), // MB
+      cpuCount: os.cpus().length,
+    },
+  };
+}
 
 /**
  * Basic health check
@@ -24,36 +56,51 @@ router.get('/health', (_req, res) => {
 
 /**
  * Detailed health check
- * Checks database connection and other dependencies
+ * Checks database, Redis, and other dependencies
  */
 router.get('/health/detailed', async (_req, res) => {
-  const checks = {
+  const checks: {
+    server: string;
+    database: string;
+    redis: string;
+    timestamp: string;
+    uptime: number;
+    metrics: ReturnType<typeof getSystemMetrics>;
+    version: string;
+  } = {
     server: 'ok',
     database: 'checking',
+    redis: 'checking',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    memory: process.memoryUsage(),
+    uptime: Math.round(process.uptime()),
+    metrics: getSystemMetrics(),
     version: process.env.npm_package_version || 'unknown',
   };
 
+  let isHealthy = true;
+
+  // Check database connection
   try {
-    // Check database connection
     await db.execute('SELECT 1');
     checks.database = 'ok';
-
-    res.status(200).json({
-      status: 'healthy',
-      checks,
-    });
-  } catch (error) {
+  } catch {
     checks.database = 'error';
-
-    res.status(503).json({
-      status: 'unhealthy',
-      checks,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    isHealthy = false;
   }
+
+  // Check Redis connection (optional - not critical)
+  try {
+    const redisAvailable = await isRedisAvailable();
+    checks.redis = redisAvailable ? 'ok' : 'not configured';
+  } catch {
+    checks.redis = 'not configured';
+  }
+
+  const status = isHealthy ? 200 : 503;
+  res.status(status).json({
+    status: isHealthy ? 'healthy' : 'unhealthy',
+    checks,
+  });
 });
 
 /**
@@ -85,6 +132,47 @@ router.get('/health/live', (_req, res) => {
   res.status(200).json({
     status: 'alive',
     timestamp: new Date().toISOString(),
+  });
+});
+
+/**
+ * Metrics endpoint
+ * For monitoring dashboards (Grafana, Datadog, etc.)
+ */
+router.get('/health/metrics', async (_req, res) => {
+  const systemMetrics = getSystemMetrics();
+  const businessMetrics = metrics.getAll();
+
+  // Get Redis stats if available
+  let redisStats = null;
+  try {
+    redisStats = await cache.getStats();
+  } catch {
+    // Redis not available
+  }
+
+  res.status(200).json({
+    timestamp: new Date().toISOString(),
+    uptime: Math.round(process.uptime()),
+    nodeVersion: process.version,
+    pid: process.pid,
+    ...systemMetrics,
+    business: businessMetrics,
+    redis: redisStats,
+  });
+});
+
+/**
+ * Alerts endpoint
+ * Returns current alert status and any triggered alerts
+ */
+router.get('/health/alerts', (_req, res) => {
+  const alertStatus = getAlertStatus();
+
+  const status = alertStatus.healthy ? 200 : 503;
+  res.status(status).json({
+    timestamp: new Date().toISOString(),
+    ...alertStatus,
   });
 });
 

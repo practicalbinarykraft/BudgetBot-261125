@@ -96,9 +96,9 @@ export async function checkBudgetAlert(params: {
         message: `Budget exceeded! You've spent ${percentage.toFixed(0)}% of your budget for this category`,
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to check budget alert', {
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
       ...params,
     });
   }
@@ -130,9 +130,9 @@ export function notifyTransactionCreated(params: {
       date: transaction.date,
       message: `New ${transaction.type}: ${transaction.description} - $${transaction.amount}`,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to send transaction notification', {
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
       userId: params.userId,
     });
   }
@@ -157,9 +157,9 @@ export function notifyExchangeRateUpdate(params: {
       timestamp: new Date().toISOString(),
       message: 'Exchange rates updated',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to send exchange rate notification', {
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 }
@@ -184,9 +184,9 @@ export function notifyLowBalance(params: {
       threshold,
       message: `Low balance alert: ${walletName} has only $${balance} remaining`,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to send low balance notification', {
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
       userId: params.userId,
     });
   }

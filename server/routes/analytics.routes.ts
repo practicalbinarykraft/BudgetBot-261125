@@ -2,6 +2,7 @@ import { Router } from "express";
 import { storage } from "../storage";
 import { withAuth } from "../middleware/auth-utils";
 import { heavyOperationRateLimiter } from "../middleware/rate-limit";
+import { getErrorMessage } from "../lib/errors";
 import { calculateTrend } from "../services/trend-calculator.service";
 import { getCategoryBreakdown } from "../services/analytics/category-breakdown.service";
 import { getPersonBreakdown } from "../services/analytics/person-breakdown.service";
@@ -207,9 +208,9 @@ router.get("/trend", withAuth(async (req, res) => {
       goals,
       metadata, // Already serialized to ISO string in forecast.service.ts
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Trend data error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -221,9 +222,9 @@ router.get("/by-category", withAuth(async (req, res) => {
     const breakdown = await getCategoryBreakdown(req.user.id, startDate, endDate);
 
     return res.json(breakdown);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in /api/analytics/by-category:', error);
-    return res.status(500).json({ error: error.message || 'Failed to get category breakdown' });
+    return res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -235,9 +236,9 @@ router.get("/by-person", withAuth(async (req, res) => {
     const breakdown = await getPersonBreakdown(req.user.id, startDate, endDate);
 
     return res.json(breakdown);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in /api/analytics/by-person:', error);
-    return res.status(500).json({ error: error.message || 'Failed to get person breakdown' });
+    return res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -249,9 +250,9 @@ router.get("/by-type", withAuth(async (req, res) => {
     const breakdown = await getTypeBreakdown(req.user.id, startDate, endDate);
 
     return res.json(breakdown);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in /api/analytics/by-type:', error);
-    return res.status(500).json({ error: error.message || 'Failed to get type breakdown' });
+    return res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -277,9 +278,9 @@ router.get("/unsorted", withAuth(async (req, res) => {
       count: transactions.length,
       transactions,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in /api/analytics/unsorted:', error);
-    return res.status(500).json({ error: error.message || 'Failed to get unsorted transactions' });
+    return res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 

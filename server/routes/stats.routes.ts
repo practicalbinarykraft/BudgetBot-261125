@@ -2,6 +2,7 @@ import { Router } from "express";
 import { storage } from "../storage";
 import { withAuth } from "../middleware/auth-utils";
 import { heavyOperationRateLimiter } from "../middleware/rate-limit";
+import { getErrorMessage } from "../lib/errors";
 
 const router = Router();
 
@@ -68,8 +69,8 @@ router.get("/stats", withAuth(async (req, res) => {
       totalExpense,
       balance,
     });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -86,8 +87,8 @@ router.get("/financial-health", withAuth(async (req, res) => {
     }
     const result = await calculateFinancialHealth(storage, req.user.id, daysWindow);
     res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 

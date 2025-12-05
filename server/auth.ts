@@ -2,7 +2,8 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { userRepository } from "./repositories/user.repository";
 import { categoryRepository } from "./repositories/category.repository";
-import { insertUserSchema } from "@shared/schema";
+import { insertUserSchema, User } from "@shared/schema";
+import { getErrorMessage } from "./lib/errors";
 import type { Express } from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
@@ -130,8 +131,8 @@ export function setupAuth(app: Express) {
     )
   );
 
-  passport.serializeUser((user: any, done) => {
-    done(null, user.id);
+  passport.serializeUser((user: Express.User, done) => {
+    done(null, (user as User).id);
   });
 
   passport.deserializeUser(async (id: number | string, done) => {
@@ -187,13 +188,13 @@ export function setupAuth(app: Express) {
           name: user.name,
         });
       });
-    } catch (error: any) {
-      res.status(400).json({ error: error.message });
+    } catch (error: unknown) {
+      res.status(400).json({ error: getErrorMessage(error) });
     }
   });
 
   app.post("/api/login", authRateLimiter, (req, res, next) => {
-    passport.authenticate("local", (err: any, user: any, info: any) => {
+    passport.authenticate("local", (err: Error | null, user: User | false, info: { message: string } | undefined) => {
       if (err) {
         return next(err);
       }
@@ -229,7 +230,7 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/logout", async (req, res) => {
-    const userId = (req.user as any)?.id;
+    const userId = (req.user as User | undefined)?.id;
 
     req.logout(async (err) => {
       if (err) {
@@ -253,7 +254,7 @@ export function setupAuth(app: Express) {
 
   app.get("/api/user", (req, res) => {
     if (req.isAuthenticated()) {
-      const user = req.user as any;
+      const user = req.user as User;
       return res.json({
         id: user.id,
         email: user.email,

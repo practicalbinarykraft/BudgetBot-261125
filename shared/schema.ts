@@ -26,6 +26,9 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   telegramId: text("telegram_id").unique(),
   telegramUsername: text("telegram_username"),
+  // 2FA fields
+  twoFactorEnabled: boolean("two_factor_enabled").default(false).notNull(),
+  twoFactorSecret: text("two_factor_secret"), // Encrypted TOTP secret
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

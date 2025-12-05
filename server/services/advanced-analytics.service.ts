@@ -72,9 +72,9 @@ export async function getSpendingForecast(userId: number) {
         amount: parseFloat(r.total || '0'),
       })),
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to calculate spending forecast', {
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
       userId,
     });
     throw error;
@@ -152,9 +152,9 @@ export async function getBudgetRecommendations(userId: number) {
     });
 
     return recommendations;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get budget recommendations', {
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
       userId,
     });
     throw error;
@@ -233,9 +233,9 @@ export async function getSpendingTrends(userId: number) {
         volatility: Math.round(((maxSpending - minSpending) / avgSpending) * 100),
       },
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get spending trends', {
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
       userId,
     });
     throw error;
@@ -330,9 +330,9 @@ export async function getFinancialHealthScore(userId: number) {
         monthlySavings: income - expense,
       },
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to calculate financial health score', {
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
       userId,
     });
     throw error;

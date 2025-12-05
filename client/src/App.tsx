@@ -11,7 +11,8 @@ import { I18nProvider } from "@/i18n";
 import { AIChatSidebar } from "@/components/ai-chat-sidebar";
 import { PageLoading } from "@/components/loading-spinner";
 import { WebSocketProvider } from "@/components/WebSocketProvider";
-import { useEffect, lazy, Suspense } from "react";
+import { WelcomeDialog, useOnboarding } from "@/components/onboarding/welcome-dialog";
+import { useEffect, useState, lazy, Suspense } from "react";
 
 // ===== Lazy Load Pages for Better Performance =====
 // Critical pages (loaded immediately)
@@ -103,10 +104,19 @@ function Router() {
 
 function AppContent() {
   const { user } = useAuth();
+  const { showOnboarding } = useOnboarding();
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
   };
+
+  // Show onboarding dialog after user logs in
+  useEffect(() => {
+    if (user && showOnboarding) {
+      setOnboardingOpen(true);
+    }
+  }, [user, showOnboarding]);
 
   if (!user) {
     return (
@@ -131,7 +141,13 @@ function AppContent() {
           </div>
         </div>
       </SidebarProvider>
-      
+
+      {/* Onboarding dialog for new users */}
+      <WelcomeDialog
+        open={onboardingOpen}
+        onComplete={() => setOnboardingOpen(false)}
+      />
+
       {/* AI Chat Sidebar - доступен везде */}
       <AIChatSidebar />
     </>

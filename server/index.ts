@@ -21,6 +21,10 @@ import { initSessionCleanup } from "./cron/session-cleanup";
 import logger, { logError, logInfo, logRequest } from "./lib/logger";
 import { captureException } from "./lib/sentry";
 import { isAppError, toAppError } from "./lib/errors";
+import { apiLimiter } from "./middleware/rate-limiter";
+import { securityHeaders } from "./middleware/security-headers";
+import { requestId } from "./middleware/request-id";
+import { compressResponse } from "./middleware/compression";
 
 const app = express();
 const server = createServer(app);
@@ -29,6 +33,15 @@ const server = createServer(app);
 // https://render.com/docs/troubleshooting-deploys
 server.keepAliveTimeout = 120000; // 120 seconds
 server.headersTimeout = 120000; // 120 seconds
+
+// Security headers - MUST be first middleware
+app.use(securityHeaders);
+
+// Request ID for tracing
+app.use(requestId);
+
+// Response compression (gzip) - reduce bandwidth
+app.use(compressResponse);
 
 declare module 'http' {
   interface IncomingMessage {
@@ -41,6 +54,9 @@ app.use(express.json({
   }
 }));
 app.use(express.urlencoded({ extended: false }));
+
+// Rate limiting - protect API from abuse
+app.use('/api', apiLimiter);
 
 setupAuth(app);
 
@@ -64,45 +80,51 @@ app.use((req, res, next) => {
   registerRoutes(app);
 
   // Global error handler - MUST be last middleware
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
     // Convert to AppError for consistent handling
     const appError = isAppError(err) ? err : toAppError(err);
     const status = appError.statusCode || 500;
+    const user = req.user as { id?: number; email?: string; username?: string } | undefined;
 
-    // Log error with Winston
+    // Log error with Winston (includes requestId for tracing)
     logError('Request failed', err, {
+      requestId: req.requestId,
       status,
       code: appError.code,
-      path: _req.path,
-      method: _req.method,
-      ip: _req.ip,
-      userId: (_req.user as any)?.id,
+      path: req.path,
+      method: req.method,
+      ip: req.ip,
+      userId: user?.id,
     });
 
     // Send error to Sentry (only 5xx errors or unexpected errors)
     if (status >= 500 || !isAppError(err)) {
       captureException(err, {
-        user: (_req.user as any)?.id ? {
-          id: (_req.user as any).id,
-          email: (_req.user as any).email,
-          username: (_req.user as any).username,
+        user: user?.id ? {
+          id: user.id,
+          email: user.email,
+          username: user.username,
         } : undefined,
         tags: {
-          path: _req.path,
-          method: _req.method,
+          path: req.path,
+          method: req.method,
           status: String(status),
+          requestId: req.requestId,
         },
         extra: {
-          ip: _req.ip,
-          headers: _req.headers,
-          query: _req.query,
-          body: _req.body,
+          ip: req.ip,
+          headers: req.headers,
+          query: req.query,
+          body: req.body,
         },
       });
     }
 
-    // Send user-friendly error response to client
-    res.status(status).json(appError.toJSON());
+    // Send user-friendly error response to client (includes requestId for support)
+    res.status(status).json({
+      ...appError.toJSON(),
+      requestId: req.requestId,
+    });
 
     // ⚠️ DO NOT throw here! It will crash the server.
     // Errors are already handled and logged.

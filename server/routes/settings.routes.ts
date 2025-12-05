@@ -4,6 +4,7 @@ import { insertSettingsSchema } from "@shared/schema";
 import { withAuth } from "../middleware/auth-utils";
 import { invalidateUserRateCache } from "../services/currency-service";
 import { updateScheduleForUser } from "../services/notification-scheduler.service";
+import { getErrorMessage } from "../lib/errors";
 
 const router = Router();
 
@@ -21,8 +22,8 @@ router.get("/", withAuth(async (req, res) => {
       });
     }
     res.json(settings);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -75,8 +76,8 @@ router.patch("/", withAuth(async (req, res) => {
     }
     
     res.json(settings);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
 

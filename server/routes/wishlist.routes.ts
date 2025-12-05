@@ -4,6 +4,7 @@ import { insertWishlistSchema } from "@shared/schema";
 import { withAuth } from "../middleware/auth-utils";
 import { predictGoal, predictGoalWithStats } from "../services/goal-predictor.service";
 import { getMonthlyStats, getTotalBudgetLimits } from "../services/budget-stats.service";
+import { getErrorMessage } from "../lib/errors";
 
 const router = Router();
 
@@ -36,8 +37,8 @@ router.get("/", withAuth(async (req, res) => {
     });
     
     res.json(wishlistWithPredictions);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -60,8 +61,8 @@ router.post("/", withAuth(async (req, res) => {
       ...wishlistItem,
       prediction,
     });
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -91,8 +92,8 @@ router.patch("/:id", withAuth(async (req, res) => {
       ...updated,
       prediction,
     });
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -106,8 +107,8 @@ router.delete("/:id", withAuth(async (req, res) => {
     }
     await storage.deleteWishlist(id);
     res.json({ success: true });
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
 

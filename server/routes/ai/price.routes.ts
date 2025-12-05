@@ -3,6 +3,7 @@ import { storage } from "../../storage";
 import { withAuth } from "../../middleware/auth-utils";
 import { receiptItemsRepository } from "../../repositories/receipt-items.repository";
 import { comparePrices, getAIPriceInsights } from "../../services/ai/price-comparison.service";
+import { getErrorMessage } from "../../lib/errors";
 
 const router = Router();
 
@@ -47,9 +48,9 @@ router.get("/price-recommendations", withAuth(async (req, res) => {
       ...comparisonResult,
       aiInsights
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Price recommendations error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 

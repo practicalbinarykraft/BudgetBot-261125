@@ -78,15 +78,17 @@ export async function generateForecast(
       currentCapital,
       stats,
       activeRecurring,
-      filters,
+      filters || {},
       historicalDays
     );
-  } catch (error: any) {
-    const isTimeout = error.name === 'AbortError' || error.message?.includes('timeout');
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorName = error instanceof Error ? error.name : '';
+    const isTimeout = errorName === 'AbortError' || errorMessage?.includes('timeout');
     if (isTimeout) {
       console.warn('[Forecast] AI request timed out after 30s, using simple forecast');
     } else {
-      console.error('[Forecast] AI forecast failed:', error.message);
+      console.error('[Forecast] AI forecast failed:', errorMessage);
     }
 
     // Fallback to simple linear forecast

@@ -14,9 +14,14 @@ import {
   Settings,
   LogOut,
   Package,
+  ChevronDown,
+  BarChart3,
+  Target,
+  Cog,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -26,108 +31,49 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
   SidebarFooter,
-  SidebarRail,
-  SidebarHeader,
-  SidebarTrigger,
-  useSidebar,
 } from "@/components/ui/sidebar";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "@/i18n";
 
+/**
+ * App Sidebar - Navigation with 5 main groups
+ *
+ * Structure:
+ * 1. Dashboard (main)
+ * 2. Money (transactions, wallets, recurring)
+ * 3. Analytics (budgets, AI, categories)
+ * 4. Goals (wishlist, planned)
+ * 5. Settings
+ */
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, logoutMutation } = useAuth();
   const { t } = useTranslation();
-  
-  const menuItems = [
-    {
-      id: 'dashboard',
-      title: t("nav.dashboard"),
-      url: "/app/dashboard",
-      icon: LayoutDashboard,
-    },
-    {
-      id: 'transactions',
-      title: t("nav.transactions"),
-      url: "/app/transactions",
-      icon: CreditCard,
-    },
-    {
-      id: 'wallets',
-      title: t("nav.wallets"),
-      url: "/app/wallets",
-      icon: Wallet,
-    },
-    {
-      id: 'assets',
-      title: t("nav.assets"),
-      url: "/app/assets",
-      icon: Building2,
-    },
-    {
-      id: 'categories',
-      title: t("nav.categories"),
-      url: "/app/categories",
-      icon: Tag,
-    },
-    {
-      id: 'tags',
-      title: t("nav.tags"),
-      url: "/app/tags",
-      icon: Users,
-    },
-    {
-      id: 'recurring',
-      title: t("nav.recurring"),
-      url: "/app/recurring",
-      icon: Repeat,
-    },
-    {
-      id: 'wishlist',
-      title: t("nav.wishlist"),
-      url: "/app/wishlist",
-      icon: Heart,
-    },
-    {
-      id: 'planned_expenses',
-      title: t("nav.planned_expenses"),
-      url: "/app/planned-expenses",
-      icon: Calendar,
-    },
-    {
-      id: 'planned_income',
-      title: t("nav.planned_income"),
-      url: "/app/planned-income",
-      icon: Coins,
-    },
-    {
-      id: 'budgets',
-      title: t("nav.budgets"),
-      url: "/app/budgets",
-      icon: TrendingDown,
-    },
-    {
-      id: 'product_catalog',
-      title: t("nav.product_catalog"),
-      url: "/app/product-catalog",
-      icon: Package,
-    },
-    {
-      id: 'ai_analysis',
-      title: t("nav.ai_analysis"),
-      url: "/app/ai-analysis",
-      icon: Sparkles,
-    },
-    {
-      id: 'settings',
-      title: t("nav.settings"),
-      url: "/app/settings",
-      icon: Settings,
-    },
-  ];
+
+  // Track which groups are expanded
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    money: true,
+    analytics: false,
+    goals: false,
+  });
+
+  const toggleGroup = (group: string) => {
+    setOpenGroups(prev => ({ ...prev, [group]: !prev[group] }));
+  };
+
+  // Check if any sub-item is active
+  const isGroupActive = (urls: string[]) => urls.some(url => location === url);
 
   const { data: sortingStats } = useQuery<{ unsortedCount: number }>({
     queryKey: ['/api/sorting/stats'],
@@ -137,7 +83,7 @@ export function AppSidebar() {
   const unsortedCount = sortingStats?.unsortedCount ?? 0;
 
   return (
-    <Sidebar>
+    <Sidebar aria-label={t("nav.main_navigation")}>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="text-lg font-bold mb-2">
@@ -145,25 +91,198 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.id}>
-                  <SidebarMenuButton asChild isActive={location === item.url}>
-                    <Link href={item.url} data-testid={`nav-${item.id}`}>
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.title}</span>
-                      {item.url === '/app/transactions' && unsortedCount > 0 && (
-                        <Badge 
-                          variant="outline" 
-                          className="ml-auto bg-muted" 
-                          data-testid="badge-unsorted-count"
-                        >
+              {/* 1. Dashboard - Always visible */}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location === "/app/dashboard"}
+                  aria-label={t("nav.dashboard")}
+                >
+                  <Link href="/app/dashboard" data-testid="nav-dashboard">
+                    <LayoutDashboard className="w-4 h-4" aria-hidden="true" />
+                    <span>{t("nav.dashboard")}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              {/* 2. Money - Transactions, Wallets, Recurring */}
+              <Collapsible
+                open={openGroups.money}
+                onOpenChange={() => toggleGroup('money')}
+              >
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton
+                      aria-expanded={openGroups.money}
+                      aria-label={t("nav.money")}
+                      className={isGroupActive(['/app/transactions', '/app/wallets', '/app/recurring']) ? 'bg-accent' : ''}
+                    >
+                      <Wallet className="w-4 h-4" aria-hidden="true" />
+                      <span>{t("nav.money")}</span>
+                      {unsortedCount > 0 && (
+                        <Badge variant="outline" className="ml-auto bg-muted" aria-label={`${unsortedCount} unsorted`}>
                           {unsortedCount}
                         </Badge>
                       )}
-                    </Link>
-                  </SidebarMenuButton>
+                      <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${openGroups.money ? 'rotate-180' : ''}`} aria-hidden="true" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      <SidebarMenuSubItem>
+                        <SidebarMenuSubButton asChild isActive={location === "/app/transactions"}>
+                          <Link href="/app/transactions" data-testid="nav-transactions" aria-label={t("nav.transactions")}>
+                            <CreditCard className="w-4 h-4" aria-hidden="true" />
+                            <span>{t("nav.transactions")}</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                      <SidebarMenuSubItem>
+                        <SidebarMenuSubButton asChild isActive={location === "/app/wallets"}>
+                          <Link href="/app/wallets" data-testid="nav-wallets" aria-label={t("nav.wallets")}>
+                            <Wallet className="w-4 h-4" aria-hidden="true" />
+                            <span>{t("nav.wallets")}</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                      <SidebarMenuSubItem>
+                        <SidebarMenuSubButton asChild isActive={location === "/app/recurring"}>
+                          <Link href="/app/recurring" data-testid="nav-recurring" aria-label={t("nav.recurring")}>
+                            <Repeat className="w-4 h-4" aria-hidden="true" />
+                            <span>{t("nav.recurring")}</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
                 </SidebarMenuItem>
-              ))}
+              </Collapsible>
+
+              {/* 3. Analytics - Budgets, AI, Categories, Tags */}
+              <Collapsible
+                open={openGroups.analytics}
+                onOpenChange={() => toggleGroup('analytics')}
+              >
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton
+                      aria-expanded={openGroups.analytics}
+                      aria-label={t("nav.analytics")}
+                      className={isGroupActive(['/app/budgets', '/app/ai-analysis', '/app/categories', '/app/tags']) ? 'bg-accent' : ''}
+                    >
+                      <BarChart3 className="w-4 h-4" aria-hidden="true" />
+                      <span>{t("nav.analytics")}</span>
+                      <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${openGroups.analytics ? 'rotate-180' : ''}`} aria-hidden="true" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      <SidebarMenuSubItem>
+                        <SidebarMenuSubButton asChild isActive={location === "/app/budgets"}>
+                          <Link href="/app/budgets" data-testid="nav-budgets" aria-label={t("nav.budgets")}>
+                            <TrendingDown className="w-4 h-4" aria-hidden="true" />
+                            <span>{t("nav.budgets")}</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                      <SidebarMenuSubItem>
+                        <SidebarMenuSubButton asChild isActive={location === "/app/ai-analysis"}>
+                          <Link href="/app/ai-analysis" data-testid="nav-ai_analysis" aria-label={t("nav.ai_analysis")}>
+                            <Sparkles className="w-4 h-4" aria-hidden="true" />
+                            <span>{t("nav.ai_analysis")}</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                      <SidebarMenuSubItem>
+                        <SidebarMenuSubButton asChild isActive={location === "/app/categories"}>
+                          <Link href="/app/categories" data-testid="nav-categories" aria-label={t("nav.categories")}>
+                            <Tag className="w-4 h-4" aria-hidden="true" />
+                            <span>{t("nav.categories")}</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                      <SidebarMenuSubItem>
+                        <SidebarMenuSubButton asChild isActive={location === "/app/tags"}>
+                          <Link href="/app/tags" data-testid="nav-tags" aria-label={t("nav.tags")}>
+                            <Users className="w-4 h-4" aria-hidden="true" />
+                            <span>{t("nav.tags")}</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
+
+              {/* 4. Goals - Wishlist, Planned Expenses, Planned Income, Assets */}
+              <Collapsible
+                open={openGroups.goals}
+                onOpenChange={() => toggleGroup('goals')}
+              >
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton
+                      aria-expanded={openGroups.goals}
+                      aria-label={t("nav.goals")}
+                      className={isGroupActive(['/app/wishlist', '/app/planned-expenses', '/app/planned-income', '/app/assets']) ? 'bg-accent' : ''}
+                    >
+                      <Target className="w-4 h-4" aria-hidden="true" />
+                      <span>{t("nav.goals")}</span>
+                      <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${openGroups.goals ? 'rotate-180' : ''}`} aria-hidden="true" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      <SidebarMenuSubItem>
+                        <SidebarMenuSubButton asChild isActive={location === "/app/wishlist"}>
+                          <Link href="/app/wishlist" data-testid="nav-wishlist" aria-label={t("nav.wishlist")}>
+                            <Heart className="w-4 h-4" aria-hidden="true" />
+                            <span>{t("nav.wishlist")}</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                      <SidebarMenuSubItem>
+                        <SidebarMenuSubButton asChild isActive={location === "/app/planned-expenses"}>
+                          <Link href="/app/planned-expenses" data-testid="nav-planned_expenses" aria-label={t("nav.planned_expenses")}>
+                            <Calendar className="w-4 h-4" aria-hidden="true" />
+                            <span>{t("nav.planned_expenses")}</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                      <SidebarMenuSubItem>
+                        <SidebarMenuSubButton asChild isActive={location === "/app/planned-income"}>
+                          <Link href="/app/planned-income" data-testid="nav-planned_income" aria-label={t("nav.planned_income")}>
+                            <Coins className="w-4 h-4" aria-hidden="true" />
+                            <span>{t("nav.planned_income")}</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                      <SidebarMenuSubItem>
+                        <SidebarMenuSubButton asChild isActive={location === "/app/assets"}>
+                          <Link href="/app/assets" data-testid="nav-assets" aria-label={t("nav.assets")}>
+                            <Building2 className="w-4 h-4" aria-hidden="true" />
+                            <span>{t("nav.assets")}</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
+
+              {/* 5. Settings - Always visible */}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location === "/app/settings"}
+                  aria-label={t("nav.settings")}
+                >
+                  <Link href="/app/settings" data-testid="nav-settings">
+                    <Settings className="w-4 h-4" aria-hidden="true" />
+                    <span>{t("nav.settings")}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -179,8 +298,9 @@ export function AppSidebar() {
             onClick={() => logoutMutation.mutate()}
             disabled={logoutMutation.isPending}
             data-testid="button-logout"
+            aria-label={t("common.logout")}
           >
-            <LogOut className="w-4 h-4 mr-2" />
+            <LogOut className="w-4 h-4 mr-2" aria-hidden="true" />
             {t("common.logout")}
           </Button>
         </div>

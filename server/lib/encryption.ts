@@ -40,9 +40,9 @@ function getEncryptionKey(): Buffer {
     }
 
     return keyBuffer;
-  } catch (err: any) {
+  } catch (err: unknown) {
     throw new Error(
-      `Invalid ENCRYPTION_KEY format: ${err.message}. ` +
+      `Invalid ENCRYPTION_KEY format: ${err instanceof Error ? err.message : String(err)}. ` +
       `Must be 32 bytes in base64 format. ` +
       `Generate with: openssl rand -base64 32`
     );
@@ -124,8 +124,8 @@ export function decrypt(encryptedData: string): string {
     decrypted += decipher.final('utf8');
 
     return decrypted;
-  } catch (err: any) {
-    throw new Error(`Decryption failed: ${err.message}`);
+  } catch (err: unknown) {
+    throw new Error(`Decryption failed: ${err instanceof Error ? err.message : String(err)}`);
   }
 }
 

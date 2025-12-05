@@ -4,6 +4,7 @@ import { withAuth } from "../../middleware/auth-utils";
 import { parseReceiptWithItems } from "../../services/ocr/receipt-parser.service";
 import { receiptItemsRepository } from "../../repositories/receipt-items.repository";
 import { processReceiptItems } from "../../services/product-catalog.service";
+import { getErrorMessage } from "../../lib/errors";
 
 const router = Router();
 
@@ -150,11 +151,11 @@ router.post("/receipt-with-items", withAuth(async (req, res) => {
       itemsCount: parsed.items.length
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Receipt parsing error:", error);
     res.status(500).json({
       error: "Failed to parse receipt",
-      details: error.message || "Unknown error"
+      details: getErrorMessage(error)
     });
   }
 }));

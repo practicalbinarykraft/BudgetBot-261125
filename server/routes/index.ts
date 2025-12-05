@@ -14,6 +14,7 @@
  * and is mounted here with the full prefix (e.g., app.use('/api/transactions', router))
  */
 import type { Express } from "express";
+import { authLimiter, aiLimiter } from "../middleware/rate-limiter";
 import transactionsRouter from "./transactions.routes";
 import walletsRouter from "./wallets.routes";
 import categoriesRouter from "./categories.routes";
@@ -40,6 +41,8 @@ import healthRouter from "./health.routes";
 import swaggerRouter from "./swagger.routes";
 import auditLogRouter from "./audit-log.routes";
 import advancedAnalyticsRouter from "./advanced-analytics.routes";
+import backupRouter from "./backup.routes";
+import twoFactorRouter from "./two-factor.routes";
 
 export function registerRoutes(app: Express) {
   // API Documentation (Swagger UI)
@@ -69,7 +72,8 @@ export function registerRoutes(app: Express) {
   app.use("/api/sorting", sortingRouter);
   app.use("/api/product-catalog", productCatalogRouter);
   app.use("/api/audit-logs", auditLogRouter);
-  
+  app.use("/api/backup", backupRouter);
+
   // Stats and analytics (mounted on /api for /api/stats and /api/financial-health)
   app.use("/api", statsRouter);
   app.use("/api/analytics", analyticsRouter);
@@ -78,9 +82,12 @@ export function registerRoutes(app: Express) {
   // Currency exchange rates and conversions
   app.use("/api", currencyRouter);
   
-  // AI routes
-  app.use("/api/ai", aiRouter);
+  // AI routes (with stricter rate limiting - expensive operations)
+  app.use("/api/ai", aiLimiter, aiRouter);
   
   // Admin/migration routes (dev-only)
   app.use("/api/admin", migrationRouter);
+
+  // Two-factor authentication
+  app.use("/api/2fa", twoFactorRouter);
 }

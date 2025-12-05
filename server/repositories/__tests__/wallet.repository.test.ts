@@ -23,42 +23,38 @@ describe('WalletRepository', () => {
 
   describe('getWalletsByUserId', () => {
     it('should return wallets for a user', async () => {
-      const mockWallets = [
+      const mockWalletsList = [
         { id: 1, userId: 1, name: 'Main Wallet', balance: '1000.00', currency: 'USD', createdAt: new Date() },
         { id: 2, userId: 1, name: 'Savings', balance: '5000.00', currency: 'USD', createdAt: new Date() },
       ];
 
-      const mockFrom = vi.fn().mockReturnThis();
-      const mockWhere = vi.fn().mockResolvedValue(mockWallets);
+      const mockDynamic = vi.fn().mockResolvedValue(mockWalletsList);
+      const mockOrderBy = vi.fn().mockReturnValue({ $dynamic: mockDynamic });
+      const mockWhere = vi.fn().mockReturnValue({ orderBy: mockOrderBy });
+      const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
 
-      (db.select as any).mockReturnValue({
-        from: mockFrom,
-      });
-      mockFrom.mockReturnValue({
-        where: mockWhere,
-      });
+      (db.select as any).mockReturnValue({ from: mockFrom });
 
       const result = await repository.getWalletsByUserId(1);
 
-      expect(result).toEqual(mockWallets);
+      expect(result.wallets).toEqual(mockWalletsList);
+      expect(result.total).toBe(0); // total comes from count query
       expect(db.select).toHaveBeenCalled();
       expect(mockFrom).toHaveBeenCalledWith(wallets);
     });
 
     it('should return empty array when user has no wallets', async () => {
-      const mockFrom = vi.fn().mockReturnThis();
-      const mockWhere = vi.fn().mockResolvedValue([]);
+      const mockDynamic = vi.fn().mockResolvedValue([]);
+      const mockOrderBy = vi.fn().mockReturnValue({ $dynamic: mockDynamic });
+      const mockWhere = vi.fn().mockReturnValue({ orderBy: mockOrderBy });
+      const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
 
-      (db.select as any).mockReturnValue({
-        from: mockFrom,
-      });
-      mockFrom.mockReturnValue({
-        where: mockWhere,
-      });
+      (db.select as any).mockReturnValue({ from: mockFrom });
 
       const result = await repository.getWalletsByUserId(999);
 
-      expect(result).toEqual([]);
+      expect(result.wallets).toEqual([]);
+      expect(result.total).toBe(0);
     });
   });
 

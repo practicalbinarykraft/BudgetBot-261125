@@ -1,0 +1,113 @@
+# Health Check Endpoints Documentation
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Basic health check
+      description: Returns 200 if server is running
+      security: []
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    format: date-time
+                  uptime:
+                    type: number
+                    description: Server uptime in seconds
+
+  /health/detailed:
+    get:
+      tags:
+        - Health
+      summary: Detailed health check
+      description: Checks database, Redis, and system metrics
+      security: []
+      responses:
+        '200':
+          description: All systems healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, unhealthy]
+                  checks:
+                    type: object
+                    properties:
+                      server:
+                        type: string
+                      database:
+                        type: string
+                      redis:
+                        type: string
+                      uptime:
+                        type: number
+                      metrics:
+                        type: object
+        '503':
+          description: System unhealthy
+
+  /health/ready:
+    get:
+      tags:
+        - Health
+      summary: Readiness probe
+      description: For Kubernetes - checks if ready to receive traffic
+      security: []
+      responses:
+        '200':
+          description: Ready
+        '503':
+          description: Not ready
+
+  /health/live:
+    get:
+      tags:
+        - Health
+      summary: Liveness probe
+      description: For Kubernetes - always returns 200 if process is running
+      security: []
+      responses:
+        '200':
+          description: Alive
+
+  /health/metrics:
+    get:
+      tags:
+        - Health
+      summary: System metrics
+      description: CPU, memory, and Redis stats for monitoring
+      security: []
+      responses:
+        '200':
+          description: System metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  timestamp:
+                    type: string
+                  uptime:
+                    type: number
+                  memory:
+                    type: object
+                  cpu:
+                    type: object
+                  system:
+                    type: object
+                  redis:
+                    type: object

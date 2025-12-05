@@ -2,6 +2,7 @@ import { Router } from "express";
 import { storage } from "../storage";
 import { insertBudgetSchema } from "@shared/schema";
 import { withAuth } from "../middleware/auth-utils";
+import { getErrorMessage } from "../lib/errors";
 
 const router = Router();
 
@@ -47,8 +48,8 @@ router.get("/", withAuth(async (req, res) => {
       : result.budgets;
 
     res.json(response);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -74,8 +75,8 @@ router.post("/", withAuth(async (req, res) => {
     
     const budget = await storage.createBudget(data);
     res.json(budget);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -107,8 +108,8 @@ router.patch("/:id", withAuth(async (req, res) => {
     // Update budget (userId already verified above, no need to pass it)
     const updated = await storage.updateBudget(id, data);
     res.json(updated);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -123,8 +124,8 @@ router.delete("/:id", withAuth(async (req, res) => {
     
     await storage.deleteBudget(id);
     res.json({ success: true });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 

@@ -3,6 +3,7 @@ import { storage } from "../storage";
 import { insertCategorySchema } from "@shared/schema";
 import { withAuth } from "../middleware/auth-utils";
 import { cache, CACHE_TTL } from "../lib/redis";
+import { getErrorMessage } from "../lib/errors";
 
 const router = Router();
 
@@ -64,8 +65,8 @@ router.get("/", withAuth(async (req, res) => {
     await cache.set(cacheKey, response, CACHE_TTL.LONG);
 
     res.json(response);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -82,8 +83,8 @@ router.post("/", withAuth(async (req, res) => {
     await cache.del(`categories:user:${req.user.id}`);
 
     res.json(category);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -101,8 +102,8 @@ router.delete("/:id", withAuth(async (req, res) => {
     await cache.del(`categories:user:${req.user.id}`);
 
     res.json({ success: true });
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
 

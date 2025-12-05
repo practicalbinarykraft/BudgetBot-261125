@@ -4,7 +4,7 @@ import { withAuth } from "../middleware/auth-utils";
 import { transactionService } from "../services/transaction.service";
 import { z } from "zod";
 import { parse, isValid, format } from "date-fns";
-import { BadRequestError, NotFoundError, ValidationError } from "../lib/errors";
+import { BadRequestError, NotFoundError, ValidationError, getErrorMessage } from "../lib/errors";
 import { logAuditEvent, AuditAction, AuditEntityType } from "../services/audit-log.service";
 import { checkBudgetAlert, notifyTransactionCreated } from "../services/realtime-notifications.service";
 
@@ -174,7 +174,7 @@ router.get("/", withAuth(async (req, res) => {
         offset: filters.offset || 0,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Let error handler middleware handle it
     throw error;
   }
@@ -304,10 +304,11 @@ router.post("/", withAuth(async (req, res) => {
     }
 
     res.json(transaction);
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Wrap Zod validation errors in user-friendly message
-    if (error.name === 'ZodError') {
-      throw new ValidationError('Please check your input and try again', error.errors);
+    if (error instanceof Error && error.name === 'ZodError') {
+      const zodError = error as unknown as { errors: unknown };
+      throw new ValidationError('Please check your input and try again', zodError.errors);
     }
     throw error;
   }
@@ -339,11 +340,12 @@ router.patch("/:id", withAuth(async (req, res) => {
     });
 
     res.json(updated);
-  } catch (error: any) {
-    if (error.message === "Transaction not found") {
-      return res.status(404).json({ error: error.message });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    if (message === "Transaction not found") {
+      return res.status(404).json({ error: message });
     }
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: message });
   }
 }));
 
@@ -363,11 +365,12 @@ router.delete("/:id", withAuth(async (req, res) => {
     });
 
     res.json({ success: true });
-  } catch (error: any) {
-    if (error.message === "Transaction not found") {
-      return res.status(404).json({ error: error.message });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    if (message === "Transaction not found") {
+      return res.status(404).json({ error: message });
     }
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: message });
   }
 }));
 

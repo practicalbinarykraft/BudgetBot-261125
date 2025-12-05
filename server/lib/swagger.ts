@@ -1,30 +1,59 @@
-import swaggerJsdoc from 'swagger-jsdoc';
+/**
+ * Swagger/OpenAPI Configuration
+ *
+ * Provides API documentation with Swagger UI.
+ * Junior-Friendly: ~80 lines, clear configuration
+ *
+ * Access docs at: /api/docs
+ */
 
-const options: swaggerJsdoc.Options = {
+import swaggerJsdoc from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
+import type { Express } from 'express';
+
+/**
+ * OpenAPI specification options
+ */
+const swaggerOptions: swaggerJsdoc.Options = {
   definition: {
     openapi: '3.0.0',
     info: {
       title: 'BudgetBot API',
-      version: '2.16.0',
-      description: 'Comprehensive API documentation for BudgetBot - Personal Finance Management System',
+      version: '1.0.0',
+      description: `
+Personal finance management API with AI-powered insights.
+
+## Features
+- 💰 **Wallets** - Manage multiple currency wallets
+- 📊 **Transactions** - Track income and expenses
+- 🏷️ **Categories** - Organize spending by category
+- 📈 **Budgets** - Set and monitor spending limits
+- 🤖 **AI Insights** - Get smart financial recommendations
+- 🔔 **Notifications** - Budget alerts via Telegram
+
+## Authentication
+Most endpoints require authentication via session cookie.
+Use \`POST /api/auth/login\` to authenticate.
+      `,
       contact: {
-        name: 'BudgetBot Team',
-        url: 'https://github.com/yourusername/budgetbot',
-      },
-      license: {
-        name: 'MIT',
-        url: 'https://opensource.org/licenses/MIT',
+        name: 'BudgetBot Support',
       },
     },
     servers: [
       {
-        url: 'http://localhost:5000',
-        description: 'Development server',
+        url: '/api',
+        description: 'API Server',
       },
-      {
-        url: 'https://api.budgetbot.com',
-        description: 'Production server',
-      },
+    ],
+    tags: [
+      { name: 'Auth', description: 'Authentication endpoints' },
+      { name: 'Users', description: 'User management' },
+      { name: 'Wallets', description: 'Wallet operations' },
+      { name: 'Transactions', description: 'Transaction management' },
+      { name: 'Categories', description: 'Category management' },
+      { name: 'Budgets', description: 'Budget tracking' },
+      { name: 'AI', description: 'AI-powered features' },
+      { name: 'Health', description: 'Health check endpoints' },
     ],
     components: {
       securitySchemes: {
@@ -32,256 +61,57 @@ const options: swaggerJsdoc.Options = {
           type: 'apiKey',
           in: 'cookie',
           name: 'connect.sid',
-          description: 'Session-based authentication using cookies',
+          description: 'Session cookie for authentication',
         },
       },
       schemas: {
         Error: {
           type: 'object',
           properties: {
-            error: {
-              type: 'string',
-              description: 'Error message',
-            },
+            error: { type: 'string', description: 'Error message' },
+            code: { type: 'string', description: 'Error code' },
+            requestId: { type: 'string', description: 'Request ID for support' },
           },
         },
-        User: {
+        SuccessResponse: {
           type: 'object',
           properties: {
-            id: {
-              type: 'integer',
-              description: 'User ID',
-            },
-            username: {
-              type: 'string',
-              description: 'Username',
-            },
-            email: {
-              type: 'string',
-              format: 'email',
-              description: 'Email address',
-            },
-            createdAt: {
-              type: 'string',
-              format: 'date-time',
-              description: 'Account creation timestamp',
-            },
-          },
-        },
-        Transaction: {
-          type: 'object',
-          properties: {
-            id: {
-              type: 'integer',
-              description: 'Transaction ID',
-            },
-            userId: {
-              type: 'integer',
-              description: 'User ID',
-            },
-            type: {
-              type: 'string',
-              enum: ['income', 'expense'],
-              description: 'Transaction type',
-            },
-            amount: {
-              type: 'string',
-              description: 'Transaction amount',
-            },
-            amountUsd: {
-              type: 'string',
-              nullable: true,
-              description: 'Amount in USD',
-            },
-            description: {
-              type: 'string',
-              description: 'Transaction description',
-            },
-            category: {
-              type: 'string',
-              nullable: true,
-              description: 'Category name (deprecated)',
-            },
-            categoryId: {
-              type: 'integer',
-              nullable: true,
-              description: 'Category ID',
-            },
-            date: {
-              type: 'string',
-              format: 'date',
-              description: 'Transaction date',
-            },
-            currency: {
-              type: 'string',
-              default: 'USD',
-              description: 'Transaction currency',
-            },
-            walletId: {
-              type: 'integer',
-              nullable: true,
-              description: 'Wallet ID',
-            },
-            personalTagId: {
-              type: 'integer',
-              nullable: true,
-              description: 'Personal tag ID',
-            },
-            financialType: {
-              type: 'string',
-              enum: ['essential', 'discretionary', 'investment', 'debt'],
-              nullable: true,
-              description: 'Financial type classification',
-            },
-            createdAt: {
-              type: 'string',
-              format: 'date-time',
-              description: 'Creation timestamp',
-            },
-          },
-        },
-        Wallet: {
-          type: 'object',
-          properties: {
-            id: {
-              type: 'integer',
-              description: 'Wallet ID',
-            },
-            userId: {
-              type: 'integer',
-              description: 'User ID',
-            },
-            name: {
-              type: 'string',
-              description: 'Wallet name',
-            },
-            balance: {
-              type: 'string',
-              description: 'Current balance',
-            },
-            currency: {
-              type: 'string',
-              default: 'USD',
-              description: 'Wallet currency',
-            },
-            createdAt: {
-              type: 'string',
-              format: 'date-time',
-              description: 'Creation timestamp',
-            },
-          },
-        },
-        Budget: {
-          type: 'object',
-          properties: {
-            id: {
-              type: 'integer',
-              description: 'Budget ID',
-            },
-            userId: {
-              type: 'integer',
-              description: 'User ID',
-            },
-            categoryId: {
-              type: 'integer',
-              description: 'Category ID',
-            },
-            period: {
-              type: 'string',
-              enum: ['monthly', 'yearly'],
-              description: 'Budget period',
-            },
-            limitAmount: {
-              type: 'string',
-              description: 'Budget limit',
-            },
-            currentAmount: {
-              type: 'string',
-              description: 'Current spending',
-            },
-            alertThreshold: {
-              type: 'number',
-              description: 'Alert threshold percentage (0-100)',
-            },
-            createdAt: {
-              type: 'string',
-              format: 'date-time',
-              description: 'Creation timestamp',
-            },
-          },
-        },
-        Category: {
-          type: 'object',
-          properties: {
-            id: {
-              type: 'integer',
-              description: 'Category ID',
-            },
-            userId: {
-              type: 'integer',
-              nullable: true,
-              description: 'User ID (null for system categories)',
-            },
-            name: {
-              type: 'string',
-              description: 'Category name',
-            },
-            icon: {
-              type: 'string',
-              nullable: true,
-              description: 'Category icon',
-            },
-            color: {
-              type: 'string',
-              nullable: true,
-              description: 'Category color',
-            },
-            type: {
-              type: 'string',
-              enum: ['income', 'expense'],
-              description: 'Category type',
-            },
-            isSystem: {
-              type: 'boolean',
-              description: 'Is system category',
-            },
-            createdAt: {
-              type: 'string',
-              format: 'date-time',
-              description: 'Creation timestamp',
-            },
+            success: { type: 'boolean', example: true },
+            message: { type: 'string' },
           },
         },
       },
     },
-    tags: [
-      {
-        name: 'Authentication',
-        description: 'User authentication endpoints',
-      },
-      {
-        name: 'Transactions',
-        description: 'Transaction management endpoints',
-      },
-      {
-        name: 'Wallets',
-        description: 'Wallet management endpoints',
-      },
-      {
-        name: 'Budgets',
-        description: 'Budget management endpoints',
-      },
-      {
-        name: 'Categories',
-        description: 'Category management endpoints',
-      },
-      {
-        name: 'Health',
-        description: 'Service health check endpoints',
-      },
-    ],
+    security: [{ sessionAuth: [] }],
   },
-  apis: ['./server/routes/*.ts'], // Path to API routes with JSDoc comments
+  apis: [
+    './server/routes/*.ts',
+    './server/docs/*.yaml',
+  ],
 };
 
-export const swaggerSpec = swaggerJsdoc(options);
+/**
+ * Generate OpenAPI specification
+ */
+export const swaggerSpec = swaggerJsdoc(swaggerOptions);
+
+/**
+ * Setup Swagger UI middleware
+ */
+export function setupSwagger(app: Express): void {
+  // Serve Swagger UI
+  app.use(
+    '/api/docs',
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerSpec, {
+      customCss: '.swagger-ui .topbar { display: none }',
+      customSiteTitle: 'BudgetBot API Docs',
+    })
+  );
+
+  // Serve raw OpenAPI spec as JSON
+  app.get('/api/docs.json', (_req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(swaggerSpec);
+  });
+}

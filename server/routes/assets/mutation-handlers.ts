@@ -7,6 +7,7 @@
 
 import { Request, Response } from 'express';
 import { assetsRepository } from '../../repositories/assets.repository';
+import { getErrorMessage } from '../../lib/errors';
 
 /**
  * POST /api/assets - Create new asset
@@ -43,7 +44,7 @@ export async function createAsset(req: Request, res: Response) {
       success: true,
       data: asset
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating asset:', error);
     res.status(500).json({
       success: false,
@@ -87,7 +88,7 @@ export async function updateAsset(req: Request, res: Response) {
       success: true,
       data: updated
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating asset:', error);
     res.status(500).json({
       success: false,
@@ -152,7 +153,7 @@ export async function calibrateAsset(req: Request, res: Response) {
       success: true,
       message: 'Price calibrated successfully'
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error calibrating price:', error);
     res.status(500).json({
       success: false,
@@ -193,7 +194,7 @@ export async function deleteAsset(req: Request, res: Response) {
       success: true,
       message: 'Asset deleted successfully'
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error deleting asset:', error);
     res.status(500).json({
       success: false,

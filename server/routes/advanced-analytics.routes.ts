@@ -12,6 +12,7 @@ import {
   getSpendingTrends,
   getFinancialHealthScore,
 } from "../services/advanced-analytics.service";
+import { getErrorMessage } from "../lib/errors";
 
 const router = Router();
 
@@ -20,8 +21,8 @@ router.get("/forecast", withAuth(async (req, res) => {
   try {
     const forecast = await getSpendingForecast(req.user.id);
     res.json(forecast);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -30,8 +31,8 @@ router.get("/recommendations", withAuth(async (req, res) => {
   try {
     const recommendations = await getBudgetRecommendations(req.user.id);
     res.json(recommendations);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -40,8 +41,8 @@ router.get("/trends", withAuth(async (req, res) => {
   try {
     const trends = await getSpendingTrends(req.user.id);
     res.json(trends);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 
@@ -50,8 +51,8 @@ router.get("/health-score", withAuth(async (req, res) => {
   try {
     const healthScore = await getFinancialHealthScore(req.user.id);
     res.json(healthScore);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 
