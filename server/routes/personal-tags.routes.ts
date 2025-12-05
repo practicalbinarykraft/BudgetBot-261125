@@ -13,7 +13,7 @@ const router = Router();
  * Supports pagination: ?limit=100&offset=0
  */
 router.get('/', withAuth(async (req, res) => {
-  const userId = req.user.id;
+  const userId = Number(req.user.id);
 
   try {
     const { limit, offset } = req.query;
@@ -65,7 +65,7 @@ router.get('/', withAuth(async (req, res) => {
  * Создать новый тег
  */
 router.post('/', withAuth(async (req, res) => {
-  const userId = req.user.id;
+  const userId = Number(req.user.id);
   
   // Валидация
   const validation = insertPersonalTagSchema.safeParse(req.body);
@@ -89,7 +89,7 @@ router.post('/', withAuth(async (req, res) => {
  */
 router.patch('/:id', withAuth(async (req, res) => {
   const tagId = parseInt(req.params.id);
-  const userId = req.user.id;
+  const userId = Number(req.user.id);
   
   if (isNaN(tagId)) {
     return res.status(400).json({ error: 'Invalid tag ID' });
@@ -131,7 +131,7 @@ router.patch('/:id', withAuth(async (req, res) => {
  */
 router.delete('/:id', withAuth(async (req, res) => {
   const tagId = parseInt(req.params.id);
-  const userId = req.user.id;
+  const userId = Number(req.user.id);
   
   if (isNaN(tagId)) {
     return res.status(400).json({ error: 'Invalid tag ID' });
@@ -165,7 +165,7 @@ router.delete('/:id', withAuth(async (req, res) => {
  */
 router.get('/:id/stats', withAuth(async (req, res) => {
   const tagId = parseInt(req.params.id);
-  const userId = req.user.id;
+  const userId = Number(req.user.id);
   
   if (isNaN(tagId)) {
     return res.status(400).json({ error: 'Invalid tag ID' });
