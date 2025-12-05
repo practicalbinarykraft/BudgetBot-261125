@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertTransactionSchema } from "@shared/schema";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
@@ -47,8 +46,16 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
   const { t } = useTranslation();
   const [showCreateCategory, setShowCreateCategory] = useState(false);
 
-  const formSchema = insertTransactionSchema.extend({
+  // Client-side validation schema - simpler than server schema
+  const formSchema = z.object({
+    type: z.enum(["income", "expense"]),
     amount: z.string().min(1, t("transactions.amount_required")),
+    description: z.string().min(1, t("transactions.description_required")),
+    date: z.string().min(1),
+    category: z.string().optional(),
+    currency: z.string().default("USD"),
+    personalTagId: z.number().nullable().optional(),
+    walletId: z.number().optional(),
   });
 
   type FormData = z.infer<typeof formSchema>;
@@ -66,15 +73,12 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      userId: user?.id || 0,
       date: new Date().toISOString().split("T")[0],
       type: "expense",
       amount: "",
-      amountUsd: "0",
       description: "",
       category: "",
       currency: "USD",
-      source: "manual",
       walletId: undefined,
       personalTagId: defaultPersonalTagId ?? null,
     },
@@ -82,11 +86,17 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const amountNum = parseFloat(data.amount);
       const payload = {
-        ...data,
+        type: data.type,
         amount: data.amount,
         amountUsd: data.amount,
+        description: data.description,
+        date: data.date,
+        category: data.category || undefined,
+        currency: data.currency,
+        personalTagId: data.personalTagId,
+        walletId: data.walletId,
+        source: 'manual',
       };
       const res = await apiRequest("POST", "/api/transactions", payload);
       return res.json() as Promise<TransactionResponse>;

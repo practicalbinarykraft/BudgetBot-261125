@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Transaction, Category, PersonalTag, insertTransactionSchema } from "@shared/schema";
+import { Transaction, Category, PersonalTag } from "@shared/schema";
 import { TagSelector } from "@/components/tags/tag-selector";
 import {
   Dialog,
@@ -36,8 +36,17 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
   const queryClient = useQueryClient();
   const { t } = useTranslation();
 
-  const formSchema = insertTransactionSchema.extend({
+  // Client-side validation schema
+  const formSchema = z.object({
+    type: z.enum(["income", "expense"]),
     amount: z.string().min(1, t("transactions.amount_required")),
+    description: z.string().min(1),
+    date: z.string().min(1),
+    category: z.string().optional(),
+    currency: z.string().default("USD"),
+    personalTagId: z.number().nullable().optional(),
+    walletId: z.number().optional(),
+    financialType: z.enum(["essential", "discretionary", "asset", "liability"]).optional(),
   });
 
   type FormData = z.infer<typeof formSchema>;
@@ -55,15 +64,12 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     values: transaction ? {
-      userId: transaction.userId,
       date: transaction.date,
       type: transaction.type as "income" | "expense",
       amount: transaction.amount,
-      amountUsd: transaction.amountUsd,
       description: transaction.description,
       category: transaction.category || "",
       currency: transaction.currency || "USD",
-      source: (transaction.source || "manual") as "manual" | "telegram" | "ocr",
       walletId: transaction.walletId || undefined,
       personalTagId: transaction.personalTagId || null,
       financialType: (transaction.financialType || "discretionary") as "essential" | "discretionary" | "asset" | "liability",
@@ -74,9 +80,16 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
     mutationFn: async (data: FormData) => {
       if (!transaction) return;
       const payload = {
-        ...data,
+        type: data.type,
         amount: data.amount,
         amountUsd: data.amount,
+        description: data.description,
+        date: data.date,
+        category: data.category || undefined,
+        currency: data.currency,
+        personalTagId: data.personalTagId,
+        walletId: data.walletId,
+        financialType: data.financialType,
       };
       const res = await apiRequest("PATCH", `/api/transactions/${transaction.id}`, payload);
       return res.json();
