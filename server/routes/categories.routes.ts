@@ -37,8 +37,10 @@ router.get("/", withAuth(async (req, res) => {
       filters.offset = offsetNum;
     }
 
+    const userId = Number(req.user.id);
+
     // Build cache key based on pagination params
-    const cacheKey = `categories:user:${req.user.id}:limit:${filters.limit || 'all'}:offset:${filters.offset || 0}`;
+    const cacheKey = `categories:user:${userId}:limit:${filters.limit || 'all'}:offset:${filters.offset || 0}`;
 
     // Try to get from cache
     const cached = await cache.get(cacheKey);
@@ -47,7 +49,7 @@ router.get("/", withAuth(async (req, res) => {
     }
 
     // If not in cache, get from database
-    const result = await storage.getCategoriesByUserId(req.user.id, filters);
+    const result = await storage.getCategoriesByUserId(userId, filters);
 
     // Prepare response
     const response = filters.limit !== undefined || filters.offset !== undefined
@@ -80,7 +82,7 @@ router.post("/", withAuth(async (req, res) => {
     const category = await storage.createCategory(data);
 
     // Invalidate cache
-    await cache.del(`categories:user:${req.user.id}`);
+    await cache.del(`categories:user:${Number(req.user.id)}`);
 
     res.json(category);
   } catch (error: unknown) {
@@ -93,13 +95,13 @@ router.delete("/:id", withAuth(async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const category = await storage.getCategoryById(id);
-    if (!category || category.userId !== req.user.id) {
+    if (!category || category.userId !== Number(req.user.id)) {
       return res.status(404).json({ error: "Category not found" });
     }
     await storage.deleteCategory(id);
 
     // Invalidate cache
-    await cache.del(`categories:user:${req.user.id}`);
+    await cache.del(`categories:user:${Number(req.user.id)}`);
 
     res.json({ success: true });
   } catch (error: unknown) {

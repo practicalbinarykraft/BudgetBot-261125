@@ -11,7 +11,7 @@ router.get("/", withAuth(async (req, res) => {
   try {
     const status = req.query.status as string | undefined;
     const planned = await storage.getPlannedIncomeByUserId(
-      req.user.id,
+      Number(req.user.id),
       status ? { status } : undefined
     );
     res.json(planned);
@@ -25,17 +25,17 @@ router.post("/", withAuth(async (req, res) => {
     const { userId: _ignoreUserId, ...bodyWithoutUserId } = req.body;
     const data = insertPlannedIncomeSchema.parse(bodyWithoutUserId);
     
-    const rates = await getUserExchangeRates(req.user.id);
+    const rates = await getUserExchangeRates(Number(req.user.id));
     const amountUsd = convertToUSD(
       parseFloat(data.amount),
       data.currency || "USD",
       rates
     );
-    
+
     const plannedItem = await storage.createPlannedIncome({
       ...data,
       amountUsd: amountUsd.toString(),
-      userId: req.user.id,
+      userId: Number(req.user.id),
     } as any);
     res.json(plannedItem);
   } catch (error: unknown) {
@@ -47,7 +47,7 @@ router.patch("/:id", withAuth(async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const plannedItem = await storage.getPlannedIncomeById(id);
-    if (!plannedItem || plannedItem.userId !== req.user.id) {
+    if (!plannedItem || plannedItem.userId !== Number(req.user.id)) {
       return res.status(404).json({ error: "Planned income not found" });
     }
     
@@ -66,7 +66,7 @@ router.patch("/:id", withAuth(async (req, res) => {
       const amount = data.amount ? parseFloat(data.amount) : parseFloat(plannedItem.amount);
       const currency = data.currency || plannedItem.currency || "USD";
       
-      const rates = await getUserExchangeRates(req.user.id);
+      const rates = await getUserExchangeRates(Number(req.user.id));
       const amountUsd = convertToUSD(amount, currency, rates);
       updateData.amountUsd = amountUsd.toString();
     }
@@ -83,7 +83,7 @@ router.delete("/:id", withAuth(async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const plannedItem = await storage.getPlannedIncomeById(id);
-    if (!plannedItem || plannedItem.userId !== req.user.id) {
+    if (!plannedItem || plannedItem.userId !== Number(req.user.id)) {
       return res.status(404).json({ error: "Planned income not found" });
     }
     await storage.deletePlannedIncome(id);
@@ -98,7 +98,7 @@ router.post("/:id/receive", withAuth(async (req, res) => {
     const id = parseInt(req.params.id);
     const plannedItem = await storage.getPlannedIncomeById(id);
     
-    if (!plannedItem || plannedItem.userId !== req.user.id) {
+    if (!plannedItem || plannedItem.userId !== Number(req.user.id)) {
       return res.status(404).json({ error: "Planned income not found" });
     }
     
@@ -106,12 +106,12 @@ router.post("/:id/receive", withAuth(async (req, res) => {
       return res.status(400).json({ error: "Only pending income can be received" });
     }
     
-    const walletsResult = await storage.getWalletsByUserId(req.user.id);
+    const walletsResult = await storage.getWalletsByUserId(Number(req.user.id));
     const wallets = walletsResult.wallets;
     const primaryWallet = wallets.find(w => w.type === "card") || wallets[0];
-    
+
     const transactionData = insertTransactionSchema.parse({
-      userId: req.user.id,
+      userId: Number(req.user.id),
       date: new Date().toISOString().split('T')[0],
       type: "income",
       amount: plannedItem.amount,
@@ -164,7 +164,7 @@ router.post("/:id/cancel", withAuth(async (req, res) => {
     const id = parseInt(req.params.id);
     const plannedItem = await storage.getPlannedIncomeById(id);
     
-    if (!plannedItem || plannedItem.userId !== req.user.id) {
+    if (!plannedItem || plannedItem.userId !== Number(req.user.id)) {
       return res.status(404).json({ error: "Planned income not found" });
     }
     

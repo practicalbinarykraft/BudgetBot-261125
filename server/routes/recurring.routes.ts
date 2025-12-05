@@ -34,7 +34,7 @@ router.get("/", withAuth(async (req, res) => {
       filters.offset = offsetNum;
     }
 
-    const result = await storage.getRecurringByUserId(req.user.id, filters);
+    const result = await storage.getRecurringByUserId(Number(req.user.id), filters);
 
     // Backward compatibility: return array if no pagination params, object with metadata if paginated
     const response = filters.limit !== undefined || filters.offset !== undefined
@@ -59,7 +59,7 @@ router.post("/", withAuth(async (req, res) => {
   try {
     const inputData = {
       ...req.body,
-      userId: req.user.id,
+      userId: Number(req.user.id),
     };
     
     const currency = inputData.currency || 'USD';
@@ -103,7 +103,7 @@ router.delete("/:id", withAuth(async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const recurringItem = await storage.getRecurringById(id);
-    if (!recurringItem || recurringItem.userId !== req.user.id) {
+    if (!recurringItem || recurringItem.userId !== Number(req.user.id)) {
       return res.status(404).json({ error: "Recurring payment not found" });
     }
     await storage.deleteRecurring(id);

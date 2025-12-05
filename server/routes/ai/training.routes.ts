@@ -10,7 +10,7 @@ const router = Router();
 // GET /api/ai/training-stats
 router.get("/training-stats", withAuth(async (req, res) => {
   try {
-    const stats: TrainingStats = await getTrainingStats(req.user.id);
+    const stats: TrainingStats = await getTrainingStats(Number(req.user.id));
     res.json(stats);
   } catch (error: unknown) {
     console.error("Training stats error:", error);
@@ -24,7 +24,7 @@ router.post("/training", withAuth(async (req, res) => {
     const validated = insertAiTrainingExampleSchema.parse(req.body);
 
     await saveTrainingExample({
-      userId: req.user.id,
+      userId: Number(req.user.id),
       transactionDescription: validated.transactionDescription,
       transactionAmount: validated.transactionAmount ? parseFloat(validated.transactionAmount) : undefined,
       merchantName: validated.merchantName || undefined,
@@ -52,7 +52,7 @@ router.get("/training/history", withAuth(async (req, res) => {
     const limit = Math.min(Math.max(isNaN(rawLimit) ? 50 : rawLimit, 1), 100);
     const offset = Math.max(isNaN(rawOffset) ? 0 : rawOffset, 0);
 
-    const history = await getTrainingHistory(req.user.id, limit, offset);
+    const history = await getTrainingHistory(Number(req.user.id), limit, offset);
     res.json(history);
   } catch (error: unknown) {
     console.error("Training history error:", error);

@@ -11,11 +11,11 @@ const router = Router();
 // GET /api/settings
 router.get("/", withAuth(async (req, res) => {
   try {
-    let settings = await storage.getSettingsByUserId(req.user.id);
+    let settings = await storage.getSettingsByUserId(Number(req.user.id));
     if (!settings) {
       // Create default settings if they don't exist
       settings = await storage.createSettings({
-        userId: req.user.id,
+        userId: Number(req.user.id),
         language: "en",
         currency: "USD",
         telegramNotifications: true,
@@ -46,17 +46,17 @@ router.patch("/", withAuth(async (req, res) => {
       (data as any).exchangeRatesUpdatedAt = new Date();
     }
     
-    let settings = await storage.getSettingsByUserId(req.user.id);
+    let settings = await storage.getSettingsByUserId(Number(req.user.id));
     
     if (!settings) {
       settings = await storage.createSettings({
-        userId: req.user.id,
+        userId: Number(req.user.id),
         language: data.language || "en",
         currency: data.currency || "USD",
         telegramNotifications: data.telegramNotifications ?? true,
       });
     } else {
-      settings = await storage.updateSettings(req.user.id, data);
+      settings = await storage.updateSettings(Number(req.user.id), data);
     }
     
     // Invalidate exchange rate cache if any rate was updated
@@ -67,12 +67,12 @@ router.patch("/", withAuth(async (req, res) => {
       data.exchangeRateEUR !== undefined ||
       data.exchangeRateCNY !== undefined
     ) {
-      invalidateUserRateCache(req.user.id);
+      invalidateUserRateCache(Number(req.user.id));
     }
     
     // Update notification schedule if notification settings were changed
     if (data.timezone !== undefined || data.notificationTime !== undefined || data.telegramNotifications !== undefined) {
-      await updateScheduleForUser(req.user.id);
+      await updateScheduleForUser(Number(req.user.id));
     }
     
     res.json(settings);

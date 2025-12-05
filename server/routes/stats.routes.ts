@@ -13,7 +13,7 @@ router.use(heavyOperationRateLimiter);
 router.get("/stats", withAuth(async (req, res) => {
   try {
     const { from, to } = req.query;
-    const result = await storage.getTransactionsByUserId(req.user.id);
+    const result = await storage.getTransactionsByUserId(Number(req.user.id));
     let transactions = result.transactions;
 
     // Apply date filters if provided (convert to UTC timestamps for correct comparison)
@@ -39,12 +39,12 @@ router.get("/stats", withAuth(async (req, res) => {
       .reduce((sum, t) => sum + parseFloat(t.amountUsd), 0);
     
     // Calculate balance: current wallet balances minus transactions after the period
-    const { wallets } = await storage.getWalletsByUserId(req.user.id);
+    const { wallets } = await storage.getWalletsByUserId(Number(req.user.id));
     let balance = wallets.reduce((sum, w) => sum + parseFloat(w.balanceUsd || '0'), 0);
     
     // If date filter is active, subtract transactions after the 'to' date
     if (to) {
-      const { transactions: allTransactions } = await storage.getTransactionsByUserId(req.user.id);
+      const { transactions: allTransactions } = await storage.getTransactionsByUserId(Number(req.user.id));
       // Parse 'to' as end of day in UTC for inclusive filtering
       const toDate = new Date(String(to));
       toDate.setUTCHours(23, 59, 59, 999); // End of day in UTC
@@ -85,7 +85,7 @@ router.get("/financial-health", withAuth(async (req, res) => {
         daysWindow = parsed;
       }
     }
-    const result = await calculateFinancialHealth(storage, req.user.id, daysWindow);
+    const result = await calculateFinancialHealth(storage, Number(req.user.id), daysWindow);
     res.json(result);
   } catch (error: unknown) {
     res.status(500).json({ error: getErrorMessage(error) });

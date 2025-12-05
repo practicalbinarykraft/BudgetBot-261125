@@ -9,7 +9,7 @@ const router = Router();
 // GET /api/limits - получить все лимиты с прогрессом
 router.get("/", withAuth(async (req, res) => {
   try {
-    const limits = await getBudgetProgress(req.user.id);
+    const limits = await getBudgetProgress(Number(req.user.id));
     res.json(limits);
   } catch (error: unknown) {
     res.status(500).json({ error: getErrorMessage(error) });
@@ -19,7 +19,7 @@ router.get("/", withAuth(async (req, res) => {
 // POST /api/limits/check - on-demand проверка всех лимитов
 router.post("/check", withAuth(async (req, res) => {
   try {
-    const compliance = await checkLimitsCompliance(req.user.id);
+    const compliance = await checkLimitsCompliance(Number(req.user.id));
     res.json(compliance);
   } catch (error: unknown) {
     res.status(500).json({ error: getErrorMessage(error) });

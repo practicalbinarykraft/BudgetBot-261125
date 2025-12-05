@@ -164,7 +164,7 @@ router.get("/", withAuth(async (req, res) => {
       filters.offset = offsetNum;
     }
 
-    const result = await transactionService.getTransactions(req.user.id, filters);
+    const result = await transactionService.getTransactions(Number(req.user.id), filters);
 
     res.json({
       data: result.transactions,
@@ -252,7 +252,7 @@ router.post("/", withAuth(async (req, res) => {
   try {
     const validated = insertTransactionSchema.omit({ userId: true }).parse(req.body);
 
-    const transaction = await transactionService.createTransaction(req.user.id, {
+    const transaction = await transactionService.createTransaction(Number(req.user.id), {
       type: validated.type,
       amount: parseFloat(validated.amount),
       description: validated.description,
@@ -267,7 +267,7 @@ router.post("/", withAuth(async (req, res) => {
 
     // Log audit event
     await logAuditEvent({
-      userId: req.user.id,
+      userId: Number(req.user.id),
       action: AuditAction.CREATE,
       entityType: AuditEntityType.TRANSACTION,
       entityId: transaction.id,
@@ -282,7 +282,7 @@ router.post("/", withAuth(async (req, res) => {
 
     // Send real-time notification
     notifyTransactionCreated({
-      userId: req.user.id,
+      userId: Number(req.user.id),
       transaction: {
         id: transaction.id,
         type: transaction.type,
@@ -296,7 +296,7 @@ router.post("/", withAuth(async (req, res) => {
     // Check budget alert (only for expenses)
     if (transaction.type === 'expense' && transaction.categoryId) {
       await checkBudgetAlert({
-        userId: req.user.id,
+        userId: Number(req.user.id),
         categoryId: transaction.categoryId,
         amount: parseFloat(transaction.amount),
         transactionDate: transaction.date,
@@ -325,11 +325,11 @@ router.patch("/:id", withAuth(async (req, res) => {
     // Validate update data
     const data = insertTransactionSchema.partial().parse(sanitizedBody);
 
-    const updated = await transactionService.updateTransaction(id, req.user.id, data);
+    const updated = await transactionService.updateTransaction(id, Number(req.user.id), data);
 
     // Log audit event
     await logAuditEvent({
-      userId: req.user.id,
+      userId: Number(req.user.id),
       action: AuditAction.UPDATE,
       entityType: AuditEntityType.TRANSACTION,
       entityId: id,
@@ -353,11 +353,11 @@ router.patch("/:id", withAuth(async (req, res) => {
 router.delete("/:id", withAuth(async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    await transactionService.deleteTransaction(id, req.user.id);
+    await transactionService.deleteTransaction(id, Number(req.user.id));
 
     // Log audit event
     await logAuditEvent({
-      userId: req.user.id,
+      userId: Number(req.user.id),
       action: AuditAction.DELETE,
       entityType: AuditEntityType.TRANSACTION,
       entityId: id,

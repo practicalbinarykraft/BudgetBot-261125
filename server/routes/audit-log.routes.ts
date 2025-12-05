@@ -44,7 +44,7 @@ router.get("/", withAuth(async (req, res) => {
     }
 
     const logs = await getUserAuditLogs({
-      userId: req.user.id,
+      userId: Number(req.user.id),
       limit: limit ? parseInt(String(limit)) : undefined,
       offset: offset ? parseInt(String(offset)) : undefined,
       fromDate: fromDate ? new Date(String(fromDate)) : undefined,
@@ -80,7 +80,7 @@ router.get("/:entityType/:entityId", withAuth(async (req, res) => {
     });
 
     // Filter to only return logs for the authenticated user
-    const userLogs = logs.filter(log => log.userId === req.user.id);
+    const userLogs = logs.filter(log => log.userId === Number(req.user.id));
 
     res.json(userLogs);
   } catch (error: unknown) {

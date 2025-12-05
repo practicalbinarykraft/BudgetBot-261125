@@ -19,7 +19,7 @@ const router = Router();
 // GET /api/analytics/forecast
 router.get("/forecast", withAuth(async (req, res) => {
   try {
-    const forecast = await getSpendingForecast(req.user.id);
+    const forecast = await getSpendingForecast(Number(req.user.id));
     res.json(forecast);
   } catch (error: unknown) {
     res.status(500).json({ error: getErrorMessage(error) });
@@ -29,7 +29,7 @@ router.get("/forecast", withAuth(async (req, res) => {
 // GET /api/analytics/recommendations
 router.get("/recommendations", withAuth(async (req, res) => {
   try {
-    const recommendations = await getBudgetRecommendations(req.user.id);
+    const recommendations = await getBudgetRecommendations(Number(req.user.id));
     res.json(recommendations);
   } catch (error: unknown) {
     res.status(500).json({ error: getErrorMessage(error) });
@@ -39,7 +39,7 @@ router.get("/recommendations", withAuth(async (req, res) => {
 // GET /api/analytics/trends
 router.get("/trends", withAuth(async (req, res) => {
   try {
-    const trends = await getSpendingTrends(req.user.id);
+    const trends = await getSpendingTrends(Number(req.user.id));
     res.json(trends);
   } catch (error: unknown) {
     res.status(500).json({ error: getErrorMessage(error) });
@@ -49,7 +49,7 @@ router.get("/trends", withAuth(async (req, res) => {
 // GET /api/analytics/health-score
 router.get("/health-score", withAuth(async (req, res) => {
   try {
-    const healthScore = await getFinancialHealthScore(req.user.id);
+    const healthScore = await getFinancialHealthScore(Number(req.user.id));
     res.json(healthScore);
   } catch (error: unknown) {
     res.status(500).json({ error: getErrorMessage(error) });

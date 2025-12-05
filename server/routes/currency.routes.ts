@@ -35,7 +35,7 @@ router.get("/exchange-rates", async (req, res) => {
 // POST /api/wallets/refresh-rates
 router.post("/wallets/refresh-rates", withAuth(async (req, res) => {
   try {
-    const walletsResult = await storage.getWalletsByUserId(req.user.id);
+    const walletsResult = await storage.getWalletsByUserId(Number(req.user.id));
     const wallets = walletsResult.wallets;
 
     // Update each wallet's USD balance
@@ -63,7 +63,7 @@ router.post("/wallets/refresh-rates", withAuth(async (req, res) => {
     const updatedWallets = await Promise.all(updates);
 
     // Invalidate wallets cache since balances were updated
-    await cache.del(`wallets:user:${req.user.id}`);
+    await cache.del(`wallets:user:${Number(req.user.id)}`);
 
     res.json({
       message: "Wallet balances refreshed successfully",

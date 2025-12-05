@@ -8,7 +8,7 @@ const router = Router();
 
 router.get("/", withAuth(async (req, res) => {
   try {
-    const planned = await storage.getPlannedByUserId(req.user.id);
+    const planned = await storage.getPlannedByUserId(Number(req.user.id));
     res.json(planned);
   } catch (error: unknown) {
     res.status(500).json({ error: getErrorMessage(error) });
@@ -19,7 +19,7 @@ router.post("/", withAuth(async (req, res) => {
   try {
     const data = insertPlannedTransactionSchema.parse({
       ...req.body,
-      userId: req.user.id,
+      userId: Number(req.user.id),
     });
     const plannedItem = await storage.createPlanned(data);
     res.json(plannedItem);
@@ -32,7 +32,7 @@ router.patch("/:id", withAuth(async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const plannedItem = await storage.getPlannedById(id);
-    if (!plannedItem || plannedItem.userId !== req.user.id) {
+    if (!plannedItem || plannedItem.userId !== Number(req.user.id)) {
       return res.status(404).json({ error: "Planned transaction not found" });
     }
     
@@ -50,7 +50,7 @@ router.delete("/:id", withAuth(async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const plannedItem = await storage.getPlannedById(id);
-    if (!plannedItem || plannedItem.userId !== req.user.id) {
+    if (!plannedItem || plannedItem.userId !== Number(req.user.id)) {
       return res.status(404).json({ error: "Planned transaction not found" });
     }
     await storage.deletePlanned(id);
@@ -65,7 +65,7 @@ router.post("/:id/purchase", withAuth(async (req, res) => {
     const id = parseInt(req.params.id);
     const plannedItem = await storage.getPlannedById(id);
     
-    if (!plannedItem || plannedItem.userId !== req.user.id) {
+    if (!plannedItem || plannedItem.userId !== Number(req.user.id)) {
       return res.status(404).json({ error: "Planned transaction not found" });
     }
     
@@ -73,11 +73,11 @@ router.post("/:id/purchase", withAuth(async (req, res) => {
       return res.status(400).json({ error: "Only planned items can be purchased" });
     }
     
-    const { wallets } = await storage.getWalletsByUserId(req.user.id);
+    const { wallets } = await storage.getWalletsByUserId(Number(req.user.id));
     const primaryWallet = wallets.find(w => w.type === "card") || wallets[0];
-    
+
     const transactionData = insertTransactionSchema.parse({
-      userId: req.user.id,
+      userId: Number(req.user.id),
       date: new Date().toISOString().split('T')[0],
       type: "expense",
       amount: plannedItem.amount,
@@ -117,7 +117,7 @@ router.post("/:id/cancel", withAuth(async (req, res) => {
     const id = parseInt(req.params.id);
     const plannedItem = await storage.getPlannedById(id);
     
-    if (!plannedItem || plannedItem.userId !== req.user.id) {
+    if (!plannedItem || plannedItem.userId !== Number(req.user.id)) {
       return res.status(404).json({ error: "Planned transaction not found" });
     }
     

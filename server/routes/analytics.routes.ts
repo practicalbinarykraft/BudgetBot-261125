@@ -219,7 +219,7 @@ router.get("/by-category", withAuth(async (req, res) => {
     const period = req.query.period as string;
     const { startDate, endDate } = getPeriodDates(period);
 
-    const breakdown = await getCategoryBreakdown(req.user.id, startDate, endDate);
+    const breakdown = await getCategoryBreakdown(Number(req.user.id), startDate, endDate);
 
     return res.json(breakdown);
   } catch (error: unknown) {
@@ -233,7 +233,7 @@ router.get("/by-person", withAuth(async (req, res) => {
     const period = req.query.period as string;
     const { startDate, endDate } = getPeriodDates(period);
 
-    const breakdown = await getPersonBreakdown(req.user.id, startDate, endDate);
+    const breakdown = await getPersonBreakdown(Number(req.user.id), startDate, endDate);
 
     return res.json(breakdown);
   } catch (error: unknown) {
@@ -247,7 +247,7 @@ router.get("/by-type", withAuth(async (req, res) => {
     const period = req.query.period as string;
     const { startDate, endDate } = getPeriodDates(period);
 
-    const breakdown = await getTypeBreakdown(req.user.id, startDate, endDate);
+    const breakdown = await getTypeBreakdown(Number(req.user.id), startDate, endDate);
 
     return res.json(breakdown);
   } catch (error: unknown) {
@@ -272,7 +272,7 @@ router.get("/unsorted", withAuth(async (req, res) => {
       endDate = dates.endDate;
     }
 
-    const transactions = await getUnsortedTransactions(req.user.id, startDate, endDate);
+    const transactions = await getUnsortedTransactions(Number(req.user.id), startDate, endDate);
 
     return res.json({
       count: transactions.length,

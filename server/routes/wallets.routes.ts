@@ -95,7 +95,7 @@ router.get("/", withAuth(async (req, res) => {
     }
 
     // Build cache key based on pagination params
-    const cacheKey = `wallets:user:${req.user.id}:limit:${filters.limit || 'all'}:offset:${filters.offset || 0}`;
+    const cacheKey = `wallets:user:${Number(req.user.id)}:limit:${filters.limit || 'all'}:offset:${filters.offset || 0}`;
 
     // Try to get from cache
     const cached = await cache.get(cacheKey);
@@ -104,7 +104,7 @@ router.get("/", withAuth(async (req, res) => {
     }
 
     // If not in cache, get from database
-    const result = await storage.getWalletsByUserId(req.user.id, filters);
+    const result = await storage.getWalletsByUserId(Number(req.user.id), filters);
 
     // Prepare response
     const response = filters.limit !== undefined || filters.offset !== undefined
@@ -149,7 +149,7 @@ router.post("/", withAuth(async (req, res) => {
 
     // Log audit event
     await logAuditEvent({
-      userId: req.user.id,
+      userId: Number(req.user.id),
       action: AuditAction.CREATE,
       entityType: AuditEntityType.WALLET,
       entityId: wallet.id,
@@ -162,7 +162,7 @@ router.post("/", withAuth(async (req, res) => {
     });
 
     // Invalidate cache
-    await cache.del(`wallets:user:${req.user.id}`);
+    await cache.del(`wallets:user:${Number(req.user.id)}`);
 
     res.json(wallet);
   } catch (error: unknown) {
@@ -175,7 +175,7 @@ router.patch("/:id", withAuth(async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const wallet = await storage.getWalletById(id);
-    if (!wallet || wallet.userId !== req.user.id) {
+    if (!wallet || wallet.userId !== Number(req.user.id)) {
       return res.status(404).json({ error: "Wallet not found" });
     }
 
@@ -200,7 +200,7 @@ router.patch("/:id", withAuth(async (req, res) => {
 
     // Log audit event
     await logAuditEvent({
-      userId: req.user.id,
+      userId: Number(req.user.id),
       action: AuditAction.UPDATE,
       entityType: AuditEntityType.WALLET,
       entityId: id,
@@ -211,7 +211,7 @@ router.patch("/:id", withAuth(async (req, res) => {
     });
 
     // Invalidate cache
-    await cache.del(`wallets:user:${req.user.id}`);
+    await cache.del(`wallets:user:${Number(req.user.id)}`);
 
     res.json(updated);
   } catch (error: unknown) {
@@ -224,14 +224,14 @@ router.delete("/:id", withAuth(async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const wallet = await storage.getWalletById(id);
-    if (!wallet || wallet.userId !== req.user.id) {
+    if (!wallet || wallet.userId !== Number(req.user.id)) {
       return res.status(404).json({ error: "Wallet not found" });
     }
     await storage.deleteWallet(id);
 
     // Log audit event
     await logAuditEvent({
-      userId: req.user.id,
+      userId: Number(req.user.id),
       action: AuditAction.DELETE,
       entityType: AuditEntityType.WALLET,
       entityId: id,
@@ -242,7 +242,7 @@ router.delete("/:id", withAuth(async (req, res) => {
     });
 
     // Invalidate cache
-    await cache.del(`wallets:user:${req.user.id}`);
+    await cache.del(`wallets:user:${Number(req.user.id)}`);
 
     res.json({ success: true });
   } catch (error: unknown) {
@@ -268,7 +268,7 @@ router.post("/:id/calibrate", withAuth(async (req, res) => {
     );
 
     // Invalidate cache after calibration
-    await cache.del(`wallets:user:${req.user.id}`);
+    await cache.del(`wallets:user:${Number(req.user.id)}`);
 
     res.json(result);
   } catch (error: unknown) {
