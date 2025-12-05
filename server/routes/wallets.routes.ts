@@ -132,7 +132,7 @@ router.post("/", withAuth(async (req, res) => {
   try {
     let data = insertWalletSchema.parse({
       ...req.body,
-      userId: req.user.id,
+      userId: Number(req.user.id),
     });
 
     // 💱 Multi-currency: Calculate USD equivalent for non-USD wallets

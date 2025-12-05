@@ -28,20 +28,26 @@ export const securityHeaders = helmet({
   // Hide X-Powered-By header
   hidePoweredBy: true,
 
-  // HSTS - enforce HTTPS (1 year)
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-  },
+  // HSTS - only enable when HTTPS is properly configured
+  // Disabled for HTTP-only deployments to prevent browser lockout
+  hsts: false,
 
-  // Content Security Policy - relaxed for API
+  // Cross-Origin headers for SPA assets
+  crossOriginOpenerPolicy: false,
+  crossOriginResourcePolicy: false,
+  originAgentCluster: false,
+
+  // Content Security Policy - relaxed for SPA with external resources
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"], // For Swagger UI
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://api.anthropic.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
+      connectSrc: ["'self'", "https://api.anthropic.com", "wss:", "ws:"],
+      // Disable HTTPS upgrade for HTTP deployments
+      upgradeInsecureRequests: null,
     },
   },
 

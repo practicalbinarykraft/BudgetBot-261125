@@ -40,7 +40,11 @@ export default function TagsSettingsPage() {
       
       const statsPromises = tags.map(async (tag) => {
         try {
-          const stats = await fetch(`/api/tags/${tag.id}/stats`).then(r => r.json());
+          const response = await fetch(`/api/tags/${tag.id}/stats`);
+          if (!response.ok) {
+            return [tag.id, { transactionCount: 0, totalSpent: 0 }];
+          }
+          const stats = await response.json();
           return [tag.id, stats];
         } catch {
           return [tag.id, { transactionCount: 0, totalSpent: 0 }];

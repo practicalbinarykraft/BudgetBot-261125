@@ -29,11 +29,11 @@ export function TagCard({ tag, stats, onEdit, onDelete, onViewDetails, disabled 
           
           <div className="text-sm text-muted-foreground flex-shrink-0">
             <span data-testid={`tag-stats-count-${tag.id}`}>
-              {stats.transactionCount} transaction{stats.transactionCount !== 1 ? 's' : ''}
+              {stats?.transactionCount ?? 0} transaction{(stats?.transactionCount ?? 0) !== 1 ? 's' : ''}
             </span>
             <span className="mx-2">·</span>
             <span data-testid={`tag-stats-total-${tag.id}`}>
-              ${stats.totalSpent.toFixed(2)}
+              ${(stats?.totalSpent ?? 0).toFixed(2)}
             </span>
           </div>
         </div>
