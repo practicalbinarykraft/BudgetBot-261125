@@ -17,7 +17,7 @@ const router = Router();
 // GET /api/ai/chat/history
 router.get("/history", withAuth(async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = Number(req.user.id);
     const limit = parseInt(req.query.limit as string) || 50;
     
     // Validate limit
@@ -39,7 +39,7 @@ router.get("/history", withAuth(async (req, res) => {
 router.post("/", withAuth(async (req, res) => {
   try {
     const { message } = req.body;
-    const userId = req.user.id;
+    const userId = Number(req.user.id);
     
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: "Message is required" });

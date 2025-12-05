@@ -11,7 +11,7 @@ const router = Router();
 // GET /api/product-catalog - Список товаров
 router.get('/', withAuth(async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = Number(req.user.id);
     const { search, category } = req.query;
     
     let products;
@@ -41,7 +41,7 @@ router.get('/', withAuth(async (req, res) => {
 router.get('/:id/price-history', withAuth(async (req, res) => {
   try {
     const productId = parseInt(req.params.id);
-    const userId = req.user.id;
+    const userId = Number(req.user.id);
     
     // Проверить что товар принадлежит пользователю
     const product = await productCatalogRepository.findById(productId);
@@ -88,7 +88,7 @@ router.get('/:id/price-history', withAuth(async (req, res) => {
 router.get('/:id', withAuth(async (req, res) => {
   try {
     const productId = parseInt(req.params.id);
-    const userId = req.user.id;
+    const userId = Number(req.user.id);
     
     const product = await productCatalogRepository.findById(productId);
     
@@ -112,7 +112,7 @@ router.get('/:id', withAuth(async (req, res) => {
 router.patch('/:id', withAuth(async (req, res) => {
   try {
     const productId = parseInt(req.params.id);
-    const userId = req.user.id;
+    const userId = Number(req.user.id);
     
     // Проверить что товар существует и принадлежит пользователю
     const product = await productCatalogRepository.findById(productId);
@@ -161,7 +161,7 @@ router.patch('/:id', withAuth(async (req, res) => {
 router.delete('/:id', withAuth(async (req, res) => {
   try {
     const productId = parseInt(req.params.id);
-    const userId = req.user.id;
+    const userId = Number(req.user.id);
     
     // Проверить что товар существует и принадлежит пользователю
     const product = await productCatalogRepository.findById(productId);

@@ -27,8 +27,8 @@ router.post("/confirm-tool", withAuth(async (req, res) => {
     console.log('👤 User ID:', req.user?.id);
     
     const { action, params } = req.body;
-    const userId = req.user.id;
-    
+    const userId = Number(req.user.id);
+
     if (!action || typeof action !== 'string') {
       console.error('❌ No action provided');
       return res.status(400).json({ error: "Action is required" });

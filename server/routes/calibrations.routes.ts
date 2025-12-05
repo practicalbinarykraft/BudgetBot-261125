@@ -8,7 +8,7 @@ const router = Router();
 // GET /api/calibrations
 router.get("/", withAuth(async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = Number(req.user.id);
     const history = await getCalibrationHistory(userId);
     res.json(history);
   } catch (error: unknown) {

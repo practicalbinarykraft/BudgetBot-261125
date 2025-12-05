@@ -77,8 +77,8 @@ function getPeriodDates(period: string = 'month'): { startDate: string; endDate:
  */
 router.get("/trend", withAuth(async (req, res) => {
   try {
-    const userId = req.user.id;
-    
+    const userId = Number(req.user.id);
+
     // ШАГ 1: Распарсить и валидировать параметры
     const historyDays = parseInt(req.query.historyDays as string) || 30;
     const forecastDays = parseInt(req.query.forecastDays as string) || 365;

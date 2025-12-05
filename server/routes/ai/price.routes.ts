@@ -10,7 +10,7 @@ const router = Router();
 // GET /api/ai/price-recommendations
 router.get("/price-recommendations", withAuth(async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = Number(req.user.id);
     const includeInsights = req.query.includeInsights === 'true';
     
     const allItems = await receiptItemsRepository.getAllByUserId(userId);

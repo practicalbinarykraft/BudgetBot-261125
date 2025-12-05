@@ -253,7 +253,7 @@ router.delete("/:id", withAuth(async (req, res) => {
 // POST /api/wallets/:id/calibrate
 router.post("/:id/calibrate", withAuth(async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = Number(req.user.id);
     const walletId = parseInt(req.params.id);
     const { actualBalance } = req.body;
     

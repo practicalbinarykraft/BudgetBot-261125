@@ -44,7 +44,7 @@ function detectCurrencyFromMerchant(merchantName: string): string {
 router.post("/receipt-with-items", withAuth(async (req, res) => {
   try {
     const { imageBase64, mimeType, transactionId } = req.body;
-    const userId = req.user.id;
+    const userId = Number(req.user.id);
     
     if (!imageBase64) {
       return res.status(400).json({ 
