@@ -12,4 +12,11 @@ export const webTagsTranslations: Translations = {
   "tags.delete_description": { en: "This will remove the tag from all transactions, but transactions will not be deleted.", ru: "Это удалит тег из всех транзакций, но транзакции не будут удалены." },
   "tags.deleting": { en: "Deleting...", ru: "Удаление..." },
   "tags.delete": { en: "Delete", ru: "Удалить" },
+  "tags.default": { en: "Default", ru: "По умолчанию" },
+  "tags.transaction_one": { en: "transaction", ru: "транзакция" },
+  "tags.transaction_few": { en: "transactions", ru: "транзакции" },
+  "tags.transaction_many": { en: "transactions", ru: "транзакций" },
+  // Default tag names (stored in DB as English, translated on display)
+  "tags.default_name.Personal": { en: "Personal", ru: "Личное" },
+  "tags.default_name.Shared": { en: "Shared", ru: "Общее" },
 };

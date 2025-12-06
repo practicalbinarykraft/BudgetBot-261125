@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { TagBadge } from './tag-badge';
 import { Edit, Trash2, Lock } from 'lucide-react';
 import type { PersonalTag } from '@shared/schema';
+import { useTranslation } from '@/i18n/context';
 
 interface TagCardProps {
   tag: PersonalTag;
@@ -16,7 +17,27 @@ interface TagCardProps {
   disabled?: boolean;
 }
 
+// Helper for Russian pluralization
+function getTransactionWord(count: number, t: (key: string) => string): string {
+  const abs = Math.abs(count);
+  const lastTwo = abs % 100;
+  const lastOne = abs % 10;
+
+  if (lastTwo >= 11 && lastTwo <= 19) {
+    return t('tags.transaction_many');
+  }
+  if (lastOne === 1) {
+    return t('tags.transaction_one');
+  }
+  if (lastOne >= 2 && lastOne <= 4) {
+    return t('tags.transaction_few');
+  }
+  return t('tags.transaction_many');
+}
+
 export function TagCard({ tag, stats, onEdit, onDelete, onViewDetails, disabled = false }: TagCardProps) {
+  const { t } = useTranslation();
+
   return (
     <Card className="p-4 hover-elevate" data-testid={`tag-card-${tag.id}`}>
       <div className="flex items-center justify-between gap-4">
@@ -29,7 +50,7 @@ export function TagCard({ tag, stats, onEdit, onDelete, onViewDetails, disabled 
           
           <div className="text-sm text-muted-foreground flex-shrink-0">
             <span data-testid={`tag-stats-count-${tag.id}`}>
-              {stats?.transactionCount ?? 0} transaction{(stats?.transactionCount ?? 0) !== 1 ? 's' : ''}
+              {stats?.transactionCount ?? 0} {getTransactionWord(stats?.transactionCount ?? 0, t)}
             </span>
             <span className="mx-2">·</span>
             <span data-testid={`tag-stats-total-${tag.id}`}>
@@ -40,12 +61,12 @@ export function TagCard({ tag, stats, onEdit, onDelete, onViewDetails, disabled 
         
         <div className="flex items-center gap-2 flex-shrink-0">
           {tag.isDefault ? (
-            <div 
+            <div
               className="flex items-center gap-1 text-xs text-muted-foreground"
               data-testid={`tag-default-badge-${tag.id}`}
             >
               <Lock className="h-3 w-3" />
-              <span>Default</span>
+              <span>{t('tags.default')}</span>
             </div>
           ) : (
             <>
