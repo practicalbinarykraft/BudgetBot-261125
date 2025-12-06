@@ -197,6 +197,10 @@ export const webTransactionsTranslations: Translations = {
     en: 'Amount is required',
     ru: 'Требуется сумма',
   },
+  'transactions.description_required': {
+    en: 'Description is required',
+    ru: 'Требуется описание',
+  },
   'transactions.create_new_category': {
     en: 'Create new category',
     ru: 'Создать новую категорию',
