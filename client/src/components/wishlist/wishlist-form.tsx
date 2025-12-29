@@ -6,6 +6,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useTranslation } from "@/i18n/context";
 
 const formSchema = insertWishlistSchema.extend({
   amount: z.string().min(1, "Amount is required"),
@@ -21,6 +22,7 @@ interface WishlistFormProps {
 }
 
 export function WishlistForm({ userId, onSubmit, onCancel, isPending }: WishlistFormProps) {
+  const { t } = useTranslation();
   const form = useForm<WishlistFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -41,9 +43,9 @@ export function WishlistForm({ userId, onSubmit, onCancel, isPending }: Wishlist
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Item Name</FormLabel>
+              <FormLabel>{t("wishlist.item_name")}</FormLabel>
               <FormControl>
-                <Input placeholder="e.g. New Laptop" data-testid="input-wishlist-name" {...field} />
+                <Input placeholder={t("wishlist.item_name_placeholder")} data-testid="input-wishlist-name" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -55,7 +57,7 @@ export function WishlistForm({ userId, onSubmit, onCancel, isPending }: Wishlist
           name="amount"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Amount</FormLabel>
+              <FormLabel>{t("wishlist.amount")}</FormLabel>
               <FormControl>
                 <Input
                   type="number"
@@ -75,17 +77,17 @@ export function WishlistForm({ userId, onSubmit, onCancel, isPending }: Wishlist
           name="priority"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Priority</FormLabel>
+              <FormLabel>{t("wishlist.priority")}</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger data-testid="select-wishlist-priority">
-                    <SelectValue placeholder="Select priority" />
+                    <SelectValue placeholder={t("wishlist.select_priority")} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="low">{t("wishlist.priority_low")}</SelectItem>
+                  <SelectItem value="medium">{t("wishlist.priority_medium")}</SelectItem>
+                  <SelectItem value="high">{t("wishlist.priority_high")}</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -98,7 +100,7 @@ export function WishlistForm({ userId, onSubmit, onCancel, isPending }: Wishlist
           name="targetDate"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Target Date (Optional)</FormLabel>
+              <FormLabel>{t("wishlist.target_date_optional")}</FormLabel>
               <FormControl>
                 <Input type="date" data-testid="input-wishlist-date" {...field} value={field.value ?? ""} />
               </FormControl>
@@ -115,7 +117,7 @@ export function WishlistForm({ userId, onSubmit, onCancel, isPending }: Wishlist
             className="flex-1"
             data-testid="button-cancel-wishlist"
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             type="submit"
@@ -123,7 +125,7 @@ export function WishlistForm({ userId, onSubmit, onCancel, isPending }: Wishlist
             className="flex-1"
             data-testid="button-submit-wishlist"
           >
-            {isPending ? "Adding..." : "Add Item"}
+            {isPending ? t("wishlist.adding") : t("wishlist.add_item")}
           </Button>
         </div>
       </form>

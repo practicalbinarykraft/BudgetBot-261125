@@ -7,7 +7,7 @@
  * - Background sync for offline transactions (future)
  */
 
-const CACHE_NAME = 'budgetbuddy-v1';
+const CACHE_NAME = 'budgetbuddy-v2'; // Обновлена версия для сброса кэша
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -48,9 +48,27 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // CRITICAL: Skip ALL external resources (Google Fonts, CDN, etc.)
+  // Service worker MUST NOT intercept external requests to avoid CSP violations
+  // Just return without calling event.respondWith() - browser will handle it naturally
+  if (url.origin !== self.location.origin) {
+    return; // Don't intercept - let browser handle it
+  }
+
   // API calls - network only (don't cache)
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(fetch(request));
+    event.respondWith(fetch(request).catch(() => {
+      // Return offline response for API calls if network fails
+      return new Response(JSON.stringify({ error: 'Offline' }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }));
+    return;
+  }
+
+  // WebSocket connections - pass through
+  if (url.protocol === 'ws:' || url.protocol === 'wss:') {
     return;
   }
 
@@ -59,16 +77,19 @@ self.addEventListener('fetch', (event) => {
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
         // Update cache in background
-        fetch(request).then((networkResponse) => {
-          if (networkResponse.ok) {
+        fetch(request).catch(() => {
+          // Ignore fetch errors in background update
+        }).then((networkResponse) => {
+          if (networkResponse && networkResponse.ok) {
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, networkResponse);
+              cache.put(request, networkResponse.clone());
             });
           }
         });
         return cachedResponse;
       }
 
+      // Network first
       return fetch(request).then((networkResponse) => {
         if (networkResponse.ok) {
           const responseClone = networkResponse.clone();
@@ -77,6 +98,9 @@ self.addEventListener('fetch', (event) => {
           });
         }
         return networkResponse;
+      }).catch(() => {
+        // Return offline page if network fails
+        return caches.match('/index.html') || new Response('Offline', { status: 503 });
       });
     })
   );

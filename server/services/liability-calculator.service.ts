@@ -55,7 +55,10 @@ export class LiabilityCalculator {
   
   /**
    * Спрогнозировать остаток долга через N месяцев
-   * 
+   *
+   * ВАЖНО: Используем calculateValueAtDate(today) как базу,
+   * чтобы обеспечить непрерывность между историей и прогнозом
+   *
    * @param liability - Обязательство
    * @param months - Количество месяцев вперёд
    * @returns Прогнозный остаток в USD (отрицательное число)
@@ -64,19 +67,22 @@ export class LiabilityCalculator {
     if (liability.type !== 'liability') {
       return 0;
     }
-    
-    // Всегда работаем с положительными числами
-    const currentDebt = Math.abs(parseFloat(liability.currentValue));
+
+    // Получить текущий остаток тем же методом, что и для истории
+    const today = new Date();
+    const todayDebt = this.calculateValueAtDate(liability, today); // Уже отрицательное
+
     const monthlyPayment = Math.abs(parseFloat(liability.monthlyExpense || '0'));
-    
+
     if (monthlyPayment === 0) {
-      return -currentDebt;
+      return todayDebt;
     }
-    
+
+    // todayDebt отрицательное, поэтому прибавляем платежи
     const paidAmount = monthlyPayment * months;
-    const remainingDebt = Math.max(0, currentDebt - paidAmount);
-    
-    return -remainingDebt;
+    const remainingDebt = Math.min(0, todayDebt + paidAmount);
+
+    return remainingDebt;
   }
   
   /**

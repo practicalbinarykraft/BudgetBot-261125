@@ -114,22 +114,26 @@ export default function CategoriesPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{t("categories.title")}</h1>
-          <p className="text-muted-foreground">{t("categories.organize")}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">{t("categories.title")}</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">{t("categories.organize")}</p>
         </div>
-        <Button onClick={() => setShowAddDialog(true)} data-testid="button-add-category">
+        <Button
+          onClick={() => setShowAddDialog(true)}
+          data-testid="button-add-category"
+          className="w-full sm:w-auto"
+        >
           <Plus className="h-4 w-4 mr-2" />
           {t("categories.add_category")}
         </Button>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div>
-          <h2 className="text-xl font-semibold mb-4">{t("categories.income_categories")}</h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">{t("categories.income_categories")}</h2>
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {incomeCategories.map((category) => (
               <Card key={category.id} className="hover-elevate" data-testid={`category-${category.id}`}>
                 <CardContent className="flex items-center justify-between p-4">
@@ -167,8 +171,8 @@ export default function CategoriesPage() {
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold mb-4">{t("categories.expense_categories")}</h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">{t("categories.expense_categories")}</h2>
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {expenseCategories.map((category) => (
               <Card key={category.id} className="hover-elevate" data-testid={`category-${category.id}`}>
                 <CardContent className="flex items-center justify-between p-4">

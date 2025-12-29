@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Trash2, Pencil, AlertCircle } from "lucide-react";
+import { useTranslation } from "@/i18n/context";
 
 export function BudgetCard({
   budget,
@@ -17,18 +18,22 @@ export function BudgetCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   const limitAmount = parseFloat(budget.limitAmount);
-  
+
   const statusColors = {
     ok: "bg-green-500",
     warning: "bg-yellow-500",
     exceeded: "bg-red-500",
   };
 
-  const statusMessages = {
-    ok: "Within budget",
-    warning: "Approaching limit",
-    exceeded: "Budget exceeded",
+  const getLimitLabel = () => {
+    switch (budget.period) {
+      case "week": return t("budgets.weekly_limit");
+      case "month": return t("budgets.monthly_limit");
+      case "year": return t("budgets.yearly_limit");
+      default: return t("budgets.monthly_limit");
+    }
   };
 
   return (
@@ -39,7 +44,7 @@ export function BudgetCard({
             className="h-3 w-3 rounded-full flex-shrink-0 bg-muted-foreground"
             style={category?.color ? { backgroundColor: category.color } : undefined}
           />
-          <h3 className="font-semibold truncate">{category?.name || "Unknown"}</h3>
+          <h3 className="font-semibold truncate">{category?.name || t("budgets.unknown_category")}</h3>
         </div>
         <div className="flex gap-1 flex-shrink-0">
           <Button
@@ -63,14 +68,14 @@ export function BudgetCard({
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">
-            {budget.period === "week" ? "Weekly" : budget.period === "month" ? "Monthly" : "Yearly"} limit
+            {getLimitLabel()}
           </span>
           <span className="font-mono font-semibold">${limitAmount.toFixed(2)}</span>
         </div>
 
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Spent</span>
+            <span className="text-muted-foreground">{t("budgets.spent")}</span>
             <span className={`font-mono font-semibold ${progress.status === "exceeded" ? "text-red-600 dark:text-red-400" : ""}`}>
               ${progress.spent.toFixed(2)}
             </span>
@@ -83,10 +88,10 @@ export function BudgetCard({
           />
           <div className="flex items-center justify-between text-xs">
             <span className={`${progress.status === "exceeded" ? "text-red-600 dark:text-red-400 font-semibold" : "text-muted-foreground"}`}>
-              {progress.percentage.toFixed(0)}% used
+              {progress.percentage.toFixed(0)}% {t("budgets.used")}
             </span>
             <span className="text-muted-foreground">
-              ${Math.max(0, limitAmount - progress.spent).toFixed(2)} remaining
+              ${Math.max(0, limitAmount - progress.spent).toFixed(2)} {t("budgets.remaining")}
             </span>
           </div>
         </div>
@@ -97,7 +102,7 @@ export function BudgetCard({
               progress.status === "exceeded" ? "text-red-600 dark:text-red-400" : "text-yellow-600 dark:text-yellow-400"
             }`} />
             <span className={progress.status === "exceeded" ? "text-red-600 dark:text-red-400" : "text-yellow-600 dark:text-yellow-400"}>
-              {statusMessages[progress.status]}
+              {t(`budgets.status_${progress.status}`)}
             </span>
           </div>
         )}

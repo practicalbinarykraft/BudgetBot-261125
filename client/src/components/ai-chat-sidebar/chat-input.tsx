@@ -90,7 +90,7 @@ export function ChatInput({
   const isDisabled = isSending || isUploading;
 
   return (
-    <div className="p-4 border-t border-border">
+    <div className="p-3 sm:p-4 border-t border-border">
       {/* Превью изображения */}
       {previewUrl && (
         <div className="mb-2 relative inline-block">

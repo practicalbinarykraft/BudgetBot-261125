@@ -74,29 +74,29 @@ export function QuickActions({ onSendMessage }: QuickActionsProps) {
   };
 
   return (
-    <div className="p-4 border-b border-border">
-      <p className="text-xs text-muted-foreground mb-3">Быстрые действия:</p>
-      <div className="flex flex-wrap gap-2">
+    <div className="p-3 sm:p-4 border-b border-border">
+      <p className="text-xs text-muted-foreground mb-2 sm:mb-3">Быстрые действия:</p>
+      <div className="flex flex-wrap gap-1.5 sm:gap-2">
         {actions.map((action) => (
           <button
             key={action.label}
             onClick={() => handleActionClick(action)}
             data-testid={`quick-action-${action.label.toLowerCase().replace(/\s+/g, '-')}`}
             className="
-              px-3 py-2 text-sm rounded-lg
+              px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm rounded-lg
               bg-gradient-to-r from-blue-50 to-purple-50
               dark:from-blue-900/20 dark:to-purple-900/20
               hover:from-blue-100 hover:to-purple-100
               dark:hover:from-blue-900/30 dark:hover:to-purple-900/30
               transition-all
-              flex items-center gap-2
+              flex items-center gap-1.5 sm:gap-2
               border border-transparent
               hover:border-blue-200
               dark:hover:border-blue-800
             "
           >
-            {action.icon}
-            <span className="text-foreground">{action.label}</span>
+            <span className="shrink-0">{action.icon}</span>
+            <span className="text-foreground whitespace-nowrap">{action.label}</span>
           </button>
         ))}
       </div>

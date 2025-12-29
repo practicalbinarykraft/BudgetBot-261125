@@ -58,8 +58,6 @@ app.use(express.urlencoded({ extended: false }));
 // Rate limiting - protect API from abuse
 app.use('/api', apiLimiter);
 
-setupAuth(app);
-
 // Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
@@ -77,6 +75,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Setup authentication (async - needs to check DB connection)
+  await setupAuth(app);
+  
   registerRoutes(app);
 
   // Global error handler - MUST be last middleware
@@ -174,9 +175,16 @@ app.use((req, res, next) => {
     }
 
     initTelegramBot();
-    await initializeScheduledNotifications();
-    initHourlyBudgetNotifications();
-    initSessionCleanup(); // Clean up expired sessions daily
+    
+    // Initialize database-dependent services
+    try {
+      await initializeScheduledNotifications();
+      initHourlyBudgetNotifications();
+      initSessionCleanup(); // Clean up expired sessions daily
+      logInfo('✅ Notification services initialized');
+    } catch (error) {
+      logError('Notification services initialization failed (app will continue without scheduled notifications)', error);
+    }
 
     // Initialize currency updates
     try {

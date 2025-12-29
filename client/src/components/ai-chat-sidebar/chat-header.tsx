@@ -37,11 +37,11 @@ export function ChatHeader({ onClose }: ChatHeaderProps) {
   const pageContext = getPageContext(location);
 
   return (
-    <div className="p-4 border-b border-border flex justify-between items-center">
+    <div className="p-3 sm:p-4 border-b border-border flex justify-between items-center">
       <div className="flex items-center gap-2">
         <Sparkles className="w-5 h-5 text-purple-500" />
         <div>
-          <h3 className="font-semibold text-foreground">AI Assistant</h3>
+          <h3 className="font-semibold text-sm sm:text-base text-foreground">AI Assistant</h3>
           <p className="text-xs text-muted-foreground">
             Currently on: {pageContext}
           </p>

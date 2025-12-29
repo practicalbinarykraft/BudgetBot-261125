@@ -45,7 +45,16 @@ export const securityHeaders = helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:", "blob:"],
-      connectSrc: ["'self'", "https://api.anthropic.com", "wss:", "ws:"],
+      connectSrc: [
+        "'self'", 
+        "https://api.anthropic.com", 
+        "https://fonts.googleapis.com",
+        "https://fonts.gstatic.com",
+        "wss:", 
+        "ws:",
+        "http://localhost:*",
+        "ws://localhost:*"
+      ],
       // Disable HTTPS upgrade for HTTP deployments
       upgradeInsecureRequests: null,
     },

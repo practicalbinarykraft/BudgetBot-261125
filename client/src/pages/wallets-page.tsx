@@ -100,61 +100,72 @@ export default function WalletsPage() {
   }, 0);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Mobile-first header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{t("wallets.title")}</h1>
-          <p className="text-muted-foreground">{t("wallets.manage")}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">{t("wallets.title")}</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">{t("wallets.manage")}</p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => setShowCalibrateDialog(true)} 
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 sm:flex-none"
+            onClick={() => setShowCalibrateDialog(true)}
             data-testid="button-calibrate-wallets"
           >
-            <Settings2 className="h-4 w-4 mr-2" />
-            {t("wallets.calibrate")}
+            <Settings2 className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">{t("wallets.calibrate")}</span>
           </Button>
-          <Button onClick={() => setShowAddDialog(true)} data-testid="button-add-wallet">
-            <Plus className="h-4 w-4 mr-2" />
-            {t("wallets.add_wallet")}
+          <Button
+            size="sm"
+            className="flex-1 sm:flex-none"
+            onClick={() => setShowAddDialog(true)}
+            data-testid="button-add-wallet"
+          >
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">{t("wallets.add_wallet")}</span>
+            <span className="sm:hidden">{t("common.add")}</span>
           </Button>
         </div>
       </div>
 
+      {/* Total balance card - compact on mobile */}
       <Card className="border-l-4 border-l-primary">
-        <CardHeader>
-          <CardTitle className="text-xl">{t("wallets.total_net_worth")}</CardTitle>
+        <CardHeader className="pb-2 sm:pb-4">
+          <CardTitle className="text-base sm:text-xl">{t("wallets.total_net_worth")}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-3xl font-mono font-bold" data-testid="total-balance">
+        <CardContent className="pt-0">
+          <p className="text-2xl sm:text-3xl font-mono font-bold" data-testid="total-balance">
             ${totalBalance.toFixed(2)}
           </p>
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {/* Wallet cards grid - single column on mobile, 2 cols on tablet, 3 on desktop */}
+      <div className="grid gap-3 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {wallets.map((wallet) => {
           const Icon = walletIcons[wallet.type as keyof typeof walletIcons] || WalletIcon;
           return (
             <Card key={wallet.id} className="hover-elevate" data-testid={`wallet-${wallet.id}`}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-base font-medium">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-sm sm:text-base font-medium truncate pr-2">
                   {wallet.name}
                 </CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
+                <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-mono font-bold">
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="text-xl sm:text-2xl font-mono font-bold">
                   {wallet.currency === "RUB" ? "₽" : wallet.currency === "IDR" ? "Rp" : "$"}
                   {parseFloat(wallet.balance).toFixed(2)}
                 </div>
                 {wallet.currency !== "USD" && wallet.balanceUsd && (
-                  <div className="text-sm text-muted-foreground mt-1">
+                  <div className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">
                     ≈ ${parseFloat(wallet.balanceUsd).toFixed(2)}
                   </div>
                 )}
-                <p className="text-xs text-muted-foreground mt-1 capitalize">
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 capitalize">
                   {wallet.type} • {wallet.currency}
                 </p>
               </CardContent>

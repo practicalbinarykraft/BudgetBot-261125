@@ -208,4 +208,66 @@ export const webAiToolsTranslations: Translations = {
     en: 'Failed to execute action. You can try again.',
     ru: 'Не удалось выполнить действие. Вы можете попробовать снова.',
   },
+
+  // Chat Empty State
+  'ai_tools.start_conversation': {
+    en: 'Start a conversation',
+    ru: 'Начните разговор',
+  },
+  'ai_tools.ask_about_finances': {
+    en: 'Ask me anything about your finances!',
+    ru: 'Спросите меня о ваших финансах!',
+  },
+
+  // Chat Header
+  'ai_tools.ai_assistant': {
+    en: 'AI Assistant',
+    ru: 'AI Помощник',
+  },
+  'ai_tools.currently_on': {
+    en: 'Currently on',
+    ru: 'Текущая страница',
+  },
+  'ai_tools.input_placeholder': {
+    en: 'Ask AI...',
+    ru: 'Спросите AI...',
+  },
+
+  // Page Names
+  'ai_tools.page_dashboard': {
+    en: 'Dashboard',
+    ru: 'Панель управления',
+  },
+  'ai_tools.page_transactions': {
+    en: 'Transactions',
+    ru: 'Транзакции',
+  },
+  'ai_tools.page_wallets': {
+    en: 'Wallets',
+    ru: 'Кошельки',
+  },
+  'ai_tools.page_goals': {
+    en: 'Goals',
+    ru: 'Цели',
+  },
+  'ai_tools.page_budgets': {
+    en: 'Budgets',
+    ru: 'Бюджеты',
+  },
+  'ai_tools.page_analytics': {
+    en: 'Analytics',
+    ru: 'Аналитика',
+  },
+  'ai_tools.page_settings': {
+    en: 'Settings',
+    ru: 'Настройки',
+  },
+  'ai_tools.page_categories': {
+    en: 'Categories',
+    ru: 'Категории',
+  },
+  'ai_tools.page_unknown': {
+    en: 'Unknown',
+    ru: 'Неизвестно',
+  },
 };

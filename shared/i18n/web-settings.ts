@@ -150,8 +150,8 @@ export const webSettingsTranslations: Translations = {
     ru: 'Выберите язык',
   },
   'settings.receive_alerts': {
-    en: 'Receive spending alerts via Telegram',
-    ru: 'Получать уведомления о расходах в Telegram',
+    en: 'Get reminders about upcoming expenses in Telegram',
+    ru: 'Получать напоминания о предстоящих расходах в Telegram',
   },
   'settings.telegram_connected': {
     en: 'Connected',

@@ -19,4 +19,37 @@ export const webTagsTranslations: Translations = {
   // Default tag names (stored in DB as English, translated on display)
   "tags.default_name.Personal": { en: "Personal", ru: "Личное" },
   "tags.default_name.Shared": { en: "Shared", ru: "Общее" },
+
+  // Tag dialog
+  "tags.edit_tag": { en: "Edit Tag", ru: "Редактировать тег" },
+  "tags.create_new_tag": { en: "Create New Tag", ru: "Создать новый тег" },
+  "tags.name": { en: "Name", ru: "Название" },
+  "tags.name_placeholder": { en: "e.g., Masha, Dima, Personal", ru: "напр., Маша, Дима, Личное" },
+  "tags.icon": { en: "Icon", ru: "Иконка" },
+  "tags.color": { en: "Color", ru: "Цвет" },
+  "tags.type": { en: "Type", ru: "Тип" },
+  "tags.type_person": { en: "Person (Other)", ru: "Человек (Другой)" },
+  "tags.type_personal": { en: "Personal (Me)", ru: "Личное (Я)" },
+  "tags.type_shared": { en: "Shared", ru: "Общее" },
+  "tags.cancel": { en: "Cancel", ru: "Отмена" },
+  "tags.saving": { en: "Saving...", ru: "Сохранение..." },
+  "tags.update": { en: "Update", ru: "Обновить" },
+  "tags.create": { en: "Create", ru: "Создать" },
+  "tags.created_successfully": { en: "Tag created successfully", ru: "Тег успешно создан" },
+  "tags.updated_successfully": { en: "Tag updated successfully", ru: "Тег успешно обновлен" },
+  "tags.create_failed": { en: "Failed to create tag", ru: "Не удалось создать тег" },
+  "tags.update_failed": { en: "Failed to update tag", ru: "Не удалось обновить тег" },
+  "tags.name_required": { en: "Name is required", ru: "Требуется название" },
+
+  // Icon names
+  "tags.icon.User": { en: "User", ru: "Пользователь" },
+  "tags.icon.Heart": { en: "Heart", ru: "Сердце" },
+  "tags.icon.Home": { en: "Home", ru: "Дом" },
+  "tags.icon.Users": { en: "Users", ru: "Люди" },
+  "tags.icon.Baby": { en: "Baby", ru: "Ребенок" },
+  "tags.icon.UserPlus": { en: "UserPlus", ru: "Добавить" },
+  "tags.icon.Briefcase": { en: "Briefcase", ru: "Портфель" },
+  "tags.icon.Gift": { en: "Gift", ru: "Подарок" },
+  "tags.icon.Dog": { en: "Dog", ru: "Собака" },
+  "tags.icon.Cat": { en: "Cat", ru: "Кот" },
 };

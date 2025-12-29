@@ -16,26 +16,44 @@ export async function handleStartCommand(bot: TelegramBot, msg: TelegramBot.Mess
   const chatId = msg.chat.id;
   const telegramId = msg.from?.id.toString();
 
-  const lang = telegramId ? await getUserLanguageByTelegramId(telegramId) : 'en';
+  if (!telegramId) {
+    await bot.sendMessage(chatId, getWelcomeMessage('en'), { parse_mode: 'Markdown' });
+    return;
+  }
 
-  // ALWAYS send welcome message first (for both verified and unverified users)
+  // Check if user exists
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.telegramId, telegramId))
+    .limit(1);
+
+  // New user - show language selection
+  if (!user) {
+    await bot.sendMessage(
+      chatId,
+      '👋 Welcome to Budget Buddy!\nПриветствуем в Budget Buddy!\n\n🌍 Please select your language / Выберите ваш язык:',
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '🇬🇧 English', callback_data: 'select_language:en' },
+              { text: '🇷🇺 Русский', callback_data: 'select_language:ru' }
+            ]
+          ]
+        }
+      }
+    );
+    return;
+  }
+
+  // Existing user - show welcome and menu
+  const lang = await getUserLanguageByTelegramId(telegramId);
   await bot.sendMessage(chatId, getWelcomeMessage(lang), { parse_mode: 'Markdown' });
 
-  // Show main menu ONLY if user is already verified
-  if (telegramId) {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.telegramId, telegramId))
-      .limit(1);
-
-    if (user) {
-      const { getMainMenuKeyboard, getMainMenuHint } = await import('../menu/keyboards');
-
-      await bot.sendMessage(chatId, getMainMenuHint(lang), {
-        parse_mode: 'Markdown',
-        reply_markup: getMainMenuKeyboard()
-      });
-    }
-  }
+  const { getMainMenuKeyboard, getMainMenuHint } = await import('../menu/keyboards');
+  await bot.sendMessage(chatId, getMainMenuHint(lang), {
+    parse_mode: 'Markdown',
+    reply_markup: getMainMenuKeyboard()
+  });
 }

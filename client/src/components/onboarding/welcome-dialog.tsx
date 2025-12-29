@@ -103,20 +103,20 @@ export function WelcomeDialog({ open, onComplete }: WelcomeDialogProps) {
                   <Sparkles className="w-8 h-8 text-primary" aria-hidden="true" />
                 </div>
               </div>
-              <DialogTitle id="onboarding-title" className="text-center text-xl">
+              <DialogTitle id="onboarding-title" className="text-center text-lg sm:text-xl">
                 {t("onboarding.welcome_title")}
               </DialogTitle>
               <DialogDescription id="onboarding-description" className="text-center">
                 {t("onboarding.welcome_description")}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-3 py-4">
-              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                <Wallet className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
+            <div className="space-y-2 sm:space-y-3 py-3 sm:py-4">
+              <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-muted rounded-lg">
+                <Wallet className="w-5 h-5 text-muted-foreground shrink-0" aria-hidden="true" />
                 <span className="text-sm">{t("onboarding.feature_wallets")}</span>
               </div>
-              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                <Sparkles className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
+              <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-muted rounded-lg">
+                <Sparkles className="w-5 h-5 text-muted-foreground shrink-0" aria-hidden="true" />
                 <span className="text-sm">{t("onboarding.feature_ai")}</span>
               </div>
             </div>
@@ -149,14 +149,14 @@ export function WelcomeDialog({ open, onComplete }: WelcomeDialogProps) {
                   <Wallet className="w-8 h-8 text-primary" aria-hidden="true" />
                 </div>
               </div>
-              <DialogTitle className="text-center text-xl">
+              <DialogTitle className="text-center text-lg sm:text-xl">
                 {t("onboarding.create_wallet_title")}
               </DialogTitle>
               <DialogDescription className="text-center">
                 {t("onboarding.create_wallet_description")}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
               <div className="space-y-2">
                 <Label htmlFor="wallet-name">{t("onboarding.wallet_name")}</Label>
                 <Input
@@ -222,7 +222,7 @@ export function WelcomeDialog({ open, onComplete }: WelcomeDialogProps) {
                   <CheckCircle2 className="w-8 h-8 text-green-600" aria-hidden="true" />
                 </div>
               </div>
-              <DialogTitle className="text-center text-xl">
+              <DialogTitle className="text-center text-lg sm:text-xl">
                 {t("onboarding.success_title")}
               </DialogTitle>
               <DialogDescription className="text-center">

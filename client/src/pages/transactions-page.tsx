@@ -72,26 +72,37 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Mobile-first header: stack on mobile, row on desktop */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{t("transactions.title")}</h1>
-          <p className="text-muted-foreground">{t("transactions.manage")}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">{t("transactions.title")}</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">{t("transactions.manage")}</p>
         </div>
         <div className="flex gap-2">
           {unsortedCount > 0 && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 sm:flex-none"
               onClick={() => setLocation('/transactions/sort')}
               data-testid="button-sort-transactions"
             >
-              <Shuffle className="h-4 w-4 mr-2" />
-              {t("transactions.sort_button")} ({unsortedCount})
+              <Shuffle className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t("transactions.sort_button")}</span>
+              <span className="sm:hidden">({unsortedCount})</span>
+              <span className="hidden sm:inline"> ({unsortedCount})</span>
             </Button>
           )}
-          <Button onClick={() => setShowAddDialog(true)} data-testid="button-add-transaction-page">
-            <Plus className="h-4 w-4 mr-2" />
-            {t("transactions.add_transaction")}
+          <Button
+            size="sm"
+            className="flex-1 sm:flex-none"
+            onClick={() => setShowAddDialog(true)}
+            data-testid="button-add-transaction-page"
+          >
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">{t("transactions.add_transaction")}</span>
+            <span className="sm:hidden">{t("common.add")}</span>
           </Button>
         </div>
       </div>

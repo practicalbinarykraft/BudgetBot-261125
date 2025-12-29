@@ -172,10 +172,10 @@ export default function PlannedExpensesPage() {
     return (
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold">{title}</h3>
+          <h3 className="text-lg sm:text-xl font-semibold">{title}</h3>
           <span className="text-sm text-muted-foreground">({count})</span>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => (
             <PlannedItemCard
               key={item.id}
@@ -208,13 +208,13 @@ export default function PlannedExpensesPage() {
         isEmpty={filteredPlanned.length === 0}
         isLoading={isLoading}
         loadingElement={
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <Skeleton className="h-20" />
             <Skeleton className="h-96" />
           </div>
         }
       >
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {renderGroup(t("planned.overdue"), groupedPlanned.overdue, groupedPlanned.overdue.length)}
           {renderGroup(t("planned.today"), groupedPlanned.today, groupedPlanned.today.length)}
           {renderGroup(t("planned.tomorrow"), groupedPlanned.tomorrow, groupedPlanned.tomorrow.length)}

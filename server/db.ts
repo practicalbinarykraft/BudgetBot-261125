@@ -23,12 +23,21 @@ export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   // Pool size limits
   max: 20, // Maximum connections in pool
-  min: 2, // Minimum connections to keep open
+  min: 0, // Don't keep minimum connections (Neon closes idle ones)
   // Timeouts (ms)
-  idleTimeoutMillis: 30000, // Close idle connections after 30s
+  idleTimeoutMillis: 10000, // Close idle connections after 10s (before Neon does)
   connectionTimeoutMillis: 5000, // Fail if can't connect in 5s
   // Statement timeout (prevent runaway queries)
   statement_timeout: 30000, // 30s max query time
+});
+
+/**
+ * Handle pool errors gracefully
+ * Neon serverless DB closes idle connections - this prevents server crash
+ */
+pool.on('error', (err) => {
+  console.error('[DB Pool] Unexpected error on idle client:', err.message);
+  // Don't exit - pool will create new connections as needed
 });
 
 export const db = drizzle(pool, { schema });

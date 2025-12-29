@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import type { GraphMode, GraphConfig, LiteModeConfig, ProModeConfig } from '@shared/types/graph-mode';
+import { useState, useCallback, useMemo } from "react";
+import type { GraphMode, GraphConfig } from '@shared/types/graph-mode';
 import { DEFAULT_LITE_CONFIG, DEFAULT_PRO_CONFIG } from '@shared/types/graph-mode';
 
 export interface TrendDataPoint {
@@ -38,46 +38,81 @@ interface UseFinancialTrendOptions {
 
 /**
  * Hook to fetch financial trend data with LITE/PRO modes
+ *
+ * Uses two config states:
+ * - pendingConfig: local changes (not yet applied)
+ * - appliedConfig: config used for API request
+ *
+ * This prevents multiple API calls when user changes several settings.
+ * User must click "Apply" button to trigger API request.
  */
 export function useFinancialTrend({
   historyDays = 30,
   forecastDays = 365,
 }: UseFinancialTrendOptions = {}) {
+  // Graph mode (lite/pro)
   const [graphMode, setGraphMode] = useState<GraphMode>(() => {
     const saved = localStorage.getItem('graphMode');
     return (saved === 'pro' ? 'pro' : 'lite') as GraphMode;
   });
 
-  const [config, setConfig] = useState<GraphConfig>(() => {
+  // Applied config - used for API request
+  const [appliedConfig, setAppliedConfig] = useState<GraphConfig>(() => {
     if (graphMode === 'lite') {
       return DEFAULT_LITE_CONFIG;
     }
     return DEFAULT_PRO_CONFIG;
   });
 
-  const toggleMode = () => {
+  // Pending config - local changes not yet applied
+  const [pendingConfig, setPendingConfig] = useState<GraphConfig>(() => {
+    if (graphMode === 'lite') {
+      return DEFAULT_LITE_CONFIG;
+    }
+    return DEFAULT_PRO_CONFIG;
+  });
+
+  // Check if there are unapplied changes
+  const hasUnappliedChanges = useMemo(() => {
+    return JSON.stringify(pendingConfig) !== JSON.stringify(appliedConfig);
+  }, [pendingConfig, appliedConfig]);
+
+  // Toggle between lite and pro modes
+  const toggleMode = useCallback(() => {
     const newMode = graphMode === 'lite' ? 'pro' : 'lite';
     setGraphMode(newMode);
     localStorage.setItem('graphMode', newMode);
-    
-    if (newMode === 'lite') {
-      setConfig(DEFAULT_LITE_CONFIG);
-    } else {
-      setConfig(DEFAULT_PRO_CONFIG);
-    }
-  };
 
-  const updateFilter = (key: string, value: any) => {
-    if (config.mode === 'lite') {
-      if (key === 'capitalMode' || key === 'forecastType') {
-        setConfig({ ...config, [key]: value });
+    const newConfig = newMode === 'lite' ? DEFAULT_LITE_CONFIG : DEFAULT_PRO_CONFIG;
+    setPendingConfig(newConfig);
+    setAppliedConfig(newConfig); // Apply immediately when switching modes
+  }, [graphMode]);
+
+  // Update a filter in pending config (doesn't trigger API call)
+  const updateFilter = useCallback((key: string, value: any) => {
+    setPendingConfig(prev => {
+      if (prev.mode === 'lite') {
+        if (key === 'capitalMode' || key === 'forecastType') {
+          return { ...prev, [key]: value };
+        }
+        return prev;
       }
-    } else {
-      setConfig({ ...config, [key]: value });
-    }
-  };
+      return { ...prev, [key]: value };
+    });
+  }, []);
 
-  const buildQueryParams = (cfg: GraphConfig) => {
+  // Apply pending changes - triggers API refetch
+  const applyChanges = useCallback(() => {
+    setAppliedConfig(pendingConfig);
+  }, [pendingConfig]);
+
+  // Reset pending changes to applied config
+  const resetChanges = useCallback(() => {
+    setPendingConfig(appliedConfig);
+  }, [appliedConfig]);
+
+  // Build query params from config
+  const buildQueryParams = useCallback((cfg: GraphConfig) => {
     const params: Record<string, string> = {
       historyDays: historyDays.toString(),
       forecastDays: forecastDays.toString(),
@@ -110,24 +145,25 @@ export function useFinancialTrend({
     }
 
     return params;
-  };
+  }, [historyDays, forecastDays]);
 
-  const queryKey = ['/api/analytics/trend', graphMode, config];
+  // Query key uses APPLIED config (not pending)
+  const queryKey = ['/api/analytics/trend', historyDays, forecastDays, graphMode, appliedConfig];
 
   const query = useQuery<TrendWithGoals>({
     queryKey,
     queryFn: async () => {
-      const params = buildQueryParams(config);
+      const params = buildQueryParams(appliedConfig);
       const searchParams = new URLSearchParams(params);
-      
+
       const res = await fetch(`/api/analytics/trend?${searchParams}`, {
         cache: 'no-store',
       });
-      
+
       if (!res.ok) {
         throw new Error("Failed to fetch trend data");
       }
-      
+
       return res.json();
     },
     placeholderData: (prev) => prev,
@@ -139,7 +175,11 @@ export function useFinancialTrend({
     ...query,
     graphMode,
     toggleMode,
-    config,
+    config: pendingConfig, // UI shows pending config
+    appliedConfig, // For comparison if needed
     updateFilter,
+    applyChanges,
+    resetChanges,
+    hasUnappliedChanges,
   };
 }

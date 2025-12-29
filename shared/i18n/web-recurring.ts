@@ -27,4 +27,7 @@ export const webRecurringTranslations: Translations = {
   "recurring.type_expense": { en: "Expense", ru: "Расход" },
   "recurring.select_type": { en: "Select type", ru: "Выберите тип" },
   "recurring.select_frequency": { en: "Select frequency", ru: "Выберите частоту" },
+  "recurring.description_placeholder": { en: "e.g. Netflix subscription", ru: "напр., подписка Netflix" },
+  "recurring.empty_title": { en: "No recurring payments yet", ru: "Пока нет повторяющихся платежей" },
+  "recurring.empty_hint": { en: "Add your subscriptions and regular bills", ru: "Добавьте подписки и регулярные счета" },
 };

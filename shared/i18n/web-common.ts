@@ -70,6 +70,10 @@ export const webCommonTranslations: Translations = {
     en: 'Goals',
     ru: 'Цели',
   },
+  'nav.product_catalog': {
+    en: 'Product Catalog',
+    ru: 'Каталог товаров',
+  },
   'nav.main_navigation': {
     en: 'Main navigation',
     ru: 'Главное меню',
@@ -107,6 +111,14 @@ export const webCommonTranslations: Translations = {
   'common.creating': {
     en: 'Creating...',
     ru: 'Создание...',
+  },
+  'common.adding': {
+    en: 'Adding...',
+    ru: 'Добавление...',
+  },
+  'common.deleting': {
+    en: 'Deleting...',
+    ru: 'Удаление...',
   },
   'common.update': {
     en: 'Update',
@@ -167,6 +179,10 @@ export const webCommonTranslations: Translations = {
   'common.date': {
     en: 'Date',
     ru: 'Дата',
+  },
+  'common.today': {
+    en: 'Today',
+    ru: 'Сегодня',
   },
   'common.amount': {
     en: 'Amount',

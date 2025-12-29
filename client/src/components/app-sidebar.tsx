@@ -35,6 +35,7 @@ import {
   SidebarMenuSubItem,
   SidebarMenuSubButton,
   SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   Collapsible,
@@ -60,6 +61,7 @@ export function AppSidebar() {
   const [location] = useLocation();
   const { user, logoutMutation } = useAuth();
   const { t } = useTranslation();
+  const { isMobile, setOpenMobile } = useSidebar();
 
   // Track which groups are expanded
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
@@ -74,6 +76,13 @@ export function AppSidebar() {
 
   // Check if any sub-item is active
   const isGroupActive = (urls: string[]) => urls.some(url => location === url);
+
+  // Close sidebar on mobile when clicking a link
+  const handleLinkClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
 
   const { data: sortingStats } = useQuery<{ unsortedCount: number }>({
     queryKey: ['/api/sorting/stats'],
@@ -98,7 +107,7 @@ export function AppSidebar() {
                   isActive={location === "/app/dashboard"}
                   aria-label={t("nav.dashboard")}
                 >
-                  <Link href="/app/dashboard" data-testid="nav-dashboard">
+                  <Link href="/app/dashboard" data-testid="nav-dashboard" onClick={handleLinkClick}>
                     <LayoutDashboard className="w-4 h-4" aria-hidden="true" />
                     <span>{t("nav.dashboard")}</span>
                   </Link>
@@ -131,7 +140,7 @@ export function AppSidebar() {
                     <SidebarMenuSub>
                       <SidebarMenuSubItem>
                         <SidebarMenuSubButton asChild isActive={location === "/app/transactions"}>
-                          <Link href="/app/transactions" data-testid="nav-transactions" aria-label={t("nav.transactions")}>
+                          <Link href="/app/transactions" data-testid="nav-transactions" aria-label={t("nav.transactions")} onClick={handleLinkClick}>
                             <CreditCard className="w-4 h-4" aria-hidden="true" />
                             <span>{t("nav.transactions")}</span>
                           </Link>
@@ -139,7 +148,7 @@ export function AppSidebar() {
                       </SidebarMenuSubItem>
                       <SidebarMenuSubItem>
                         <SidebarMenuSubButton asChild isActive={location === "/app/wallets"}>
-                          <Link href="/app/wallets" data-testid="nav-wallets" aria-label={t("nav.wallets")}>
+                          <Link href="/app/wallets" data-testid="nav-wallets" aria-label={t("nav.wallets")} onClick={handleLinkClick}>
                             <Wallet className="w-4 h-4" aria-hidden="true" />
                             <span>{t("nav.wallets")}</span>
                           </Link>
@@ -147,7 +156,7 @@ export function AppSidebar() {
                       </SidebarMenuSubItem>
                       <SidebarMenuSubItem>
                         <SidebarMenuSubButton asChild isActive={location === "/app/recurring"}>
-                          <Link href="/app/recurring" data-testid="nav-recurring" aria-label={t("nav.recurring")}>
+                          <Link href="/app/recurring" data-testid="nav-recurring" aria-label={t("nav.recurring")} onClick={handleLinkClick}>
                             <Repeat className="w-4 h-4" aria-hidden="true" />
                             <span>{t("nav.recurring")}</span>
                           </Link>
@@ -158,7 +167,7 @@ export function AppSidebar() {
                 </SidebarMenuItem>
               </Collapsible>
 
-              {/* 3. Analytics - Budgets, AI, Categories, Tags */}
+              {/* 3. Analytics - Budgets, AI, Categories, Tags, Product Catalog */}
               <Collapsible
                 open={openGroups.analytics}
                 onOpenChange={() => toggleGroup('analytics')}
@@ -168,7 +177,7 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       aria-expanded={openGroups.analytics}
                       aria-label={t("nav.analytics")}
-                      className={isGroupActive(['/app/budgets', '/app/ai-analysis', '/app/categories', '/app/tags']) ? 'bg-accent' : ''}
+                      className={isGroupActive(['/app/budgets', '/app/ai-analysis', '/app/categories', '/app/tags', '/app/product-catalog']) ? 'bg-accent' : ''}
                     >
                       <BarChart3 className="w-4 h-4" aria-hidden="true" />
                       <span>{t("nav.analytics")}</span>
@@ -179,7 +188,7 @@ export function AppSidebar() {
                     <SidebarMenuSub>
                       <SidebarMenuSubItem>
                         <SidebarMenuSubButton asChild isActive={location === "/app/budgets"}>
-                          <Link href="/app/budgets" data-testid="nav-budgets" aria-label={t("nav.budgets")}>
+                          <Link href="/app/budgets" data-testid="nav-budgets" aria-label={t("nav.budgets")} onClick={handleLinkClick}>
                             <TrendingDown className="w-4 h-4" aria-hidden="true" />
                             <span>{t("nav.budgets")}</span>
                           </Link>
@@ -187,7 +196,7 @@ export function AppSidebar() {
                       </SidebarMenuSubItem>
                       <SidebarMenuSubItem>
                         <SidebarMenuSubButton asChild isActive={location === "/app/ai-analysis"}>
-                          <Link href="/app/ai-analysis" data-testid="nav-ai_analysis" aria-label={t("nav.ai_analysis")}>
+                          <Link href="/app/ai-analysis" data-testid="nav-ai_analysis" aria-label={t("nav.ai_analysis")} onClick={handleLinkClick}>
                             <Sparkles className="w-4 h-4" aria-hidden="true" />
                             <span>{t("nav.ai_analysis")}</span>
                           </Link>
@@ -195,7 +204,7 @@ export function AppSidebar() {
                       </SidebarMenuSubItem>
                       <SidebarMenuSubItem>
                         <SidebarMenuSubButton asChild isActive={location === "/app/categories"}>
-                          <Link href="/app/categories" data-testid="nav-categories" aria-label={t("nav.categories")}>
+                          <Link href="/app/categories" data-testid="nav-categories" aria-label={t("nav.categories")} onClick={handleLinkClick}>
                             <Tag className="w-4 h-4" aria-hidden="true" />
                             <span>{t("nav.categories")}</span>
                           </Link>
@@ -203,9 +212,17 @@ export function AppSidebar() {
                       </SidebarMenuSubItem>
                       <SidebarMenuSubItem>
                         <SidebarMenuSubButton asChild isActive={location === "/app/tags"}>
-                          <Link href="/app/tags" data-testid="nav-tags" aria-label={t("nav.tags")}>
+                          <Link href="/app/tags" data-testid="nav-tags" aria-label={t("nav.tags")} onClick={handleLinkClick}>
                             <Users className="w-4 h-4" aria-hidden="true" />
                             <span>{t("nav.tags")}</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                      <SidebarMenuSubItem>
+                        <SidebarMenuSubButton asChild isActive={location === "/app/product-catalog"}>
+                          <Link href="/app/product-catalog" data-testid="nav-product-catalog" aria-label={t("nav.product_catalog")} onClick={handleLinkClick}>
+                            <Package className="w-4 h-4" aria-hidden="true" />
+                            <span>{t("nav.product_catalog")}</span>
                           </Link>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
@@ -235,7 +252,7 @@ export function AppSidebar() {
                     <SidebarMenuSub>
                       <SidebarMenuSubItem>
                         <SidebarMenuSubButton asChild isActive={location === "/app/wishlist"}>
-                          <Link href="/app/wishlist" data-testid="nav-wishlist" aria-label={t("nav.wishlist")}>
+                          <Link href="/app/wishlist" data-testid="nav-wishlist" aria-label={t("nav.wishlist")} onClick={handleLinkClick}>
                             <Heart className="w-4 h-4" aria-hidden="true" />
                             <span>{t("nav.wishlist")}</span>
                           </Link>
@@ -243,7 +260,7 @@ export function AppSidebar() {
                       </SidebarMenuSubItem>
                       <SidebarMenuSubItem>
                         <SidebarMenuSubButton asChild isActive={location === "/app/planned-expenses"}>
-                          <Link href="/app/planned-expenses" data-testid="nav-planned_expenses" aria-label={t("nav.planned_expenses")}>
+                          <Link href="/app/planned-expenses" data-testid="nav-planned_expenses" aria-label={t("nav.planned_expenses")} onClick={handleLinkClick}>
                             <Calendar className="w-4 h-4" aria-hidden="true" />
                             <span>{t("nav.planned_expenses")}</span>
                           </Link>
@@ -251,7 +268,7 @@ export function AppSidebar() {
                       </SidebarMenuSubItem>
                       <SidebarMenuSubItem>
                         <SidebarMenuSubButton asChild isActive={location === "/app/planned-income"}>
-                          <Link href="/app/planned-income" data-testid="nav-planned_income" aria-label={t("nav.planned_income")}>
+                          <Link href="/app/planned-income" data-testid="nav-planned_income" aria-label={t("nav.planned_income")} onClick={handleLinkClick}>
                             <Coins className="w-4 h-4" aria-hidden="true" />
                             <span>{t("nav.planned_income")}</span>
                           </Link>
@@ -259,7 +276,7 @@ export function AppSidebar() {
                       </SidebarMenuSubItem>
                       <SidebarMenuSubItem>
                         <SidebarMenuSubButton asChild isActive={location === "/app/assets"}>
-                          <Link href="/app/assets" data-testid="nav-assets" aria-label={t("nav.assets")}>
+                          <Link href="/app/assets" data-testid="nav-assets" aria-label={t("nav.assets")} onClick={handleLinkClick}>
                             <Building2 className="w-4 h-4" aria-hidden="true" />
                             <span>{t("nav.assets")}</span>
                           </Link>
@@ -277,7 +294,7 @@ export function AppSidebar() {
                   isActive={location === "/app/settings"}
                   aria-label={t("nav.settings")}
                 >
-                  <Link href="/app/settings" data-testid="nav-settings">
+                  <Link href="/app/settings" data-testid="nav-settings" onClick={handleLinkClick}>
                     <Settings className="w-4 h-4" aria-hidden="true" />
                     <span>{t("nav.settings")}</span>
                   </Link>

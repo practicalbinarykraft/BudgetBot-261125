@@ -4,6 +4,9 @@ import { insertCategorySchema } from "@shared/schema";
 import { withAuth } from "../middleware/auth-utils";
 import { cache, CACHE_TTL } from "../lib/redis";
 import { getErrorMessage } from "../lib/errors";
+import { db } from "../db";
+import { assets } from "@shared/schemas/assets.schema";
+import { eq, and } from "drizzle-orm";
 
 const router = Router();
 
@@ -87,6 +90,33 @@ router.post("/", withAuth(async (req, res) => {
     res.json(category);
   } catch (error: unknown) {
     res.status(400).json({ error: getErrorMessage(error) });
+  }
+}));
+
+// GET /api/categories/:id/assets-count - Count assets in category
+router.get("/:id/assets-count", withAuth(async (req, res) => {
+  try {
+    const categoryId = parseInt(req.params.id);
+    const userId = Number(req.user.id);
+
+    // Verify category belongs to user
+    const category = await storage.getCategoryById(categoryId);
+    if (!category || category.userId !== userId) {
+      return res.status(404).json({ error: "Category not found" });
+    }
+
+    // Count assets in this category
+    const result = await db
+      .select()
+      .from(assets)
+      .where(and(
+        eq(assets.categoryId, categoryId),
+        eq(assets.userId, userId)
+      ));
+
+    res.json({ count: result.length, categoryName: category.name });
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
 

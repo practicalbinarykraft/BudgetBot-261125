@@ -20,7 +20,7 @@ export function DateFilter({ value, onChange }: DateFilterProps) {
   ];
 
   return (
-    <div className="flex gap-2 flex-wrap">
+    <div className="flex gap-1.5 sm:gap-2 flex-wrap">
       {filters.map((filter) => (
         <Button
           key={filter.value}
@@ -28,7 +28,7 @@ export function DateFilter({ value, onChange }: DateFilterProps) {
           size="sm"
           onClick={() => onChange(filter.value)}
           data-testid={`filter-${filter.value}`}
-          className="toggle-elevate toggle-elevated"
+          className="toggle-elevate toggle-elevated text-xs sm:text-sm px-2 sm:px-3"
         >
           {filter.label}
         </Button>

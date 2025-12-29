@@ -89,6 +89,10 @@ export function GeneralSettingsCard({
               )}
             />
 
+            <Button type="submit" disabled={isPending} data-testid="button-save-settings-top" className="w-full">
+              {isPending ? `${t("settings.save_settings")}...` : t("settings.save_settings")}
+            </Button>
+
             <FormField
               control={form.control}
               name="telegramNotifications"

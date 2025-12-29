@@ -35,7 +35,7 @@ export function ChartLegend({
   const { t } = useTranslation();
   
   return (
-    <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
+    <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center justify-center gap-2 sm:gap-4 text-xs sm:text-sm">
       <label className="flex items-center gap-2 cursor-pointer">
         <Checkbox
           checked={showIncome ?? true}

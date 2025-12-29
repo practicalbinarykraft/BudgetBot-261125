@@ -7,6 +7,7 @@ import { getErrorMessage } from "./lib/errors";
 import type { Express } from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
+import memorystore from "memorystore";
 import bcrypt from "bcryptjs";
 import { createDefaultTags } from "./services/tag.service";
 import { pool } from "./db";
@@ -16,6 +17,7 @@ import { logAuditEvent, AuditAction, AuditEntityType } from "./services/audit-lo
 import { env } from "./lib/env";
 
 const PgSession = connectPgSimple(session);
+const MemoryStore = memorystore(session);
 
 /**
  * Create default categories for new user
@@ -47,7 +49,7 @@ async function createDefaultCategories(userId: number) {
   }
 }
 
-export function setupAuth(app: Express) {
+export async function setupAuth(app: Express) {
   // 🔒 Validate SESSION_SECRET
   if (!process.env.SESSION_SECRET) {
     throw new Error(
@@ -63,16 +65,32 @@ export function setupAuth(app: Express) {
     );
   }
 
-  // 💾 PostgreSQL Session Store (persistent, survives restarts)
-  const sessionStore = new PgSession({
-    pool: pool, // Use existing database connection pool
-    tableName: 'session', // Table created by migration
-    createTableIfMissing: false, // Require explicit migration
-    pruneSessionInterval: 60 * 15, // Cleanup expired sessions every 15 minutes
-    errorLog: (error) => {
-      logError('Session store error', error as Error);
-    }
-  });
+  // 💾 Session Store - Try PostgreSQL, fallback to Memory
+  let sessionStore: session.Store;
+  
+  try {
+    // Test database connection first
+    await pool.query('SELECT 1');
+    
+    // Database is available, use PostgreSQL session store
+    sessionStore = new PgSession({
+      pool: pool,
+      tableName: 'session',
+      createTableIfMissing: false,
+      pruneSessionInterval: 60 * 15,
+      errorLog: (error) => {
+        logError('Session store error', error as Error);
+      }
+    });
+    logInfo('✅ Using PostgreSQL session store');
+  } catch (error) {
+    // Fallback to memory store if PostgreSQL is unavailable
+    logWarning('⚠️  PostgreSQL unavailable, using Memory session store (sessions will not persist across restarts)');
+    logError('Database connection failed', error as Error);
+    sessionStore = new MemoryStore({
+      checkPeriod: 86400000 // Prune expired entries every 24h
+    });
+  }
 
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET,

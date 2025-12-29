@@ -116,13 +116,13 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-3xl font-bold">{t("dashboard.title")}</h1>
-            <p className="text-muted-foreground">{t("dashboard.overview")}</p>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">{t("dashboard.title")}</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">{t("dashboard.overview")}</p>
           </div>
         </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           <Skeleton className="h-32" />
           <Skeleton className="h-32" />
           <Skeleton className="h-32" />
@@ -135,21 +135,26 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold">{t("dashboard.title")}</h1>
-          <p className="text-muted-foreground">{t("dashboard.overview")}</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">{t("dashboard.title")}</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">{t("dashboard.overview")}</p>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => setShowCalibrateDialog(true)} 
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            onClick={() => setShowCalibrateDialog(true)}
             data-testid="button-calibrate-wallets"
+            className="w-full sm:w-auto text-xs sm:text-sm"
           >
             <Settings2 className="h-4 w-4 mr-2" />
             {t("dashboard.calibrate_wallets")}
           </Button>
-          <Button onClick={() => setShowAddDialog(true)} data-testid="button-add-transaction">
+          <Button
+            onClick={() => setShowAddDialog(true)}
+            data-testid="button-add-transaction"
+            className="w-full sm:w-auto text-xs sm:text-sm"
+          >
             <Plus className="h-4 w-4 mr-2" />
             {t("dashboard.add_transaction")}
           </Button>
@@ -160,7 +165,7 @@ export default function DashboardPage() {
 
       <BudgetAlerts />
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title={t("dashboard.total_income")}
           value={`$${stats?.totalIncome?.toFixed(2) ?? "0.00"}`}

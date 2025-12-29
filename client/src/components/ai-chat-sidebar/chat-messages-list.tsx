@@ -38,7 +38,7 @@ export function ChatMessagesList({
   }, [messages, pendingConfirmation, isTyping]);
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
       {/* Сообщения */}
       {messages.map((msg, index) => (
         <ChatMessage key={msg.id} message={msg} index={index} />

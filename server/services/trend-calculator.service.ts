@@ -293,48 +293,123 @@ async function generateAndProcessForecast(params: {
 
     // Apply filters to forecast data (recurring, planned, budget limits)
     // Capital is calculated immediately after filters to avoid stale data
-    const forecastDataWithFilters = await Promise.all(
-      result.forecast.map(async (f, index) => {
+    //
+    // OPTIMIZATION: Process filters in batches to avoid DB timeout
+    // For now, use simple cumulative approach for recurring payments
+    let forecastDataWithFilters: Array<{
+      date: string;
+      income: number;
+      expense: number;
+      capital: number;
+      assetsNet: number;
+      isToday: boolean;
+      isForecast: boolean;
+    }>;
+
+    try {
+      // Pre-fetch recurring data once instead of per-day queries
+      const recurringData = await storage.getRecurringByUserId(userId);
+      const activeRecurring = recurringData.recurring.filter(r => r.isActive);
+
+      // Pre-fetch planned transactions
+      const plannedData = await storage.getPlannedByUserId(userId);
+      const activePlanned = plannedData.filter(p => p.status === 'planned');
+
+      // Pre-fetch budgets for later per-day calculation
+      let budgetsData: Array<{ limitAmount: string; period: string; startDate: string | null }> = [];
+      if (includeBudgetLimits) {
+        const { budgets } = await storage.getBudgetsByUserId(userId);
+        budgetsData = budgets.map(b => ({
+          limitAmount: b.limitAmount as unknown as string,
+          period: b.period,
+          startDate: b.startDate,
+        }));
+      }
+
+      forecastDataWithFilters = result.forecast.map((f) => {
         const date = new Date(f.date);
         let income = f.predictedIncome;
         let expense = f.predictedExpense;
-        
-        // Apply filters if enabled
-        if (includeRecurringIncome) {
-          const recurringIncome = await getRecurringIncomeForDate(userId, date);
-          income += recurringIncome;
+
+        // Apply budget limits (daily equivalent, respecting startDate)
+        if (includeBudgetLimits && budgetsData.length > 0) {
+          for (const b of budgetsData) {
+            // Check if budget has started
+            if (b.startDate) {
+              const startDate = new Date(b.startDate);
+              if (date < startDate) continue; // Skip budgets that haven't started
+            }
+
+            const limit = parseFloat(b.limitAmount) || 0;
+            switch (b.period) {
+              case 'day':
+                expense += limit;
+                break;
+              case 'week':
+                expense += limit / 7;
+                break;
+              case 'month':
+                expense += limit / 30;
+                break;
+              case 'year':
+                expense += limit / 365;
+                break;
+              default:
+                expense += limit / 30;
+            }
+          }
         }
-        
-        if (includeRecurringExpense) {
-          const recurringExpense = await getRecurringExpenseForDate(userId, date);
-          expense += recurringExpense;
+
+        // Apply recurring income/expense from pre-fetched data
+        if (includeRecurringIncome || includeRecurringExpense) {
+          for (const recurring of activeRecurring) {
+            const amount = parseFloat(recurring.amount) || 0;
+            const isIncome = recurring.type === 'income';
+
+            // Simple monthly recurrence check
+            // Note: nextDate is stored as 'YYYY-MM-DD' string, parse day directly
+            if (recurring.frequency === 'monthly') {
+              const dayOfMonth = date.getUTCDate();
+              // Extract day from nextDate string (format: "YYYY-MM-DD")
+              const recurringDay = parseInt(recurring.nextDate.split('-')[2], 10);
+              if (dayOfMonth === recurringDay) {
+                if (isIncome && includeRecurringIncome) income += amount;
+                if (!isIncome && includeRecurringExpense) expense += amount;
+              }
+            } else if (recurring.frequency === 'weekly') {
+              const dayOfWeek = date.getUTCDay();
+              // Get recurring day of week from nextDate
+              const nextDateParts = recurring.nextDate.split('-');
+              const nextDateObj = new Date(Date.UTC(
+                parseInt(nextDateParts[0], 10),
+                parseInt(nextDateParts[1], 10) - 1,
+                parseInt(nextDateParts[2], 10)
+              ));
+              const recurringDayOfWeek = nextDateObj.getUTCDay();
+              if (dayOfWeek === recurringDayOfWeek) {
+                if (isIncome && includeRecurringIncome) income += amount;
+                if (!isIncome && includeRecurringExpense) expense += amount;
+              }
+            } else if (recurring.frequency === 'daily') {
+              if (isIncome && includeRecurringIncome) income += amount;
+              if (!isIncome && includeRecurringExpense) expense += amount;
+            }
+          }
         }
-        
-        if (includePlannedIncome) {
-          const plannedIncome = await getPlannedIncomeForDate(userId, date);
-          income += plannedIncome;
+
+        // Apply planned transactions from pre-fetched data
+        if (includePlannedIncome || includePlannedExpenses) {
+          for (const planned of activePlanned) {
+            const targetDate = new Date(planned.targetDate);
+            if (targetDate.toISOString().split('T')[0] === f.date) {
+              const amount = parseFloat(planned.amount) || 0;
+              const isIncome = planned.type === 'income';
+              if (isIncome && includePlannedIncome) income += amount;
+              if (!isIncome && includePlannedExpenses) expense += amount;
+            }
+          }
         }
-        
-        if (includePlannedExpenses) {
-          const plannedExpense = await getPlannedExpenseForDate(userId, date);
-          expense += plannedExpense;
-        }
-        
-        if (includeBudgetLimits) {
-          const budgetTotal = await getDailyBudgetTotal(userId, date);
-          expense += budgetTotal;
-        }
-        
-        if (includeAssetIncome) {
-          const assetIncome = await getAssetIncomeForDate(userId, date);
-          income += assetIncome;
-        }
-        
-        if (includeLiabilityExpense) {
-          const liabilityExpense = await getLiabilityExpenseForDate(userId, date);
-          expense += liabilityExpense;
-        }
-        
+
         return {
           date: f.date,
           income,
@@ -344,8 +419,20 @@ async function generateAndProcessForecast(params: {
           isToday: false,
           isForecast: true,
         };
-      })
-    );
+      });
+    } catch (filterError) {
+      console.warn('[Forecast] Filter application failed, using base forecast:', filterError);
+      // Fallback: use base forecast without filters
+      forecastDataWithFilters = result.forecast.map((f) => ({
+        date: f.date,
+        income: f.predictedIncome,
+        expense: f.predictedExpense,
+        capital: 0,
+        assetsNet: 0,
+        isToday: false,
+        isForecast: true,
+      }));
+    }
     
     // Convert to cumulative format and recalculate capital
     // makeCumulativeFromBase takes DAILY deltas and converts to CUMULATIVE totals
@@ -370,60 +457,55 @@ async function generateAndProcessForecast(params: {
       const lastHistoricalDate = new Date(lastHistorical.date);
       
       forecastData.forEach((point: TrendDataPoint) => {
-        // Рассчитать реальное количество месяцев от последней исторической точки
+        // Рассчитать стоимость активов напрямую для даты прогноза
+        // Используем тот же метод calculateValueAtDate что и для истории - это обеспечивает непрерывность
         const pointDate = new Date(point.date);
-        const milliseconds = pointDate.getTime() - lastHistoricalDate.getTime();
-        const days = milliseconds / (1000 * 60 * 60 * 24);
-        const monthsAhead = days / 30.44; // Среднее количество дней в месяце
-        
+
         let totalAssetsValue = 0;
         let totalLiabilitiesValue = 0;
-        
-        // Спрогнозировать стоимость каждого актива/обязательства
+
+        // Рассчитать стоимость каждого актива/обязательства на дату прогноза
         for (const item of assetsRaw) {
           const asset = item.asset;
-          
+
           if (asset.type === 'asset' && includeAssetValue) {
-            const projectedValue = assetValueCalculator.projectValue(asset, monthsAhead);
-            totalAssetsValue += projectedValue;
+            // Используем тот же метод что и для истории
+            const value = assetValueCalculator.calculateValueAtDate(asset, pointDate);
+            totalAssetsValue += value;
           } else if (asset.type === 'liability' && includeLiabilityValue) {
-            const projectedValue = liabilityCalculator.projectValue(asset, monthsAhead);
-            totalLiabilitiesValue += projectedValue; // Уже отрицательное!
+            // Используем тот же метод что и для истории
+            const value = liabilityCalculator.calculateValueAtDate(asset, pointDate);
+            totalLiabilitiesValue += value; // Уже отрицательное!
           }
         }
-        
+
         point.assetsNet = totalAssetsValue + totalLiabilitiesValue;
         const walletsDelta = (point.income - lastHistorical.income) - (point.expense - lastHistorical.expense);
         point.capital = baseWalletsForForecast + walletsDelta + point.assetsNet;
       });
     } else {
       forecastData = makeCumulativeFromBase(forecastData, 0, 0);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
+
       forecastData.forEach((point: TrendDataPoint) => {
-        // Рассчитать реальное количество месяцев от сегодня до даты прогноза
+        // Рассчитать стоимость активов напрямую для даты прогноза
         const pointDate = new Date(point.date);
-        const milliseconds = pointDate.getTime() - today.getTime();
-        const days = milliseconds / (1000 * 60 * 60 * 24);
-        const monthsAhead = days / 30.44; // Среднее количество дней в месяце
-        
+
         let totalAssetsValue = 0;
         let totalLiabilitiesValue = 0;
-        
-        // Спрогнозировать стоимость каждого актива/обязательства
+
+        // Рассчитать стоимость каждого актива/обязательства на дату прогноза
         for (const item of assetsRaw) {
           const asset = item.asset;
-          
+
           if (asset.type === 'asset' && includeAssetValue) {
-            const projectedValue = assetValueCalculator.projectValue(asset, monthsAhead);
-            totalAssetsValue += projectedValue;
+            const value = assetValueCalculator.calculateValueAtDate(asset, pointDate);
+            totalAssetsValue += value;
           } else if (asset.type === 'liability' && includeLiabilityValue) {
-            const projectedValue = liabilityCalculator.projectValue(asset, monthsAhead);
-            totalLiabilitiesValue += projectedValue; // Уже отрицательное!
+            const value = liabilityCalculator.calculateValueAtDate(asset, pointDate);
+            totalLiabilitiesValue += value; // Уже отрицательное!
           }
         }
-        
+
         point.assetsNet = totalAssetsValue + totalLiabilitiesValue;
         point.capital = currentWalletsBalance + point.income - point.expense + point.assetsNet;
       });

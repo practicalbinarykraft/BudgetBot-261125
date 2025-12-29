@@ -1,4 +1,7 @@
 import winston from 'winston';
+import fs from 'fs';
+import path from 'path';
+import DailyRotateFile from 'winston-daily-rotate-file';
 import { env } from './env';
 
 /**
@@ -59,12 +62,6 @@ function buildTransports(): winston.transport[] {
 
   // Only add file transports in development (not in Docker/production)
   if (env.NODE_ENV !== 'production') {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const fs = require('fs');
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const path = require('path');
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const DailyRotateFile = require('winston-daily-rotate-file');
 
     // Create logs directory if it doesn't exist
     const logsDir = path.join(process.cwd(), 'logs');

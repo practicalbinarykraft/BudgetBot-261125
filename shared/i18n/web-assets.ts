@@ -28,7 +28,16 @@ export const webAssetsTranslations: Translations = {
   "assets.category_name_placeholder": { en: "e.g., Real Estate, Vehicles", ru: "напр., Недвижимость, Транспорт" },
   "assets.category_color": { en: "Color", ru: "Цвет" },
   "assets.category_created": { en: "Category created successfully", ru: "Категория успешно создана" },
-  
+  "assets.category_deleted": { en: "Category deleted successfully", ru: "Категория успешно удалена" },
+
+  "assets.manage_categories": { en: "Edit Categories", ru: "Редактировать категории" },
+  "assets.existing_categories": { en: "Existing categories", ru: "Существующие категории" },
+  "assets.no_categories": { en: "No categories yet", ru: "Пока нет категорий" },
+  "assets.add_new_category": { en: "Add new category", ru: "Добавить новую категорию" },
+  "assets.delete_category_title": { en: "Delete category?", ru: "Удалить категорию?" },
+  "assets.delete_category_confirm": { en: "Are you sure you want to delete category", ru: "Вы уверены, что хотите удалить категорию" },
+  "assets.delete_category_warning": { en: "assets will be moved to \"No category\"", ru: "активов будут перемещены в \"Без категории\"" },
+
   "assets.no_assets": { en: "No assets yet. Add your first asset!", ru: "Пока нет активов. Добавьте первый актив!" },
   "assets.no_liabilities": { en: "No liabilities yet.", ru: "Пока нет обязательств." },
   "assets.add_first_hint": { en: "Click \"+ Add\" to add your first asset", ru: "Нажмите \"+ Добавить\" чтобы добавить первый актив" },

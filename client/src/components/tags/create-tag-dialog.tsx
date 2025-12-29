@@ -7,6 +7,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslation } from '@/i18n/context';
 import type { PersonalTag, InsertPersonalTag } from '@shared/schema';
 import { User, Heart, Home, Users, Baby, UserPlus, Briefcase, Gift, Dog, Cat } from 'lucide-react';
 
@@ -33,6 +34,7 @@ const COLOR_OPTIONS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f97316', '#10b981', '#
 export function CreateTagDialog({ open, onClose, editTag }: CreateTagDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('User');
@@ -60,30 +62,30 @@ export function CreateTagDialog({ open, onClose, editTag }: CreateTagDialogProps
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tags'] });
-      toast({ description: 'Tag created successfully' });
+      toast({ description: t('tags.created_successfully') });
       handleClose();
     },
     onError: (error: any) => {
-      toast({ 
-        description: error.message || 'Failed to create tag', 
-        variant: 'destructive' 
+      toast({
+        description: error.message || t('tags.create_failed'),
+        variant: 'destructive'
       });
     },
   });
-  
+
   const updateMutation = useMutation({
     mutationFn: async (data: Partial<InsertPersonalTag>) => {
       return await apiRequest('PATCH', `/api/tags/${editTag!.id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tags'] });
-      toast({ description: 'Tag updated successfully' });
+      toast({ description: t('tags.updated_successfully') });
       handleClose();
     },
     onError: (error: any) => {
-      toast({ 
-        description: error.message || 'Failed to update tag', 
-        variant: 'destructive' 
+      toast({
+        description: error.message || t('tags.update_failed'),
+        variant: 'destructive'
       });
     },
   });
@@ -98,9 +100,9 @@ export function CreateTagDialog({ open, onClose, editTag }: CreateTagDialogProps
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!name.trim()) {
-      toast({ description: 'Name is required', variant: 'destructive' });
+      toast({ description: t('tags.name_required'), variant: 'destructive' });
       return;
     }
     
@@ -121,44 +123,44 @@ export function CreateTagDialog({ open, onClose, editTag }: CreateTagDialogProps
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>
-              {editTag ? 'Edit Tag' : 'Create New Tag'}
+              {editTag ? t('tags.edit_tag') : t('tags.create_new_tag')}
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div>
-              <Label htmlFor="tag-name">Name</Label>
+              <Label htmlFor="tag-name">{t('tags.name')}</Label>
               <Input
                 id="tag-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., Маша, Дима, Personal"
+                placeholder={t('tags.name_placeholder')}
                 disabled={isPending}
                 data-testid="input-tag-name"
               />
             </div>
-            
+
             <div>
-              <Label htmlFor="tag-icon">Icon</Label>
+              <Label htmlFor="tag-icon">{t('tags.icon')}</Label>
               <Select value={icon} onValueChange={setIcon} disabled={isPending}>
                 <SelectTrigger id="tag-icon" data-testid="select-tag-icon">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ICON_OPTIONS.map(({ name, component: IconComponent }) => (
-                    <SelectItem key={name} value={name}>
+                  {ICON_OPTIONS.map(({ name: iconName, component: IconComponent }) => (
+                    <SelectItem key={iconName} value={iconName}>
                       <div className="flex items-center gap-2">
                         <IconComponent className="h-4 w-4" />
-                        <span>{name}</span>
+                        <span>{t(`tags.icon.${iconName}`)}</span>
                       </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div>
-              <Label htmlFor="tag-color">Color</Label>
+              <Label htmlFor="tag-color">{t('tags.color')}</Label>
               <div className="flex gap-2">
                 {COLOR_OPTIONS.map((c) => (
                   <button
@@ -173,38 +175,38 @@ export function CreateTagDialog({ open, onClose, editTag }: CreateTagDialogProps
                 ))}
               </div>
             </div>
-            
+
             <div>
-              <Label htmlFor="tag-type">Type</Label>
+              <Label htmlFor="tag-type">{t('tags.type')}</Label>
               <Select value={type} onValueChange={(v) => setType(v as any)} disabled={isPending}>
                 <SelectTrigger id="tag-type" data-testid="select-tag-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="person">Person (Other)</SelectItem>
-                  <SelectItem value="personal">Personal (Me)</SelectItem>
-                  <SelectItem value="shared">Shared</SelectItem>
+                  <SelectItem value="person">{t('tags.type_person')}</SelectItem>
+                  <SelectItem value="personal">{t('tags.type_personal')}</SelectItem>
+                  <SelectItem value="shared">{t('tags.type_shared')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
-          
+
           <DialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={handleClose}
               disabled={isPending}
               data-testid="button-cancel-tag"
             >
-              Cancel
+              {t('tags.cancel')}
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={isPending}
               data-testid="button-save-tag"
             >
-              {isPending ? 'Saving...' : editTag ? 'Update' : 'Create'}
+              {isPending ? t('tags.saving') : editTag ? t('tags.update') : t('tags.create')}
             </Button>
           </DialogFooter>
         </form>

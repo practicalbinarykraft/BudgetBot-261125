@@ -3,8 +3,10 @@ import { LimitProgressBar } from "./limit-progress-bar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
 import type { LimitProgress } from "@/types/limit-progress";
+import { useTranslation } from "@/i18n/context";
 
 export function LimitsProgress() {
+  const { t } = useTranslation();
   const { data: limits, isLoading, error } = useQuery<LimitProgress[]>({
     queryKey: ['/api/limits'],
   });
@@ -30,13 +32,13 @@ export function LimitsProgress() {
   // Ошибка
   if (error) {
     return (
-      <div 
+      <div
         className="p-4 bg-card border border-border rounded-md text-center"
         data-testid="limits-error"
       >
         <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
         <p className="text-sm text-muted-foreground">
-          Failed to load budget limits
+          {t("budgets.failed_load_limits")}
         </p>
       </div>
     );
@@ -45,13 +47,13 @@ export function LimitsProgress() {
   // Нет лимитов
   if (!limits || limits.length === 0) {
     return (
-      <div 
+      <div
         className="p-6 bg-card border border-border rounded-md text-center"
         data-testid="limits-empty"
       >
-        <p className="text-muted-foreground">No budget limits set yet</p>
+        <p className="text-muted-foreground">{t("budgets.no_limits_set")}</p>
         <p className="text-sm text-muted-foreground mt-1">
-          Create budgets to track your spending
+          {t("budgets.create_to_track")}
         </p>
       </div>
     );
@@ -61,9 +63,9 @@ export function LimitsProgress() {
   return (
     <div className="space-y-4" data-testid="limits-list">
       {limits.map((limit) => (
-        <LimitProgressBar 
-          key={limit.budgetId} 
-          limit={limit} 
+        <LimitProgressBar
+          key={limit.budgetId}
+          limit={limit}
         />
       ))}
     </div>

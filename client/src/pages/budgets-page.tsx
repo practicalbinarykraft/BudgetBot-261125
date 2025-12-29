@@ -165,9 +165,9 @@ export default function BudgetsPage() {
 
   if (budgetsLoading || categoriesLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <Skeleton className="h-20" />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <Skeleton className="h-48" />
           <Skeleton className="h-48" />
           <Skeleton className="h-48" />
@@ -187,13 +187,17 @@ export default function BudgetsPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{t("budgets.title")}</h1>
-          <p className="text-muted-foreground">{t("budgets.manage")}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">{t("budgets.title")}</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">{t("budgets.manage")}</p>
         </div>
-        <Button onClick={handleAddNew} data-testid="button-add-budget">
+        <Button
+          onClick={handleAddNew}
+          data-testid="button-add-budget"
+          className="w-full sm:w-auto"
+        >
           <Plus className="h-4 w-4 mr-2" />
           {t("budgets.add_budget")}
         </Button>
@@ -203,7 +207,10 @@ export default function BudgetsPage() {
         <Alert variant="destructive" data-testid="alert-exceeded-budgets">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {exceededBudgets.length} {exceededBudgets.length === 1 ? "budget has" : "budgets have"} exceeded their limit
+            {exceededBudgets.length === 1
+              ? t("budgets.exceeded_alert_one")
+              : t("budgets.exceeded_alert_many").replace("{count}", exceededBudgets.length.toString())
+            }
           </AlertDescription>
         </Alert>
       )}
@@ -211,7 +218,7 @@ export default function BudgetsPage() {
       {/* Limits Progress Section */}
       {budgets.length > 0 && (
         <div className="space-y-2">
-          <h2 className="text-xl font-semibold">Budget Progress</h2>
+          <h2 className="text-lg sm:text-xl font-semibold">{t("budgets.progress_title")}</h2>
           <LimitsProgress />
         </div>
       )}
@@ -219,7 +226,7 @@ export default function BudgetsPage() {
       {budgets.length === 0 ? (
         <BudgetEmptyState onAddClick={handleAddNew} />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {budgets.map((budget) => {
             const category = categories.find((c) => c.id === budget.categoryId);
             

@@ -7,6 +7,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { UseFormReturn } from "react-hook-form";
 import { insertBudgetSchema } from "@shared/schema";
 import { z } from "zod";
+import { useTranslation } from "@/i18n/context";
 
 type FormData = z.infer<typeof insertBudgetSchema>;
 
@@ -27,11 +28,13 @@ export function BudgetFormDialog({
   expenseCategories: Category[];
   isPending: boolean;
 }) {
+  const { t } = useTranslation();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent data-testid="dialog-budget-form">
         <DialogHeader>
-          <DialogTitle>{editingBudget ? "Edit Budget" : "Add Budget"}</DialogTitle>
+          <DialogTitle>{editingBudget ? t("budgets.edit_budget_dialog") : t("budgets.add_budget_dialog")}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -40,14 +43,14 @@ export function BudgetFormDialog({
               name="categoryId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Category</FormLabel>
+                  <FormLabel>{t("budgets.category")}</FormLabel>
                   <Select
                     onValueChange={(value) => field.onChange(parseInt(value))}
                     value={field.value?.toString() || ""}
                   >
                     <FormControl>
                       <SelectTrigger data-testid="select-category">
-                        <SelectValue placeholder="Select category" />
+                        <SelectValue placeholder={t("budgets.select_category")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -74,7 +77,7 @@ export function BudgetFormDialog({
               name="limitAmount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Limit Amount (USD)</FormLabel>
+                  <FormLabel>{t("budgets.limit_amount")}</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -95,17 +98,17 @@ export function BudgetFormDialog({
               name="period"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Period</FormLabel>
+                  <FormLabel>{t("budgets.period")}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value || ""}>
                     <FormControl>
                       <SelectTrigger data-testid="select-period">
-                        <SelectValue placeholder="Select period" />
+                        <SelectValue placeholder={t("budgets.select_period")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="week">Weekly</SelectItem>
-                      <SelectItem value="month">Monthly</SelectItem>
-                      <SelectItem value="year">Yearly</SelectItem>
+                      <SelectItem value="week">{t("budgets.period_week")}</SelectItem>
+                      <SelectItem value="month">{t("budgets.period_month")}</SelectItem>
+                      <SelectItem value="year">{t("budgets.period_year")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -118,7 +121,7 @@ export function BudgetFormDialog({
               name="startDate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Start Date</FormLabel>
+                  <FormLabel>{t("budgets.start_date")}</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} data-testid="input-start-date" />
                   </FormControl>
@@ -134,14 +137,17 @@ export function BudgetFormDialog({
                 onClick={() => onOpenChange(false)}
                 data-testid="button-cancel"
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button
                 type="submit"
                 disabled={isPending}
                 data-testid="button-submit"
               >
-                {editingBudget ? "Update" : "Create"}
+                {isPending
+                  ? (editingBudget ? t("budgets.updating") : t("budgets.creating"))
+                  : (editingBudget ? t("budgets.update") : t("budgets.create"))
+                }
               </Button>
             </div>
           </form>

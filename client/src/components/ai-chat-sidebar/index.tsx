@@ -89,7 +89,7 @@ export function AIChatSidebar() {
       {/* Сайдбар */}
       <div
         className={`
-          fixed top-0 right-0 h-screen w-[400px]
+          fixed top-0 right-0 h-screen w-full sm:w-[400px]
           bg-background
           shadow-2xl z-40
           transform transition-transform duration-300

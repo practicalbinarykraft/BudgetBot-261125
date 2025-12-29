@@ -29,7 +29,8 @@ export function formatFullCurrency(value: number): string {
   }).format(value);
 }
 
-export function formatChartDate(dateStr: string): string {
+export function formatChartDate(dateStr: string, locale: string = 'en'): string {
   const date = new Date(dateStr);
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const localeCode = locale === 'ru' ? 'ru-RU' : 'en-US';
+  return date.toLocaleDateString(localeCode, { month: "short", day: "numeric", year: "numeric" });
 }

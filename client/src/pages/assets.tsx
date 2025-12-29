@@ -55,11 +55,11 @@ export default function AssetsPage() {
   return (
     <div className="flex gap-6">
       {/* Основной контент */}
-      <div className="flex-1 space-y-6">
+      <div className="flex-1 space-y-4 sm:space-y-6">
         {/* Заголовок */}
         <div>
-          <h1 className="text-3xl font-bold mb-2">{t('assets.title')}</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2">{t('assets.title')}</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             {t('assets.subtitle')}
           </p>
         </div>
@@ -87,24 +87,24 @@ export default function AssetsPage() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="bg-white/10 p-3 rounded-lg">
                   <p className="text-xs opacity-80">{t('assets.assets')}</p>
                   <p className="text-lg font-semibold" data-testid="text-total-assets">
                     ${((summary.totalAssets ?? 0) / 1000).toFixed(0)}K
                   </p>
                 </div>
-                
+
                 <div className="bg-white/10 p-3 rounded-lg">
                   <p className="text-xs opacity-80">{t('assets.liabilities')}</p>
                   <p className="text-lg font-semibold" data-testid="text-total-liabilities">
                     ${((summary.totalLiabilities ?? 0) / 1000).toFixed(0)}K
                   </p>
                 </div>
-                
+
                 <div className="bg-white/10 p-3 rounded-lg">
                   <p className="text-xs opacity-80">{t('assets.cashflow')}</p>
-                  <p 
+                  <p
                     className={`text-lg font-semibold ${
                       summary.monthlyCashflow >= 0 ? 'text-green-200' : 'text-red-200'
                     }`}
@@ -119,7 +119,7 @@ export default function AssetsPage() {
         )}
         
         {/* Табы */}
-        <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as 'asset' | 'liability')} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as 'asset' | 'liability')} className="space-y-4 sm:space-y-6">
           <TabsList className="grid w-full grid-cols-2" data-testid="tabs-list">
             <TabsTrigger value="asset" data-testid="tab-assets">
               {t('assets.tab_assets')}
@@ -128,21 +128,23 @@ export default function AssetsPage() {
               {t('assets.tab_liabilities')}
             </TabsTrigger>
           </TabsList>
-          
+
           {/* Кнопки */}
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2">
             <Button
               variant="outline"
               onClick={() => setShowCategoryDialog(true)}
               data-testid="button-add-category"
+              className="w-full sm:w-auto"
             >
               <Plus className="w-4 h-4 mr-2" />
               {t('assets.add_category')}
             </Button>
-            
+
             <Button
               onClick={() => setShowForm(true)}
               data-testid="button-add-asset"
+              className="w-full sm:w-auto"
             >
               <Plus className="w-4 h-4 mr-2" />
               {activeTab === 'asset' ? t('assets.add_asset') : t('assets.add_liability')}

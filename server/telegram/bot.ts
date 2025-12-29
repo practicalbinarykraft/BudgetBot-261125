@@ -223,10 +223,127 @@ async function handleMenuButton(msg: TelegramBot.Message, userId: number): Promi
 }
 
 /**
+ * Handle language selection for new users
+ */
+async function handleLanguageSelection(query: TelegramBot.CallbackQuery): Promise<void> {
+  const telegramId = query.from.id.toString();
+  const chatId = query.message?.chat.id;
+  const lang = query.data?.split(':')[1] as 'en' | 'ru';
+
+  if (!chatId || !lang) return;
+
+  try {
+    // Import db and users schema
+    const { db } = await import('../db');
+    const { users } = await import('@shared/schema');
+    const { eq } = await import('drizzle-orm');
+
+    // Check if user already exists
+    const [existingUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.telegramId, telegramId))
+      .limit(1);
+
+    if (existingUser) {
+      // User already exists, just update language in settings
+      const { settings } = await import('@shared/schema');
+
+      // Check if settings exist
+      const [userSettings] = await db
+        .select()
+        .from(settings)
+        .where(eq(settings.userId, existingUser.id))
+        .limit(1);
+
+      if (userSettings) {
+        // Update existing settings
+        await db
+          .update(settings)
+          .set({ language: lang })
+          .where(eq(settings.userId, existingUser.id));
+      } else {
+        // Create new settings
+        await db.insert(settings).values({
+          userId: existingUser.id,
+          language: lang,
+          currency: 'USD',
+        });
+      }
+
+      await bot!.answerCallbackQuery(query.id);
+
+      const { getWelcomeMessage } = await import('@shared/i18n');
+      const { getMainMenuKeyboard, getMainMenuHint } = await import('./menu/keyboards');
+
+      await bot!.editMessageText(getWelcomeMessage(lang), {
+        chat_id: chatId,
+        message_id: query.message?.message_id,
+        parse_mode: 'Markdown'
+      });
+
+      await bot!.sendMessage(chatId, getMainMenuHint(lang), {
+        parse_mode: 'Markdown',
+        reply_markup: getMainMenuKeyboard()
+      });
+      return;
+    }
+
+    // Create new user
+    const name = query.from.first_name || query.from.username || 'User';
+    const email = `${telegramId}@telegram.user`;
+
+    const [newUser] = await db.insert(users).values({
+      email,
+      name,
+      password: '',
+      telegramId,
+      telegramUsername: query.from.username || null,
+    }).returning();
+
+    // Create settings with selected language
+    const { settings } = await import('@shared/schema');
+    await db.insert(settings).values({
+      userId: newUser.id,
+      language: lang,
+      currency: 'USD',
+    });
+
+    await bot!.answerCallbackQuery(query.id);
+
+    const { getWelcomeMessage } = await import('@shared/i18n');
+    const { getMainMenuKeyboard, getMainMenuHint } = await import('./menu/keyboards');
+
+    await bot!.editMessageText(getWelcomeMessage(lang), {
+      chat_id: chatId,
+      message_id: query.message?.message_id,
+      parse_mode: 'Markdown'
+    });
+
+    await bot!.sendMessage(chatId, getMainMenuHint(lang), {
+      parse_mode: 'Markdown',
+      reply_markup: getMainMenuKeyboard()
+    });
+  } catch (error) {
+    logError('Error handling language selection', error as Error);
+    await bot!.answerCallbackQuery(query.id, {
+      text: 'Error creating user. Please try again.',
+      show_alert: true
+    });
+  }
+}
+
+/**
  * Обработать callback query (inline-кнопки)
  */
 async function handleIncomingCallback(query: TelegramBot.CallbackQuery): Promise<void> {
   try {
+    // Handle language selection for new users (before auth check)
+    if (query.data?.startsWith('select_language:')) {
+      await handleLanguageSelection(query);
+      return;
+    }
+
     await withUserCallback(bot!, query, async (_, q, user) => {
       await routeCallback(bot!, q, user);
     });

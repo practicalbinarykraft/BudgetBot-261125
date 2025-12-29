@@ -48,16 +48,22 @@ export class AssetValueCalculator {
   
   /**
    * Спрогнозировать стоимость через N месяцев
-   * 
+   *
+   * ВАЖНО: Используем calculateValueAtDate(today) как базу,
+   * чтобы обеспечить непрерывность между историей и прогнозом
+   *
    * @param asset - Актив
    * @param months - Количество месяцев вперёд
    * @returns Прогнозная стоимость в USD
    */
   projectValue(asset: Asset, months: number): number {
-    const currentValue = parseFloat(asset.currentValue);
+    // Получить текущую стоимость тем же методом, что и для истории
+    const today = new Date();
+    const todayValue = this.calculateValueAtDate(asset, today);
+
     const years = months / 12;
-    
-    return this.applyRateChange(currentValue, asset, years);
+
+    return this.applyRateChange(todayValue, asset, years);
   }
   
   /**

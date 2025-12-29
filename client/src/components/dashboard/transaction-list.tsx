@@ -17,6 +17,24 @@ interface TransactionListProps {
   showEdit?: boolean;
 }
 
+// System categories that have translations
+const SYSTEM_CATEGORIES = ['Unaccounted', 'Salary', 'Freelance', 'Food', 'Transport', 'Entertainment', 'Bills', 'Shopping', 'Healthcare', 'Education', 'Housing', 'Travel', 'Other'];
+
+// Helper to translate category name
+function translateCategory(category: string, t: (key: string) => string): string {
+  if (SYSTEM_CATEGORIES.includes(category)) {
+    return t(`categories.name.${category}`);
+  }
+  return category;
+}
+
+// Helper to translate source
+function translateSource(source: string, t: (key: string) => string): string {
+  const key = `transaction.source.${source}`;
+  const translated = t(key);
+  return translated !== key ? translated : source;
+}
+
 // Helper function to format date headers
 function getDateHeader(dateStr: string, lang: string, t: (key: string) => string): string {
   const date = parseISO(dateStr);
@@ -86,70 +104,78 @@ export function TransactionList({ transactions, onDelete, onEdit, showDelete = f
               {dateTransactions.map((transaction) => (
           <div
             key={transaction.id}
-            className="flex items-center justify-between py-3 px-4 rounded-md border hover-elevate"
+            className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 px-3 sm:px-4 rounded-md border hover-elevate gap-2"
             data-testid={`transaction-${transaction.id}`}
           >
-            <div className="flex items-center gap-4 flex-1">
-              <div className="flex-1">
-                <p className="font-medium">{transaction.description}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <p className="text-sm text-muted-foreground">
-                    {/* ⏰ parseISO prevents timezone bugs */}
-                    {format(parseISO(transaction.date), "MMM dd, yyyy")}
-                  </p>
-                  {transaction.category && (
-                    <Badge variant="secondary" className="text-xs">
-                      {transaction.category}
-                    </Badge>
+            {/* Main content - full width on mobile, flex on desktop */}
+            <div className="flex-1 min-w-0">
+              {/* Description and Amount row */}
+              <div className="flex items-start justify-between gap-2 mb-1">
+                <p className="font-medium text-sm sm:text-base truncate flex-1">{transaction.description}</p>
+                {/* Amount - always visible, right aligned */}
+                <div className="text-right shrink-0">
+                  <div className={cn(
+                    "font-mono font-semibold text-base sm:text-lg whitespace-nowrap",
+                    transaction.type === "income"
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-red-600 dark:text-red-400"
                   )}
-                  {transaction.source !== "manual" && (
-                    <Badge variant="outline" className="text-xs">
-                      {transaction.source}
-                    </Badge>
+                  data-testid={`amount-${transaction.id}`}
+                  >
+                    {transaction.type === "income" ? "+" : "-"}
+                    {transaction.originalAmount && transaction.originalCurrency
+                      ? `${transaction.originalCurrency === "RUB" ? "₽" : transaction.originalCurrency === "IDR" ? "Rp" : "$"}${transaction.originalAmount}`
+                      : `$${transaction.amountUsd}`
+                    }
+                  </div>
+                  {transaction.originalAmount && transaction.originalCurrency && transaction.originalCurrency !== "USD" && (
+                    <div className="text-xs text-muted-foreground">
+                      ≈ ${transaction.amountUsd}
+                    </div>
                   )}
                 </div>
               </div>
-              <div className="text-right">
-                <div className={cn(
-                  "font-mono font-semibold text-lg",
-                  transaction.type === "income" 
-                    ? "text-green-600 dark:text-green-400" 
-                    : "text-red-600 dark:text-red-400"
+              {/* Meta info row */}
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  {format(parseISO(transaction.date), "d MMM", { locale: language === 'ru' ? ru : enUS })}
+                </p>
+                {transaction.category && (
+                  <Badge variant="secondary" className="text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2">
+                    {translateCategory(transaction.category, t)}
+                  </Badge>
                 )}
-                data-testid={`amount-${transaction.id}`}
-                >
-                  {transaction.type === "income" ? "+" : "-"}
-                  {transaction.originalAmount && transaction.originalCurrency 
-                    ? `${transaction.originalCurrency === "RUB" ? "₽" : transaction.originalCurrency === "IDR" ? "Rp" : "$"}${transaction.originalAmount}`
-                    : `$${transaction.amountUsd}`
-                  }
-                </div>
-                {transaction.originalAmount && transaction.originalCurrency && transaction.originalCurrency !== "USD" && (
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    ≈ ${transaction.amountUsd}
-                  </div>
+                {transaction.source !== "manual" && (
+                  <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2 hidden sm:inline-flex">
+                    {translateSource(transaction.source, t)}
+                  </Badge>
                 )}
               </div>
             </div>
-            <div className="flex gap-1">
+            {/* Action buttons - full width on mobile, compact on desktop */}
+            <div className="flex gap-1 sm:gap-1 w-full sm:w-auto sm:shrink-0">
               {showEdit && onEdit && (
                 <Button
                   variant="ghost"
-                  size="icon"
+                  size="sm"
+                  className="flex-1 sm:flex-none h-8 sm:h-9 sm:w-9 sm:px-0"
                   onClick={() => onEdit(transaction)}
                   data-testid={`button-edit-${transaction.id}`}
                 >
-                  <Pencil className="h-4 w-4" />
+                  <Pencil className="h-4 w-4 sm:mr-0" />
+                  <span className="sm:hidden ml-2">{t("common.edit")}</span>
                 </Button>
               )}
               {showDelete && onDelete && (
                 <Button
                   variant="ghost"
-                  size="icon"
+                  size="sm"
+                  className="flex-1 sm:flex-none h-8 sm:h-9 sm:w-9 sm:px-0"
                   onClick={() => onDelete(transaction.id)}
                   data-testid={`button-delete-${transaction.id}`}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-4 w-4 sm:mr-0" />
+                  <span className="sm:hidden ml-2">{t("common.delete")}</span>
                 </Button>
               )}
             </div>

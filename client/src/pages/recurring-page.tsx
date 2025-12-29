@@ -19,11 +19,12 @@ import { useAuth } from "@/hooks/use-auth";
 import { Badge } from "@/components/ui/badge";
 // ⏰ parseISO prevents timezone bugs when parsing date strings from DB
 import { format, parseISO } from "date-fns";
+import { ru, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/i18n/context";
 
-const formSchema = insertRecurringSchema.extend({
+const formSchema = insertRecurringSchema.omit({ userId: true }).extend({
   amount: z.string().min(1),
 });
 
@@ -34,7 +35,7 @@ export default function RecurringPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
 
   const { data: recurring = [], isLoading } = useQuery<Recurring[]>({
     queryKey: ["/api/recurring"],
@@ -43,7 +44,6 @@ export default function RecurringPage() {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      userId: user?.id || 0,
       type: "expense",
       amount: "",
       description: "",
@@ -57,7 +57,7 @@ export default function RecurringPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: FormData) => {
+    mutationFn: async (data: FormData & { userId: number }) => {
       const res = await apiRequest("POST", "/api/recurring", data);
       return res.json();
     },
@@ -100,12 +100,23 @@ export default function RecurringPage() {
   });
 
   const onSubmit = (data: FormData) => {
-    createMutation.mutate(data);
+    if (!user?.id) {
+      toast({
+        title: t("common.error"),
+        description: "User not authenticated",
+        variant: "destructive",
+      });
+      return;
+    }
+    createMutation.mutate({
+      ...data,
+      userId: user.id,
+    });
   };
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <Skeleton className="h-20" />
         <Skeleton className="h-96" />
       </div>
@@ -113,13 +124,13 @@ export default function RecurringPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{t("recurring.title")}</h1>
-          <p className="text-muted-foreground">{t("recurring.manage")}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">{t("recurring.title")}</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">{t("recurring.manage")}</p>
         </div>
-        <Button onClick={() => setShowAddDialog(true)} data-testid="button-add-recurring">
+        <Button onClick={() => setShowAddDialog(true)} data-testid="button-add-recurring" className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           {t("recurring.add_recurring")}
         </Button>
@@ -146,7 +157,7 @@ export default function RecurringPage() {
                       )}
                       <p className="text-sm text-muted-foreground">
                         {/* ⏰ parseISO prevents timezone bugs */}
-                        {t("recurring.next")} {format(parseISO(item.nextDate), "MMM dd, yyyy")}
+                        {t("recurring.next")} {format(parseISO(item.nextDate), "d MMM yyyy", { locale: language === 'ru' ? ru : enUS })}
                       </p>
                     </div>
                   </div>
@@ -187,7 +198,7 @@ export default function RecurringPage() {
                   <FormItem>
                     <FormLabel>{t("recurring.description")}</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Netflix subscription" data-testid="input-recurring-description" {...field} />
+                      <Input placeholder={t("recurring.description_placeholder")} data-testid="input-recurring-description" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

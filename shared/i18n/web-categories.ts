@@ -19,4 +19,26 @@ export const webCategoriesTranslations: Translations = {
   "categories.type_income": { en: "Income", ru: "Доход" },
   "categories.type_expense": { en: "Expense", ru: "Расход" },
   "categories.select_type": { en: "Select type", ru: "Выберите тип" },
+  "categories.name_placeholder": { en: "e.g. Groceries, Salary", ru: "напр. Продукты, Зарплата" },
+
+  // System category names (stored in DB as English, translated on display)
+  "categories.name.Unaccounted": { en: "Unaccounted", ru: "Неучтённые" },
+  "categories.name.Salary": { en: "Salary", ru: "Зарплата" },
+  "categories.name.Freelance": { en: "Freelance", ru: "Фриланс" },
+  "categories.name.Food": { en: "Food", ru: "Еда" },
+  "categories.name.Transport": { en: "Transport", ru: "Транспорт" },
+  "categories.name.Entertainment": { en: "Entertainment", ru: "Развлечения" },
+  "categories.name.Bills": { en: "Bills", ru: "Счета" },
+  "categories.name.Shopping": { en: "Shopping", ru: "Покупки" },
+  "categories.name.Healthcare": { en: "Healthcare", ru: "Здоровье" },
+  "categories.name.Education": { en: "Education", ru: "Образование" },
+  "categories.name.Housing": { en: "Housing", ru: "Жильё" },
+  "categories.name.Travel": { en: "Travel", ru: "Путешествия" },
+  "categories.name.Other": { en: "Other", ru: "Прочее" },
+
+  // Transaction source labels
+  "transaction.source.calibration": { en: "calibration", ru: "калибровка" },
+  "transaction.source.manual": { en: "manual", ru: "вручную" },
+  "transaction.source.telegram": { en: "telegram", ru: "телеграм" },
+  "transaction.source.recurring": { en: "recurring", ru: "повтор" },
 };

@@ -339,6 +339,10 @@ export const webDashboardTranslations: Translations = {
     en: 'Detailed Analysis',
     ru: 'Детальный анализ',
   },
+  'dashboard.financial_forecast': {
+    en: 'Financial Forecast',
+    ru: 'Финансовый прогноз',
+  },
   'dashboard.forecast_type_ai': {
     en: 'AI Forecast (smart)',
     ru: 'AI прогноз (умный)',
@@ -346,5 +350,109 @@ export const webDashboardTranslations: Translations = {
   'dashboard.forecast_type_linear': {
     en: 'Linear forecast (simple)',
     ru: 'Линейный прогноз (простой)',
+  },
+
+  // Chart time controls
+  'dashboard.history': {
+    en: 'History:',
+    ru: 'История:',
+  },
+  'dashboard.forecast_label': {
+    en: 'Forecast:',
+    ru: 'Прогноз:',
+  },
+  'dashboard.days_7': {
+    en: '7 days',
+    ru: '7 дней',
+  },
+  'dashboard.days_30': {
+    en: '30 days',
+    ru: '30 дней',
+  },
+  'dashboard.days_60': {
+    en: '60 days',
+    ru: '60 дней',
+  },
+  'dashboard.days_90': {
+    en: '90 days',
+    ru: '90 дней',
+  },
+  'dashboard.year_1': {
+    en: '1 year',
+    ru: '1 год',
+  },
+  'dashboard.none': {
+    en: 'None',
+    ru: 'Нет',
+  },
+  'dashboard.financial_trend_subtitle': {
+    en: 'Track your money over time with AI-powered forecast',
+    ru: 'Отслеживайте деньги с AI-прогнозом',
+  },
+  'dashboard.forecast_error_generic': {
+    en: 'Failed to load forecast',
+    ru: 'Не удалось загрузить прогноз',
+  },
+
+  // Chart loading states
+  'dashboard.chart_loading': {
+    en: 'Building chart...',
+    ru: 'Строим график...',
+  },
+  'dashboard.chart_loading_hint': {
+    en: 'Analyzing your finances',
+    ru: 'Анализируем ваши финансы',
+  },
+  'dashboard.chart_updating': {
+    en: 'Updating chart...',
+    ru: 'Обновляем график...',
+  },
+  'dashboard.chart_error': {
+    en: 'Failed to load chart',
+    ru: 'Не удалось загрузить график',
+  },
+  'dashboard.chart_no_data': {
+    en: 'No data to display',
+    ru: 'Нет данных для отображения',
+  },
+  'dashboard.chart_no_data_hint': {
+    en: 'Add transactions to see your financial trend',
+    ru: 'Добавьте транзакции чтобы увидеть финансовый тренд',
+  },
+
+  // Chart legend
+  'dashboard.chart_income': {
+    en: 'Income',
+    ru: 'Доход',
+  },
+  'dashboard.chart_expense': {
+    en: 'Expense',
+    ru: 'Расход',
+  },
+  'dashboard.chart_capital_actual': {
+    en: 'Capital (actual)',
+    ru: 'Капитал (факт)',
+  },
+  'dashboard.chart_capital_forecast': {
+    en: 'Capital (forecast)',
+    ru: 'Капитал (прогноз)',
+  },
+  'dashboard.chart_assets_liabilities': {
+    en: 'Assets - Liabilities',
+    ru: 'Активы - Пассивы',
+  },
+  'dashboard.chart_goal_markers': {
+    en: 'Goal markers',
+    ru: 'Маркеры целей',
+  },
+
+  // Chart update button
+  'dashboard.update_chart': {
+    en: 'Update Chart',
+    ru: 'Обновить график',
+  },
+  'dashboard.chart_settings_changed': {
+    en: 'Settings changed. Click to update the chart.',
+    ru: 'Настройки изменены. Нажмите для обновления графика.',
   },
 };

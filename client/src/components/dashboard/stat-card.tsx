@@ -24,7 +24,7 @@ export function StatCard({ title, value, icon: Icon, trend, className, action }:
         <Icon className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-mono font-bold" data-testid={`stat-${title.toLowerCase()}`}>
+        <div className="text-lg sm:text-xl md:text-2xl font-mono font-bold" data-testid={`stat-${title.toLowerCase()}`}>
           {value}
         </div>
         {trend && (
