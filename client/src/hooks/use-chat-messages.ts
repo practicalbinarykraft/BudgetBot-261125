@@ -122,6 +122,9 @@ export function useChatMessages(
         // Обычное сообщение — обновить историю
         queryClient.invalidateQueries({ queryKey: ['/api/ai/chat/history'] });
       }
+
+      // Обновить баланс сообщений после каждого запроса
+      queryClient.invalidateQueries({ queryKey: ['credits-balance'] });
     },
     onError: (error: Error) => {
       toast({

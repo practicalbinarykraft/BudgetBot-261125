@@ -20,6 +20,7 @@ import { useChatSidebar } from '@/stores/chat-sidebar-store';
 import { useChatMessages } from '@/hooks/use-chat-messages';
 import { useToolConfirmation } from '@/hooks/use-tool-confirmation';
 import { useImageUpload } from '@/hooks/use-image-upload';
+import { useCreditsBalance } from '@/hooks/use-credits-balance';
 
 // Компоненты
 import { FloatingChatButton } from './floating-button';
@@ -52,6 +53,10 @@ export function AIChatSidebar() {
 
   // Хук загрузки изображений
   const { uploadImage, isUploading } = useImageUpload(refreshHistory);
+
+  // Хук баланса кредитов
+  const { data: balance } = useCreditsBalance();
+  const hasCredits = !balance || balance.messagesRemaining > 0;
 
   /**
    * Обработчик быстрых действий
@@ -122,13 +127,32 @@ export function AIChatSidebar() {
           <EmptyState />
         )}
 
-        {/* Поле ввода */}
-        <ChatInput
-          onSend={sendMessage}
-          onImageUpload={handleImageUpload}
-          isSending={isSending}
-          isUploading={isUploading}
-        />
+        {/* Поле ввода или баннер об исчерпании лимита */}
+        {hasCredits ? (
+          <ChatInput
+            onSend={sendMessage}
+            onImageUpload={handleImageUpload}
+            isSending={isSending}
+            isUploading={isUploading}
+          />
+        ) : (
+          <div className="p-4 border-t border-border bg-orange-50 dark:bg-orange-950/20">
+            <div className="text-center">
+              <h4 className="font-semibold text-sm text-orange-900 dark:text-orange-100 mb-1">
+                Free messages exhausted
+              </h4>
+              <p className="text-xs text-orange-700 dark:text-orange-300 mb-3">
+                You've used all 50 free AI messages. Upgrade to continue chatting!
+              </p>
+              <button
+                onClick={() => window.open('https://t.me/yourusername', '_blank')}
+                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium rounded-md transition-colors"
+              >
+                Contact for Upgrade
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

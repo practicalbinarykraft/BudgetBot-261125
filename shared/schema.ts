@@ -810,6 +810,54 @@ export type InsertExchangeRateHistory = z.infer<typeof insertExchangeRateHistory
 export type ExchangeRateHistory = typeof exchangeRateHistory.$inferSelect;
 
 // ========================================
+// AI CREDITS SYSTEM
+// ========================================
+
+export const userCredits = pgTable("user_credits", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  messagesRemaining: integer("messages_remaining").notNull().default(50),
+  totalGranted: integer("total_granted").notNull().default(50),
+  totalUsed: integer("total_used").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const aiUsageLog = pgTable("ai_usage_log", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  model: text("model").notNull(),
+  inputTokens: integer("input_tokens").notNull(),
+  outputTokens: integer("output_tokens").notNull(),
+  messageCount: integer("message_count").notNull().default(1),
+  wasFree: boolean("was_free").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const creditTransactions = pgTable("credit_transactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  messagesChange: integer("messages_change").notNull(),
+  balanceBefore: integer("balance_before").notNull(),
+  balanceAfter: integer("balance_after").notNull(),
+  description: text("description"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertUserCreditsSchema = createInsertSchema(userCredits);
+export const insertAiUsageLogSchema = createInsertSchema(aiUsageLog);
+export const insertCreditTransactionSchema = createInsertSchema(creditTransactions);
+
+export type UserCredits = typeof userCredits.$inferSelect;
+export type InsertUserCredits = z.infer<typeof insertUserCreditsSchema>;
+export type AiUsageLog = typeof aiUsageLog.$inferSelect;
+export type InsertAiUsageLog = z.infer<typeof insertAiUsageLogSchema>;
+export type CreditTransaction = typeof creditTransactions.$inferSelect;
+export type InsertCreditTransaction = z.infer<typeof insertCreditTransactionSchema>;
+
+// ========================================
 // PRODUCT CATALOG SCHEMAS (Modular)
 // ========================================
 export * from "./schemas/product-catalog";

@@ -11,8 +11,27 @@ import { suggestCategory, getUserCategories } from "../../services/categorizatio
 import { validateToolParams } from "../../ai/tool-schemas";
 import { ZodError } from "zod";
 import { getErrorMessage } from "../../lib/errors";
+import { checkCreditsAvailable, deductMessage, getCreditBalance } from "../../services/credits.service";
+import { chatWithOpenRouter, buildFinancialAdvisorPrompt } from "../../services/ai/openrouter.service";
 
 const router = Router();
+
+// GET /api/ai/chat/balance
+router.get("/balance", withAuth(async (req, res) => {
+  try {
+    const userId = Number(req.user.id);
+    const balance = await getCreditBalance(userId);
+
+    res.json({
+      messagesRemaining: balance.messagesRemaining,
+      totalGranted: balance.totalGranted,
+      totalUsed: balance.totalUsed
+    });
+  } catch (error: unknown) {
+    console.error("Balance check error:", error);
+    res.status(500).json({ error: getErrorMessage(error) });
+  }
+}));
 
 // GET /api/ai/chat/history
 router.get("/history", withAuth(async (req, res) => {
@@ -56,24 +75,78 @@ router.post("/", withAuth(async (req, res) => {
       });
     }
     
-    // 🔐 Get decrypted API key
+    // 🔐 Get decrypted API key (optional - use OpenRouter if not set)
     const { settingsRepository } = await import('../../repositories/settings.repository');
     const apiKey = await settingsRepository.getAnthropicApiKey(userId);
 
-    if (!apiKey) {
-      return res.status(400).json({
-        error: "Anthropic API key not configured. Please add it in Settings."
-      });
+    const useOpenRouter = !apiKey;
+
+    // Check credits if using free OpenRouter
+    if (useOpenRouter) {
+      try {
+        await checkCreditsAvailable(userId);
+      } catch (error: any) {
+        return res.status(402).json({
+          error: error.message,
+          creditsExhausted: true
+        });
+      }
     }
-    
+
     // Save user message to history first
     await storage.createAIChatMessage({
       userId,
       role: "user",
       content: trimmedMessage
     });
-    
-    // Call Claude with tools enabled
+
+    // Use OpenRouter (free, no tools) or Anthropic (paid, with tools)
+    if (useOpenRouter) {
+      // Get recent chat history for context
+      const recentMessages = await storage.getAIChatMessages(userId, 10);
+      const messages = recentMessages.map(msg => ({
+        role: msg.role as "user" | "assistant",
+        content: msg.content
+      })).reverse();
+
+      // Build system prompt with financial context
+      const contextData = await buildFinancialContext(userId);
+      const systemPrompt = buildFinancialAdvisorPrompt(contextData);
+
+      // Call OpenRouter with DeepSeek
+      const openRouterMessages = [
+        { role: "system" as const, content: systemPrompt },
+        ...messages
+      ];
+
+      const response = await chatWithOpenRouter({
+        messages: openRouterMessages,
+        model: "deepseek/deepseek-chat"
+      });
+
+      // Save assistant message
+      await storage.createAIChatMessage({
+        userId,
+        role: "assistant",
+        content: response.message
+      });
+
+      // Deduct one message from user's balance
+      const newBalance = await deductMessage(userId, {
+        model: "deepseek/deepseek-chat",
+        inputTokens: response.usage.inputTokens,
+        outputTokens: response.usage.outputTokens,
+        messageCount: 1
+      });
+
+      return res.json({
+        type: 'message',
+        content: response.message,
+        creditsRemaining: newBalance.messagesRemaining
+      });
+    }
+
+    // Call Claude with tools enabled (user has their own API key)
     const response = await chatWithTools(trimmedMessage, userId);
     
     // Check if Claude wants to use a tool

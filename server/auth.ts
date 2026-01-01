@@ -15,6 +15,7 @@ import { authRateLimiter } from "./middleware/rate-limit";
 import { logError, logWarning, logInfo } from "./lib/logger";
 import { logAuditEvent, AuditAction, AuditEntityType } from "./services/audit-log.service";
 import { env } from "./lib/env";
+import { grantWelcomeBonus } from "./services/credits.service";
 
 const PgSession = connectPgSimple(session);
 const MemoryStore = memorystore(session);
@@ -183,6 +184,7 @@ export async function setupAuth(app: Express) {
 
       await createDefaultCategories(user.id);
       await createDefaultTags(user.id);
+      await grantWelcomeBonus(user.id);
 
       // Log registration audit event
       await logAuditEvent({
