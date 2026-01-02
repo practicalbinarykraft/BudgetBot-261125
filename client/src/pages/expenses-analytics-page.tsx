@@ -13,10 +13,15 @@ import { UnsortedTab } from '@/components/analytics/tabs/unsorted-tab';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from '@/i18n';
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function ExpensesAnalyticsPage() {
   const [period, setPeriod] = useState('month');
-  const [activeTab, setActiveTab] = useState('category');
+
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const isMobile = useIsMobile();  const [activeTab, setActiveTab] = useState('category');
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -44,7 +49,8 @@ export default function ExpensesAnalyticsPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <>
+      <div className="space-y-6 pb-20 sm:pb-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link href="/app/dashboard">
@@ -119,5 +125,31 @@ export default function ExpensesAnalyticsPage() {
           </TabsContent>
         </Tabs>
     </div>
+
+      {/* Mobile Navigation */}
+      {isMobile && (
+        <MobileBottomNav
+          onMenuClick={() => setShowMobileMenu(true)}
+          onAddClick={() => {
+            toast({
+              title: "Добавить транзакцию",
+              description: "Функция скоро будет доступна!",
+            });
+          }}
+          onAiChatClick={() => {
+            toast({
+              title: "AI Chat",
+              description: "Функция AI чата скоро будет доступна!",
+            });
+          }}
+        />
+      )}
+
+      <MobileMenuSheet
+        open={showMobileMenu}
+        onOpenChange={setShowMobileMenu}
+      />
+
   );
+}  );
 }

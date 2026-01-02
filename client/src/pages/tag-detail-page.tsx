@@ -13,6 +13,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TagBadge } from "@/components/tags/tag-badge";
 import { Link } from "wouter";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface TagStats {
   transactionCount: number;
@@ -22,7 +25,9 @@ interface TagStats {
 
 export default function TagDetailPage() {
   const [, params] = useRoute("/app/tags/:id");
-  const tagId = params?.id ? parseInt(params.id) : null;
+
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const isMobile = useIsMobile();  const tagId = params?.id ? parseInt(params.id) : null;
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const { toast } = useToast();
@@ -89,7 +94,8 @@ export default function TagDetailPage() {
 
   if (isLoadingTags || isLoadingStats) {
     return (
-      <div className="space-y-6">
+    <>
+      <div className="space-y-6 pb-20 sm:pb-6">
         <Skeleton className="h-20" />
         <Skeleton className="h-40" />
         <Skeleton className="h-96" />
@@ -99,7 +105,8 @@ export default function TagDetailPage() {
 
   if (!currentTag || !tagId) {
     return (
-      <div className="space-y-6">
+    <>
+      <div className="space-y-6 pb-20 sm:pb-6">
         <div className="flex items-center gap-4">
           <Link href="/app/tags">
             <Button variant="ghost" size="icon" data-testid="button-back">
@@ -116,7 +123,8 @@ export default function TagDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <div className="space-y-6 pb-20 sm:pb-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/app/tags">
@@ -213,5 +221,31 @@ export default function TagDetailPage() {
         onOpenChange={(open) => !open && setEditingTransaction(null)}
       />
     </div>
+
+      {/* Mobile Navigation */}
+      {isMobile && (
+        <MobileBottomNav
+          onMenuClick={() => setShowMobileMenu(true)}
+          onAddClick={() => {
+            toast({
+              title: "Добавить транзакцию",
+              description: "Функция скоро будет доступна!",
+            });
+          }}
+          onAiChatClick={() => {
+            toast({
+              title: "AI Chat",
+              description: "Функция AI чата скоро будет доступна!",
+            });
+          }}
+        />
+      )}
+
+      <MobileMenuSheet
+        open={showMobileMenu}
+        onOpenChange={setShowMobileMenu}
+      />
+
   );
+}  );
 }

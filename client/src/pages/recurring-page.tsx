@@ -23,6 +23,9 @@ import { ru, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/i18n/context";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const formSchema = insertRecurringSchema.omit({ userId: true }).extend({
   amount: z.string().min(1),
@@ -32,7 +35,9 @@ type FormData = z.infer<typeof formSchema>;
 
 export default function RecurringPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const { user } = useAuth();
+
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const isMobile = useIsMobile();  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { t, language } = useTranslation();
@@ -310,5 +315,31 @@ export default function RecurringPage() {
         </DialogContent>
       </Dialog>
     </div>
+
+      {/* Mobile Navigation */}
+      {isMobile && (
+        <MobileBottomNav
+          onMenuClick={() => setShowMobileMenu(true)}
+          onAddClick={() => {
+            toast({
+              title: "Добавить транзакцию",
+              description: "Функция скоро будет доступна!",
+            });
+          }}
+          onAiChatClick={() => {
+            toast({
+              title: "AI Chat",
+              description: "Функция AI чата скоро будет доступна!",
+            });
+          }}
+        />
+      )}
+
+      <MobileMenuSheet
+        open={showMobileMenu}
+        onOpenChange={setShowMobileMenu}
+      />
+
   );
+}  );
 }

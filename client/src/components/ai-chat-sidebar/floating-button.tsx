@@ -28,10 +28,11 @@ export function FloatingChatButton() {
         w-16 h-16 rounded-full
         bg-gradient-to-r from-blue-500 to-purple-600
         shadow-lg hover:shadow-xl
-        flex items-center justify-center
+        items-center justify-center
         text-white transition-all
         hover:scale-110
         p-0
+        hidden sm:flex
       "
       size="icon"
     >

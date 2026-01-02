@@ -1,3 +1,11 @@
+/**
+ * Mobile Dashboard Demo Page
+ * 
+ * Демонстрационная страница с новым мобильным UI
+ * Показывает bottom navigation bar + floating AI button
+ * После утверждения дизайна можно перенести на все страницы
+ */
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Transaction } from "@shared/schema";
 import { WishlistItemWithPrediction } from "@/types/goal-prediction";
@@ -8,9 +16,8 @@ import { FinancialTrendChart } from "@/components/charts/financial-trend-chart";
 import { BudgetAlerts } from "@/components/dashboard/budget-alerts";
 import { DateFilter, DateFilterValue, getDateRange } from "@/components/dashboard/date-filter";
 import { NetWorthWidget } from "@/components/assets/net-worth-widget";
-import { TrendingUp, TrendingDown, Wallet, Settings2, ArrowRight } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Settings2, ArrowRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 import { useState } from "react";
 import { AddTransactionDialog } from "@/components/transactions/add-transaction-dialog";
 import { EditTransactionDialog } from "@/components/transactions/edit-transaction-dialog";
@@ -24,7 +31,7 @@ import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-export default function DashboardPage() {
+export default function DashboardMobileDemoPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showCalibrateDialog, setShowCalibrateDialog] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -34,6 +41,13 @@ export default function DashboardPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
+  
+  // DEBUG
+  console.log('📱📱📱 DashboardMobileDemoPage RENDER:', JSON.stringify({ 
+    isMobile, 
+    width: typeof window !== 'undefined' ? window.innerWidth : 'SSR',
+    height: typeof window !== 'undefined' ? window.innerHeight : 'SSR'
+  }));
 
   const dateRange = getDateRange(dateFilter);
   const queryParams = dateRange 
@@ -85,7 +99,6 @@ export default function DashboardPage() {
       await apiRequest("DELETE", `/api/transactions/${id}`);
     },
     onSuccess: () => {
-      // Invalidate all transaction queries (including date-filtered ones)
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["/api/sorting/stats"] });
@@ -104,7 +117,6 @@ export default function DashboardPage() {
     },
   });
 
-  // Умное форматирование сумм
   const formatCurrency = (value: number) => {
     const safeValue = value ?? 0;
     if (Math.abs(safeValue) >= 1000000) {
@@ -121,7 +133,7 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <>
-        <div className="space-y-6 pb-20 sm:pb-6">
+        <div className="space-y-6 pb-20">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
             <div>
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">{t("dashboard.title")}</h1>
@@ -137,7 +149,7 @@ export default function DashboardPage() {
           <Skeleton className="h-96" />
         </div>
         {isMobile && (
-          <MobileBottomNav
+          <MobileBottomNav 
             onMenuClick={() => setShowMobileMenu(true)}
             onAddClick={() => setShowAddDialog(true)}
             onAiChatClick={() => {
@@ -154,7 +166,23 @@ export default function DashboardPage() {
 
   return (
     <>
+      {/* 🎨 ДЕМО БАННЕР - только на мобильных */}
+      {isMobile && (
+        <div className="mb-4 p-4 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-lg">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">🎨</span>
+            <div>
+              <h3 className="font-semibold text-sm mb-1">Новый мобильный дизайн!</h3>
+              <p className="text-xs text-muted-foreground">
+                Это демо-страница с bottom navigation bar. Попробуйте навигацию внизу экрана.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-6 pb-20 sm:pb-6">
+        {/* Header с кнопками */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
           <div>
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">{t("dashboard.title")}</h1>
@@ -185,6 +213,7 @@ export default function DashboardPage() {
 
         <BudgetAlerts />
 
+        {/* Карточки статистики */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             title={t("dashboard.total_income")}
@@ -244,7 +273,7 @@ export default function DashboardPage() {
 
         <FinancialTrendChart wishlistPredictions={wishlistItems} />
 
-        <TransactionList
+        <TransactionList 
           transactions={recentTransactions}
           onEdit={(transaction) => setEditingTransaction(transaction)}
           onDelete={(id) => deleteMutation.mutate(id)}
@@ -253,9 +282,9 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Mobile Navigation */}
+      {/* 📱 Mobile Bottom Navigation - только на мобильных */}
       {isMobile && (
-        <MobileBottomNav
+        <MobileBottomNav 
           onMenuClick={() => setShowMobileMenu(true)}
           onAddClick={() => setShowAddDialog(true)}
           onAiChatClick={() => {
@@ -267,11 +296,14 @@ export default function DashboardPage() {
         />
       )}
 
+      {/* 📋 Mobile Menu Sheet */}
       <MobileMenuSheet
         open={showMobileMenu}
         onOpenChange={setShowMobileMenu}
+        onAddTransaction={() => setShowAddDialog(true)}
       />
 
+      {/* Диалоги */}
       <AddTransactionDialog
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
@@ -282,7 +314,7 @@ export default function DashboardPage() {
         open={!!editingTransaction}
         onOpenChange={(open) => !open && setEditingTransaction(null)}
       />
-
+      
       <CalibrationDialog
         open={showCalibrateDialog}
         onOpenChange={setShowCalibrateDialog}
@@ -290,3 +322,4 @@ export default function DashboardPage() {
     </>
   );
 }
+

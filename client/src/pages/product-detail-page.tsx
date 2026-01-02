@@ -26,6 +26,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { ProductCatalog } from "@shared/schemas/product-catalog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface PriceHistoryEntry {
   id: number;
@@ -53,7 +56,9 @@ export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   const [, navigate] = useLocation();
-  const { toast } = useToast();
+
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const isMobile = useIsMobile();  const { toast } = useToast();
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -195,5 +200,31 @@ export default function ProductDetailPage() {
         />
       )}
     </div>
+
+      {/* Mobile Navigation */}
+      {isMobile && (
+        <MobileBottomNav
+          onMenuClick={() => setShowMobileMenu(true)}
+          onAddClick={() => {
+            toast({
+              title: "Добавить транзакцию",
+              description: "Функция скоро будет доступна!",
+            });
+          }}
+          onAiChatClick={() => {
+            toast({
+              title: "AI Chat",
+              description: "Функция AI чата скоро будет доступна!",
+            });
+          }}
+        />
+      )}
+
+      <MobileMenuSheet
+        open={showMobileMenu}
+        onOpenChange={setShowMobileMenu}
+      />
+
   );
+}  );
 }

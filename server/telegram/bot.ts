@@ -53,6 +53,12 @@ export function getTelegramBot(): TelegramBot | null {
  * 2. Webhook — Telegram отправляет сообщения нам (prod)
  */
 export function initTelegramBot(): TelegramBot | null {
+  // Проверка на отключение бота (для локальной разработки)
+  if (process.env.DISABLE_TELEGRAM_BOT === 'true') {
+    logWarning('⚠️  Telegram bot disabled (DISABLE_TELEGRAM_BOT=true)');
+    return null;
+  }
+
   if (!TELEGRAM_BOT_TOKEN) {
     logWarning('TELEGRAM_BOT_TOKEN not set. Telegram bot will not start.');
     return null;

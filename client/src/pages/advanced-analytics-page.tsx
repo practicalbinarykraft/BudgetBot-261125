@@ -17,6 +17,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/queryClient";
 import {
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
   HealthScoreCard,
   ForecastCard,
   RecommendationsCard,
@@ -64,7 +67,8 @@ export default function AdvancedAnalyticsPage() {
   const isLoading = forecastLoading || recommendationsLoading || trendsLoading || healthScoreLoading;
 
   return (
-    <div className="space-y-6">
+    <>
+      <div className="space-y-6 pb-20 sm:pb-6">
       {/* Header */}
       <header className="flex items-center gap-3">
         <Link href="/app/dashboard">
@@ -97,5 +101,31 @@ export default function AdvancedAnalyticsPage() {
         </main>
       )}
     </div>
+
+      {/* Mobile Navigation */}
+      {isMobile && (
+        <MobileBottomNav
+          onMenuClick={() => setShowMobileMenu(true)}
+          onAddClick={() => {
+            toast({
+              title: "Добавить транзакцию",
+              description: "Функция скоро будет доступна!",
+            });
+          }}
+          onAiChatClick={() => {
+            toast({
+              title: "AI Chat",
+              description: "Функция AI чата скоро будет доступна!",
+            });
+          }}
+        />
+      )}
+
+      <MobileMenuSheet
+        open={showMobileMenu}
+        onOpenChange={setShowMobileMenu}
+      />
+
   );
+}  );
 }

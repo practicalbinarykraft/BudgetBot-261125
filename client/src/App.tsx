@@ -19,6 +19,7 @@ import { useEffect, useState, lazy, Suspense } from "react";
 import LandingPage from "@/pages/landing-page";
 import AuthPage from "@/pages/auth-page";
 import DashboardPage from "@/pages/dashboard-page";
+import DashboardMobileDemoPage from "@/pages/dashboard-mobile-demo-page";
 
 // Non-critical pages (lazy loaded on demand)
 const TransactionsPage = lazy(() => import("@/pages/transactions-page"));
@@ -70,6 +71,7 @@ function Router() {
         <Route path="/login" component={AuthPage} />
 
         {/* Protected app routes */}
+        <ProtectedRoute path="/app/dashboard-mobile-demo" component={DashboardMobileDemoPage} />
         <ProtectedRoute path="/app/dashboard" component={DashboardPage} />
         <ProtectedRoute path="/app/transactions/sort" component={SwipeSortPage} />
         <ProtectedRoute path="/app/transactions" component={TransactionsPage} />
@@ -132,7 +134,7 @@ function AppContent() {
         <div className="flex h-screen w-full">
           <AppSidebar />
           <div className="flex flex-col flex-1">
-            <header className="flex items-center justify-between p-4 border-b">
+            <header className="flex items-center justify-between p-4 border-b sm:flex hidden">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
             </header>
             <main className="flex-1 overflow-auto pt-4 sm:pt-6 px-4 sm:px-6 pb-24 bg-background">

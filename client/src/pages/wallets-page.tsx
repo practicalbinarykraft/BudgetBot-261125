@@ -18,6 +18,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CalibrationDialog } from "@/components/wallets/calibration-dialog";
 import { useTranslation } from "@/i18n/context";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const formSchema = insertWalletSchema.extend({
   balance: z.string().min(1),
@@ -33,7 +36,9 @@ const walletIcons = {
 
 export default function WalletsPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [showCalibrateDialog, setShowCalibrateDialog] = useState(false);
+
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const isMobile = useIsMobile();  const [showCalibrateDialog, setShowCalibrateDialog] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -83,7 +88,8 @@ export default function WalletsPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+    <>
+      <div className="space-y-6 pb-20 sm:pb-6">
         <Skeleton className="h-20" />
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <Skeleton className="h-40" />
@@ -302,5 +308,31 @@ export default function WalletsPage() {
         onOpenChange={setShowCalibrateDialog}
       />
     </div>
+
+      {/* Mobile Navigation */}
+      {isMobile && (
+        <MobileBottomNav
+          onMenuClick={() => setShowMobileMenu(true)}
+          onAddClick={() => {
+            toast({
+              title: "Добавить транзакцию",
+              description: "Функция скоро будет доступна!",
+            });
+          }}
+          onAiChatClick={() => {
+            toast({
+              title: "AI Chat",
+              description: "Функция AI чата скоро будет доступна!",
+            });
+          }}
+        />
+      )}
+
+      <MobileMenuSheet
+        open={showMobileMenu}
+        onOpenChange={setShowMobileMenu}
+      />
+
   );
+}  );
 }

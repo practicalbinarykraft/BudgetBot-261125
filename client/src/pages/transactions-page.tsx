@@ -12,11 +12,16 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/i18n/context";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function TransactionsPage() {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
-  const [showAddDialog, setShowAddDialog] = useState(false);
+
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const isMobile = useIsMobile();  const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -64,7 +69,8 @@ export default function TransactionsPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+    <>
+      <div className="space-y-6 pb-20 sm:pb-6">
         <Skeleton className="h-20" />
         <Skeleton className="h-96" />
       </div>
@@ -126,5 +132,31 @@ export default function TransactionsPage() {
         onOpenChange={(open) => !open && setEditingTransaction(null)}
       />
     </div>
+
+      {/* Mobile Navigation */}
+      {isMobile && (
+        <MobileBottomNav
+          onMenuClick={() => setShowMobileMenu(true)}
+          onAddClick={() => {
+            toast({
+              title: "Добавить транзакцию",
+              description: "Функция скоро будет доступна!",
+            });
+          }}
+          onAiChatClick={() => {
+            toast({
+              title: "AI Chat",
+              description: "Функция AI чата скоро будет доступна!",
+            });
+          }}
+        />
+      )}
+
+      <MobileMenuSheet
+        open={showMobileMenu}
+        onOpenChange={setShowMobileMenu}
+      />
+
   );
+}  );
 }

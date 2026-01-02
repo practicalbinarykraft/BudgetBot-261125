@@ -19,6 +19,9 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import type { AssetWithCategory, AssetValuation } from "@/lib/types/assets";
 import {
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
   AssetHeader,
   AssetValueCard,
   AssetChartCard,
@@ -41,7 +44,9 @@ interface AssetDetailResponse {
 
 export default function AssetDetailPage() {
   const [, params] = useRoute("/app/assets/:id");
-  const assetId = params?.id ? parseInt(params.id) : null;
+
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const isMobile = useIsMobile();  const assetId = params?.id ? parseInt(params.id) : null;
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [showCalibration, setShowCalibration] = useState(false);
@@ -88,7 +93,8 @@ export default function AssetDetailPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="space-y-6" aria-busy="true">
+    <>
+      <div className="space-y-6 pb-20 sm:pb-6" aria-busy="true">
         <p className="text-center text-muted-foreground">Loading...</p>
       </div>
     );
@@ -97,7 +103,8 @@ export default function AssetDetailPage() {
   // Not found state
   if (!asset) {
     return (
-      <div className="space-y-6">
+    <>
+      <div className="space-y-6 pb-20 sm:pb-6">
         <p className="text-center text-muted-foreground">Asset not found</p>
         <div className="text-center">
           <Link href="/app/assets">
@@ -135,7 +142,8 @@ export default function AssetDetailPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <>
+      <div className="space-y-6 pb-20 sm:pb-6">
       {/* Back Navigation */}
       <Link href="/app/assets">
         <Button variant="outline" data-testid="button-back" aria-label="Back to assets list">
@@ -186,5 +194,31 @@ export default function AssetDetailPage() {
         onSuccess={handleCalibrationSuccess}
       />
     </div>
+
+      {/* Mobile Navigation */}
+      {isMobile && (
+        <MobileBottomNav
+          onMenuClick={() => setShowMobileMenu(true)}
+          onAddClick={() => {
+            toast({
+              title: "Добавить транзакцию",
+              description: "Функция скоро будет доступна!",
+            });
+          }}
+          onAiChatClick={() => {
+            toast({
+              title: "AI Chat",
+              description: "Функция AI чата скоро будет доступна!",
+            });
+          }}
+        />
+      )}
+
+      <MobileMenuSheet
+        open={showMobileMenu}
+        onOpenChange={setShowMobileMenu}
+      />
+
   );
+}  );
 }

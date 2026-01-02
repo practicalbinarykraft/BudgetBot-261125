@@ -5,6 +5,9 @@ import { format } from "date-fns";
 import { Brain, CheckCircle2, XCircle, Zap } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { TrainingStats } from "@shared/schema";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface TrainingHistoryItem {
   id: number;
@@ -188,5 +191,31 @@ export default function AiTrainingHistoryPage() {
         </CardContent>
       </Card>
     </div>
+
+      {/* Mobile Navigation */}
+      {isMobile && (
+        <MobileBottomNav
+          onMenuClick={() => setShowMobileMenu(true)}
+          onAddClick={() => {
+            toast({
+              title: "Добавить транзакцию",
+              description: "Функция скоро будет доступна!",
+            });
+          }}
+          onAiChatClick={() => {
+            toast({
+              title: "AI Chat",
+              description: "Функция AI чата скоро будет доступна!",
+            });
+          }}
+        />
+      )}
+
+      <MobileMenuSheet
+        open={showMobileMenu}
+        onOpenChange={setShowMobileMenu}
+      />
+
   );
+}  );
 }

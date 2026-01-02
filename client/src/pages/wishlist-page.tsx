@@ -16,10 +16,15 @@ import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sortWishlist } from "@/lib/wishlist-utils";
 import { useTranslation } from "@/i18n/context";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function WishlistPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [scheduleItem, setScheduleItem] = useState<WishlistItemWithPrediction | null>(null);
+
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const isMobile = useIsMobile();  const [scheduleItem, setScheduleItem] = useState<WishlistItemWithPrediction | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>("priority");
   const { user } = useAuth();
   const { toast } = useToast();
@@ -219,5 +224,31 @@ export default function WishlistPage() {
         onSchedule={handleScheduleConfirm}
       />
     </div>
+
+      {/* Mobile Navigation */}
+      {isMobile && (
+        <MobileBottomNav
+          onMenuClick={() => setShowMobileMenu(true)}
+          onAddClick={() => {
+            toast({
+              title: "Добавить транзакцию",
+              description: "Функция скоро будет доступна!",
+            });
+          }}
+          onAiChatClick={() => {
+            toast({
+              title: "AI Chat",
+              description: "Функция AI чата скоро будет доступна!",
+            });
+          }}
+        />
+      )}
+
+      <MobileMenuSheet
+        open={showMobileMenu}
+        onOpenChange={setShowMobileMenu}
+      />
+
   );
+}  );
 }

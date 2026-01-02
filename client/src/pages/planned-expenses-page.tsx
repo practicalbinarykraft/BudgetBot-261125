@@ -10,6 +10,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseISO, isToday, isTomorrow, differenceInDays, startOfWeek, endOfWeek, isPast } from "date-fns";
 import { useTranslation } from "@/i18n";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type GroupedPlanned = {
   overdue: PlannedTransaction[];
@@ -58,7 +61,9 @@ function groupByDate(items: PlannedTransaction[]): GroupedPlanned {
 
 export default function PlannedExpensesPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState<"all" | "planned" | "completed">("all");
+
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const isMobile = useIsMobile();  const [activeTab, setActiveTab] = useState<"all" | "planned" | "completed">("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { t, language } = useTranslation();
@@ -170,7 +175,8 @@ export default function PlannedExpensesPage() {
     if (items.length === 0) return null;
 
     return (
-      <div className="space-y-3">
+    <>
+      <div className="space-y-3 pb-20 sm:pb-6">
         <div className="flex items-center gap-2">
           <h3 className="text-lg sm:text-xl font-semibold">{title}</h3>
           <span className="text-sm text-muted-foreground">({count})</span>
@@ -232,5 +238,31 @@ export default function PlannedExpensesPage() {
         isSubmitting={createMutation.isPending}
       />
     </>
+
+      {/* Mobile Navigation */}
+      {isMobile && (
+        <MobileBottomNav
+          onMenuClick={() => setShowMobileMenu(true)}
+          onAddClick={() => {
+            toast({
+              title: "Добавить транзакцию",
+              description: "Функция скоро будет доступна!",
+            });
+          }}
+          onAiChatClick={() => {
+            toast({
+              title: "AI Chat",
+              description: "Функция AI чата скоро будет доступна!",
+            });
+          }}
+        />
+      )}
+
+      <MobileMenuSheet
+        open={showMobileMenu}
+        onOpenChange={setShowMobileMenu}
+      />
+
   );
+}  );
 }

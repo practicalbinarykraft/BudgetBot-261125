@@ -11,11 +11,16 @@ import { AdBlock } from '@/components/assets/ad-block';
 import { AIAdviceBlock } from '@/components/assets/ai-advice-block';
 import type { AssetWithCategory, NetWorthSummary } from '@/lib/types/assets';
 import { useTranslation } from '@/i18n';
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function AssetsPage() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'asset' | 'liability'>('asset');
-  const [showForm, setShowForm] = useState(false);
+
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const isMobile = useIsMobile();  const [showForm, setShowForm] = useState(false);
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   
   // Получить все активы
@@ -202,5 +207,31 @@ export default function AssetsPage() {
         </div>
       </div>
     </div>
+
+      {/* Mobile Navigation */}
+      {isMobile && (
+        <MobileBottomNav
+          onMenuClick={() => setShowMobileMenu(true)}
+          onAddClick={() => {
+            toast({
+              title: "Добавить транзакцию",
+              description: "Функция скоро будет доступна!",
+            });
+          }}
+          onAiChatClick={() => {
+            toast({
+              title: "AI Chat",
+              description: "Функция AI чата скоро будет доступна!",
+            });
+          }}
+        />
+      )}
+
+      <MobileMenuSheet
+        open={showMobileMenu}
+        onOpenChange={setShowMobileMenu}
+      />
+
   );
+}  );
 }

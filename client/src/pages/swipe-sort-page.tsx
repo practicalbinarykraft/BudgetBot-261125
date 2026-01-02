@@ -11,6 +11,9 @@ import { SwipeDeck } from "@/components/sorting/swipe-deck";
 import { TrainingHeader } from "@/components/sorting/training-header";
 import { SwipeInstructions } from "@/components/sorting/swipe-instructions";
 import type { Transaction, Category, PersonalTag, TrainingStats } from "@shared/schema";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SortingStats {
   unsortedCount: number;
@@ -22,7 +25,9 @@ interface SortingStats {
 
 export default function SwipeSortPage() {
   const [, setLocation] = useLocation();
-  const { user } = useAuth();
+
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const isMobile = useIsMobile();  const { user } = useAuth();
   const [sessionTransactionsSorted, setSessionTransactionsSorted] = useState(0);
   const [sessionPoints, setSessionPoints] = useState(0);
   const [initialUnsortedCount, setInitialUnsortedCount] = useState<number | null>(null);
@@ -197,5 +202,31 @@ export default function SwipeSortPage() {
         <SwipeInstructions />
       </div>
     </div>
+
+      {/* Mobile Navigation */}
+      {isMobile && (
+        <MobileBottomNav
+          onMenuClick={() => setShowMobileMenu(true)}
+          onAddClick={() => {
+            toast({
+              title: "Добавить транзакцию",
+              description: "Функция скоро будет доступна!",
+            });
+          }}
+          onAiChatClick={() => {
+            toast({
+              title: "AI Chat",
+              description: "Функция AI чата скоро будет доступна!",
+            });
+          }}
+        />
+      )}
+
+      <MobileMenuSheet
+        open={showMobileMenu}
+        onOpenChange={setShowMobileMenu}
+      />
+
   );
+}  );
 }

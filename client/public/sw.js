@@ -7,7 +7,7 @@
  * - Background sync for offline transactions (future)
  */
 
-const CACHE_NAME = 'budgetbuddy-v2'; // Обновлена версия для сброса кэша
+const CACHE_NAME = 'budgetbuddy-v3'; // Обновлена версия для сброса кэша
 const STATIC_ASSETS = [
   '/',
   '/index.html',

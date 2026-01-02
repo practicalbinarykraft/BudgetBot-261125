@@ -8,6 +8,9 @@ import { ReceiptScanner } from "@/components/ai/receipt-scanner";
 import { SpendingAnalysisCard } from "@/components/ai/spending-analysis-card";
 import { AIChat } from "@/components/ai/ai-chat";
 import { useTranslation } from "@/i18n/context";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface FinancialHealthScore {
   score: number;
@@ -46,7 +49,8 @@ export default function AIAnalysisPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <>
+      <div className="space-y-6 pb-20 sm:pb-6">
       <div>
         <h1 className="text-3xl font-bold">{t("analysis.title")}</h1>
         <p className="text-muted-foreground">{t("analysis.insights")}</p>
@@ -126,5 +130,31 @@ export default function AIAnalysisPage() {
         </AccordionItem>
       </Accordion>
     </div>
+
+      {/* Mobile Navigation */}
+      {isMobile && (
+        <MobileBottomNav
+          onMenuClick={() => setShowMobileMenu(true)}
+          onAddClick={() => {
+            toast({
+              title: "Добавить транзакцию",
+              description: "Функция скоро будет доступна!",
+            });
+          }}
+          onAiChatClick={() => {
+            toast({
+              title: "AI Chat",
+              description: "Функция AI чата скоро будет доступна!",
+            });
+          }}
+        />
+      )}
+
+      <MobileMenuSheet
+        open={showMobileMenu}
+        onOpenChange={setShowMobileMenu}
+      />
+
   );
+}  );
 }

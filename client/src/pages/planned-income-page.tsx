@@ -13,13 +13,18 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type FilterStatus = "all" | "pending" | "received" | "cancelled";
 type FormData = z.infer<typeof insertPlannedIncomeSchema>;
 
 export default function PlannedIncomePage() {
   const [activeTab, setActiveTab] = useState<FilterStatus>("all");
-  const [showAddDialog, setShowAddDialog] = useState(false);
+
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const isMobile = useIsMobile();  const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingIncome, setEditingIncome] = useState<PlannedIncome | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -281,5 +286,31 @@ export default function PlannedIncomePage() {
         isPending={createMutation.isPending || updateMutation.isPending}
       />
     </>
+
+      {/* Mobile Navigation */}
+      {isMobile && (
+        <MobileBottomNav
+          onMenuClick={() => setShowMobileMenu(true)}
+          onAddClick={() => {
+            toast({
+              title: "Добавить транзакцию",
+              description: "Функция скоро будет доступна!",
+            });
+          }}
+          onAiChatClick={() => {
+            toast({
+              title: "AI Chat",
+              description: "Функция AI чата скоро будет доступна!",
+            });
+          }}
+        />
+      )}
+
+      <MobileMenuSheet
+        open={showMobileMenu}
+        onOpenChange={setShowMobileMenu}
+      />
+
   );
+}  );
 }
