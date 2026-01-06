@@ -7,6 +7,10 @@ import { voiceTransactionNormalizer } from "../services/voice-transaction-normal
 import { t } from "@shared/i18n";
 import { getUserLanguageByTelegramId } from "./language";
 import { handleTextMessage } from "./commands/index";
+import { getApiKey } from "../services/api-key-manager";
+import { chargeCredits } from "../services/billing.service";
+import { parseTransactionWithDeepSeek } from "../services/deepseek.service";
+import { BillingError } from "../types/billing";
 
 /**
  * Voice Message Handler for Telegram Bot
@@ -51,18 +55,29 @@ export async function handleVoiceMessage(bot: TelegramBot, msg: TelegramBot.Mess
       return;
     }
 
-    // 🔐 Get user's settings and decrypted OpenAI API key
+    // 🔐 Get user's settings
     const { settingsRepository } = await import('../repositories/settings.repository');
     const userSettings = await settingsRepository.getSettingsByUserId(user.id);
-    const openaiApiKey = await settingsRepository.getOpenAiApiKey(user.id);
 
-    if (!openaiApiKey) {
-      await bot.sendMessage(
-        chatId,
-        t('voice.no_api_key', lang),
-        { parse_mode: 'Markdown' }
-      );
-      return;
+    // 🎯 Smart API key selection: BYOK or system key with credits
+    let whisperApiKey;
+    let whisperBillingMode;
+
+    try {
+      const apiKeyInfo = await getApiKey(user.id, 'voice_transcription');
+      whisperApiKey = apiKeyInfo.key;
+      whisperBillingMode = apiKeyInfo;
+    } catch (error) {
+      if (error instanceof BillingError && error.code === 'INSUFFICIENT_CREDITS') {
+        await bot.sendMessage(
+          chatId,
+          t('voice.no_credits', lang) ||
+          '❌ No credits remaining. Purchase more at /app/settings/billing or add your own OpenAI API key.',
+          { parse_mode: 'Markdown' }
+        );
+        return;
+      }
+      throw error;
     }
 
     // Send "transcribing..." status message
@@ -98,19 +113,19 @@ export async function handleVoiceMessage(bot: TelegramBot, msg: TelegramBot.Mess
 
     // Transcribe using OpenAI Whisper
     const result = await transcribeVoiceMessage(
-      openaiApiKey,
+      whisperApiKey,
       fileUrl,
       lang // Pass user's language for better accuracy
     );
 
     if (!result.success || !result.text) {
       console.error('[Voice] Transcription failed:', result.errorCode);
-      
+
       // Map error code to i18n key
-      const errorKey = result.errorCode 
-        ? `voice.error_${result.errorCode}` 
+      const errorKey = result.errorCode
+        ? `voice.error_${result.errorCode}`
         : 'voice.error_unknown';
-      
+
       await bot.editMessageText(
         t(errorKey, lang),
         { chat_id: chatId, message_id: statusMsg.message_id }
@@ -119,6 +134,18 @@ export async function handleVoiceMessage(bot: TelegramBot, msg: TelegramBot.Mess
     }
 
     console.log(`[Voice] Transcription successful: "${result.text}"`);
+
+    // 💳 Charge credits for Whisper transcription
+    if (whisperBillingMode.shouldCharge) {
+      const durationSeconds = msg.voice?.duration || msg.audio?.duration || 30;
+      await chargeCredits(
+        user.id,
+        'voice_transcription',
+        whisperBillingMode.provider,
+        { input: durationSeconds * 100, output: 0 }, // Approximate token count
+        whisperBillingMode.billingMode === 'free'
+      );
+    }
 
     // Delete status message
     await bot.deleteMessage(chatId, statusMsg.message_id);
@@ -129,55 +156,57 @@ export async function handleVoiceMessage(bot: TelegramBot, msg: TelegramBot.Mess
       `${t('voice.transcribed', lang)}:\n\n"${result.text}"`
     );
 
-    // Try AI normalization (if Anthropic API key available)
-    const anthropicApiKey = await settingsRepository.getAnthropicApiKey(user.id);
+    // 🚀 AI normalization using DeepSeek (12x cheaper than Claude!)
     let processedText = result.text;
 
-    if (anthropicApiKey) {
-      console.log('[Voice] Attempting AI normalization...');
-      
-      const normalizationResult = await voiceTransactionNormalizer.normalize({
-        transcribedText: result.text,
-        userCurrency: userSettings?.currency || 'USD',
-        anthropicApiKey
-      });
+    try {
+      // Get API key for normalization (DeepSeek by default)
+      const normalizationApiKey = await getApiKey(user.id, 'voice_normalization');
 
-      if (normalizationResult.success) {
-        const normalized = normalizationResult.data;
-        console.log('[Voice] AI normalization successful:', normalized);
+      console.log(`[Voice] Attempting AI normalization with ${normalizationApiKey.provider}...`);
 
-        // Validate that we have required fields (description optional)
-        if (normalized.amount > 0 && normalized.currency) {
-          // Convert normalized data back to "smart" text for handleTextMessage
-          // Format: "{amount} {currency} {description}"
-          // Example: "150000 IDR Coffee at Starbucks"
-          const description = normalized.description?.trim() || result.text.slice(0, 50).trim();
-          processedText = `${normalized.amount} ${normalized.currency} ${description}`;
-          
-          // Show confidence indicator to user
-          if (normalized.confidence === 'medium' || normalized.confidence === 'low') {
-            await bot.sendMessage(
-              chatId,
-              `ℹ️ ${t('voice.ai_processed', lang)}: ${processedText}`
-            );
-          }
-        } else {
-          console.log('[Voice] AI normalization incomplete (missing amount or currency), using original text');
+      // Parse transaction with DeepSeek
+      const parsed = await parseTransactionWithDeepSeek(
+        normalizationApiKey.key,
+        result.text,
+        userSettings?.currency || 'USD'
+      );
+
+      console.log('[Voice] AI normalization successful:', parsed);
+
+      // Convert normalized data back to "smart" text for handleTextMessage
+      // Format: "{amount} {currency} {description}"
+      // Example: "150000 IDR Coffee at Starbucks"
+      if (parsed.amount > 0 && parsed.currency) {
+        const description = parsed.description?.trim() || result.text.slice(0, 50).trim();
+        processedText = `${parsed.amount} ${parsed.currency} ${description}`;
+
+        await bot.sendMessage(
+          chatId,
+          `💡 AI processed: ${processedText}`
+        );
+
+        // 💳 Charge credits for normalization
+        if (normalizationApiKey.shouldCharge) {
+          await chargeCredits(
+            user.id,
+            'voice_normalization',
+            normalizationApiKey.provider,
+            { input: result.text.length * 4, output: 200 }, // Estimate tokens
+            normalizationApiKey.billingMode === 'free'
+          );
         }
       } else {
-        // AI normalization failed - use fallback if available
-        console.log('[Voice] AI normalization failed, trying fallback...');
-        
-        if (normalizationResult.fallback) {
-          const fallback = normalizationResult.fallback;
-          
-          if (fallback.amount > 0 && fallback.currency) {
-            const fallbackDesc = fallback.description?.trim() || result.text.slice(0, 50);
-            processedText = `${fallback.amount} ${fallback.currency} ${fallbackDesc}`;
-            console.log('[Voice] Using fallback parser:', processedText);
-          }
-        }
+        console.log('[Voice] AI normalization incomplete (missing amount or currency), using original text');
       }
+    } catch (normError) {
+      // If normalization fails (no credits or error), use original text
+      if (normError instanceof BillingError) {
+        console.log('[Voice] Skipping AI normalization: no credits');
+      } else {
+        console.error('[Voice] AI normalization error:', normError);
+      }
+      // Continue with original text
     }
 
     // Create a synthetic text message to reuse existing text handler

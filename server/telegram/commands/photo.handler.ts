@@ -17,6 +17,9 @@ import { convertToUSD, getUserExchangeRates } from '../../services/currency-serv
 import { resolveCategoryId } from '../../services/category-resolution.service';
 import { storage } from '../../storage';
 import { pendingReceipts } from '../pending-receipts';
+import { getApiKey } from '../../services/api-key-manager';
+import { chargeCredits } from '../../services/billing.service';
+import { BillingError } from '../../types/billing';
 
 export async function handlePhotoMessage(bot: TelegramBot, msg: TelegramBot.Message) {
   const chatId = msg.chat.id;
@@ -42,14 +45,25 @@ export async function handlePhotoMessage(bot: TelegramBot, msg: TelegramBot.Mess
 
     lang = await getUserLanguageByUserId(user.id);
 
-    // Check if user has Anthropic API key for OCR (using storage for consistency)
-    const userSettings = await storage.getSettingsByUserId(user.id);
+    // 🎯 Smart API key selection for OCR (Claude Vision)
+    let ocrApiKey;
+    let ocrBillingMode;
 
-    if (!userSettings?.anthropicApiKey) {
-      await bot.sendMessage(chatId, t('receipt.no_api_key', lang), {
-        parse_mode: 'Markdown'
-      });
-      return;
+    try {
+      const apiKeyInfo = await getApiKey(user.id, 'ocr');
+      ocrApiKey = apiKeyInfo.key;
+      ocrBillingMode = apiKeyInfo;
+    } catch (error) {
+      if (error instanceof BillingError && error.code === 'INSUFFICIENT_CREDITS') {
+        await bot.sendMessage(
+          chatId,
+          t('receipt.no_credits', lang) ||
+          '❌ No credits remaining. Purchase more at /app/settings/billing or add your own Anthropic API key.',
+          { parse_mode: 'Markdown' }
+        );
+        return;
+      }
+      throw error;
     }
 
     const photo = msg.photo[msg.photo.length - 1];
@@ -63,7 +77,19 @@ export async function handlePhotoMessage(bot: TelegramBot, msg: TelegramBot.Mess
     const buffer = await response.arrayBuffer();
     const base64 = Buffer.from(buffer).toString('base64');
 
-    const parsed = await processReceiptImage(user.id, base64);
+    // Process receipt with Claude Vision (using smart-routed API key)
+    const parsed = await processReceiptImage(user.id, base64, ocrApiKey);
+
+    // 💳 Charge credits for OCR
+    if (ocrBillingMode.shouldCharge) {
+      await chargeCredits(
+        user.id,
+        'ocr',
+        ocrBillingMode.provider,
+        { input: 1500, output: 200 }, // Typical token count for receipt OCR
+        ocrBillingMode.billingMode === 'free'
+      );
+    }
 
     if (!parsed) {
       await bot.sendMessage(chatId, t('receipt.error', lang), {

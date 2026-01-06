@@ -14,6 +14,7 @@ import type { Transaction, Category, PersonalTag, TrainingStats } from "@shared/
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useToast } from "@/hooks/use-toast";
 
 interface SortingStats {
   unsortedCount: number;
@@ -27,7 +28,9 @@ export default function SwipeSortPage() {
   const [, setLocation] = useLocation();
 
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const isMobile = useIsMobile();  const { user } = useAuth();
+  const isMobile = useIsMobile();
+  const { toast } = useToast();
+  const { user } = useAuth();
   const [sessionTransactionsSorted, setSessionTransactionsSorted] = useState(0);
   const [sessionPoints, setSessionPoints] = useState(0);
   const [initialUnsortedCount, setInitialUnsortedCount] = useState<number | null>(null);
@@ -104,8 +107,8 @@ export default function SwipeSortPage() {
 
   if (statsLoading || transactionsLoading) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+      <div className="max-w-2xl mx-auto p-4 sm:p-6 pb-20 sm:pb-6">
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
           <Button variant="ghost" onClick={() => setLocation('/transactions')} data-testid="button-back">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
@@ -120,8 +123,8 @@ export default function SwipeSortPage() {
 
   if (!unsortedTransactions || unsortedTransactions.length === 0) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+      <div className="max-w-2xl mx-auto p-4 sm:p-6 pb-20 sm:pb-6">
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
           <Button variant="ghost" onClick={() => setLocation('/transactions')} data-testid="button-back">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
@@ -129,7 +132,7 @@ export default function SwipeSortPage() {
         </div>
         <Card className="p-12 text-center">
           <Trophy className="w-16 h-16 mx-auto mb-4 text-green-600" />
-          <h2 className="text-2xl font-semibold mb-2">All Sorted!</h2>
+          <h2 className="text-2xl sm:text-3xl font-semibold mb-2">All Sorted!</h2>
           <p className="text-muted-foreground mb-6">
             No unsorted transactions remaining. Great job!
           </p>
@@ -142,91 +145,91 @@ export default function SwipeSortPage() {
   }
 
   const totalUnsorted = initialUnsortedCount ?? 0;
-  const progressPercent = totalUnsorted > 0 
+  const progressPercent = totalUnsorted > 0
     ? Math.round(((totalUnsorted - unsortedTransactions.length) / totalUnsorted) * 100)
     : 0;
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <Button variant="ghost" onClick={handleFinishSession} data-testid="button-back">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Finish
-        </Button>
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2" data-testid="text-session-points">
-            <Zap className="w-5 h-5 text-yellow-600" />
-            <span className="font-semibold">+{sessionPoints}</span>
-          </div>
-          <div className="flex items-center gap-2" data-testid="text-current-streak">
-            <Flame className="w-5 h-5 text-orange-600" />
-            <span className="font-semibold">{stats?.currentStreak ?? 0}</span>
-          </div>
-        </div>
-      </div>
-
-      <Card className="p-4 mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium">
-            {unsortedTransactions.length} remaining
-          </span>
-          <span className="text-sm text-muted-foreground">{progressPercent}%</span>
-        </div>
-        <Progress value={progressPercent} className="h-2" data-testid="progress-sorting" />
-      </Card>
-
-      {trainingStats && trainingStats.totalExamples < 10 && (
-        <Card className="p-4 mb-6 bg-primary/10 border-primary/20" data-testid="onboarding-hint">
-          <div className="flex items-start gap-3">
-            <Sparkles className="w-5 h-5 text-primary mt-0.5" />
-            <div>
-              <h3 className="font-semibold mb-1">Train Your AI Assistant</h3>
-              <p className="text-sm text-muted-foreground">
-                Classify transactions to teach your AI. After {10 - trainingStats.totalExamples} more examples, 
-                it will start predicting categories and tags automatically!
-              </p>
+    <>
+        <div className="max-w-2xl mx-auto p-4 sm:p-6 pb-20 sm:pb-6 space-y-4 sm:space-y-6">
+          <div className="flex items-center justify-between">
+            <Button variant="ghost" onClick={handleFinishSession} data-testid="button-back">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Finish
+            </Button>
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2" data-testid="text-session-points">
+                <Zap className="w-5 h-5 text-yellow-600" />
+                <span className="font-semibold">+{sessionPoints}</span>
+              </div>
+              <div className="flex items-center gap-2" data-testid="text-current-streak">
+                <Flame className="w-5 h-5 text-orange-600" />
+                <span className="font-semibold">{stats?.currentStreak ?? 0}</span>
+              </div>
             </div>
           </div>
-        </Card>
-      )}
 
-      <TrainingHeader />
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium">
+                {unsortedTransactions.length} remaining
+              </span>
+              <span className="text-sm text-muted-foreground">{progressPercent}%</span>
+            </div>
+            <Progress value={progressPercent} className="h-2" data-testid="progress-sorting" />
+          </Card>
 
-      <div className="relative mt-32 px-4 sm:px-8 md:px-16 lg:px-32">
-        <SwipeDeck
-          transactions={unsortedTransactions}
-          categories={categories ?? []}
-          tags={tags ?? []}
-          onSwipeComplete={handleSwipeComplete}
+          {trainingStats && trainingStats.totalExamples < 10 && (
+            <Card className="p-4 bg-primary/10 border-primary/20" data-testid="onboarding-hint">
+              <div className="flex items-start gap-3">
+                <Sparkles className="w-5 h-5 text-primary mt-0.5" />
+                <div>
+                  <h3 className="font-semibold mb-1">Train Your AI Assistant</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Classify transactions to teach your AI. After {10 - trainingStats.totalExamples} more examples,
+                    it will start predicting categories and tags automatically!
+                  </p>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          <TrainingHeader />
+
+          <div className="relative mt-32 px-4 sm:px-8 md:px-16 lg:px-32">
+            <SwipeDeck
+              transactions={unsortedTransactions}
+              categories={categories ?? []}
+              tags={tags ?? []}
+              onSwipeComplete={handleSwipeComplete}
+            />
+            <SwipeInstructions />
+          </div>
+        </div>
+
+        {/* Mobile Navigation */}
+        {isMobile && (
+          <MobileBottomNav
+            onMenuClick={() => setShowMobileMenu(true)}
+            onAddClick={() => {
+              toast({
+                title: "Добавить транзакцию",
+                description: "Функция скоро будет доступна!",
+              });
+            }}
+            onAiChatClick={() => {
+              toast({
+                title: "AI Chat",
+                description: "Функция AI чата скоро будет доступна!",
+              });
+            }}
+          />
+        )}
+
+        <MobileMenuSheet
+          open={showMobileMenu}
+          onOpenChange={setShowMobileMenu}
         />
-        <SwipeInstructions />
-      </div>
-    </div>
-
-      {/* Mobile Navigation */}
-      {isMobile && (
-        <MobileBottomNav
-          onMenuClick={() => setShowMobileMenu(true)}
-          onAddClick={() => {
-            toast({
-              title: "Добавить транзакцию",
-              description: "Функция скоро будет доступна!",
-            });
-          }}
-          onAiChatClick={() => {
-            toast({
-              title: "AI Chat",
-              description: "Функция AI чата скоро будет доступна!",
-            });
-          }}
-        />
-      )}
-
-      <MobileMenuSheet
-        open={showMobileMenu}
-        onOpenChange={setShowMobileMenu}
-      />
-
-  );
-}  );
-}
+      </>
+    );
+  }

@@ -13,6 +13,8 @@ import { X, Sparkles, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLocation } from 'wouter';
 import { useCreditsBalance } from '@/hooks/use-credits-balance';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useEffect, useState } from 'react';
 
 interface ChatHeaderProps {
   onClose: () => void;
@@ -38,9 +40,54 @@ export function ChatHeader({ onClose }: ChatHeaderProps) {
   const [location] = useLocation();
   const pageContext = getPageContext(location);
   const { data: balance } = useCreditsBalance();
+  const isMobile = useIsMobile();
+  const [paddingTop, setPaddingTop] = useState<number>(12);
+
+  // Определяем отступ для хедера в зависимости от состояния Telegram Mini App
+  useEffect(() => {
+    const updatePadding = () => {
+      const webApp = window.Telegram?.WebApp;
+      const isTelegram = typeof webApp !== 'undefined' && !!webApp?.initData;
+
+      if (isTelegram && webApp) {
+        const isExpanded = webApp.isExpanded;
+        
+        if (isExpanded) {
+          // Развернуто на весь экран - нужен отступ сверху, чтобы контент не был слишком близко
+          // Контейнер сайдбара начинается с top: 0, поэтому добавляем отступ в хедере
+          setPaddingTop(isMobile ? 16 : 20); // Больший отступ для полноэкранного режима
+        } else {
+          // Не развернуто - есть шторка, контейнер уже смещен, минимальный отступ
+          setPaddingTop(isMobile ? 12 : 16);
+        }
+      } else {
+        // Обычный браузер - стандартный отступ
+        setPaddingTop(isMobile ? 12 : 16);
+      }
+    };
+
+    updatePadding();
+    window.addEventListener('resize', updatePadding);
+
+    // Для Telegram периодически проверяем изменения состояния
+    if (window.Telegram?.WebApp) {
+      const interval = setInterval(updatePadding, 500);
+      return () => {
+        window.removeEventListener('resize', updatePadding);
+        clearInterval(interval);
+      };
+    }
+
+    return () => {
+      window.removeEventListener('resize', updatePadding);
+    };
+  }, [isMobile]);
 
   return (
-    <div className="p-3 sm:p-4 border-b border-border">
+    <div 
+      className="p-3 sm:p-4 border-b border-border"
+      style={{ paddingTop: `${paddingTop}px` }}
+    >
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-purple-500" />

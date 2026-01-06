@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +9,7 @@ import type { TrainingStats } from "@shared/schema";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useToast } from "@/hooks/use-toast";
 
 interface TrainingHistoryItem {
   id: number;
@@ -21,6 +23,10 @@ interface TrainingHistoryItem {
 }
 
 export default function AiTrainingHistoryPage() {
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const isMobile = useIsMobile();
+  const { toast } = useToast();
+
   const { data: history, isLoading } = useQuery<TrainingHistoryItem[]>({
     queryKey: ["/api/ai/training/history"],
   });
@@ -31,9 +37,9 @@ export default function AiTrainingHistoryPage() {
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-4">
+      <div className="p-4 sm:p-6 space-y-4 pb-20 sm:pb-6">
         <Skeleton className="h-12 w-64" />
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-24" />
           ))}
@@ -48,19 +54,20 @@ export default function AiTrainingHistoryPage() {
   }
 
   return (
-    <div className="p-6 space-y-6" data-testid="ai-training-history-page">
+    <>
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 pb-20 sm:pb-6" data-testid="ai-training-history-page">
       <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2" data-testid="heading-ai-training">
-          <Brain className="h-8 w-8" />
+        <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2" data-testid="heading-ai-training">
+          <Brain className="h-6 w-6 sm:h-8 sm:w-8" />
           AI Training History
         </h1>
-        <p className="text-muted-foreground mt-1">
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
           Every swipe teaches your personalized AI model
         </p>
       </div>
 
       {stats && (
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Examples</CardTitle>
@@ -192,30 +199,29 @@ export default function AiTrainingHistoryPage() {
       </Card>
     </div>
 
-      {/* Mobile Navigation */}
-      {isMobile && (
-        <MobileBottomNav
-          onMenuClick={() => setShowMobileMenu(true)}
-          onAddClick={() => {
-            toast({
-              title: "Добавить транзакцию",
-              description: "Функция скоро будет доступна!",
-            });
-          }}
-          onAiChatClick={() => {
-            toast({
-              title: "AI Chat",
-              description: "Функция AI чата скоро будет доступна!",
-            });
-          }}
-        />
-      )}
-
-      <MobileMenuSheet
-        open={showMobileMenu}
-        onOpenChange={setShowMobileMenu}
+    {/* Mobile Navigation */}
+    {isMobile && (
+      <MobileBottomNav
+        onMenuClick={() => setShowMobileMenu(true)}
+        onAddClick={() => {
+          toast({
+            title: "Добавить транзакцию",
+            description: "Функция скоро будет доступна!",
+          });
+        }}
+        onAiChatClick={() => {
+          toast({
+            title: "AI Chat",
+            description: "Функция AI чата скоро будет доступна!",
+          });
+        }}
       />
+    )}
 
+    <MobileMenuSheet
+      open={showMobileMenu}
+      onOpenChange={setShowMobileMenu}
+    />
+    </>
   );
-}  );
 }

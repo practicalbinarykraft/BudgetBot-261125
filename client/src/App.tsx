@@ -12,6 +12,12 @@ import { AIChatSidebar } from "@/components/ai-chat-sidebar";
 import { PageLoading } from "@/components/loading-spinner";
 import { WebSocketProvider } from "@/components/WebSocketProvider";
 import { WelcomeDialog, useOnboarding } from "@/components/onboarding/welcome-dialog";
+import { CreditsWidget } from "@/components/credits-widget";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useChatSidebar } from "@/stores/chat-sidebar-store";
+import { useTelegramPaddingTopStyle } from "@/hooks/use-telegram-safe-area";
 import { useEffect, useState, lazy, Suspense } from "react";
 
 // ===== Lazy Load Pages for Better Performance =====
@@ -43,6 +49,12 @@ const ProductDetailPage = lazy(() => import("@/pages/product-detail-page"));
 const AssetsPage = lazy(() => import("@/pages/assets"));
 const AssetDetailPage = lazy(() => import("@/pages/asset-detail"));
 const AdvancedAnalyticsPage = lazy(() => import("@/pages/advanced-analytics-page"));
+const BillingPage = lazy(() => import("@/pages/billing-page"));
+
+// Lazy load dialog components
+const AddTransactionDialog = lazy(() =>
+  import("@/components/transactions/add-transaction-dialog").then(m => ({ default: m.AddTransactionDialog }))
+);
 
 // Landing page with redirect logic for authenticated users
 function LandingPageWrapper() {
@@ -73,6 +85,7 @@ function Router() {
         {/* Protected app routes */}
         <ProtectedRoute path="/app/dashboard-mobile-demo" component={DashboardMobileDemoPage} />
         <ProtectedRoute path="/app/dashboard" component={DashboardPage} />
+        <ProtectedRoute path="/app/billing" component={BillingPage} />
         <ProtectedRoute path="/app/transactions/sort" component={SwipeSortPage} />
         <ProtectedRoute path="/app/transactions" component={TransactionsPage} />
         <ProtectedRoute path="/app/wallets" component={WalletsPage} />
@@ -89,6 +102,7 @@ function Router() {
         <ProtectedRoute path="/app/expenses/analytics" component={ExpensesAnalyticsPage} />
         <ProtectedRoute path="/app/tags/:id" component={TagDetailPage} />
         <ProtectedRoute path="/app/tags" component={TagsSettingsPage} />
+        <ProtectedRoute path="/app/settings/billing" component={BillingPage} />
         <ProtectedRoute path="/app/settings" component={SettingsPage} />
         <ProtectedRoute path="/app/currency/history" component={CurrencyHistoryPage} />
         <ProtectedRoute path="/app/product-catalog/:id" component={ProductDetailPage} />
@@ -107,7 +121,12 @@ function Router() {
 function AppContent() {
   const { user } = useAuth();
   const { showOnboarding } = useOnboarding();
+  const { toggle: toggleAiChat } = useChatSidebar();
+  const isMobile = useIsMobile();
+  const telegramPaddingStyle = useTelegramPaddingTopStyle();
   const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showAddDialog, setShowAddDialog] = useState(false);
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
@@ -131,13 +150,23 @@ function AppContent() {
   return (
     <>
       <SidebarProvider style={style as React.CSSProperties}>
-        <div className="flex h-screen w-full">
-          <AppSidebar />
-          <div className="flex flex-col flex-1">
-            <header className="flex items-center justify-between p-4 border-b sm:flex hidden">
-              <SidebarTrigger data-testid="button-sidebar-toggle" />
+        <div className="flex h-screen w-full overflow-hidden">
+          {/* Сайдбар только на десктопе */}
+          <div className="hidden sm:block">
+            <AppSidebar />
+          </div>
+          <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+            {/* Header - ВНУТРИ контентной области */}
+            <header 
+              className="flex-shrink-0 flex items-center justify-center relative p-3 sm:p-4 border-b bg-background"
+              style={telegramPaddingStyle}
+            >
+              <div className="hidden sm:flex absolute left-3 sm:left-4">
+                <SidebarTrigger data-testid="button-sidebar-toggle" />
+              </div>
+              <CreditsWidget />
             </header>
-            <main className="flex-1 overflow-auto pt-4 sm:pt-6 px-4 sm:px-6 pb-24 bg-background">
+            <main className="flex-1 overflow-y-auto px-4 sm:px-6 pb-20 sm:pb-6 bg-background">
               <Router />
             </main>
           </div>
@@ -152,6 +181,27 @@ function AppContent() {
 
       {/* AI Chat Sidebar - доступен везде */}
       <AIChatSidebar />
+
+      {/* Mobile Bottom Navigation - показывается только на мобильных */}
+      {isMobile && user && (
+        <>
+          <MobileBottomNav
+            onMenuClick={() => setShowMobileMenu(true)}
+            onAddClick={() => setShowAddDialog(prev => !prev)}
+            onAiChatClick={toggleAiChat}
+          />
+          <MobileMenuSheet
+            open={showMobileMenu}
+            onOpenChange={setShowMobileMenu}
+          />
+          <Suspense fallback={null}>
+            <AddTransactionDialog
+              open={showAddDialog}
+              onOpenChange={setShowAddDialog}
+            />
+          </Suspense>
+        </>
+      )}
     </>
   );
 }

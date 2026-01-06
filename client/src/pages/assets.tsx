@@ -14,13 +14,16 @@ import { useTranslation } from '@/i18n';
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AssetsPage() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'asset' | 'liability'>('asset');
 
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const isMobile = useIsMobile();  const [showForm, setShowForm] = useState(false);
+  const isMobile = useIsMobile();
+  const { toast } = useToast();
+  const [showForm, setShowForm] = useState(false);
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   
   // Получить все активы
@@ -58,9 +61,10 @@ export default function AssetsPage() {
   const isPositive = (summary?.changePercent || 0) >= 0;
   
   return (
-    <div className="flex gap-6">
+    <>
+    <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 p-4 sm:p-6">
       {/* Основной контент */}
-      <div className="flex-1 space-y-4 sm:space-y-6">
+      <div className="flex-1 space-y-4 sm:space-y-6 pb-20 sm:pb-6">
         {/* Заголовок */}
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold mb-2">{t('assets.title')}</h1>
@@ -231,7 +235,6 @@ export default function AssetsPage() {
         open={showMobileMenu}
         onOpenChange={setShowMobileMenu}
       />
-
+    </>
   );
-}  );
 }

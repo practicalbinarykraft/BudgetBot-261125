@@ -13,22 +13,29 @@ import { chatWithAI } from '../../services/ai/chat.service';
 import { buildFinancialContext } from '../../services/ai/financial-context.service';
 import { getAiChatKeyboard, getMainMenuKeyboard, getMainMenuHint } from './keyboards';
 import { getUserLanguageByUserId } from '../language';
+import { getApiKey } from '../../services/api-key-manager';
+import { chargeCredits } from '../../services/billing.service';
+import { BillingError } from '../../types/billing';
 
 // REMOVED: In-memory activeChats Map (not reliable across bot restarts)
 // AI chat active state is now determined by checking recent ai_chat_messages
 // with source='telegram' and role='user' (sent in last 30 minutes)
 
 /**
- * Проверка есть ли у пользователя API ключ
+ * Проверка есть ли у пользователя API ключ или кредиты
  */
 async function hasApiKey(userId: number): Promise<boolean> {
-  const [userSettings] = await db
-    .select()
-    .from(settings)
-    .where(eq(settings.userId, userId))
-    .limit(1);
-  
-  return !!(userSettings?.anthropicApiKey);
+  try {
+    // Try to get API key (BYOK or system with credits)
+    await getApiKey(userId, 'financial_advisor');
+    return true;
+  } catch (error) {
+    if (error instanceof BillingError && error.code === 'INSUFFICIENT_CREDITS') {
+      return false;
+    }
+    // Other errors - assume no access
+    return false;
+  }
 }
 
 /**
@@ -122,24 +129,32 @@ export async function handleAiChatMessage(
   messageText: string
 ): Promise<void> {
   const lang = await getUserLanguageByUserId(userId);
-  
+
   try {
-    // Получить API ключ
-    const [userSettings] = await db
-      .select()
-      .from(settings)
-      .where(eq(settings.userId, userId))
-      .limit(1);
-    
-    const apiKey = userSettings?.anthropicApiKey;
-    if (!apiKey) {
-      await bot.sendMessage(chatId, lang === 'ru' ? 'API ключ не найден' : 'API key not found');
-      return;
+    // 🎯 Smart API key selection: BYOK or system key with credits
+    let chatApiKey;
+    let chatBillingMode;
+
+    try {
+      const apiKeyInfo = await getApiKey(userId, 'financial_advisor');
+      chatApiKey = apiKeyInfo.key;
+      chatBillingMode = apiKeyInfo;
+    } catch (error) {
+      if (error instanceof BillingError && error.code === 'INSUFFICIENT_CREDITS') {
+        await bot.sendMessage(
+          chatId,
+          lang === 'ru'
+            ? '❌ Кредиты закончились. Купи больше на /app/settings/billing или добавь свой Anthropic API ключ.'
+            : '❌ No credits remaining. Purchase more at /app/settings/billing or add your own Anthropic API key.'
+        );
+        return;
+      }
+      throw error;
     }
-    
+
     // Показать typing indicator
     await bot.sendChatAction(chatId, 'typing');
-    
+
     // Сохранить сообщение пользователя
     await db.insert(aiChatMessages).values({
       userId,
@@ -148,7 +163,7 @@ export async function handleAiChatMessage(
       source: 'telegram',
       contextType: 'general'
     });
-    
+
     // Загрузить историю чата (последние 20 сообщений из ВСЕХ источников)
     const history = await db
       .select()
@@ -156,7 +171,7 @@ export async function handleAiChatMessage(
       .where(eq(aiChatMessages.userId, userId))
       .orderBy(desc(aiChatMessages.createdAt))
       .limit(20);
-    
+
     // Построить финансовый контекст
     const financialContext = await buildFinancialContext({
       userId,
@@ -165,17 +180,31 @@ export async function handleAiChatMessage(
       includeWallets: true,
       transactionDays: 30
     });
-    
+
     // Отправить в AI
     const aiResponse = await chatWithAI({
-      apiKey,
+      apiKey: chatApiKey,
       messages: history.reverse().map(msg => ({
         role: msg.role as 'user' | 'assistant',
         content: msg.content
       })),
       contextData: financialContext
     });
-    
+
+    // 💳 Charge credits for AI chat
+    if (chatBillingMode.shouldCharge && aiResponse.usage) {
+      await chargeCredits(
+        userId,
+        'financial_advisor',
+        chatBillingMode.provider,
+        {
+          input: aiResponse.usage.input_tokens || 2000,
+          output: aiResponse.usage.output_tokens || 500
+        },
+        chatBillingMode.billingMode === 'free'
+      );
+    }
+
     // Сохранить ответ AI
     await db.insert(aiChatMessages).values({
       userId,
@@ -184,7 +213,7 @@ export async function handleAiChatMessage(
       source: 'telegram',
       contextType: 'general'
     });
-    
+
     // Отправить ответ пользователю
     await bot.sendMessage(chatId, aiResponse.message, {
       parse_mode: 'Markdown',

@@ -271,7 +271,6 @@ export default function BudgetsPage() {
         expenseCategories={expenseCategories}
         isPending={createMutation.isPending || updateMutation.isPending}
       />
-    </div>
 
       {/* Mobile Navigation */}
       {isMobile && (
@@ -296,7 +295,6 @@ export default function BudgetsPage() {
         open={showMobileMenu}
         onOpenChange={setShowMobileMenu}
       />
-
+    </div>
   );
-}  );
 }

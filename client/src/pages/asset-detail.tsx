@@ -19,15 +19,15 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import type { AssetWithCategory, AssetValuation } from "@/lib/types/assets";
 import {
-import { MobileBottomNav } from "@/components/mobile-bottom-nav";
-import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
-import { useIsMobile } from "@/hooks/use-mobile";
   AssetHeader,
   AssetValueCard,
   AssetChartCard,
   AssetCashflowCard,
   CalibrationModal,
 } from "@/components/assets";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AssetDetailResponse {
   success: boolean;
@@ -93,7 +93,6 @@ export default function AssetDetailPage() {
   // Loading state
   if (isLoading) {
     return (
-    <>
       <div className="space-y-6 pb-20 sm:pb-6" aria-busy="true">
         <p className="text-center text-muted-foreground">Loading...</p>
       </div>
@@ -103,7 +102,6 @@ export default function AssetDetailPage() {
   // Not found state
   if (!asset) {
     return (
-    <>
       <div className="space-y-6 pb-20 sm:pb-6">
         <p className="text-center text-muted-foreground">Asset not found</p>
         <div className="text-center">
@@ -218,7 +216,6 @@ export default function AssetDetailPage() {
         open={showMobileMenu}
         onOpenChange={setShowMobileMenu}
       />
-
+    </>
   );
-}  );
 }

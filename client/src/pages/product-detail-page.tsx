@@ -58,7 +58,8 @@ export default function ProductDetailPage() {
   const [, navigate] = useLocation();
 
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const isMobile = useIsMobile();  const { toast } = useToast();
+  const isMobile = useIsMobile();
+  const { toast } = useToast();
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -118,9 +119,9 @@ export default function ProductDetailPage() {
   // Loading state
   if (productLoading) {
     return (
-      <div className="container mx-auto px-4 py-6 max-w-4xl" aria-busy="true">
-        <Skeleton className="h-8 w-48 mb-6" />
-        <Skeleton className="h-12 w-3/4 mb-4" />
+      <div className="container mx-auto p-4 sm:p-6 pb-20 sm:pb-6 max-w-4xl space-y-4 sm:space-y-6" aria-busy="true">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-12 w-3/4" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Skeleton className="h-32" />
           <Skeleton className="h-32" />
@@ -133,7 +134,7 @@ export default function ProductDetailPage() {
   // Not found state
   if (!product) {
     return (
-      <div className="container mx-auto px-4 py-6 max-w-4xl">
+      <div className="container mx-auto p-4 sm:p-6 pb-20 sm:pb-6 max-w-4xl">
         <Card>
           <CardContent className="p-6 text-center">
             <Package className="w-12 h-12 mx-auto mb-4 text-muted-foreground" aria-hidden="true" />
@@ -151,55 +152,56 @@ export default function ProductDetailPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-4xl">
-      <Button variant="ghost" className="mb-6" asChild data-testid="button-back">
-        <Link href="/app/product-catalog">
-          <ArrowLeft className="w-4 h-4 mr-2" aria-hidden="true" />
-          {t("productDetail.back")}
-        </Link>
-      </Button>
+    <>
+      <div className="container mx-auto p-4 sm:p-6 pb-20 sm:pb-6 max-w-4xl space-y-4 sm:space-y-6">
+          <Button variant="ghost" asChild data-testid="button-back">
+          <Link href="/app/product-catalog">
+            <ArrowLeft className="w-4 h-4 mr-2" aria-hidden="true" />
+            {t("productDetail.back")}
+          </Link>
+        </Button>
 
-      <ProductHeader
-        product={product}
-        showDeleteDialog={showDeleteDialog}
-        onDeleteDialogChange={setShowDeleteDialog}
-        onDelete={handleDelete}
-        isDeleting={deleteMutation.isPending}
-      />
-
-      <ProductStatsCards
-        product={product}
-        currency={currency}
-        exchangeRate={exchangeRate}
-      />
-
-      <Button
-        onClick={() => setShowSearchModal(true)}
-        className="w-full mb-6"
-        size="lg"
-        data-testid="button-search-prices"
-      >
-        <Search className="w-5 h-5 mr-2" aria-hidden="true" />
-        {t("productDetail.searchPrices")}
-      </Button>
-
-      {priceData?.priceHistory && priceData.priceHistory.length > 0 && (
-        <div className="mb-6">
-          <PriceHistoryChart data={priceData.priceHistory} />
-        </div>
-      )}
-
-      {priceData?.byStore && <StoresList byStore={priceData.byStore} currency={currency} />}
-
-      {showSearchModal && (
-        <PriceSearchModal
-          productId={parseInt(id!)}
-          productName={product.name}
-          currency={currency}
-          onClose={() => setShowSearchModal(false)}
+        <ProductHeader
+          product={product}
+          showDeleteDialog={showDeleteDialog}
+          onDeleteDialogChange={setShowDeleteDialog}
+          onDelete={handleDelete}
+          isDeleting={deleteMutation.isPending}
         />
-      )}
-    </div>
+
+        <ProductStatsCards
+          product={product}
+          currency={currency}
+          exchangeRate={exchangeRate}
+        />
+
+        <Button
+          onClick={() => setShowSearchModal(true)}
+          className="w-full"
+          size="lg"
+          data-testid="button-search-prices"
+        >
+          <Search className="w-5 h-5 mr-2" aria-hidden="true" />
+          {t("productDetail.searchPrices")}
+        </Button>
+
+        {priceData?.priceHistory && priceData.priceHistory.length > 0 && (
+          <div>
+            <PriceHistoryChart data={priceData.priceHistory} />
+          </div>
+        )}
+
+        {priceData?.byStore && <StoresList byStore={priceData.byStore} currency={currency} />}
+
+        {showSearchModal && (
+          <PriceSearchModal
+            productId={parseInt(id!)}
+            productName={product.name}
+            currency={currency}
+            onClose={() => setShowSearchModal(false)}
+          />
+        )}
+      </div>
 
       {/* Mobile Navigation */}
       {isMobile && (
@@ -224,7 +226,6 @@ export default function ProductDetailPage() {
         open={showMobileMenu}
         onOpenChange={setShowMobileMenu}
       />
-
+    </>
   );
-}  );
 }

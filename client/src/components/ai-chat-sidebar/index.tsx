@@ -21,6 +21,7 @@ import { useChatMessages } from '@/hooks/use-chat-messages';
 import { useToolConfirmation } from '@/hooks/use-tool-confirmation';
 import { useImageUpload } from '@/hooks/use-image-upload';
 import { useCreditsBalance } from '@/hooks/use-credits-balance';
+import { useTelegramSafeArea } from '@/hooks/use-telegram-safe-area';
 
 // Компоненты
 import { FloatingChatButton } from './floating-button';
@@ -33,6 +34,9 @@ import { EmptyState } from './empty-state';
 export function AIChatSidebar() {
   // Состояние открытия сайдбара (Zustand store)
   const { isOpen, close } = useChatSidebar();
+  
+  // Динамические отступы для Telegram Mini App
+  const safeArea = useTelegramSafeArea();
 
   // Хук подтверждения действий
   const {
@@ -94,7 +98,7 @@ export function AIChatSidebar() {
       {/* Сайдбар */}
       <div
         className={`
-          fixed top-0 right-0 h-screen w-full sm:w-[400px]
+          fixed right-0 w-full sm:w-[400px]
           bg-background
           shadow-2xl z-40
           transform transition-transform duration-300
@@ -102,6 +106,12 @@ export function AIChatSidebar() {
           border-l border-border
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
+        style={{
+          // Смещаем контейнер только если есть шторка (не развернуто на весь экран)
+          // Если развернуто на весь экран (safeArea.top = 0), начинаем с top: 0
+          top: safeArea.top > 0 ? `${safeArea.top}px` : '0',
+          height: safeArea.top > 0 ? `calc(100vh - ${safeArea.top}px)` : '100vh',
+        }}
         data-testid="sidebar-ai-chat"
       >
         {/* Заголовок */}

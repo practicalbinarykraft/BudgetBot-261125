@@ -88,7 +88,6 @@ export default function WalletsPage() {
 
   if (isLoading) {
     return (
-    <>
       <div className="space-y-6 pb-20 sm:pb-6">
         <Skeleton className="h-20" />
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -307,7 +306,6 @@ export default function WalletsPage() {
         open={showCalibrateDialog}
         onOpenChange={setShowCalibrateDialog}
       />
-    </div>
 
       {/* Mobile Navigation */}
       {isMobile && (
@@ -332,7 +330,6 @@ export default function WalletsPage() {
         open={showMobileMenu}
         onOpenChange={setShowMobileMenu}
       />
-
+    </div>
   );
-}  );
 }

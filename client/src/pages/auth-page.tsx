@@ -7,6 +7,7 @@ import { useTranslation } from "@/i18n/context";
 import { LanguageToggle } from "@/components/language-toggle";
 import { LoginForm } from "@/components/auth/login-form";
 import { RegisterForm } from "@/components/auth/register-form";
+import { TelegramLoginButton } from "@/components/auth/telegram-login-button";
 import { Wallet, TrendingUp, Bot, Camera, DollarSign } from "lucide-react";
 
 export default function AuthPage() {
@@ -66,18 +67,48 @@ export default function AuthPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <TabsContent value="login" className="mt-0" key={`login-${language}`}>
-                  <LoginForm 
-                    onSubmit={onLogin} 
-                    isPending={loginMutation.isPending} 
+                <TabsContent value="login" className="mt-0 space-y-4" key={`login-${language}`}>
+                  <LoginForm
+                    onSubmit={onLogin}
+                    isPending={loginMutation.isPending}
                   />
+
+                  {/* Divider */}
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">
+                        {t('auth.or_continue_with')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Telegram Login */}
+                  <TelegramLoginButton />
                 </TabsContent>
 
-                <TabsContent value="register" className="mt-0" key={`register-${language}`}>
-                  <RegisterForm 
-                    onSubmit={onRegister} 
-                    isPending={registerMutation.isPending} 
+                <TabsContent value="register" className="mt-0 space-y-4" key={`register-${language}`}>
+                  <RegisterForm
+                    onSubmit={onRegister}
+                    isPending={registerMutation.isPending}
                   />
+
+                  {/* Divider */}
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">
+                        {t('auth.or_continue_with')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Telegram Login */}
+                  <TelegramLoginButton />
                 </TabsContent>
               </CardContent>
             </Card>

@@ -1,0 +1,250 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRoute } from "wouter";
+import { Transaction, PersonalTag } from "@shared/schema";
+import { TransactionList } from "@/components/dashboard/transaction-list";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, Plus } from "lucide-react";
+import { AddTransactionDialog } from "@/components/transactions/add-transaction-dialog";
+import { EditTransactionDialog } from "@/components/transactions/edit-transaction-dialog";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TagBadge } from "@/components/tags/tag-badge";
+import { Link } from "wouter";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+interface TagStats {
+  transactionCount: number;
+  totalSpent: number;
+  totalIncome: number;
+}
+
+export default function TagDetailPage() {
+  const [, params] = useRoute("/app/tags/:id");
+
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const isMobile = useIsMobile();  const tagId = params?.id ? parseInt(params.id) : null;
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Load all tags to find the current one
+  const { data: tags = [], isLoading: isLoadingTags } = useQuery<PersonalTag[]>({
+    queryKey: ["/api/tags"],
+  });
+
+  // Load tag stats
+  const { data: stats, isLoading: isLoadingStats } = useQuery<TagStats>({
+    queryKey: ["/api/tags", tagId, "stats"],
+    queryFn: async () => {
+      const res = await fetch(`/api/tags/${tagId}/stats`);
+      if (!res.ok) throw new Error("Failed to load stats");
+      return res.json();
+    },
+    enabled: !!tagId,
+  });
+
+  // Load transactions filtered by this tag
+  const { data: transactionsResponse, isLoading: isLoadingTransactions } = useQuery<{
+    data: Transaction[];
+    pagination: { total: number; limit: number; offset: number };
+  }>({
+    queryKey: ["/api/transactions", { personalTagId: tagId }],
+    queryFn: async () => {
+      const res = await fetch(`/api/transactions?personalTagId=${tagId}`);
+      if (!res.ok) throw new Error("Failed to load transactions");
+      return res.json();
+    },
+    enabled: !!tagId,
+  });
+
+  const transactions = transactionsResponse?.data ?? [];
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/transactions/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/sorting/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/unsorted"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["/api/tags", tagId, "stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transactions", { personalTagId: tagId }], exact: false });
+      toast({
+        title: "Success",
+        description: "Transaction deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const currentTag = tags.find(t => t.id === tagId);
+
+  if (isLoadingTags || isLoadingStats) {
+    return (
+    <>
+      <div className="space-y-6 pb-20 sm:pb-6">
+        <Skeleton className="h-20" />
+        <Skeleton className="h-40" />
+        <Skeleton className="h-96" />
+      </div>
+    );
+  }
+
+  if (!currentTag || !tagId) {
+    return (
+    <>
+      <div className="space-y-6 pb-20 sm:pb-6">
+        <div className="flex items-center gap-4">
+          <Link href="/app/tags">
+            <Button variant="ghost" size="icon" data-testid="button-back">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold">Tag Not Found</h1>
+            <p className="text-muted-foreground">The requested tag does not exist</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="space-y-6 pb-20 sm:pb-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Link href="/app/tags">
+          <Button variant="ghost" size="icon" data-testid="button-back-to-tags">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div className="flex-1">
+          <div className="flex items-center gap-3 mb-2">
+            <TagBadge tag={currentTag} className="text-2xl" />
+          </div>
+          <p className="text-muted-foreground">
+            {currentTag.type === 'personal' && 'Personal expenses'}
+            {currentTag.type === 'shared' && 'Shared expenses'}
+            {currentTag.type === 'person' && 'Expenses for this person'}
+          </p>
+        </div>
+        <Button onClick={() => setShowAddDialog(true)} data-testid="button-add-transaction">
+          <Plus className="h-4 w-4 mr-2" />
+          Add Transaction
+        </Button>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" data-testid="stat-transaction-count">
+              {stats?.transactionCount || 0}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-destructive" data-testid="stat-total-spent">
+              ${(stats?.totalSpent || 0).toFixed(2)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Income</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600" data-testid="stat-total-income">
+              ${(stats?.totalIncome || 0).toFixed(2)}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Transactions List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Transactions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoadingTransactions ? (
+            <Skeleton className="h-64" />
+          ) : transactions.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground" data-testid="empty-transactions">
+              <p>No transactions found for this tag</p>
+              <p className="text-sm mt-2">Start by adding a new transaction above</p>
+            </div>
+          ) : (
+            <TransactionList
+              transactions={transactions}
+              onEdit={(transaction) => setEditingTransaction(transaction)}
+              onDelete={(id) => deleteMutation.mutate(id)}
+              showEdit={true}
+              showDelete={true}
+            />
+          )}
+        </CardContent>
+      </Card>
+
+      <AddTransactionDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        defaultPersonalTagId={tagId}
+      />
+
+      <EditTransactionDialog
+        transaction={editingTransaction}
+        open={!!editingTransaction}
+        onOpenChange={(open) => !open && setEditingTransaction(null)}
+      />
+    </div>
+
+      {/* Mobile Navigation */}
+      {isMobile && (
+        <MobileBottomNav
+          onMenuClick={() => setShowMobileMenu(true)}
+          onAddClick={() => {
+            toast({
+              title: "Добавить транзакцию",
+              description: "Функция скоро будет доступна!",
+            });
+          }}
+          onAiChatClick={() => {
+            toast({
+              title: "AI Chat",
+              description: "Функция AI чата скоро будет доступна!",
+            });
+          }}
+        />
+      )}
+
+      <MobileMenuSheet
+        open={showMobileMenu}
+        onOpenChange={setShowMobileMenu}
+      />
+    </div>
+  );
+}

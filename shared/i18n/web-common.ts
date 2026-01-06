@@ -46,6 +46,10 @@ export const webCommonTranslations: Translations = {
     en: 'Settings',
     ru: 'Настройки',
   },
+  'nav.billing': {
+    en: 'Billing',
+    ru: 'Тарифы',
+  },
   'nav.ai_analysis': {
     en: 'AI Analysis',
     ru: 'AI Анализ',
@@ -371,5 +375,152 @@ export const webCommonTranslations: Translations = {
   'settings.2fa_setup_error': {
     en: 'Failed to set up 2FA',
     ru: 'Не удалось настроить 2FA',
+  },
+
+  // Credits & Billing
+  'credits.title': {
+    en: 'Credits & Pricing',
+    ru: 'Кредиты и тарифы',
+  },
+  'credits.remaining': {
+    en: 'You have {count} credits remaining',
+    ru: 'У вас осталось {count} кредитов',
+  },
+  'credits.byok_unlimited': {
+    en: 'You are using your own API keys (unlimited usage)',
+    ru: 'Вы используете свои API ключи (неограниченно)',
+  },
+  'credits.view_billing': {
+    en: 'View Full Billing Details & Usage History',
+    ru: 'Посмотреть детали биллинга и историю использования',
+  },
+  'credits.your_balance': {
+    en: 'Your Balance',
+    ru: 'Ваш баланс',
+  },
+  'credits.credits_remaining': {
+    en: 'Credits Remaining',
+    ru: 'Осталось кредитов',
+  },
+  'credits.total_granted': {
+    en: 'Total Granted',
+    ru: 'Всего выдано',
+  },
+  'credits.total_used': {
+    en: 'Total Used',
+    ru: 'Всего использовано',
+  },
+  'credits.mode': {
+    en: 'Mode',
+    ru: 'Режим',
+  },
+  'credits.mode_paid': {
+    en: 'Paid',
+    ru: 'Платный',
+  },
+  'credits.mode_free': {
+    en: 'Free Tier',
+    ru: 'Бесплатный',
+  },
+  'credits.mode_byok': {
+    en: 'BYOK',
+    ru: 'Свои ключи',
+  },
+  'credits.what_costs': {
+    en: 'What Each Action Costs',
+    ru: 'Стоимость каждого действия',
+  },
+  'credits.loading_pricing': {
+    en: 'Loading pricing...',
+    ru: 'Загрузка тарифов...',
+  },
+  'credits.credit': {
+    en: 'credit',
+    ru: 'кредит',
+  },
+  'credits.credits': {
+    en: 'credits',
+    ru: 'кредитов',
+  },
+  'credits.pricing_plans': {
+    en: 'Pricing Plans',
+    ru: 'Тарифные планы',
+  },
+  'credits.most_popular': {
+    en: 'Most Popular',
+    ru: 'Самый популярный',
+  },
+  'credits.current_plan': {
+    en: 'Current Plan',
+    ru: 'Текущий план',
+  },
+  'credits.per_month': {
+    en: '/month',
+    ru: '/месяц',
+  },
+  'credits.credits_per_month': {
+    en: '{count} credits/month',
+    ru: '{count} кредитов/месяц',
+  },
+  'credits.byok_title': {
+    en: 'Prefer Unlimited? Use Your Own Keys (BYOK)',
+    ru: 'Нужно неограниченно? Используйте свои ключи (BYOK)',
+  },
+  'credits.byok_description': {
+    en: 'Connect your Anthropic and OpenAI API keys for unlimited usage at your own cost',
+    ru: 'Подключите API ключи Anthropic и OpenAI для неограниченного использования за свой счёт',
+  },
+  'credits.byok_feature1': {
+    en: 'Unlimited AI operations (you pay API providers directly)',
+    ru: 'Неограниченные AI операции (вы платите провайдерам напрямую)',
+  },
+  'credits.byok_feature2': {
+    en: 'Full cost control and transparency',
+    ru: 'Полный контроль расходов и прозрачность',
+  },
+  'credits.byok_feature3': {
+    en: 'Your keys are encrypted (AES-256-GCM)',
+    ru: 'Ваши ключи зашифрованы (AES-256-GCM)',
+  },
+  'credits.add_keys': {
+    en: 'Add API Keys in Settings',
+    ru: 'Добавить API ключи в настройках',
+  },
+  'credits.low_balance_warning': {
+    en: "You're running low on credits! Purchase more credits or add your own API keys to continue using AI features.",
+    ru: 'У вас заканчиваются кредиты! Купите больше кредитов или добавьте свои API ключи для продолжения использования AI функций.',
+  },
+  // Pricing tiers features
+  'credits.tier.free_credits': {
+    en: '50 free credits (one-time)',
+    ru: '50 бесплатных кредитов (разово)',
+  },
+  'credits.tier.all_features': {
+    en: 'All AI features',
+    ru: 'Все AI функции',
+  },
+  'credits.tier.no_card': {
+    en: 'No credit card required',
+    ru: 'Не требуется банковская карта',
+  },
+  'credits.tier.email_support': {
+    en: 'Email support',
+    ru: 'Поддержка по email',
+  },
+  'credits.tier.priority_support': {
+    en: 'Priority support',
+    ru: 'Приоритетная поддержка',
+  },
+  'credits.tier.operations_100_200': {
+    en: '~100-200 operations',
+    ru: '~100-200 операций',
+  },
+  'credits.tier.operations_250_500': {
+    en: '~250-500 operations',
+    ru: '~250-500 операций',
+  },
+  'credits.tier.operations_500_1000': {
+    en: '~500-1000 operations',
+    ru: '~500-1000 операций',
   },
 };

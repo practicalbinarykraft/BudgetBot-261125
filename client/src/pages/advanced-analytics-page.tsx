@@ -10,6 +10,7 @@
  * - Clear separation of concerns
  */
 
+import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -17,9 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/queryClient";
 import {
-import { MobileBottomNav } from "@/components/mobile-bottom-nav";
-import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
-import { useIsMobile } from "@/hooks/use-mobile";
   HealthScoreCard,
   ForecastCard,
   RecommendationsCard,
@@ -29,8 +27,16 @@ import { useIsMobile } from "@/hooks/use-mobile";
   SpendingTrends,
   FinancialHealthScore,
 } from "@/components/analytics";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdvancedAnalyticsPage() {
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const isMobile = useIsMobile();
+  const { toast } = useToast();
+
   // Fetch data from all endpoints
   const { data: forecast, isLoading: forecastLoading } = useQuery<SpendingForecast>({
     queryKey: ["/api/analytics/advanced/forecast"],
@@ -100,7 +106,6 @@ export default function AdvancedAnalyticsPage() {
           {trends && <TrendsCard trends={trends} />}
         </main>
       )}
-    </div>
 
       {/* Mobile Navigation */}
       {isMobile && (
@@ -125,7 +130,7 @@ export default function AdvancedAnalyticsPage() {
         open={showMobileMenu}
         onOpenChange={setShowMobileMenu}
       />
-
+    </div>
+    </>
   );
-}  );
 }

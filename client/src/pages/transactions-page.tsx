@@ -69,7 +69,6 @@ export default function TransactionsPage() {
 
   if (isLoading) {
     return (
-    <>
       <div className="space-y-6 pb-20 sm:pb-6">
         <Skeleton className="h-20" />
         <Skeleton className="h-96" />
@@ -131,7 +130,6 @@ export default function TransactionsPage() {
         open={!!editingTransaction}
         onOpenChange={(open) => !open && setEditingTransaction(null)}
       />
-    </div>
 
       {/* Mobile Navigation */}
       {isMobile && (
@@ -156,7 +154,6 @@ export default function TransactionsPage() {
         open={showMobileMenu}
         onOpenChange={setShowMobileMenu}
       />
-
+    </div>
   );
-}  );
 }

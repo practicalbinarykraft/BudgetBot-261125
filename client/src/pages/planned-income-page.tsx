@@ -285,7 +285,6 @@ export default function PlannedIncomePage() {
         incomeCategories={incomeCategories}
         isPending={createMutation.isPending || updateMutation.isPending}
       />
-    </>
 
       {/* Mobile Navigation */}
       {isMobile && (
@@ -310,7 +309,6 @@ export default function PlannedIncomePage() {
         open={showMobileMenu}
         onOpenChange={setShowMobileMenu}
       />
-
+    </>
   );
-}  );
 }

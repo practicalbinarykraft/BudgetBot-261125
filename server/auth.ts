@@ -16,6 +16,7 @@ import { logError, logWarning, logInfo } from "./lib/logger";
 import { logAuditEvent, AuditAction, AuditEntityType } from "./services/audit-log.service";
 import { env } from "./lib/env";
 import { grantWelcomeBonus } from "./services/credits.service";
+import authTelegramRouter from "./routes/auth-telegram.routes";
 
 const PgSession = connectPgSimple(session);
 const MemoryStore = memorystore(session);
@@ -279,8 +280,13 @@ export async function setupAuth(app: Express) {
         id: user.id,
         email: user.email,
         name: user.name,
+        telegramId: user.telegramId,
+        telegramUsername: user.telegramUsername,
       });
     }
     res.status(401).json({ error: "Not authenticated" });
   });
+
+  // Telegram OAuth routes
+  app.use("/api/auth", authTelegramRouter);
 }

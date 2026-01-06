@@ -141,21 +141,21 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-[95vw] sm:max-w-md !p-3 sm:!p-6 overflow-x-hidden">
         <DialogHeader>
-          <DialogTitle>{t("transactions.add_transaction")}</DialogTitle>
+          <DialogTitle className="text-base sm:text-lg">{t("transactions.add_transaction")}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 sm:space-y-4 overflow-x-hidden px-0.5">
             <FormField
               control={form.control}
               name="type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("common.type")}</FormLabel>
+                  <FormLabel className="text-sm">{t("common.type")}</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger data-testid="select-type">
+                      <SelectTrigger data-testid="select-type" className="w-full max-w-full text-sm h-9">
                         <SelectValue placeholder={t("transactions.select_type")} />
                       </SelectTrigger>
                     </FormControl>
@@ -169,19 +169,20 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
               <FormField
                 control={form.control}
                 name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("transactions.amount")}</FormLabel>
+                    <FormLabel className="text-sm">{t("transactions.amount")}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
                         step="0.01"
                         placeholder="0.00"
                         data-testid="input-amount"
+                        className="w-full text-sm h-9"
                         {...field}
                       />
                     </FormControl>
@@ -195,12 +196,12 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
                 name="currency"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("transactions.currency")}</FormLabel>
+                    <FormLabel className="text-sm">{t("transactions.currency")}</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
                       <FormControl>
-                        <SelectTrigger data-testid="select-currency">
-                          <SelectValue placeholder={t("transactions.currency")} />
-                        </SelectTrigger>
+                      <SelectTrigger data-testid="select-currency" className="w-full max-w-full text-sm h-9">
+                        <SelectValue placeholder={t("transactions.currency")} />
+                      </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="USD">USD ($)</SelectItem>
@@ -219,9 +220,14 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("transactions.description")}</FormLabel>
+                  <FormLabel className="text-sm">{t("transactions.description")}</FormLabel>
                   <FormControl>
-                    <Input placeholder={t("transactions.placeholder_description")} data-testid="input-description" {...field} />
+                    <Input
+                      placeholder={t("transactions.placeholder_description")}
+                      data-testid="input-description"
+                      className="w-full text-sm h-9"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -233,10 +239,10 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
               name="category"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("transactions.category_optional")}</FormLabel>
+                  <FormLabel className="text-sm">{t("transactions.category_optional")}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value || ""}>
                     <FormControl>
-                      <SelectTrigger data-testid="select-category">
+                      <SelectTrigger data-testid="select-category" className="w-full max-w-full text-sm h-9">
                         <SelectValue placeholder={t("transactions.select_category")} />
                       </SelectTrigger>
                     </FormControl>
@@ -271,7 +277,7 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
               name="personalTagId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("transactions.tag_optional")}</FormLabel>
+                  <FormLabel className="text-sm">{t("transactions.tag_optional")}</FormLabel>
                   <FormControl>
                     <TagSelector
                       value={field.value ?? null}
@@ -287,22 +293,27 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
               control={form.control}
               name="date"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("transactions.date")}</FormLabel>
+                <FormItem className="w-full">
+                  <FormLabel className="text-sm">{t("transactions.date")}</FormLabel>
                   <FormControl>
-                    <Input type="date" data-testid="input-date" {...field} />
+                    <Input
+                      type="date"
+                      data-testid="input-date"
+                      className="w-full text-sm h-9"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="flex gap-2 pt-4">
+            <div className="flex gap-2 pt-2 sm:pt-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="flex-1"
+                className="flex-1 text-sm"
                 data-testid="button-cancel"
               >
                 {t("transactions.cancel")}
@@ -310,7 +321,7 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
               <Button
                 type="submit"
                 disabled={createMutation.isPending}
-                className="flex-1"
+                className="flex-1 text-sm"
                 data-testid="button-submit-transaction"
               >
                 {createMutation.isPending ? t("transactions.adding") : t("transactions.add_transaction")}

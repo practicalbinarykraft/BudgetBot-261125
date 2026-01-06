@@ -75,6 +75,7 @@ export const authTranslations: Translations = {
   'auth.password': { en: 'Password', ru: 'Пароль' },
   'auth.password_placeholder': { en: '••••••••', ru: '••••••••' },
   'auth.login_button': { en: 'Login', ru: 'Войти' },
+  'auth.or_continue_with': { en: 'Or continue with', ru: 'Или войти через' },
 
   // Register Form
   'auth.create_account': { en: 'Create account', ru: 'Создать аккаунт' },

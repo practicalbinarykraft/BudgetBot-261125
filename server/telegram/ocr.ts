@@ -29,23 +29,29 @@ export interface ProcessedReceipt {
 /**
  * Распознать чек через Claude Vision API (BYOK - использует API ключ пользователя)
  * Теперь с извлечением товаров!
- * 
+ *
  * @param userId - ID пользователя (для загрузки API ключа из Settings)
  * @param imageBase64 - Изображение чека в base64
+ * @param providedApiKey - Optional: API key (if not provided, loads from user settings)
  * @param mimeType - MIME тип изображения
  * @returns Распознанные данные с товарами или null
  */
 export async function processReceiptImage(
   userId: number,
   imageBase64: string,
+  providedApiKey?: string,
   mimeType: string = 'image/jpeg'
 ): Promise<ProcessedReceipt | null> {
   try {
     console.log('1️⃣ Starting OCR process for user:', userId);
-    
-    // 1. Загрузить настройки пользователя (с автоматической дешифровкой)
-    const { settingsRepository } = await import('../repositories/settings.repository');
-    const apiKey = await settingsRepository.getAnthropicApiKey(userId);
+
+    // 1. Use provided API key or load from user settings
+    let apiKey = providedApiKey;
+
+    if (!apiKey) {
+      const { settingsRepository } = await import('../repositories/settings.repository');
+      apiKey = await settingsRepository.getAnthropicApiKey(userId);
+    }
 
     if (!apiKey) {
       console.error('❌ OCR failed: User has no Anthropic API key in Settings');

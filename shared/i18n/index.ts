@@ -32,6 +32,7 @@ import { webProductCatalogTranslations } from './web-product-catalog';
 import { webLandingTranslations } from './web-landing';
 import { webAnalyticsTranslations } from './web-analytics';
 import { webAssetsTranslations } from './web-assets';
+import { webCreditsTranslations } from './web-credits';
 
 // Export types
 export type { Language, Translation, Translations } from './types';
@@ -66,6 +67,7 @@ const allTranslations: Translations = {
   ...webLandingTranslations,
   ...webAnalyticsTranslations,
   ...webAssetsTranslations,
+  ...webCreditsTranslations,
 };
 
 /**

@@ -15,8 +15,9 @@ import { Badge } from '@/components/ui/badge';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from '@/i18n';
+import { useLocation } from 'wouter';
 import type { Wallet } from '@shared/schema';
-import { Settings2, CreditCard, Coins, Bitcoin, CheckCircle2, AlertTriangle, AlertCircle } from 'lucide-react';
+import { Settings2, CreditCard, Coins, Bitcoin, CheckCircle2, AlertTriangle, AlertCircle, Plus } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 
@@ -41,6 +42,7 @@ export function CalibrationDialog({ open, onOpenChange }: Props) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { t } = useTranslation();
+  const [, setLocation] = useLocation();
 
   const { data: wallets = [], isLoading } = useQuery<Wallet[]>({
     queryKey: ['/api/wallets'],
@@ -181,7 +183,22 @@ export function CalibrationDialog({ open, onOpenChange }: Props) {
           {isLoading ? (
             <div className="text-center text-muted-foreground py-8">{t('wallets.loading_wallets')}</div>
           ) : wallets.length === 0 ? (
-            <div className="text-center text-muted-foreground py-8">{t('wallets.no_wallets_found')}</div>
+            <div className="text-center py-8 space-y-4">
+              <p className="text-muted-foreground">{t('wallets.no_wallets_found')}</p>
+              <div className="flex justify-center">
+                <Button
+                  onClick={() => {
+                    onOpenChange(false);
+                    setLocation('/app/wallets');
+                  }}
+                  data-testid="button-create-wallet-from-calibration"
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  {t('wallets.add_wallet')}
+                </Button>
+              </div>
+            </div>
           ) : (
             walletPreview.map((preview) => {
               const Icon = walletIcons[preview.wallet.type as keyof typeof walletIcons] || CreditCard;

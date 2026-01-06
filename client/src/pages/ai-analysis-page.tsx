@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp } from "lucide-react";
@@ -8,6 +9,7 @@ import { ReceiptScanner } from "@/components/ai/receipt-scanner";
 import { SpendingAnalysisCard } from "@/components/ai/spending-analysis-card";
 import { AIChat } from "@/components/ai/ai-chat";
 import { useTranslation } from "@/i18n/context";
+import { useToast } from "@/hooks/use-toast";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -39,6 +41,9 @@ interface PriceRecommendationsResponse {
 }
 
 export default function AIAnalysisPage() {
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const isMobile = useIsMobile();
+  const { toast } = useToast();
   const { t } = useTranslation();
   const { data: healthScore, isLoading: isLoadingHealth } = useQuery<FinancialHealthScore>({
     queryKey: ["/api/financial-health"],
@@ -129,7 +134,7 @@ export default function AIAnalysisPage() {
           </AccordionContent>
         </AccordionItem>
       </Accordion>
-    </div>
+      </div>
 
       {/* Mobile Navigation */}
       {isMobile && (
@@ -154,7 +159,6 @@ export default function AIAnalysisPage() {
         open={showMobileMenu}
         onOpenChange={setShowMobileMenu}
       />
-
+    </>
   );
-}  );
 }

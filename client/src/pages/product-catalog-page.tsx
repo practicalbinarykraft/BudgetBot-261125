@@ -11,13 +11,16 @@ import { ProductCatalog } from '@shared/schemas/product-catalog';
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ProductCatalogPage() {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
 
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const isMobile = useIsMobile();  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const isMobile = useIsMobile();
+  const { toast } = useToast();
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   // Fetch user settings for currency and exchange rates
   const { data: settings } = useQuery<{
@@ -64,22 +67,23 @@ export default function ProductCatalogPage() {
   );
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-4xl">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-2">
-          <Package className="w-8 h-8 text-primary" />
-          <h1 className="text-3xl font-bold" data-testid="text-page-title">
-            {t('productCatalog.title') || 'Каталог товаров'}
-          </h1>
+    <>
+      <div className="container mx-auto p-4 sm:p-6 pb-20 sm:pb-6 max-w-4xl space-y-4 sm:space-y-6">
+        {/* Header */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Package className="w-8 h-8 text-primary" />
+            <h1 className="text-2xl sm:text-3xl font-bold" data-testid="text-page-title">
+              {t('productCatalog.title') || 'Каталог товаров'}
+            </h1>
+          </div>
+          <p className="text-muted-foreground">
+            {t('productCatalog.subtitle') || 'Товары из ваших чеков с историей цен'}
+          </p>
         </div>
-        <p className="text-muted-foreground">
-          {t('productCatalog.subtitle') || 'Товары из ваших чеков с историей цен'}
-        </p>
-      </div>
 
-      {/* Search and Filters */}
-      <div className="mb-6 flex gap-3 flex-wrap">
+        {/* Search and Filters */}
+        <div className="flex gap-3 flex-wrap">
         {/* Search */}
         <div className="flex-1 min-w-[200px] relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -111,54 +115,54 @@ export default function ProductCatalogPage() {
         </Select>
       </div>
 
-      {/* Products List */}
-      {isLoading ? (
-        <div className="space-y-3">
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-        </div>
-      ) : products.length > 0 ? (
-        <>
-          <div className="space-y-3" data-testid="list-products">
-            {products.map(product => (
-              <ProductListItem 
-                key={product.id} 
-                product={product} 
-                currency={currency}
-                exchangeRate={exchangeRate}
-              />
-            ))}
+        {/* Products List */}
+        {isLoading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-24" />
+            <Skeleton className="h-24" />
+            <Skeleton className="h-24" />
           </div>
+        ) : products.length > 0 ? (
+          <>
+            <div className="space-y-3" data-testid="list-products">
+              {products.map(product => (
+                <ProductListItem
+                  key={product.id}
+                  product={product}
+                  currency={currency}
+                  exchangeRate={exchangeRate}
+                />
+              ))}
+            </div>
 
-          {/* Stats Footer */}
-          <Card className="mt-6">
-            <CardContent className="p-4">
+            {/* Stats Footer */}
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-sm text-muted-foreground">
+                  {t('productCatalog.totalProducts') || 'Всего товаров'}: {' '}
+                  <span className="font-semibold" data-testid="text-total-products">
+                    {products.length}
+                  </span>
+                </p>
+              </CardContent>
+            </Card>
+          </>
+        ) : (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <Package className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
+              <p className="text-lg font-medium mb-2">
+                {searchQuery
+                  ? t('productCatalog.noResults') || 'Ничего не найдено'
+                  : t('productCatalog.empty') || 'Пока нет товаров'}
+              </p>
               <p className="text-sm text-muted-foreground">
-                {t('productCatalog.totalProducts') || 'Всего товаров'}: {' '}
-                <span className="font-semibold" data-testid="text-total-products">
-                  {products.length}
-                </span>
+                {t('productCatalog.emptyHint') || 'Загрузите чек через OCR чтобы добавить товары'}
               </p>
             </CardContent>
           </Card>
-        </>
-      ) : (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <Package className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
-            <p className="text-lg font-medium mb-2">
-              {searchQuery 
-                ? t('productCatalog.noResults') || 'Ничего не найдено'
-                : t('productCatalog.empty') || 'Пока нет товаров'}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {t('productCatalog.emptyHint') || 'Загрузите чек через OCR чтобы добавить товары'}
-            </p>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+        )}
+      </div>
 
       {/* Mobile Navigation */}
       {isMobile && (
@@ -183,7 +187,6 @@ export default function ProductCatalogPage() {
         open={showMobileMenu}
         onOpenChange={setShowMobileMenu}
       />
-
+    </>
   );
-}  );
 }

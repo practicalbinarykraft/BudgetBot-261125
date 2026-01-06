@@ -4,6 +4,7 @@
  * Displays historical exchange rates with trends and charts
  */
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,6 +12,7 @@ import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useToast } from "@/hooks/use-toast";
 
 interface RateHistoryEntry {
   id: number;
@@ -26,6 +28,10 @@ interface RateHistory {
 }
 
 export default function CurrencyHistoryPage() {
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const isMobile = useIsMobile();
+  const { toast } = useToast();
+
   // Fetch rate history for last 30 days
   const { data, isLoading, error } = useQuery<RateHistory>({
     queryKey: ["/api/exchange-rates/history", { days: 30 }],
@@ -33,8 +39,8 @@ export default function CurrencyHistoryPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
-        <h1 className="text-3xl font-bold">Currency Exchange Rates History</h1>
+      <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6 pb-20 sm:pb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold">Currency Exchange Rates History</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <Skeleton key={i} className="h-48" />
@@ -46,9 +52,9 @@ export default function CurrencyHistoryPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto p-4 sm:p-6 pb-20 sm:pb-6">
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <p className="text-red-500">Failed to load currency history</p>
           </CardContent>
         </Card>
@@ -59,10 +65,11 @@ export default function CurrencyHistoryPage() {
   const currencies = Object.keys(data?.history || {}).sort();
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <>
+    <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6 pb-20 sm:pb-6">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Currency Exchange Rates History</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2">Currency Exchange Rates History</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Historical rates for the last 30 days (1 USD = X currency)
         </p>
       </div>
@@ -152,30 +159,29 @@ export default function CurrencyHistoryPage() {
       )}
     </div>
 
-      {/* Mobile Navigation */}
-      {isMobile && (
-        <MobileBottomNav
-          onMenuClick={() => setShowMobileMenu(true)}
-          onAddClick={() => {
-            toast({
-              title: "Добавить транзакцию",
-              description: "Функция скоро будет доступна!",
-            });
-          }}
-          onAiChatClick={() => {
-            toast({
-              title: "AI Chat",
-              description: "Функция AI чата скоро будет доступна!",
-            });
-          }}
-        />
-      )}
-
-      <MobileMenuSheet
-        open={showMobileMenu}
-        onOpenChange={setShowMobileMenu}
+    {/* Mobile Navigation */}
+    {isMobile && (
+      <MobileBottomNav
+        onMenuClick={() => setShowMobileMenu(true)}
+        onAddClick={() => {
+          toast({
+            title: "Добавить транзакцию",
+            description: "Функция скоро будет доступна!",
+          });
+        }}
+        onAiChatClick={() => {
+          toast({
+            title: "AI Chat",
+            description: "Функция AI чата скоро будет доступна!",
+          });
+        }}
       />
+    )}
 
+    <MobileMenuSheet
+      open={showMobileMenu}
+      onOpenChange={setShowMobileMenu}
+    />
+    </>
   );
-}  );
 }

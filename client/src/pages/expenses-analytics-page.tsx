@@ -50,37 +50,39 @@ export default function ExpensesAnalyticsPage() {
 
   return (
     <>
-      <div className="space-y-6 pb-20 sm:pb-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="space-y-4 sm:space-y-6 pb-20 sm:pb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link href="/app/dashboard">
-            <Button variant="ghost" size="icon" data-testid="button-back">
-              <ArrowLeft className="h-5 w-5" />
+            <Button variant="ghost" size="icon" data-testid="button-back" className="h-8 w-8 sm:h-10 sm:w-10">
+              <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold" data-testid="text-page-title">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold" data-testid="text-page-title">
               {t('analytics.title')}
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               {t('analytics.description')}
             </p>
           </div>
         </div>
 
-        <div className="flex gap-3 items-center">
+        <div className="flex gap-2 sm:gap-3 items-center w-full sm:w-auto">
           <Button
             variant="outline"
             size="sm"
             onClick={() => migrateMutation.mutate()}
             disabled={migrateMutation.isPending}
             data-testid="button-migrate"
+            className="flex-1 sm:flex-none text-xs sm:text-sm"
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${migrateMutation.isPending ? 'animate-spin' : ''}`} />
-            {migrateMutation.isPending ? t('analytics.migrating') : t('analytics.fix_unsorted')}
+            <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${migrateMutation.isPending ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">{migrateMutation.isPending ? t('analytics.migrating') : t('analytics.fix_unsorted')}</span>
+            <span className="sm:hidden">{migrateMutation.isPending ? t('analytics.migrating') : 'Исправить'}</span>
           </Button>
           <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="w-[150px]" data-testid="select-period">
+            <SelectTrigger className="w-[120px] sm:w-[150px] text-xs sm:text-sm" data-testid="select-period">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -92,18 +94,18 @@ export default function ExpensesAnalyticsPage() {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4" data-testid="tabs-list">
-          <TabsTrigger value="category" data-testid="tab-category">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+        <TabsList className="grid w-full grid-cols-4 h-auto" data-testid="tabs-list">
+          <TabsTrigger value="category" data-testid="tab-category" className="text-[10px] sm:text-xs px-2 sm:px-3 py-2">
             {t('analytics.tab.category')}
           </TabsTrigger>
-          <TabsTrigger value="person" data-testid="tab-person">
+          <TabsTrigger value="person" data-testid="tab-person" className="text-[10px] sm:text-xs px-2 sm:px-3 py-2">
             {t('analytics.tab.person')}
           </TabsTrigger>
-          <TabsTrigger value="type" data-testid="tab-type">
+          <TabsTrigger value="type" data-testid="tab-type" className="text-[10px] sm:text-xs px-2 sm:px-3 py-2">
             {t('analytics.tab.type')}
           </TabsTrigger>
-          <TabsTrigger value="unsorted" data-testid="tab-unsorted">
+          <TabsTrigger value="unsorted" data-testid="tab-unsorted" className="text-[10px] sm:text-xs px-2 sm:px-3 py-2">
             {t('analytics.tab.unsorted')}
           </TabsTrigger>
         </TabsList>
@@ -124,7 +126,7 @@ export default function ExpensesAnalyticsPage() {
             <UnsortedTab period={period} />
           </TabsContent>
         </Tabs>
-    </div>
+      </div>
 
       {/* Mobile Navigation */}
       {isMobile && (
@@ -149,7 +151,6 @@ export default function ExpensesAnalyticsPage() {
         open={showMobileMenu}
         onOpenChange={setShowMobileMenu}
       />
-
+    </>
   );
-}  );
 }

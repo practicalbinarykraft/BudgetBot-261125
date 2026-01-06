@@ -300,6 +300,19 @@ export function AppSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location === "/app/billing"}
+                  aria-label={t("nav.billing")}
+                >
+                  <Link href="/app/billing" data-testid="nav-billing" onClick={handleLinkClick}>
+                    <Sparkles className="w-4 h-4" aria-hidden="true" />
+                    <span>{t("nav.billing")}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

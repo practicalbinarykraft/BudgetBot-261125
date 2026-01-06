@@ -43,6 +43,7 @@ import auditLogRouter from "./audit-log.routes";
 import advancedAnalyticsRouter from "./advanced-analytics.routes";
 import backupRouter from "./backup.routes";
 import twoFactorRouter from "./two-factor.routes";
+import creditsRouter from "./credits.routes";
 
 export function registerRoutes(app: Express) {
   // API Documentation (Swagger UI)
@@ -66,6 +67,7 @@ export function registerRoutes(app: Express) {
   app.use("/api/budgets", budgetsRouter);
   app.use("/api/limits", limitsRouter);
   app.use("/api/settings", settingsRouter);
+  app.use("/api/credits", creditsRouter);
   app.use("/api/calibrations", calibrationsRouter);
   app.use("/api/telegram", telegramRouter);
   app.use("/api/tags", personalTagsRouter);

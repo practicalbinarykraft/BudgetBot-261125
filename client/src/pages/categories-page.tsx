@@ -100,7 +100,6 @@ export default function CategoriesPage() {
 
   if (isLoading) {
     return (
-    <>
       <div className="space-y-6 pb-20 sm:pb-6">
         <Skeleton className="h-20" />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -296,7 +295,6 @@ export default function CategoriesPage() {
           </Form>
         </DialogContent>
       </Dialog>
-    </div>
 
       {/* Mobile Navigation */}
       {isMobile && (
@@ -321,7 +319,6 @@ export default function CategoriesPage() {
         open={showMobileMenu}
         onOpenChange={setShowMobileMenu}
       />
-
+    </div>
   );
-}  );
 }

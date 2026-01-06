@@ -94,7 +94,6 @@ export default function TagDetailPage() {
 
   if (isLoadingTags || isLoadingStats) {
     return (
-    <>
       <div className="space-y-6 pb-20 sm:pb-6">
         <Skeleton className="h-20" />
         <Skeleton className="h-40" />
@@ -105,7 +104,6 @@ export default function TagDetailPage() {
 
   if (!currentTag || !tagId) {
     return (
-    <>
       <div className="space-y-6 pb-20 sm:pb-6">
         <div className="flex items-center gap-4">
           <Link href="/app/tags">
@@ -208,6 +206,7 @@ export default function TagDetailPage() {
           )}
         </CardContent>
       </Card>
+    </div>
 
       <AddTransactionDialog
         open={showAddDialog}
@@ -220,7 +219,6 @@ export default function TagDetailPage() {
         open={!!editingTransaction}
         onOpenChange={(open) => !open && setEditingTransaction(null)}
       />
-    </div>
 
       {/* Mobile Navigation */}
       {isMobile && (
@@ -245,7 +243,6 @@ export default function TagDetailPage() {
         open={showMobileMenu}
         onOpenChange={setShowMobileMenu}
       />
-
+    </>
   );
-}  );
 }

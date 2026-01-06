@@ -24,6 +24,7 @@ import { GeneralSettingsCard } from "./general-settings-card";
 import { TelegramIntegrationCard } from "./telegram-integration-card";
 import { AccountInfoCard } from "./account-info-card";
 import { TwoFactorSettings } from "@/components/settings/two-factor-settings";
+import { TelegramAccountSettings } from "@/components/settings/telegram-account-settings";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -174,6 +175,8 @@ export default function SettingsPage() {
         generateCodeMutation={generateCodeMutation}
         disconnectMutation={disconnectMutation}
       />
+
+      <TelegramAccountSettings />
 
       <TwoFactorSettings />
 

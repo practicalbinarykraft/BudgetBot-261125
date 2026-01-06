@@ -223,7 +223,6 @@ export default function WishlistPage() {
         onOpenChange={(open) => !open && setScheduleItem(null)}
         onSchedule={handleScheduleConfirm}
       />
-    </div>
 
       {/* Mobile Navigation */}
       {isMobile && (
@@ -248,7 +247,6 @@ export default function WishlistPage() {
         open={showMobileMenu}
         onOpenChange={setShowMobileMenu}
       />
-
+    </div>
   );
-}  );
 }

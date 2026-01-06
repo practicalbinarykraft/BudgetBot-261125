@@ -33,10 +33,13 @@ import {
   BarChart3,
   Target,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import * as React from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "@/i18n";
 import { cn } from "@/lib/utils";
+import { useTelegramSafeArea } from "@/hooks/use-telegram-safe-area";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Collapsible,
   CollapsibleContent,
@@ -52,6 +55,8 @@ export function MobileMenuSheet({ open, onOpenChange }: MobileMenuSheetProps) {
   const [location] = useLocation();
   const { user, logoutMutation } = useAuth();
   const { t } = useTranslation();
+  const safeArea = useTelegramSafeArea();
+  const isMobile = useIsMobile();
 
   // Track which groups are expanded
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
@@ -72,15 +77,46 @@ export function MobileMenuSheet({ open, onOpenChange }: MobileMenuSheetProps) {
     onOpenChange(false);
   };
 
+  // Определяем отступ для Sheet в зависимости от состояния Telegram Mini App
+  const getSheetPaddingTop = () => {
+    const webApp = window.Telegram?.WebApp;
+    const isTelegram = typeof webApp !== 'undefined' && !!webApp?.initData;
+
+    if (isTelegram && webApp) {
+      const isExpanded = webApp.isExpanded;
+      
+      if (isExpanded) {
+        // Развернуто на весь экран - нужен отступ сверху
+        return isMobile ? 16 : 20;
+      } else {
+        // Не развернуто - есть шторка, контейнер уже смещен, минимальный отступ
+        return isMobile ? 12 : 16;
+      }
+    } else {
+      // Обычный браузер - стандартный отступ
+      return isMobile ? 12 : 16;
+    }
+  };
+
+  const sheetPaddingTop = getSheetPaddingTop();
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[300px] sm:w-[340px] flex flex-col">
+      <SheetContent 
+        side="right" 
+        className="w-[300px] sm:w-[340px] flex flex-col [&>button]:!top-4"
+        style={{
+          top: safeArea.top > 0 ? `${safeArea.top}px` : '0',
+          height: safeArea.top > 0 ? `calc(100vh - ${safeArea.top}px)` : '100vh',
+          paddingTop: `${sheetPaddingTop}px`,
+        }}
+      >
         <SheetHeader className="flex-shrink-0">
           <SheetTitle>{t("nav.main_navigation")}</SheetTitle>
         </SheetHeader>
 
-        {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto mt-6 -mx-6 px-6">
+        {/* Content */}
+        <div className="flex-1 overflow-y-visible mt-6 -mx-6 px-6">
           <div className="space-y-2">
             {/* 1. Dashboard */}
             <Link href="/app/dashboard">
@@ -346,6 +382,21 @@ export function MobileMenuSheet({ open, onOpenChange }: MobileMenuSheetProps) {
               >
                 <Settings className="h-5 w-5" />
                 <span>{t("nav.settings")}</span>
+              </button>
+            </Link>
+
+            {/* 6. Billing */}
+            <Link href="/app/billing">
+              <button
+                onClick={handleLinkClick}
+                className={cn(
+                  "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg transition-colors text-sm",
+                  "hover:bg-accent",
+                  location === "/app/billing" ? "bg-accent text-primary font-medium" : "text-foreground"
+                )}
+              >
+                <Sparkles className="h-5 w-5" />
+                <span>{t("nav.billing")}</span>
               </button>
             </Link>
 

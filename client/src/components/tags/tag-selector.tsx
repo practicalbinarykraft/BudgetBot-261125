@@ -22,7 +22,7 @@ export function TagSelector({ value, onChange, disabled = false }: TagSelectorPr
       onValueChange={(v) => onChange(v === 'none' ? null : parseInt(v))}
       disabled={disabled || isLoading}
     >
-      <SelectTrigger data-testid="tag-selector-trigger" className="flex items-center">
+      <SelectTrigger data-testid="tag-selector-trigger" className="flex items-center h-9">
         <div className="flex items-center w-full">
           {selectedTag ? (
             <TagBadge tag={selectedTag} />

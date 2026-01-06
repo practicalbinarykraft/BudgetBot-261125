@@ -314,7 +314,6 @@ export default function RecurringPage() {
           </Form>
         </DialogContent>
       </Dialog>
-    </div>
 
       {/* Mobile Navigation */}
       {isMobile && (
@@ -339,7 +338,6 @@ export default function RecurringPage() {
         open={showMobileMenu}
         onOpenChange={setShowMobileMenu}
       />
-
+    </div>
   );
-}  );
 }

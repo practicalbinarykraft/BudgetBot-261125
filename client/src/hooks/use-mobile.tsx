@@ -3,26 +3,26 @@ import * as React from "react"
 const MOBILE_BREAKPOINT = 640
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean>(
-    typeof window !== 'undefined' ? window.innerWidth < MOBILE_BREAKPOINT : false
-  )
+  const [isMobile, setIsMobile] = React.useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
+    return mql.matches
+  })
 
   React.useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const onChange = () => {
-      const newValue = window.innerWidth < MOBILE_BREAKPOINT
-      console.log('📱 useIsMobile onChange:', JSON.stringify({ width: window.innerWidth, isMobile: newValue }))
+    const onChange = (e: MediaQueryListEvent | MediaQueryList) => {
+      const newValue = 'matches' in e ? e.matches : e.matches
+      console.log('📱 useIsMobile onChange:', JSON.stringify({ matches: newValue, isMobile: newValue }))
       setIsMobile(newValue)
     }
+    
+    // Проверяем сразу при монтировании
+    const currentMatches = mql.matches
+    console.log('📱 useIsMobile MOUNT:', JSON.stringify({ matches: currentMatches, isMobile: currentMatches }))
+    setIsMobile(currentMatches)
+    
     mql.addEventListener("change", onChange)
-
-    // Проверяем только ОДИН раз при монтировании
-    setIsMobile(prev => {
-      const currentIsMobile = window.innerWidth < MOBILE_BREAKPOINT
-      console.log('📱 useIsMobile MOUNT:', JSON.stringify({ width: window.innerWidth, isMobile: currentIsMobile }))
-      return currentIsMobile
-    })
-
     return () => mql.removeEventListener("change", onChange)
   }, [])
 

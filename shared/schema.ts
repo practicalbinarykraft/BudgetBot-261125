@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, serial, text, varchar, decimal, date, boolean, timestamp, integer, pgEnum, unique, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, varchar, decimal, date, boolean, timestamp, integer, pgEnum, unique, jsonb, check } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -21,16 +21,24 @@ export const toolExecutionStatusEnum = pgEnum('tool_execution_status', [
 // Users table
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
-  password: text("password").notNull(),
+  email: varchar("email", { length: 255 }).unique(), // Nullable for Telegram-only users
+  password: text("password"), // Nullable for Telegram-only users
   name: text("name").notNull(),
   telegramId: text("telegram_id").unique(),
   telegramUsername: text("telegram_username"),
+  telegramFirstName: text("telegram_first_name"),
+  telegramPhotoUrl: text("telegram_photo_url"),
   // 2FA fields
   twoFactorEnabled: boolean("two_factor_enabled").default(false).notNull(),
   twoFactorSecret: text("two_factor_secret"), // Encrypted TOTP secret
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  // CHECK constraint: user must have EITHER email OR telegram_id
+  authMethodCheck: check("users_auth_method_check", sql`(
+    (${table.email} IS NOT NULL AND ${table.password} IS NOT NULL) OR
+    (${table.telegramId} IS NOT NULL)
+  )`),
+}));
 
 // Transactions table
 export const transactions = pgTable("transactions", {

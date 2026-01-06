@@ -29,7 +29,8 @@ export default function TagsSettingsPage() {
   const [, navigate] = useLocation();
 
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const isMobile = useIsMobile();  const [dialogOpen, setDialogOpen] = useState(false);
+  const isMobile = useIsMobile();
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTag, setEditingTag] = useState<PersonalTag | null>(null);
   const [deletingTag, setDeletingTag] = useState<PersonalTag | null>(null);
   const { t } = useTranslation();
@@ -104,88 +105,89 @@ export default function TagsSettingsPage() {
       </div>
     );
   }
-  
+
   return (
-    <div className="container max-w-4xl mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold" data-testid="heading-tags-settings">
-            {t('tags.title')}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {t('tags.organize')}
-          </p>
-        </div>
-        
-        <Button 
-          onClick={() => setDialogOpen(true)}
-          data-testid="button-create-tag"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          {t('tags.create_tag')}
-        </Button>
-      </div>
-      
-      {tags.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 text-center">
-          <p className="text-muted-foreground mb-4">
-            {t('tags.no_tags')}
-          </p>
-          <Button 
-            variant="outline" 
+    <>
+      <div className="container max-w-4xl mx-auto p-4 sm:p-6 pb-20 sm:pb-6 space-y-4 sm:space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold" data-testid="heading-tags-settings">
+              {t('tags.title')}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {t('tags.organize')}
+            </p>
+          </div>
+
+          <Button
             onClick={() => setDialogOpen(true)}
-            data-testid="button-create-first-tag"
+            data-testid="button-create-tag"
           >
             <Plus className="h-4 w-4 mr-2" />
-            {t('tags.create_first_tag')}
+            {t('tags.create_tag')}
           </Button>
         </div>
-      ) : (
-        <div className="space-y-3">
-          {tags.map((tag) => (
-            <TagCard
-              key={tag.id}
-              tag={tag}
-              stats={tagStats[tag.id] || { transactionCount: 0, totalSpent: 0 }}
-              onEdit={() => handleEdit(tag)}
-              onDelete={() => handleDelete(tag)}
-              onViewDetails={() => handleViewDetails(tag.id)}
-              disabled={deleteMutation.isPending}
-            />
-          ))}
-        </div>
-      )}
-      
-      <CreateTagDialog 
-        open={dialogOpen} 
-        onClose={handleCloseDialog}
-        editTag={editingTag}
-      />
-      
-      <AlertDialog open={!!deletingTag} onOpenChange={() => setDeletingTag(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('tags.delete_tag')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('tags.delete_confirm')} "{deletingTag?.name}"?
-              {t('tags.delete_description')}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-delete">
-              {t('common.cancel')}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deletingTag && deleteMutation.mutate(deletingTag.id)}
-              disabled={deleteMutation.isPending}
-              data-testid="button-confirm-delete"
+
+        {tags.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 text-center">
+            <p className="text-muted-foreground mb-4">
+              {t('tags.no_tags')}
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => setDialogOpen(true)}
+              data-testid="button-create-first-tag"
             >
-              {deleteMutation.isPending ? t('tags.deleting') : t('tags.delete')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+              <Plus className="h-4 w-4 mr-2" />
+              {t('tags.create_first_tag')}
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {tags.map((tag) => (
+              <TagCard
+                key={tag.id}
+                tag={tag}
+                stats={tagStats[tag.id] || { transactionCount: 0, totalSpent: 0 }}
+                onEdit={() => handleEdit(tag)}
+                onDelete={() => handleDelete(tag)}
+                onViewDetails={() => handleViewDetails(tag.id)}
+                disabled={deleteMutation.isPending}
+              />
+            ))}
+          </div>
+        )}
+
+        <CreateTagDialog
+          open={dialogOpen}
+          onClose={handleCloseDialog}
+          editTag={editingTag}
+        />
+
+        <AlertDialog open={!!deletingTag} onOpenChange={() => setDeletingTag(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('tags.delete_tag')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t('tags.delete_confirm')} "{deletingTag?.name}"?
+                {t('tags.delete_description')}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel data-testid="button-cancel-delete">
+                {t('common.cancel')}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deletingTag && deleteMutation.mutate(deletingTag.id)}
+                disabled={deleteMutation.isPending}
+                data-testid="button-confirm-delete"
+              >
+                {deleteMutation.isPending ? t('tags.deleting') : t('tags.delete')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
 
       {/* Mobile Navigation */}
       {isMobile && (
@@ -210,7 +212,6 @@ export default function TagsSettingsPage() {
         open={showMobileMenu}
         onOpenChange={setShowMobileMenu}
       />
-
+    </>
   );
-}  );
 }
