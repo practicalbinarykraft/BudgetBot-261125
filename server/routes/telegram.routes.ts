@@ -4,8 +4,9 @@ import { users, telegramVerificationCodes } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { withAuth } from "../middleware/auth-utils";
 import { VERIFICATION_CODE_TTL_MINUTES } from "../telegram/config";
-import crypto from "crypto";
 import { TELEGRAM_BOT_TOKEN } from "../telegram/config";
+import { validateInitData } from "../services/telegram-validation.service";
+import { authRateLimiter } from "../middleware/rate-limit";
 
 const router = Router();
 
@@ -13,8 +14,9 @@ const router = Router();
  * Authenticate via Telegram Mini App
  *
  * Validates initData from Telegram WebApp and creates/returns user session
+ * Uses shared validation service to prevent code duplication
  */
-router.post("/webapp-auth", async (req, res) => {
+router.post("/webapp-auth", authRateLimiter, async (req, res) => {
   try {
     const { initData } = req.body;
 
@@ -22,91 +24,75 @@ router.post("/webapp-auth", async (req, res) => {
       return res.status(400).json({ message: "initData is required" });
     }
 
-    // Validate Telegram initData signature
-    const urlParams = new URLSearchParams(initData);
-    const hash = urlParams.get('hash');
-    urlParams.delete('hash');
-
-    // Sort params alphabetically
-    const dataCheckString = Array.from(urlParams.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, value]) => `${key}=${value}`)
-      .join('\n');
-
-    // Create secret key from bot token
-    const secretKey = crypto
-      .createHmac('sha256', 'WebAppData')
-      .update(TELEGRAM_BOT_TOKEN)
-      .digest();
-
-    // Calculate expected hash
-    const expectedHash = crypto
-      .createHmac('sha256', secretKey)
-      .update(dataCheckString)
-      .digest('hex');
-
-    // Verify hash
-    if (hash !== expectedHash) {
-      return res.status(401).json({ message: "Invalid initData signature" });
+    // Validate initData signature and freshness (prevents replay attacks)
+    const botToken = TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
+    if (!botToken) {
+      return res.status(500).json({ message: "Telegram bot token not configured" });
     }
 
-    // Parse user data
-    const userJson = urlParams.get('user');
-    if (!userJson) {
-      return res.status(400).json({ message: "User data not found in initData" });
+    const validationResult = validateInitData(initData, botToken);
+    
+    if (!validationResult.isValid) {
+      return res.status(401).json({ 
+        message: validationResult.error || "Invalid initData" 
+      });
     }
 
-    const telegramUser = JSON.parse(userJson);
-    const telegramId = telegramUser.id?.toString();
+    const telegramUser = validationResult.user!;
+    const telegramId = telegramUser.id.toString();
 
-    if (!telegramId) {
-      return res.status(400).json({ message: "Telegram user ID not found" });
-    }
-
-    // Find or create user
+    // Find user by telegram_id
     let [user] = await db
       .select()
       .from(users)
       .where(eq(users.telegramId, telegramId))
       .limit(1);
 
-    if (!user) {
-      // Create new user from Telegram data
-      const username = telegramUser.username || `user_${telegramId}`;
-      const email = `${telegramId}@telegram.user`; // Temporary email
+    if (user) {
+      // SCENARIO 1: User found with telegram_id
+      // Check if user has email and password (required for login)
+      if (user.email && user.password) {
+        // User has email+password → Auto-login
+        req.login(user, (err) => {
+          if (err) {
+            console.error("Error creating session:", err);
+            return res.status(500).json({ message: "Failed to create session" });
+          }
 
-      [user] = await db
-        .insert(users)
-        .values({
-          email,
-          username,
-          password: '', // No password for Telegram users
-          telegramId,
-          telegramUsername: telegramUser.username || null,
-          firstName: telegramUser.first_name || null,
-          lastName: telegramUser.last_name || null,
-          defaultCurrency: 'USD',
-          preferredLanguage: telegramUser.language_code || 'en',
-        })
-        .returning();
-    }
-
-    // Create session (using passport.js login)
-    req.login(user, (err) => {
-      if (err) {
-        console.error("Error creating session:", err);
-        return res.status(500).json({ message: "Failed to create session" });
+          return res.json({
+            success: true,
+            autoLogin: true,
+            user: {
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              telegramId: user.telegramId,
+              telegramUsername: user.telegramUsername,
+            },
+          });
+        });
+      } else {
+        // User exists but missing email/password → Requires email
+        return res.json({
+          success: false,
+          requiresEmail: true,
+          message: 'Please add email and password to your account',
+        });
       }
-
-      res.json({
-        user: {
-          id: user.id,
-          email: user.email,
-          username: user.username,
-          telegramId: user.telegramId,
+    } else {
+      // SCENARIO 2: User not found → Requires registration
+      // Don't create user automatically - require email/password registration
+      return res.json({
+        success: false,
+        requiresRegistration: true,
+        telegramId,
+        telegramData: {
+          firstName: telegramUser.first_name || null,
+          username: telegramUser.username || null,
+          photoUrl: telegramUser.photo_url || null,
         },
       });
-    });
+    }
   } catch (error) {
     console.error("Error in webapp-auth:", error);
     res.status(500).json({ message: "Authentication failed" });

@@ -4,14 +4,15 @@
  * Allows users to link/unlink their Telegram account
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { Send } from 'lucide-react';
+import { useTelegramMiniApp } from '@/hooks/use-telegram-miniapp';
+import { Send, CheckCircle } from 'lucide-react';
 
 interface User {
   id: number;
@@ -39,11 +40,49 @@ declare global {
 export function TelegramAccountSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isMiniApp, initData, telegramUser } = useTelegramMiniApp();
   const containerRef = useRef<HTMLDivElement>(null);
   const isLoadingRef = useRef(false);
+  const [isLinkingMiniApp, setIsLinkingMiniApp] = useState(false);
 
   const { data: user } = useQuery<User>({
     queryKey: ['/api/user'],
+  });
+
+  const linkMiniAppMutation = useMutation({
+    mutationFn: async (data: { initData: string; telegramId: string }) => {
+      const response = await fetch('/api/auth/link-telegram-miniapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          telegramId: data.telegramId,
+          initData: data.initData,
+        }),
+        credentials: 'include',
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to link Telegram');
+      }
+      return result;
+    },
+    onSuccess: () => {
+      toast({
+        title: '✅ Telegram linked!',
+        description: 'Your Telegram account has been successfully linked',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      setIsLinkingMiniApp(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: '❌ Failed to link Telegram',
+        description: error.message,
+        variant: 'destructive',
+      });
+      setIsLinkingMiniApp(false);
+    },
   });
 
   const linkMutation = useMutation({
@@ -55,21 +94,17 @@ export function TelegramAccountSettings() {
         credentials: 'include',
       });
 
-      const data = await response.json();
-
+      const result = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to link Telegram');
+        throw new Error(result.error || 'Failed to link Telegram');
       }
-
-      return data;
+      return result;
     },
     onSuccess: () => {
       toast({
         title: '✅ Telegram linked!',
         description: 'Your Telegram account has been successfully linked',
       });
-
-      // Refresh user data
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       isLoadingRef.current = false;
     },
@@ -79,10 +114,27 @@ export function TelegramAccountSettings() {
         description: error.message,
         variant: 'destructive',
       });
-
       isLoadingRef.current = false;
     },
   });
+
+  // Handle Mini App linking
+  async function handleLinkMiniApp() {
+    if (!isMiniApp || !initData || !telegramUser) {
+      toast({
+        title: 'Not available',
+        description: 'This feature is only available in Telegram Mini App',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsLinkingMiniApp(true);
+    linkMiniAppMutation.mutate({
+      initData,
+      telegramId: telegramUser.id.toString(),
+    });
+  }
 
   const unlinkMutation = useMutation({
     mutationFn: async () => {
@@ -239,10 +291,28 @@ export function TelegramAccountSettings() {
 
             <Separator />
 
-            <div className="flex flex-col items-start gap-3">
-              <p className="text-sm font-medium">Click to connect:</p>
-              <div ref={containerRef} className="w-full flex justify-start" />
-            </div>
+            {isMiniApp ? (
+              // Mini App: Use initData
+              <div className="flex flex-col items-start gap-3">
+                <p className="text-sm font-medium">Link your Telegram account:</p>
+                <Button
+                  onClick={handleLinkMiniApp}
+                  disabled={isLinkingMiniApp || linkMiniAppMutation.isPending}
+                  className="w-full sm:w-auto"
+                >
+                  {isLinkingMiniApp || linkMiniAppMutation.isPending ? 'Linking...' : 'Link Telegram Account'}
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Your Telegram account will be linked for automatic login
+                </p>
+              </div>
+            ) : (
+              // Web: Use Telegram Login Widget
+              <div className="flex flex-col items-start gap-3">
+                <p className="text-sm font-medium">Click to connect:</p>
+                <div ref={containerRef} className="w-full flex justify-start" />
+              </div>
+            )}
 
             <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
               <p className="text-xs text-blue-800 dark:text-blue-200">
