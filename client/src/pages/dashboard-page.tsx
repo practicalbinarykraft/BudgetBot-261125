@@ -28,12 +28,12 @@ export default function DashboardPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showCalibrateDialog, setShowCalibrateDialog] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const isMobile = useIsMobile();
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [dateFilter, setDateFilter] = useState<DateFilterValue>("month");
   const { toast } = useToast();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const isMobile = useIsMobile();
 
   const dateRange = getDateRange(dateFilter);
   const queryParams = dateRange 
@@ -154,7 +154,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <div className="space-y-6 pb-20 sm:pb-6">
+      <div className="space-y-4 sm:space-y-6 pb-20 sm:pb-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
           <div>
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">{t("dashboard.title")}</h1>
@@ -168,7 +168,7 @@ export default function DashboardPage() {
               className="w-full sm:w-auto text-xs sm:text-sm"
             >
               <Settings2 className="h-4 w-4 mr-2" />
-              {t("dashboard.calibrate_wallets")}
+              {isMobile ? t("wallets.calibrate") : t("dashboard.calibrate_wallets")}
             </Button>
             <Button
               onClick={() => setShowAddDialog(true)}
