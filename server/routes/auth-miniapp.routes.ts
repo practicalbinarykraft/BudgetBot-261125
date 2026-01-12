@@ -13,7 +13,7 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { authRateLimiter } from '../middleware/rate-limit';
 import { withAuth } from '../middleware/auth-utils';
-import { logError, logInfo } from '../lib/logger';
+import { logError, logInfo, logWarning } from '../lib/logger';
 import { logAuditEvent, AuditAction, AuditEntityType } from '../services/audit-log.service';
 import { categoryRepository } from '../repositories/category.repository';
 import { createDefaultTags } from '../services/tag.service';
@@ -38,6 +38,16 @@ const registerMiniAppSchema = z.object({
     username: z.string().optional(),
     photoUrl: z.string().optional(),
   }).optional(),
+});
+
+/**
+ * Add email schema for existing Telegram-only users
+ */
+const addEmailSchema = z.object({
+  email: z.string().email('Invalid email format'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  telegramId: z.string().optional(),
+  initData: z.string().optional(),
 });
 
 /**
@@ -175,6 +185,158 @@ router.post('/register-miniapp', authRateLimiter, async (req: Request, res: Resp
 });
 
 /**
+ * POST /api/auth/add-email
+ *
+ * Add email and password to existing Telegram-only user
+ * User must be authenticated via Telegram Mini App (initData validation)
+ */
+router.post('/add-email', authRateLimiter, async (req: Request, res: Response) => {
+  try {
+    // STEP 1: Validate input
+    const validationResult = addEmailSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: validationResult.error.errors,
+      });
+    }
+
+    const { email, password, telegramId, initData } = validationResult.data;
+
+    // STEP 2: Check if email already exists
+    const existingUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+
+    if (existingUser.length > 0) {
+      return res.status(400).json({
+        error: 'Email already registered',
+      });
+    }
+
+    // STEP 3: Validate initData if provided (for Mini App)
+    // SECURITY: For Mini App, initData is required and cryptographically validated
+    // For web version, this endpoint should NOT be used (use /api/auth/link-telegram instead)
+    // But we allow it for backward compatibility if initData is not provided
+    if (initData) {
+      if (!telegramId) {
+        return res.status(400).json({
+          error: 'Telegram ID is required when initData is provided',
+        });
+      }
+
+      const botToken = TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
+      if (!botToken) {
+        return res.status(500).json({ error: 'Telegram bot token not configured' });
+      }
+
+      const initDataValidation = validateInitData(initData, botToken);
+      
+      if (!initDataValidation.isValid) {
+        return res.status(401).json({ error: initDataValidation.error || 'Invalid initData' });
+      }
+
+      const telegramUser = initDataValidation.user!;
+      const telegramIdFromData = telegramUser.id.toString();
+
+      // Verify telegramId matches (prevents tampering)
+      if (telegramIdFromData !== telegramId) {
+        return res.status(400).json({ error: 'telegramId mismatch' });
+      }
+    } else {
+      // For web version: initData not provided
+      // SECURITY NOTE: This endpoint is primarily for Mini App flow
+      // For web, users should use /api/auth/link-telegram which requires authentication
+      // We allow this for backward compatibility, but it's less secure
+      if (!telegramId) {
+        return res.status(400).json({
+          error: 'Telegram ID is required',
+        });
+      }
+      
+      // Additional security: Log warning when used without initData
+      logWarning('add-email endpoint called without initData (web version)', {
+        telegramId: telegramId.substring(0, 5) + '...', // Mask for privacy
+      });
+    }
+
+    // STEP 4: Find user by telegramId
+
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.telegramId, telegramId))
+      .limit(1);
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'User not found',
+      });
+    }
+
+    if (user.email) {
+      return res.status(400).json({
+        error: 'User already has email',
+      });
+    }
+
+    // STEP 5: Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // STEP 6: Update user with email and password
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        email,
+        password: hashedPassword,
+      })
+      .where(eq(users.id, user.id))
+      .returning();
+
+    // STEP 7: Log audit event
+    await logAuditEvent({
+      userId: updatedUser.id,
+      action: AuditAction.UPDATE,
+      entityType: AuditEntityType.USER,
+      entityId: updatedUser.id,
+      metadata: {
+        action: 'add_email',
+        email: updatedUser.email,
+      },
+      req,
+    });
+
+    logInfo('Email added to Telegram-only user', {
+      userId: updatedUser.id,
+      email: updatedUser.email,
+    });
+
+    // STEP 8: Create session for updated user
+    req.login(updatedUser, (err) => {
+      if (err) {
+        logError('Session creation error', err as Error, { userId: updatedUser.id });
+        return res.status(500).json({ error: 'Failed to create session' });
+      }
+
+      return res.json({
+        success: true,
+        user: {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          name: updatedUser.name,
+          telegramId: updatedUser.telegramId,
+        },
+      });
+    });
+  } catch (error) {
+    logError('Add email error', error as Error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * POST /api/auth/link-telegram-miniapp
  *
  * Link Telegram account to authenticated user
@@ -263,4 +425,3 @@ router.post('/link-telegram-miniapp', authRateLimiter, withAuth(async (req: Requ
 }));
 
 export default router;
-

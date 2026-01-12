@@ -78,7 +78,9 @@ app.use((req, res, next) => {
   // Setup authentication (async - needs to check DB connection)
   await setupAuth(app);
   
+  console.log('[SERVER] About to register routes...');
   registerRoutes(app);
+  console.log('[SERVER] Routes registered');
 
   // Global error handler - MUST be last middleware
   app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
@@ -138,8 +140,10 @@ app.use((req, res, next) => {
     // Dynamic import to avoid loading vite in production
     const { setupVite } = await import("./vite");
     await setupVite(app, server);
+    logInfo("✅ Vite dev server setup complete");
   } else {
     serveStatic(app);
+    logInfo("✅ Static file serving setup complete");
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT

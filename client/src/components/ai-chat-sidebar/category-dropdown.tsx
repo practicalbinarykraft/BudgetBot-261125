@@ -2,6 +2,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Sparkles } from 'lucide-react';
 import { useTranslation } from '@/i18n/context';
+import { useTranslateCategory } from '@/lib/category-translations';
 
 interface Category {
   id: number;
@@ -30,6 +31,7 @@ export function CategoryDropdown({
   onChange 
 }: CategoryDropdownProps) {
   const { t } = useTranslation();
+  const translateCategory = useTranslateCategory();
   
   return (
     <div className="space-y-1.5">
@@ -63,7 +65,7 @@ export function CategoryDropdown({
               value={cat.name}
               data-testid={`option-category-${cat.id}`}
             >
-              {cat.icon && cat.icon !== 'Tag' ? `${cat.icon} ` : ''}{cat.name}
+              {cat.icon && cat.icon !== 'Tag' ? `${cat.icon} ` : ''}{translateCategory(cat.name)}
             </SelectItem>
           ))}
         </SelectContent>

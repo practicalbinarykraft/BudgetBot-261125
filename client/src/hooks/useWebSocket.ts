@@ -9,8 +9,58 @@ import { io, Socket } from 'socket.io-client';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 
-// WebSocket server URL
-const SOCKET_URL = import.meta.env.VITE_API_URL || window.location.origin;
+// WebSocket server URL - computed dynamically to avoid issues
+const getSocketUrl = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  
+  // Don't connect WebSocket in admin panel
+  if (window.location.pathname.startsWith('/admin')) {
+    return null;
+  }
+  
+  const apiUrl = import.meta.env.VITE_API_URL;
+  if (apiUrl) {
+    // Validate API URL
+    try {
+      const url = new URL(apiUrl);
+      if (url.hostname && !url.hostname.includes('undefined')) {
+        return apiUrl;
+      }
+    } catch (error) {
+      console.warn('[WebSocket] Invalid VITE_API_URL, using fallback:', apiUrl);
+    }
+  }
+  
+  // Fallback to current origin, but ensure it's valid
+  const hostname = window.location.hostname;
+  const port = window.location.port;
+  const protocol = window.location.protocol;
+  
+  // КРИТИЧНО: Если порт пустой, явно устанавливаем порт для localhost
+  if (!port || port === '' || port === 'undefined') {
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      // В dev режиме всегда используем порт 3000
+      const devPort = import.meta.env.DEV ? ':3000' : '';
+      const constructedOrigin = `${protocol}//${hostname}${devPort}`;
+      console.log('[WebSocket] Constructed URL for localhost without port:', constructedOrigin);
+      return constructedOrigin;
+    }
+    // Для других хостов используем стандартные порты
+    const defaultPort = protocol === 'https:' ? '' : ':80';
+    const constructedOrigin = `${protocol}//${hostname}${defaultPort}`;
+    console.log('[WebSocket] Constructed URL without port:', constructedOrigin);
+    return constructedOrigin;
+  }
+  
+  // Если порт есть, используем origin, но проверяем на undefined
+  const origin = window.location.origin;
+  if (!origin || origin.includes('undefined') || !origin.includes('://')) {
+    console.warn('[WebSocket] Invalid origin, skipping connection:', origin);
+    return null;
+  }
+  
+  return origin;
+};
 
 // Event types
 export enum NotificationEvent {
@@ -45,6 +95,14 @@ export function useWebSocket() {
 
   // Connect to WebSocket
   useEffect(() => {
+    // Get URL dynamically
+    const socketUrl = getSocketUrl();
+    
+    // Don't connect in admin panel or if no URL
+    if (!socketUrl) {
+      return;
+    }
+
     if (!user) {
       // Disconnect if user logs out
       if (socketRef.current) {
@@ -55,7 +113,37 @@ export function useWebSocket() {
     }
 
     // Connect to Socket.IO server
-    const socket = io(SOCKET_URL, {
+    // CRITICAL: Ensure socketUrl is valid and doesn't contain 'undefined'
+    if (!socketUrl || socketUrl.includes('undefined')) {
+      console.error('[WebSocket] Invalid socketUrl, skipping connection:', socketUrl);
+      return;
+    }
+
+    // Final validation - ensure URL is completely valid
+    let finalUrl = socketUrl;
+    try {
+      const url = new URL(socketUrl);
+      // If port is undefined, set it explicitly
+      if (!url.port && url.hostname === 'localhost') {
+        finalUrl = `${url.protocol}//${url.hostname}:3000`;
+        console.log('[WebSocket] Fixed localhost URL without port:', finalUrl);
+      }
+      // Validate the final URL
+      new URL(finalUrl); // This will throw if invalid
+      
+      // Final check - ensure no undefined in URL
+      if (finalUrl.includes('undefined')) {
+        console.error('[WebSocket] URL still contains undefined after validation:', finalUrl);
+        return;
+      }
+    } catch (error) {
+      console.error('[WebSocket] Invalid URL after validation, skipping connection:', socketUrl, error);
+      return;
+    }
+
+    // Создаем Socket.IO клиент с отключенным autoConnect
+    // Подключимся явно после проверки
+    const socket = io(finalUrl, {
       path: '/socket.io',
       auth: {
         userId: user.id,
@@ -63,7 +151,29 @@ export function useWebSocket() {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 5,
+      // Force Socket.IO to use HTTP transport, not native WebSocket
+      transports: ['polling', 'websocket'],
+      // Prevent Socket.IO from auto-detecting URL (which might use undefined port)
+      forceNew: false,
+      // Отключаем автоматическое подключение - подключимся явно после проверки
+      autoConnect: false,
+      // Явно указываем URL, чтобы Socket.IO не пытался его определить сам
+      withCredentials: true,
     });
+
+    // Подключаемся только после проверки, что URL валидный
+    if (socket && finalUrl && !finalUrl.includes('undefined')) {
+      try {
+        socket.connect();
+        console.log('[WebSocket] Connecting to:', finalUrl);
+      } catch (error) {
+        console.error('[WebSocket] Failed to connect:', error);
+        return;
+      }
+    } else {
+      console.error('[WebSocket] Cannot connect - invalid socket or URL');
+      return;
+    }
 
     socketRef.current = socket;
 

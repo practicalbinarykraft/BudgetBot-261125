@@ -270,4 +270,8 @@ export const webAiToolsTranslations: Translations = {
     en: 'Unknown',
     ru: 'Неизвестно',
   },
+  'ai_tools.free_messages': {
+    en: 'free messages',
+    ru: 'бесплатных сообщений',
+  },
 };

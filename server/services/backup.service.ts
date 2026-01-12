@@ -25,7 +25,7 @@ export interface UserDataExport {
   exportedAt: string;
   userId: number;
   user: {
-    email: string;
+    email: string | null;
     name: string;
     createdAt: Date;
   };

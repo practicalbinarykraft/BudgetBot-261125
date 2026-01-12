@@ -11,8 +11,8 @@ export function useIsMobile() {
 
   React.useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const onChange = (e: MediaQueryListEvent | MediaQueryList) => {
-      const newValue = 'matches' in e ? e.matches : e.matches
+    const onChange = (e: MediaQueryListEvent) => {
+      const newValue = e.matches
       console.log('📱 useIsMobile onChange:', JSON.stringify({ matches: newValue, isMobile: newValue }))
       setIsMobile(newValue)
     }

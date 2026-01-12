@@ -3,12 +3,14 @@ import { useAuth } from "@/hooks/use-auth";
 import { Redirect, useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useTranslation } from "@/i18n/context";
 import { LanguageToggle } from "@/components/language-toggle";
 import { LoginForm } from "@/components/auth/login-form";
 import { RegisterForm } from "@/components/auth/register-form";
 import { TelegramLoginButton } from "@/components/auth/telegram-login-button";
 import { TelegramLinkPrompt } from "@/components/auth/telegram-link-prompt";
+import { AddEmailForm } from "@/components/auth/add-email-form";
 import { useTelegramMiniApp } from "@/hooks/use-telegram-miniapp";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
@@ -23,8 +25,17 @@ export default function AuthPage() {
   
   const [activeTab, setActiveTab] = useState("login");
   const [showLinkPrompt, setShowLinkPrompt] = useState(false);
+  const [showEmailForm, setShowEmailForm] = useState(false);
   const [pendingTelegramId, setPendingTelegramId] = useState<string | null>(null);
   const [isCheckingMiniApp, setIsCheckingMiniApp] = useState(false);
+  const [linkPromptCount, setLinkPromptCount] = useState(0);
+  const [isAddingEmail, setIsAddingEmail] = useState(false);
+
+  // Load prompt decline count from localStorage on mount
+  useEffect(() => {
+    const count = parseInt(localStorage.getItem('telegramLinkDeclined') || '0', 10);
+    setLinkPromptCount(count);
+  }, []);
 
   // Handle Mini App authentication on mount
   useEffect(() => {
@@ -57,11 +68,8 @@ export default function AuthPage() {
         setPendingTelegramId(data.telegramId);
       } else if (data.requiresEmail) {
         // User exists but missing email - show email form
-        toast({
-          title: 'Требуется email',
-          description: 'Пожалуйста, добавьте email к вашему аккаунту',
-          variant: 'destructive',
-        });
+        setShowEmailForm(true);
+        setPendingTelegramId(data.telegramId || null);
       }
     } catch (error) {
       console.error('Mini App auth error:', error);
@@ -79,9 +87,22 @@ export default function AuthPage() {
     try {
       const user = await loginMutation.mutateAsync(data);
       
-      // After successful login, offer Telegram linking if in Mini App
-      if (isMiniApp && initData && !user.telegramId) {
-        setPendingTelegramId(telegramUser?.id?.toString() || null);
+      // After successful login, offer Telegram linking
+      // Show in Mini App if initData available, or in web (always available via widget)
+      // Only show if user hasn't declined 3+ times and hasn't dismissed permanently
+      const shouldShow = 
+        !user.telegramId &&
+        linkPromptCount < 3 &&
+        !localStorage.getItem('telegramLinkDismissed');
+      
+      if (shouldShow) {
+        // In Mini App, use initData; in web, will use Telegram Login Widget
+        if (isMiniApp && initData) {
+          setPendingTelegramId(telegramUser?.id?.toString() || null);
+        } else {
+          // For web, we'll use Telegram Login Widget in the prompt
+          setPendingTelegramId(null); // Will be set when user clicks widget
+        }
         setShowLinkPrompt(true);
       } else {
         setLocation('/app/dashboard');
@@ -116,7 +137,14 @@ export default function AuthPage() {
       queryClient.setQueryData(['/api/user'], result.user);
 
       // Offer Telegram linking if telegramId was provided
-      if (result.shouldOfferTelegramLink && result.telegramId) {
+      // Only show if user hasn't declined 3+ times and hasn't dismissed permanently
+      const shouldShow = 
+        result.shouldOfferTelegramLink && 
+        result.telegramId &&
+        linkPromptCount < 3 &&
+        !localStorage.getItem('telegramLinkDismissed');
+      
+      if (shouldShow) {
         setPendingTelegramId(result.telegramId);
         setShowLinkPrompt(true);
       } else {
@@ -132,52 +160,113 @@ export default function AuthPage() {
   };
 
   async function handleLinkTelegram() {
-    if (!initData || !pendingTelegramId) {
-      setShowLinkPrompt(false);
-      setLocation('/app/dashboard');
-      return;
-    }
+    // For Mini App: use initData
+    if (isMiniApp && initData && pendingTelegramId) {
+      try {
+        const response = await fetch('/api/auth/link-telegram-miniapp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            telegramId: pendingTelegramId,
+            initData,
+          }),
+          credentials: 'include',
+        });
 
-    try {
-      const response = await fetch('/api/auth/link-telegram-miniapp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          telegramId: pendingTelegramId,
-          initData,
-        }),
-        credentials: 'include',
-      });
+        if (!response.ok) {
+          throw new Error('Failed to link Telegram');
+        }
 
-      if (!response.ok) {
-        throw new Error('Failed to link Telegram');
+        // Save to localStorage
+        localStorage.setItem('telegramLinked', 'true');
+
+        toast({
+          title: t('auth.link_telegram_success') || '✅ Готово!',
+          description: t('auth.link_telegram_success_description') || 'В следующий раз вход будет автоматическим',
+        });
+
+        setShowLinkPrompt(false);
+        setLocation('/app/dashboard');
+      } catch (error) {
+        toast({
+          title: t('auth.link_telegram_error') || 'Ошибка',
+          description: t('auth.link_telegram_error_description') || 'Не удалось связать Telegram аккаунт',
+          variant: 'destructive',
+        });
+        setShowLinkPrompt(false);
+        setLocation('/app/dashboard');
       }
-
-      // Save to localStorage
-      localStorage.setItem('telegramLinked', 'true');
-
-      toast({
-        title: '✅ Готово!',
-        description: 'В следующий раз вход будет автоматическим',
-      });
-
-      setShowLinkPrompt(false);
-      setLocation('/app/dashboard');
-    } catch (error) {
-      toast({
-        title: 'Ошибка',
-        description: 'Не удалось связать Telegram аккаунт',
-        variant: 'destructive',
-      });
+    } else {
+      // For web: Telegram Login Widget will handle linking via callback in TelegramLinkPrompt
+      // This function is called by widget callback after successful linking
+      // Just close and redirect
       setShowLinkPrompt(false);
       setLocation('/app/dashboard');
     }
   }
 
   function handleDeclineLink() {
-    localStorage.setItem('telegramLinkPrompted', 'true');
+    // Increment decline count
+    const newCount = linkPromptCount + 1;
+    localStorage.setItem('telegramLinkDeclined', newCount.toString());
+    setLinkPromptCount(newCount);
+    
+    // If declined 3+ times, mark as permanently dismissed
+    if (newCount >= 3) {
+      localStorage.setItem('telegramLinkDismissed', 'true');
+    }
+    
     setShowLinkPrompt(false);
     setLocation('/app/dashboard');
+  }
+
+  async function handleAddEmail(data: { email: string; password: string; confirmPassword: string }) {
+    setIsAddingEmail(true);
+    try {
+      const response = await fetch('/api/auth/add-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+          telegramId: pendingTelegramId || telegramUser?.id?.toString(),
+          initData: isMiniApp ? initData : undefined, // Only send initData in Mini App
+        }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to add email');
+      }
+
+      const result = await response.json();
+      
+      // Update user in query cache
+      queryClient.setQueryData(['/api/user'], result.user);
+
+      toast({
+        title: t('auth.email_added_success') || '✅ Email added!',
+        description: t('auth.email_added_description') || 'Your account is now more secure',
+      });
+
+      setShowEmailForm(false);
+      
+      // After adding email, offer Telegram linking if available
+      if (isMiniApp && initData && pendingTelegramId) {
+        setShowLinkPrompt(true);
+      } else {
+        setLocation('/app/dashboard');
+      }
+    } catch (error: any) {
+      toast({
+        title: t('auth.email_add_error') || '❌ Error',
+        description: error.message || 'Failed to add email',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAddingEmail(false);
+    }
   }
 
   if (user) {
@@ -309,7 +398,26 @@ export default function AuthPage() {
           open={showLinkPrompt}
           onAccept={handleLinkTelegram}
           onDecline={handleDeclineLink}
+          isMiniApp={isMiniApp}
         />
+      )}
+
+      {/* Add Email Form Dialog */}
+      {showEmailForm && (
+        <Dialog open={showEmailForm} onOpenChange={(isOpen) => !isOpen && setShowEmailForm(false)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{t('auth.add_email_title') || 'Add Email to Account'}</DialogTitle>
+              <DialogDescription>
+                {t('auth.add_email_dialog_description') || 'Please add an email address and password to your account for better security and password recovery.'}
+              </DialogDescription>
+            </DialogHeader>
+            <AddEmailForm
+              onSubmit={handleAddEmail}
+              isPending={isAddingEmail}
+            />
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

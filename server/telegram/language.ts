@@ -12,8 +12,11 @@ import { getUserLanguage, type Language } from '@shared/i18n';
  */
 export async function getUserLanguageByTelegramId(telegramId: string): Promise<Language> {
   try {
+    // Используем явное указание полей, исключая isBlocked
     const [user] = await db
-      .select()
+      .select({
+        id: users.id,
+      })
       .from(users)
       .where(eq(users.telegramId, telegramId))
       .limit(1);

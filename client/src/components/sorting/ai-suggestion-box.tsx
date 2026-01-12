@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Sparkles, Tag, User } from "lucide-react";
 import type { Category, PersonalTag } from "@shared/schema";
+import { useTranslateCategory } from "@/lib/category-translations";
 
 interface AISuggestionBoxProps {
   categoryId: number | null;
@@ -45,6 +46,7 @@ export function AISuggestionBox({
   onTagChange,
 }: AISuggestionBoxProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const translateCategory = useTranslateCategory();
 
   return (
     <div className="w-full max-w-sm space-y-3 p-4 rounded-lg bg-muted/50 border" data-testid="ai-suggestion-box">
@@ -81,7 +83,7 @@ export function AISuggestionBox({
               <SelectContent>
                 {categories.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id.toString()}>
-                    {cat.name}
+                    {translateCategory(cat.name)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -96,7 +98,7 @@ export function AISuggestionBox({
             >
               {categoryId ? (
                 <Badge variant="secondary">
-                  {categories.find((c) => c.id === categoryId)?.name || "Unknown"}
+                  {translateCategory(categories.find((c) => c.id === categoryId)?.name || "Unknown")}
                 </Badge>
               ) : (
                 <span className="text-muted-foreground text-sm">No category</span>

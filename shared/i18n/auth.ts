@@ -75,7 +75,46 @@ export const authTranslations: Translations = {
   'auth.password': { en: 'Password', ru: 'Пароль' },
   'auth.password_placeholder': { en: '••••••••', ru: '••••••••' },
   'auth.login_button': { en: 'Login', ru: 'Войти' },
+  'auth.forgot_password': { en: 'Forgot password?', ru: 'Забыли пароль?' },
   'auth.or_continue_with': { en: 'Or continue with', ru: 'Или войти через' },
+  
+  // Telegram Link Prompt
+  'auth.link_telegram_title': { en: 'Sync with Telegram?', ru: 'Синхронизировать с Telegram?' },
+  'auth.link_telegram_description': { 
+    en: 'Next time you can log in automatically without entering your email and password. This will only take a few seconds.', 
+    ru: 'В следующий раз вы сможете войти автоматически без ввода логина и пароля. Это займет всего несколько секунд.' 
+  },
+  'auth.link_telegram_accept': { en: 'Yes, sync', ru: 'Да, синхронизировать' },
+  'auth.link_telegram_later': { en: 'Later', ru: 'Позже' },
+  'auth.link_telegram_success': { en: '✅ Done!', ru: '✅ Готово!' },
+  'auth.link_telegram_success_description': { 
+    en: 'Next time you can log in automatically', 
+    ru: 'В следующий раз вход будет автоматическим' 
+  },
+  'auth.link_telegram_error': { en: '❌ Error', ru: '❌ Ошибка' },
+  'auth.link_telegram_error_description': { 
+    en: 'Failed to link Telegram account', 
+    ru: 'Не удалось связать Telegram аккаунт' 
+  },
+  
+  // Add Email Form
+  'auth.add_email_description': { 
+    en: 'Add email to your account for password recovery and better security', 
+    ru: 'Добавьте email для восстановления пароля и повышения безопасности' 
+  },
+  'auth.add_email_button': { en: 'Add Email', ru: 'Добавить Email' },
+  'auth.adding_email': { en: 'Adding...', ru: 'Добавление...' },
+  'auth.add_email_title': { en: 'Add Email to Account', ru: 'Добавить Email к аккаунту' },
+  'auth.add_email_dialog_description': { 
+    en: 'Please add an email address and password to your account for better security and password recovery.', 
+    ru: 'Пожалуйста, добавьте email адрес и пароль к вашему аккаунту для повышения безопасности и восстановления пароля.' 
+  },
+  'auth.email_added_success': { en: '✅ Email added!', ru: '✅ Email добавлен!' },
+  'auth.email_added_description': { 
+    en: 'Your account is now more secure', 
+    ru: 'Ваш аккаунт теперь более защищен' 
+  },
+  'auth.email_add_error': { en: '❌ Error', ru: '❌ Ошибка' },
 
   // Register Form
   'auth.create_account': { en: 'Create account', ru: 'Создать аккаунт' },

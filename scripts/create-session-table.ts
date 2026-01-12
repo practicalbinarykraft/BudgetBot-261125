@@ -5,7 +5,12 @@
 
 import { Pool } from 'pg';
 
-const DB_URL = 'postgresql://neondb_owner:npg_Ih7NnWf2rAvE@ep-fancy-sea-ahwdfdjc-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require';
+// Use DATABASE_URL from environment or fallback to localhost
+const DB_URL = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/budget_bot';
+
+if (!process.env.DATABASE_URL) {
+  console.warn('⚠️  DATABASE_URL not set, using default localhost connection');
+}
 
 const pool = new Pool({ connectionString: DB_URL });
 

@@ -50,7 +50,7 @@ export async function processReceiptImage(
 
     if (!apiKey) {
       const { settingsRepository } = await import('../repositories/settings.repository');
-      apiKey = await settingsRepository.getAnthropicApiKey(userId);
+      apiKey = await settingsRepository.getAnthropicApiKey(userId) ?? undefined;
     }
 
     if (!apiKey) {

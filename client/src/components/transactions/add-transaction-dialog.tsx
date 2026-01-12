@@ -17,6 +17,7 @@ import { Category, PersonalTag } from "@shared/schema";
 import { Plus } from "lucide-react";
 import { CategoryCreateDialog } from "@/components/categories/category-create-dialog";
 import { TagSelector } from "@/components/tags/tag-selector";
+import { useTranslateCategory } from "@/lib/category-translations";
 
 interface AddTransactionDialogProps {
   open: boolean;
@@ -44,6 +45,7 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
+  const translateCategory = useTranslateCategory();
   const [showCreateCategory, setShowCreateCategory] = useState(false);
 
   // Client-side validation schema - simpler than server schema
@@ -249,7 +251,7 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
                     <SelectContent>
                       {categories.map((cat) => (
                         <SelectItem key={cat.id} value={cat.name}>
-                          {cat.name}
+                          {translateCategory(cat.name)}
                         </SelectItem>
                       ))}
                       

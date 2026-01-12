@@ -24,8 +24,14 @@ export async function handleStatusCommand(bot: TelegramBot, msg: TelegramBot.Mes
   let lang = await getUserLanguageByTelegramId(telegramId);
 
   try {
+    // Используем явное указание полей, исключая isBlocked
     const [user] = await db
-      .select()
+      .select({
+        id: users.id,
+        name: users.name,
+        telegramId: users.telegramId,
+        telegramUsername: users.telegramUsername,
+      })
       .from(users)
       .where(eq(users.telegramId, telegramId))
       .limit(1);

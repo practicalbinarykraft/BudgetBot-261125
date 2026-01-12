@@ -12,6 +12,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Camera, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { useTranslation } from '@/i18n/context';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -26,6 +27,7 @@ export function ChatInput({
   isSending,
   isUploading,
 }: ChatInputProps) {
+  const { t } = useTranslation();
   const [message, setMessage] = useState('');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -144,7 +146,7 @@ export function ChatInput({
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyPress}
-          placeholder="Ask AI..."
+          placeholder={t('ai_tools.input_placeholder')}
           className="resize-none overflow-hidden"
           style={{ minHeight: '44px', maxHeight: '120px' }}
           rows={1}

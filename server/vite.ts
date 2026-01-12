@@ -40,10 +40,36 @@ export async function setupVite(app: Express, server: Server) {
     appType: "custom",
   });
 
-  app.use(vite.middlewares);
+  // SPA fallback middleware - handles SPA routes BEFORE Vite
+  // This ensures /admin/analytics etc. get index.html immediately
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
 
+    // Skip for:
+    // - API routes
+    // - WebSocket
+    // - Vite internal paths (@vite, @fs, @id, etc.)
+    // - Source files (/src/)
+    if (
+      url.startsWith("/api/") ||
+      url.startsWith("/socket.io/") ||
+      url.startsWith("/@") ||
+      url.startsWith("/src/")
+    ) {
+      return next();
+    }
+
+    // Check if URL has a file extension (but not .html)
+    const pathWithoutQuery = url.split('?')[0];
+    const hasFileExtension = /\.\w+$/.test(pathWithoutQuery);
+    
+    // If it's a file request (has extension and not .html), let Vite handle it
+    if (hasFileExtension && !pathWithoutQuery.endsWith('.html')) {
+      return next();
+    }
+
+    // For SPA routes (no extension or .html), serve index.html immediately
+    // This allows client-side routing to work
     try {
       const clientTemplate = path.resolve(
         import.meta.dirname,
@@ -61,11 +87,16 @@ export async function setupVite(app: Express, server: Server) {
       const page = await vite.transformIndexHtml(url, template);
       // Preserve security headers set by securityHeaders middleware
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
+      return; // Don't continue to next middleware
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);
       next(e);
     }
   });
+
+  // Vite middleware handles all file requests (JS, CSS, images, etc.)
+  // It runs after SPA fallback, so file requests are handled correctly
+  app.use(vite.middlewares);
 }
 
 export function serveStatic(app: Express) {

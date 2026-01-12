@@ -31,6 +31,8 @@ export const users = pgTable("users", {
   // 2FA fields
   twoFactorEnabled: boolean("two_factor_enabled").default(false).notNull(),
   twoFactorSecret: text("two_factor_secret"), // Encrypted TOTP secret
+  // Admin fields
+  isBlocked: boolean("is_blocked").default(false).notNull(), // Blocked by admin
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({
   // CHECK constraint: user must have EITHER email OR telegram_id
@@ -243,6 +245,21 @@ export const telegramVerificationCodes = pgTable("telegram_verification_codes", 
   isUsed: boolean("is_used").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// Password Recovery Codes table
+// Stores temporary 6-digit codes for password reset via Telegram or Email
+export const passwordRecoveryCodes = pgTable("password_recovery_codes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 6 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertPasswordRecoveryCodeSchema = createInsertSchema(passwordRecoveryCodes);
+export type PasswordRecoveryCode = typeof passwordRecoveryCodes.$inferSelect;
+export type InsertPasswordRecoveryCode = z.infer<typeof insertPasswordRecoveryCodeSchema>;
 
 // Personal Tags table (WHO classification)
 export const personalTags = pgTable("personal_tags", {
@@ -874,3 +891,182 @@ export * from "./schemas/product-catalog";
 // ASSETS & LIABILITIES SCHEMAS (Modular)
 // ========================================
 export * from "./schemas/assets.schema";
+
+// ========================================
+// ADMIN PANEL SCHEMAS
+// ========================================
+
+// Admin Users table (separate from regular users)
+export const adminUsers = pgTable("admin_users", {
+  id: serial("id").primaryKey(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  role: text("role").notNull().default("support"), // 'super_admin', 'support', 'analyst', 'readonly'
+  permissions: text("permissions").array().default([]),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  lastLoginAt: timestamp("last_login_at"),
+  ipWhitelist: text("ip_whitelist").array(),
+  isActive: boolean("is_active").default(true).notNull(),
+});
+
+// Admin Audit Log table (tracks all admin actions)
+export const adminAuditLog = pgTable("admin_audit_log", {
+  id: serial("id").primaryKey(),
+  adminId: integer("admin_id").references(() => adminUsers.id, { onDelete: "set null" }),
+  action: varchar("action", { length: 100 }).notNull(), // 'user.ban', 'plan.change', 'broadcast.send', 'login', 'logout'
+  entityType: varchar("entity_type", { length: 50 }), // 'user', 'transaction', 'plan', 'broadcast'
+  entityId: text("entity_id"), // ID of affected entity (TEXT for flexibility)
+  changes: jsonb("changes"), // before/after state or metadata
+  ipAddress: varchar("ip_address", { length: 45 }), // IPv4 or IPv6
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Broadcasts table (for admin panel)
+export const broadcasts = pgTable("broadcasts", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  templateId: text("template_id"), // Reference to template (optional)
+  targetSegment: text("target_segment"), // 'all', 'active', 'new_users', 'at_risk', etc.
+  targetUserIds: integer("target_user_ids").array(), // Specific user IDs (optional)
+  status: text("status").notNull().default("draft"), // 'draft', 'scheduled', 'sending', 'completed', 'cancelled'
+  scheduledAt: timestamp("scheduled_at"), // When to send (if scheduled)
+  sentAt: timestamp("sent_at"), // When actually sent
+  createdBy: integer("created_by").references(() => adminUsers.id, { onDelete: "set null" }),
+  totalRecipients: integer("total_recipients").default(0),
+  sentCount: integer("sent_count").default(0),
+  failedCount: integer("failed_count").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Broadcast recipients table (tracks who received the broadcast)
+export const broadcastRecipients = pgTable("broadcast_recipients", {
+  id: serial("id").primaryKey(),
+  broadcastId: integer("broadcast_id").notNull().references(() => broadcasts.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("pending"), // 'pending', 'sent', 'failed'
+  sentAt: timestamp("sent_at"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Broadcast templates table (reusable message templates)
+export const broadcastTemplates = pgTable("broadcast_templates", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  description: text("description"),
+  variables: text("variables").array(), // Available variables like {name}, {email}, etc.
+  createdBy: integer("created_by").references(() => adminUsers.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Zod Schemas for Admin
+export const insertAdminUserSchema = createInsertSchema(adminUsers, {
+  email: z.string().email(),
+  passwordHash: z.string().min(1),
+  role: z.enum(["super_admin", "support", "analyst", "readonly"]).optional(),
+  permissions: z.array(z.string()).optional(),
+  ipWhitelist: z.array(z.string()).optional(),
+}).omit({ id: true, createdAt: true, lastLoginAt: true });
+
+export const insertAdminAuditLogSchema = createInsertSchema(adminAuditLog, {
+  action: z.string().min(1).max(100),
+  entityType: z.string().max(50).optional(),
+  entityId: z.string().optional(),
+  changes: z.any().optional(), // JSONB can be any
+  ipAddress: z.string().max(45).optional(),
+  userAgent: z.string().optional(),
+}).omit({ id: true, createdAt: true });
+
+// Broadcasts Zod Schemas
+export const insertBroadcastSchema = createInsertSchema(broadcasts, {
+  title: z.string().min(1),
+  message: z.string().min(1),
+  templateId: z.string().optional(),
+  targetSegment: z.enum(["all", "active", "new_users", "at_risk", "churned", "power_users"]).optional(),
+  targetUserIds: z.array(z.number().int().positive()).optional(),
+  status: z.enum(["draft", "scheduled", "sending", "completed", "cancelled"]).optional(),
+  scheduledAt: z.date().or(z.string()).optional(),
+  sentAt: z.date().or(z.string()).optional(),
+}).omit({ id: true, createdAt: true, updatedAt: true });
+
+export const insertBroadcastRecipientSchema = createInsertSchema(broadcastRecipients, {
+  status: z.enum(["pending", "sent", "failed"]).optional(),
+  sentAt: z.date().or(z.string()).optional(),
+  errorMessage: z.string().optional(),
+}).omit({ id: true, createdAt: true });
+
+export const insertBroadcastTemplateSchema = createInsertSchema(broadcastTemplates, {
+  name: z.string().min(1),
+  title: z.string().min(1),
+  message: z.string().min(1),
+  description: z.string().optional(),
+  variables: z.array(z.string()).optional(),
+}).omit({ id: true, createdAt: true, updatedAt: true });
+
+// Types
+export type AdminUser = typeof adminUsers.$inferSelect;
+export type InsertAdminUser = z.infer<typeof insertAdminUserSchema>;
+export type AdminAuditLog = typeof adminAuditLog.$inferSelect;
+export type InsertAdminAuditLog = z.infer<typeof insertAdminAuditLogSchema>;
+export type Broadcast = typeof broadcasts.$inferSelect;
+export type InsertBroadcast = z.infer<typeof insertBroadcastSchema>;
+export type BroadcastRecipient = typeof broadcastRecipients.$inferSelect;
+export type InsertBroadcastRecipient = z.infer<typeof insertBroadcastRecipientSchema>;
+export type BroadcastTemplate = typeof broadcastTemplates.$inferSelect;
+export type InsertBroadcastTemplate = z.infer<typeof insertBroadcastTemplateSchema>;
+
+// ========================================
+// SUPPORT CHATS SCHEMAS
+// ========================================
+
+// Support Chats table (for admin panel)
+export const supportChats = pgTable("support_chats", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("open"), // 'open', 'closed', 'pending', 'resolved'
+  priority: text("priority").notNull().default("normal"), // 'low', 'normal', 'high', 'urgent'
+  subject: text("subject"), // Subject/topic of the chat
+  assignedTo: integer("assigned_to").references(() => adminUsers.id, { onDelete: "set null" }), // Admin assigned to handle this chat
+  lastMessageAt: timestamp("last_message_at"), // When last message was sent
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Support Messages table
+export const supportMessages = pgTable("support_messages", {
+  id: serial("id").primaryKey(),
+  chatId: integer("chat_id").notNull().references(() => supportChats.id, { onDelete: "cascade" }),
+  senderType: text("sender_type").notNull(), // 'user' or 'admin'
+  senderId: integer("sender_id"), // user_id if sender_type='user', admin_id if sender_type='admin'
+  message: text("message").notNull(),
+  isRead: boolean("is_read").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Support Chats Zod Schemas
+export const insertSupportChatSchema = createInsertSchema(supportChats, {
+  status: z.enum(["open", "closed", "pending", "resolved"]).optional(),
+  priority: z.enum(["low", "normal", "high", "urgent"]).optional(),
+  subject: z.string().optional(),
+  assignedTo: z.number().int().positive().optional(),
+  lastMessageAt: z.date().or(z.string()).optional(),
+}).omit({ id: true, createdAt: true, updatedAt: true });
+
+export const insertSupportMessageSchema = createInsertSchema(supportMessages, {
+  senderType: z.enum(["user", "admin"]),
+  senderId: z.number().int().positive().optional(),
+  message: z.string().min(1).max(4000),
+  isRead: z.boolean().optional(),
+}).omit({ id: true, createdAt: true });
+
+// Support Types
+export type SupportChat = typeof supportChats.$inferSelect;
+export type InsertSupportChat = z.infer<typeof insertSupportChatSchema>;
+export type SupportMessage = typeof supportMessages.$inferSelect;
+export type InsertSupportMessage = z.infer<typeof insertSupportMessageSchema>;

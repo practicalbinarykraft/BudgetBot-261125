@@ -28,6 +28,7 @@ import {
   handleLastCommand,
   handleIncomeCommand,
   handleStatusCommand,
+  handleRecoverCommand,
 } from '../commands/index';
 import { handleCurrencyCommand } from '../currency-command';
 import { getUserLanguageByTelegramId } from '../language';
@@ -72,6 +73,10 @@ const commandRegistry: Record<string, CommandHandler> = {
   '/language': async (bot, msg) => await handleLanguageCommand(bot, msg),
   '/lang': async (bot, msg) => await handleLanguageCommand(bot, msg), // Алиас
   '/currency': async (bot, msg) => await handleCurrencyCommand(bot, msg),
+
+  // Восстановление пароля
+  '/recover': async (bot, msg) => await handleRecoverCommand(bot, msg),
+  '/reset': async (bot, msg) => await handleRecoverCommand(bot, msg), // Алиас
 };
 
 /**

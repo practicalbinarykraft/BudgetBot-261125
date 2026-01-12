@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useTranslation } from "@/i18n/context";
 import { useMemo } from "react";
+import { Link } from "wouter";
 
 type LoginFormData = {
   email: string;
@@ -80,6 +81,17 @@ export function LoginForm({ onSubmit, isPending }: LoginFormProps) {
         >
           {isPending ? `${t('auth.login_button')}...` : t('auth.login_button')}
         </Button>
+        
+        {/* Forgot password link */}
+        <div className="text-center text-sm">
+          <Link 
+            href="/recover-password" 
+            className="text-primary hover:underline"
+            data-testid="link-forgot-password"
+          >
+            {t('auth.forgot_password') || 'Forgot password?'}
+          </Link>
+        </div>
       </form>
     </Form>
   );

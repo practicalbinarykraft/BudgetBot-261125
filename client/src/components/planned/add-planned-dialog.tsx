@@ -10,7 +10,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useQuery } from "@tanstack/react-query";
 import { Calendar, DollarSign, Tag } from "lucide-react";
 import type { Category } from "@shared/schema";
-import { useTranslation } from "@/i18n";
+import { useTranslation } from "@/i18n/context";
+import { useTranslateCategory } from "@/lib/category-translations";
 
 interface AddPlannedDialogProps {
   open: boolean;
@@ -28,6 +29,7 @@ type FormData = {
 
 export function AddPlannedDialog({ open, onOpenChange, onAdd, isSubmitting }: AddPlannedDialogProps) {
   const { t, language } = useTranslation();
+  const translateCategory = useTranslateCategory();
   
   const formSchema = useMemo(() => z.object({
     name: z.string().min(1, t("planned.validation_name_required")),
@@ -161,7 +163,7 @@ export function AddPlannedDialog({ open, onOpenChange, onAdd, isSubmitting }: Ad
                     <SelectContent>
                       {categories?.map((cat) => (
                         <SelectItem key={cat.id} value={cat.name}>
-                          {cat.name}
+                          {translateCategory(cat.name)}
                         </SelectItem>
                       ))}
                     </SelectContent>

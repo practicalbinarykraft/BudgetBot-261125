@@ -300,7 +300,6 @@ export default function DashboardMobileDemoPage() {
       <MobileMenuSheet
         open={showMobileMenu}
         onOpenChange={setShowMobileMenu}
-        onAddTransaction={() => setShowAddDialog(true)}
       />
 
       {/* Диалоги */}

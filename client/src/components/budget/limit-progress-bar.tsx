@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { getProgressColorZone, type LimitProgress } from "@/types/limit-progress";
 import { TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
+import { useTranslateCategory } from "@/lib/category-translations";
 
 interface LimitProgressBarProps {
   limit: LimitProgress;
@@ -10,6 +11,7 @@ interface LimitProgressBarProps {
 
 export function LimitProgressBar({ limit }: LimitProgressBarProps) {
   const { t } = useTranslation();
+  const translateCategory = useTranslateCategory();
   const { categoryName, categoryIcon, spent, limitAmount, percentage, period } = limit;
 
   const zone = getProgressColorZone(percentage);
@@ -81,7 +83,7 @@ export function LimitProgressBar({ limit }: LimitProgressBarProps) {
             </span>
           )}
           <h3 className="font-medium" data-testid="text-category-name">
-            {categoryName}
+            {translateCategory(categoryName)}
           </h3>
         </div>
         <Badge variant={style.badgeVariant} data-testid="badge-status">

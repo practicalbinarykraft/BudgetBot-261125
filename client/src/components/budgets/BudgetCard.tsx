@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Trash2, Pencil, AlertCircle } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
+import { useTranslateCategory } from "@/lib/category-translations";
 
 export function BudgetCard({
   budget,
@@ -19,6 +20,7 @@ export function BudgetCard({
   onDelete: () => void;
 }) {
   const { t } = useTranslation();
+  const translateCategory = useTranslateCategory();
   const limitAmount = parseFloat(budget.limitAmount);
 
   const statusColors = {
@@ -44,7 +46,7 @@ export function BudgetCard({
             className="h-3 w-3 rounded-full flex-shrink-0 bg-muted-foreground"
             style={category?.color ? { backgroundColor: category.color } : undefined}
           />
-          <h3 className="font-semibold truncate">{category?.name || t("budgets.unknown_category")}</h3>
+          <h3 className="font-semibold truncate">{category ? translateCategory(category.name) : t("budgets.unknown_category")}</h3>
         </div>
         <div className="flex gap-1 flex-shrink-0">
           <Button

@@ -5,16 +5,10 @@
  * Junior-Friendly: ~80 lines, clear test cases
  */
 
-/**
- * TelegramLinkPrompt Component Tests
- *
- * Tests for Telegram linking prompt dialog
- * Junior-Friendly: ~80 lines, clear test cases
- */
-
+import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { screen } from '@testing-library/react';
+import { renderWithProviders, userEvent } from '@/__tests__/test-utils';
 import { TelegramLinkPrompt } from '../telegram-link-prompt';
 
 // Setup DOM environment for tests
@@ -29,7 +23,7 @@ describe('TelegramLinkPrompt', () => {
     const onDecline = vi.fn();
 
     // Act
-    render(
+    renderWithProviders(
       <TelegramLinkPrompt
         open={true}
         onAccept={onAccept}
@@ -50,7 +44,7 @@ describe('TelegramLinkPrompt', () => {
     const onDecline = vi.fn();
 
     // Act
-    render(
+    renderWithProviders(
       <TelegramLinkPrompt
         open={false}
         onAccept={onAccept}
@@ -68,7 +62,7 @@ describe('TelegramLinkPrompt', () => {
     const onAccept = vi.fn();
     const onDecline = vi.fn();
 
-    render(
+    renderWithProviders(
       <TelegramLinkPrompt
         open={true}
         onAccept={onAccept}
@@ -91,7 +85,7 @@ describe('TelegramLinkPrompt', () => {
     const onAccept = vi.fn();
     const onDecline = vi.fn();
 
-    render(
+    renderWithProviders(
       <TelegramLinkPrompt
         open={true}
         onAccept={onAccept}

@@ -9,6 +9,7 @@ import { UseFormReturn } from "react-hook-form";
 import { insertPlannedIncomeSchema } from "@shared/schema";
 import { z } from "zod";
 import { useTranslation } from "@/i18n/context";
+import { useTranslateCategory } from "@/lib/category-translations";
 
 type FormData = z.infer<typeof insertPlannedIncomeSchema>;
 
@@ -39,6 +40,7 @@ export function PlannedIncomeFormDialog({
   isPending: boolean;
 }) {
   const { t } = useTranslation();
+  const translateCategory = useTranslateCategory();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -153,7 +155,7 @@ export function PlannedIncomeFormDialog({
                               className="h-3 w-3 rounded-full bg-muted-foreground"
                               style={category.color ? { backgroundColor: category.color } : undefined}
                             />
-                            {category.name}
+                            {translateCategory(category.name)}
                           </div>
                         </SelectItem>
                       ))}

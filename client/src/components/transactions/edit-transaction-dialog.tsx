@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/i18n/context";
+import { useTranslateCategory } from "@/lib/category-translations";
 import { z } from "zod";
 
 interface EditTransactionDialogProps {
@@ -35,6 +36,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
+  const translateCategory = useTranslateCategory();
 
   // Client-side validation schema
   const formSchema = z.object({
@@ -226,7 +228,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
                     <SelectContent>
                       {categories.map((cat) => (
                         <SelectItem key={cat.id} value={cat.name}>
-                          {cat.name}
+                          {translateCategory(cat.name)}
                         </SelectItem>
                       ))}
                     </SelectContent>

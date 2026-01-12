@@ -160,7 +160,7 @@ export default function AssetDetailPage() {
       {/* Current Value */}
       <AssetValueCard
         currentValue={currentValue}
-        change={change}
+        change={change || null}
         onCalibrate={() => setShowCalibration(true)}
       />
 

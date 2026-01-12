@@ -33,6 +33,8 @@ import { webLandingTranslations } from './web-landing';
 import { webAnalyticsTranslations } from './web-analytics';
 import { webAssetsTranslations } from './web-assets';
 import { webCreditsTranslations } from './web-credits';
+import { passwordRecoveryTranslations } from './password-recovery';
+import { adminTranslations } from './admin';
 
 // Export types
 export type { Language, Translation, Translations } from './types';
@@ -68,6 +70,8 @@ const allTranslations: Translations = {
   ...webAnalyticsTranslations,
   ...webAssetsTranslations,
   ...webCreditsTranslations,
+  ...passwordRecoveryTranslations,
+  ...adminTranslations,
 };
 
 /**

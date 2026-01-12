@@ -50,8 +50,26 @@ export function parseTransactionText(
   let currency: string = defaultCurrency;
   let description = '';
 
-  // Match amounts with thousand separators: 200.000, 200,000, 1.500.000
+  // Match amounts with thousand separators: 200.000, 200,000, 1.500.000, 555000
+  // Также ищем валюту отдельно, если она указана после числа (например, "555000 IDR")
   const amountMatch = cleaned.match(/(\d+(?:[.,]\d{3})*(?:[.,]\d{1,2})?[kк]?)\s*([₽₹$]|руб|rub|idr|rp|usd)?/i);
+  
+  // Если не нашли валюту в основном паттерне, ищем её отдельно после числа
+  // Например: "555000 IDR", "интернет 555000 idr"
+  let currencyFromText = '';
+  if (amountMatch && !amountMatch[2]) {
+    // Ищем валюту после числа (может быть через пробел или в конце строки)
+    const currencyMatch = cleaned.match(/\d+\s+(idr|rp|usd|rub|руб|eur|€|₽|₹|\$)/i);
+    if (currencyMatch) {
+      currencyFromText = currencyMatch[1];
+    } else {
+      // Ищем валюту в конце строки, если число было в начале
+      const endCurrencyMatch = cleaned.match(/(idr|rp|usd|rub|руб|eur)\s*$/i);
+      if (endCurrencyMatch) {
+        currencyFromText = endCurrencyMatch[1];
+      }
+    }
+  }
 
   if (!amountMatch) {
     return null;
@@ -88,19 +106,35 @@ export function parseTransactionText(
     return null;
   }
 
-  const currencySymbol = amountMatch[2];
-  if (currencySymbol && CURRENCY_SYMBOLS[currencySymbol]) {
-    currency = CURRENCY_SYMBOLS[currencySymbol];
-  } else if (cleaned.includes('usd')) {
-    currency = 'USD';
-  } else if (cleaned.includes('€') || cleaned.includes('eur')) {
-    currency = 'EUR';
-  } else if (cleaned.includes('฿') || cleaned.includes('thb')) {
-    currency = 'THB';
-  } else if (cleaned.includes('₽') || cleaned.includes('руб')) {
-    currency = 'RUB';
-  } else if (cleaned.includes('₹') || cleaned.includes('idr') || cleaned.includes('rp')) {
-    currency = 'IDR';
+  const currencySymbol = amountMatch[2] || currencyFromText;
+  
+  // Определяем валюту из символа или текста
+  if (currencySymbol) {
+    const symbolLower = currencySymbol.toLowerCase();
+    if (CURRENCY_SYMBOLS[symbolLower]) {
+      currency = CURRENCY_SYMBOLS[symbolLower];
+    } else if (symbolLower === 'idr' || symbolLower === 'rp') {
+      currency = 'IDR';
+    } else if (symbolLower === 'usd' || symbolLower === '$') {
+      currency = 'USD';
+    } else if (symbolLower === 'rub' || symbolLower === 'руб' || symbolLower === '₽') {
+      currency = 'RUB';
+    }
+  }
+  
+  // Если валюта не определена из символа, ищем в тексте
+  if (currency === defaultCurrency) {
+    if (cleaned.includes('usd') || cleaned.includes('$')) {
+      currency = 'USD';
+    } else if (cleaned.includes('€') || cleaned.includes('eur')) {
+      currency = 'EUR';
+    } else if (cleaned.includes('฿') || cleaned.includes('thb')) {
+      currency = 'THB';
+    } else if (cleaned.includes('₽') || cleaned.includes('руб') || cleaned.includes('rub')) {
+      currency = 'RUB';
+    } else if (cleaned.includes('₹') || cleaned.includes('idr') || cleaned.includes('rp')) {
+      currency = 'IDR';
+    }
   }
 
   description = cleaned

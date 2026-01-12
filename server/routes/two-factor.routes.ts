@@ -12,7 +12,10 @@ import {
   disableTwoFactor,
   hasTwoFactorEnabled,
 } from '../services/two-factor.service';
-import { AuthenticatedRequest } from '../types';
+// AuthenticatedRequest type - user is guaranteed to be present after auth middleware
+interface AuthenticatedRequest extends Request {
+  user: Express.User;
+}
 
 const router = Router();
 
@@ -61,7 +64,7 @@ router.post('/setup', async (req: Request, res: Response, next: NextFunction) =>
       return res.status(400).json({ error: '2FA is already enabled' });
     }
 
-    const setup = await generateTwoFactorSecret(authReq.user.id, authReq.user.email);
+    const setup = await generateTwoFactorSecret(authReq.user.id, authReq.user.email || '');
     res.json({
       secret: setup.secret,
       qrCode: setup.qrCode,

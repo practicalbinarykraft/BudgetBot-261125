@@ -1,3 +1,4 @@
+import React from "react";
 import { Switch, Route, Redirect, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -19,11 +20,13 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useChatSidebar } from "@/stores/chat-sidebar-store";
 import { useTelegramPaddingTopStyle } from "@/hooks/use-telegram-safe-area";
 import { useEffect, useState, lazy, Suspense } from "react";
+import { AdminQueryClientProvider } from "@/components/admin/AdminQueryClientProvider";
 
 // ===== Lazy Load Pages for Better Performance =====
 // Critical pages (loaded immediately)
 import LandingPage from "@/pages/landing-page";
 import AuthPage from "@/pages/auth-page";
+import RecoverPasswordPage from "@/pages/recover-password-page";
 import DashboardPage from "@/pages/dashboard-page";
 import DashboardMobileDemoPage from "@/pages/dashboard-mobile-demo-page";
 
@@ -56,22 +59,66 @@ const AddTransactionDialog = lazy(() =>
   import("@/components/transactions/add-transaction-dialog").then(m => ({ default: m.AddTransactionDialog }))
 );
 
+// Admin pages (lazy loaded)
+const AdminLoginPage = lazy(() => import("@/pages/admin/auth/login"));
+const AdminDashboardPage = lazy(() => import("@/pages/admin/dashboard/index"));
+const AdminUsersListPage = lazy(() => import("@/pages/admin/users/list"));
+const AdminUserDetailPage = lazy(() => import("@/pages/admin/users/[id]"));
+const AdminAnalyticsPage = lazy(() => import("@/pages/admin/analytics/index"));
+const AdminSystemMonitoringPage = lazy(() => import("@/pages/admin/system/monitoring"));
+const AdminAuditLogPage = lazy(() => import("@/pages/admin/audit-log/index"));
+const AdminBroadcastsPage = lazy(() => import("@/pages/admin/broadcasts/index"));
+const AdminSupportPage = lazy(() => import("@/pages/admin/support/index"));
+
 // Landing page with redirect logic for authenticated users
 function LandingPageWrapper() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const [location] = useLocation();
 
   useEffect(() => {
-    if (user) {
+    // НИКОГДА не редиректим если мы на админ-странице
+    // Админ-страницы имеют свою логику авторизации и не должны перенаправляться
+    if (location.startsWith('/admin')) {
+      return;
+    }
+    
+    // Редиректим обычных пользователей только если мы НЕ на админ-странице
+    if (user && !location.startsWith('/admin')) {
       setLocation('/app/dashboard');
     }
-  }, [user, setLocation]);
+  }, [user, setLocation, location]);
+
+  // Не показываем landing page если мы на админ-странице
+  if (location.startsWith('/admin')) {
+    return null;
+  }
 
   if (user) {
     return null;
   }
 
   return <LandingPage />;
+}
+
+// Админ-маршруты (AdminQueryClientProvider оборачивается в App())
+function AdminRoutes() {
+  return (
+    <Suspense fallback={<PageLoading />}>
+      <Switch>
+        <Route path="/admin" component={() => <Redirect to="/admin/dashboard" />} />
+        <Route path="/admin/login" component={AdminLoginPage} />
+        <Route path="/admin/dashboard" component={AdminDashboardPage} />
+        <Route path="/admin/users/:id" component={AdminUserDetailPage} />
+        <Route path="/admin/users" component={AdminUsersListPage} />
+        <Route path="/admin/analytics" component={AdminAnalyticsPage} />
+        <Route path="/admin/broadcasts" component={AdminBroadcastsPage} />
+        <Route path="/admin/support" component={AdminSupportPage} />
+        <Route path="/admin/system" component={AdminSystemMonitoringPage} />
+        <Route path="/admin/audit-log" component={AdminAuditLogPage} />
+      </Switch>
+    </Suspense>
+  );
 }
 
 function Router() {
@@ -81,6 +128,7 @@ function Router() {
         {/* Public routes */}
         <Route path="/" component={LandingPageWrapper} />
         <Route path="/login" component={AuthPage} />
+        <Route path="/recover-password" component={RecoverPasswordPage} />
 
         {/* Protected app routes */}
         <ProtectedRoute path="/app/dashboard-mobile-demo" component={DashboardMobileDemoPage} />
@@ -139,6 +187,7 @@ function AppContent() {
     }
   }, [user, showOnboarding]);
 
+  // Public routes (login, landing) - no layout
   if (!user) {
     return (
       <main className="flex-1 overflow-auto bg-background">
@@ -147,6 +196,7 @@ function AppContent() {
     );
   }
 
+  // Regular app routes - with AppSidebar and header
   return (
     <>
       <SidebarProvider style={style as React.CSSProperties}>
@@ -166,7 +216,7 @@ function AppContent() {
               </div>
               <CreditsWidget />
             </header>
-            <main className="flex-1 overflow-y-auto px-4 sm:px-6 pb-20 sm:pb-6 bg-background">
+            <main className="flex-1 overflow-y-auto px-4 sm:px-6 pt-4 sm:pt-6 pb-20 sm:pb-6 bg-background">
               <Router />
             </main>
           </div>
@@ -207,18 +257,67 @@ function AppContent() {
 }
 
 export default function App() {
+  // Определяем, находимся ли мы в админ-панели
+  const [isAdminRoute, setIsAdminRoute] = useState(
+    typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')
+  );
+
+  // Отслеживаем изменения маршрута
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const checkAdminRoute = () => {
+      setIsAdminRoute(window.location.pathname.startsWith('/admin'));
+    };
+    
+    // Проверяем при навигации
+    window.addEventListener('popstate', checkAdminRoute);
+    const originalPushState = history.pushState;
+    const originalReplaceState = history.replaceState;
+    
+    history.pushState = function(...args) {
+      originalPushState.apply(history, args);
+      checkAdminRoute();
+    };
+    
+    history.replaceState = function(...args) {
+      originalReplaceState.apply(history, args);
+      checkAdminRoute();
+    };
+    
+    return () => {
+      window.removeEventListener('popstate', checkAdminRoute);
+      history.pushState = originalPushState;
+      history.replaceState = originalReplaceState;
+    };
+  }, []);
+
+  // TooltipProvider всегда доступен
+  // Для админ-панели используем AdminQueryClientProvider с I18nProvider (но без AuthProvider)
+  // I18nProvider условно загружает данные только вне админ-панели, но сам провайдер доступен
+  // Для обычного приложения используем обычный QueryClientProvider с AuthProvider и I18nProvider
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <AuthProvider>
-          <WebSocketProvider>
+    <TooltipProvider delayDuration={300}>
+      {isAdminRoute ? (
+        // Админ-панель - используем AdminQueryClientProvider с I18nProvider (без AuthProvider)
+        <AdminQueryClientProvider>
+          <I18nProvider>
+            <AdminRoutes />
+          </I18nProvider>
+        </AdminQueryClientProvider>
+      ) : (
+        // Обычное приложение - используем обычный QueryClientProvider с AuthProvider и I18nProvider
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
             <I18nProvider>
-              <AppContent />
+              <WebSocketProvider>
+                <AppContent />
+              </WebSocketProvider>
             </I18nProvider>
-          </WebSocketProvider>
-        </AuthProvider>
-        <Toaster />
-      </TooltipProvider>
-    </QueryClientProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      )}
+      <Toaster />
+    </TooltipProvider>
   );
 }

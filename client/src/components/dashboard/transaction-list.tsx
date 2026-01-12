@@ -147,7 +147,7 @@ export function TransactionList({ transactions, onDelete, onEdit, showDelete = f
                 )}
                 {transaction.source !== "manual" && (
                   <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2 hidden sm:inline-flex">
-                    {translateSource(transaction.source, t)}
+                    {translateSource(transaction.source || 'manual', t)}
                   </Badge>
                 )}
               </div>

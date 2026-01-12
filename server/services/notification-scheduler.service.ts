@@ -4,6 +4,7 @@ import { settings, users } from '@shared/schema';
 import { eq, and, isNotNull } from 'drizzle-orm';
 import { getTelegramBot } from '../telegram/bot';
 import { t } from '@shared/i18n';
+import { userRepository } from '../repositories/user.repository';
 
 const scheduledTasks = new Map<number, cron.ScheduledTask>();
 
@@ -49,20 +50,17 @@ export async function scheduleNotificationForUser(userId: number) {
       return;
     }
 
-    const user = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
+    // Используем userRepository, который обрабатывает отсутствие isBlocked
+    const user = await userRepository.getUserById(userId);
 
-    if (!user.length || !user[0].telegramId) {
+    if (!user || !user.telegramId) {
       return;
     }
 
     const notificationTime = userSettings[0].notificationTime || '09:00';
     const timezone = userSettings[0].timezone || 'UTC';
     const language = (userSettings[0].language || 'en') as 'en' | 'ru';
-    const telegramId = user[0].telegramId;
+    const telegramId = user.telegramId;
 
     // Validate notification time format
     if (!/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/.test(notificationTime)) {

@@ -9,14 +9,7 @@ import { useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 
-interface TelegramUser {
-  id: number;
-  first_name: string;
-  username?: string;
-  photo_url?: string;
-  auth_date: number;
-  hash: string;
-}
+import type { TelegramUser } from '@shared/types/telegram';
 
 declare global {
   interface Window {

@@ -409,7 +409,7 @@ export function MobileMenuSheet({ open, onOpenChange }: MobileMenuSheetProps) {
         <div className="flex-shrink-0 border-t pt-4 mt-4 space-y-2">
           <div className="px-3 py-2 text-sm text-muted-foreground">
             <div className="font-medium text-foreground mb-1">{t("common.signed_in_as")}</div>
-            <div className="truncate">{user?.email || user?.username}</div>
+            <div className="truncate">{user?.email || user?.telegramUsername || user?.name}</div>
           </div>
 
           <button

@@ -198,8 +198,8 @@ export async function handleAiChatMessage(
         'financial_advisor',
         chatBillingMode.provider,
         {
-          input: aiResponse.usage.input_tokens || 2000,
-          output: aiResponse.usage.output_tokens || 500
+          input: aiResponse.usage.inputTokens || 2000,
+          output: aiResponse.usage.outputTokens || 500
         },
         chatBillingMode.billingMode === 'free'
       );

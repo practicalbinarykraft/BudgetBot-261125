@@ -76,6 +76,7 @@ router.post("/webapp-auth", authRateLimiter, async (req, res) => {
         return res.json({
           success: false,
           requiresEmail: true,
+          telegramId, // Return telegramId for the form
           message: 'Please add email and password to your account',
         });
       }

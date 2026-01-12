@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/i18n/context";
+import { useTranslateCategory } from "@/lib/category-translations";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -32,6 +33,7 @@ export default function CategoriesPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
+  const translateCategory = useTranslateCategory();
 
   const { data: categories = [], isLoading } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
@@ -150,7 +152,7 @@ export default function CategoriesPage() {
                       <Tag className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <p className="font-medium">{category.name}</p>
+                      <p className="font-medium">{translateCategory(category.name)}</p>
                       <Badge variant="secondary" className="text-xs mt-1">{t("categories.type_income")}</Badge>
                     </div>
                   </div>
@@ -189,7 +191,7 @@ export default function CategoriesPage() {
                       <Tag className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <p className="font-medium">{category.name}</p>
+                      <p className="font-medium">{translateCategory(category.name)}</p>
                       <Badge variant="secondary" className="text-xs mt-1">{t("categories.type_expense")}</Badge>
                     </div>
                   </div>
@@ -229,7 +231,7 @@ export default function CategoriesPage() {
                   <FormItem>
                     <FormLabel>{t("categories.name")}</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Groceries, Salary" data-testid="input-category-name" {...field} />
+                      <Input placeholder={t("categories.name_placeholder")} data-testid="input-category-name" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

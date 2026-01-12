@@ -1,14 +1,19 @@
 #!/bin/bash
 
-# Import CSV data to Neon DB
+# Import CSV data to database
 # Usage: ./scripts/import-csv-data.sh
 
 set -e
 
-DB_URL="postgresql://neondb_owner:npg_Ih7NnWf2rAvE@ep-fancy-sea-ahwdfdjc-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
+# Use DATABASE_URL from environment or fallback to localhost
+DB_URL="${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/budget_bot}"
 CSV_DIR="$HOME/Downloads/BD budget bot"
 
-echo "🚀 Starting CSV import to Neon DB..."
+if [ -z "$DATABASE_URL" ]; then
+  echo "⚠️  DATABASE_URL not set, using default localhost connection"
+fi
+
+echo "🚀 Starting CSV import to database..."
 
 # Order matters - tables with foreign keys must be imported after their dependencies
 TABLES=(

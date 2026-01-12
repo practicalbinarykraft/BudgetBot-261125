@@ -28,6 +28,11 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  
+  // Проверяем, находимся ли мы в админ-панели
+  // В админ-панели используется отдельная система аутентификации
+  const isAdminRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
+  
   const {
     data: user,
     error,
@@ -35,6 +40,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useQuery<SelectUser | undefined, Error>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
+    // Не загружаем данные в админ-панели
+    enabled: !isAdminRoute,
   });
 
   const loginMutation = useMutation({

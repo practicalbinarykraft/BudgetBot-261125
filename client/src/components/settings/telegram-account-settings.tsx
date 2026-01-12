@@ -22,14 +22,7 @@ interface User {
   telegramUsername: string | null;
 }
 
-interface TelegramUser {
-  id: number;
-  first_name: string;
-  username?: string;
-  photo_url?: string;
-  auth_date: number;
-  hash: string;
-}
+import type { TelegramUser } from '@shared/types/telegram';
 
 declare global {
   interface Window {

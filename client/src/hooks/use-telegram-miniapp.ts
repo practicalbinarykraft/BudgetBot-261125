@@ -7,19 +7,13 @@
 
 import { useState, useEffect } from 'react';
 
-interface TelegramUser {
-  id: number;
-  first_name: string;
-  username?: string;
-  photo_url?: string;
-  language_code?: string;
-}
+import type { TelegramUser } from '@shared/types/telegram';
 
 interface TelegramMiniAppState {
   isMiniApp: boolean;
   initData: string | null;
   telegramUser: TelegramUser | null;
-  webApp: typeof window.Telegram.WebApp | null;
+  webApp: any; // Telegram WebApp type - using any to avoid complex type definitions
 }
 
 /**
@@ -55,12 +49,23 @@ export function useTelegramMiniApp(): TelegramMiniAppState {
       
       // Get initData and user info
       const initData = tg.initData;
-      const user = tg.initDataUnsafe?.user || null;
+      const unsafeUser = tg.initDataUnsafe?.user;
+      
+      // Map Telegram WebApp user to TelegramUser type
+      const telegramUser: TelegramUser | null = unsafeUser ? {
+        id: unsafeUser.id,
+        first_name: unsafeUser.first_name || '',
+        username: unsafeUser.username,
+        photo_url: unsafeUser.photo_url,
+        auth_date: Math.floor(Date.now() / 1000), // Use current timestamp as fallback
+        hash: '', // Not available in initDataUnsafe
+        language_code: unsafeUser.language_code,
+      } : null;
       
       setState({
         isMiniApp: true,
         initData: initData || null,
-        telegramUser: user,
+        telegramUser,
         webApp: tg,
       });
     } else {

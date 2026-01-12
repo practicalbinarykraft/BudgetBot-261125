@@ -15,30 +15,33 @@ import { useLocation } from 'wouter';
 import { useCreditsBalance } from '@/hooks/use-credits-balance';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useEffect, useState } from 'react';
+import { useTranslation } from '@/i18n/context';
 
 interface ChatHeaderProps {
   onClose: () => void;
 }
 
 /**
- * Получить название текущей страницы
+ * Получить ключ перевода для текущей страницы
  *
  * Для джуна: AI использует эту информацию чтобы понять контекст вопроса
  */
-function getPageContext(location: string): string {
-  if (location === '/' || location === '/app/dashboard') return 'Dashboard';
-  if (location.includes('/transactions')) return 'Transactions';
-  if (location.includes('/wallets')) return 'Wallets';
-  if (location.includes('/goals')) return 'Goals';
-  if (location.includes('/budgets')) return 'Budgets';
-  if (location.includes('/analytics')) return 'Analytics';
-  if (location.includes('/settings')) return 'Settings';
-  return 'Unknown';
+function getPageContextKey(location: string): string {
+  if (location === '/' || location === '/app/dashboard') return 'ai_tools.page_dashboard';
+  if (location.includes('/transactions')) return 'ai_tools.page_transactions';
+  if (location.includes('/wallets')) return 'ai_tools.page_wallets';
+  if (location.includes('/goals')) return 'ai_tools.page_goals';
+  if (location.includes('/budgets')) return 'ai_tools.page_budgets';
+  if (location.includes('/analytics')) return 'ai_tools.page_analytics';
+  if (location.includes('/settings')) return 'ai_tools.page_settings';
+  if (location.includes('/categories')) return 'ai_tools.page_categories';
+  return 'ai_tools.page_unknown';
 }
 
 export function ChatHeader({ onClose }: ChatHeaderProps) {
   const [location] = useLocation();
-  const pageContext = getPageContext(location);
+  const pageContextKey = getPageContextKey(location);
+  const { t } = useTranslation();
   const { data: balance } = useCreditsBalance();
   const isMobile = useIsMobile();
   const [paddingTop, setPaddingTop] = useState<number>(12);
@@ -92,9 +95,9 @@ export function ChatHeader({ onClose }: ChatHeaderProps) {
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-purple-500" />
           <div>
-            <h3 className="font-semibold text-sm sm:text-base text-foreground">AI Assistant</h3>
+            <h3 className="font-semibold text-sm sm:text-base text-foreground">{t('ai_tools.ai_assistant')}</h3>
             <p className="text-xs text-muted-foreground">
-              Currently on: {pageContext}
+              {t('ai_tools.currently_on')}: {t(pageContextKey)}
             </p>
           </div>
         </div>
@@ -112,7 +115,7 @@ export function ChatHeader({ onClose }: ChatHeaderProps) {
         <div className="flex items-center gap-1.5 px-2 py-1 bg-purple-50 dark:bg-purple-950/30 rounded-md border border-purple-200 dark:border-purple-800">
           <MessageSquare className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
           <span className="text-xs font-medium text-purple-700 dark:text-purple-300">
-            {balance.messagesRemaining}/{balance.totalGranted} free messages
+            {balance.messagesRemaining}/{balance.totalGranted} {t('ai_tools.free_messages')}
           </span>
         </div>
       )}

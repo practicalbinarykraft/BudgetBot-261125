@@ -20,6 +20,7 @@ import { logInfo, logError, logWarning } from '../lib/logger';
 import { dispatchCommand, isCommand, parseCommand } from './handlers/command-registry';
 import { routeCallback } from './handlers/callbacks';
 import { withUser, withUserCallback, findUserByTelegramId } from './middleware/with-user';
+import { isUpdateProcessed, markUpdateProcessed } from './middleware/deduplication';
 
 // Специализированные хендлеры
 import { handleTextMessage, handlePhotoMessage } from './commands/index';
@@ -89,8 +90,25 @@ function createBotInstance(): TelegramBot | null {
     const webhookPath = `/telegram/webhook/${TELEGRAM_BOT_TOKEN!.split(':')[1]}`;
     const fullWebhookUrl = `${webhookUrl}${webhookPath}`;
 
+    // КРИТИЧНО: Проверить, не установлен ли уже webhook другим сервером
+    instance.getWebHookInfo()
+      .then((info) => {
+        if (info.url && info.url !== fullWebhookUrl) {
+          logWarning('Another webhook is already set!', {
+            currentUrl: info.url,
+            tryingToSet: fullWebhookUrl,
+            warning: 'This may cause conflicts if both servers are running',
+          });
+        } else if (info.url === fullWebhookUrl) {
+          logInfo('Webhook already set correctly', { url: fullWebhookUrl });
+        }
+      })
+      .catch((error) => {
+        logError('Failed to check webhook info', error as Error);
+      });
+
     instance.setWebHook(fullWebhookUrl)
-      .then(() => logInfo('Telegram webhook set successfully', { mode: 'webhook' }))
+      .then(() => logInfo('Telegram webhook set successfully', { mode: 'webhook', url: fullWebhookUrl }))
       .catch((error) => logError('Failed to set Telegram webhook', error as Error));
 
     logInfo('Telegram bot initialized in WEBHOOK mode');
@@ -98,6 +116,26 @@ function createBotInstance(): TelegramBot | null {
   }
 
   // Polling режим (development)
+  // КРИТИЧНО: Проверить, не установлен ли webhook на прод сервере
+  if (process.env.NODE_ENV === 'production') {
+    logWarning('⚠️  Polling mode in production! This may conflict with webhook.');
+  }
+  
+  // Проверяем, не установлен ли webhook (чтобы избежать конфликтов)
+  const tempInstance = new TelegramBot(TELEGRAM_BOT_TOKEN!, { polling: false });
+  tempInstance.getWebHookInfo()
+    .then((info) => {
+      if (info.url) {
+        logWarning('Webhook is already set on another server!', {
+          webhookUrl: info.url,
+          warning: 'Polling may conflict with webhook. Consider using DISABLE_TELEGRAM_BOT=true on localhost',
+        });
+      }
+    })
+    .catch((error) => {
+      logError('Failed to check webhook info before polling', error as Error);
+    });
+
   const instance = new TelegramBot(TELEGRAM_BOT_TOKEN!, {
     polling: { interval: 300, autoStart: true, params: { timeout: 10 } }
   });
@@ -119,8 +157,23 @@ function createBotInstance(): TelegramBot | null {
 function setupMessageHandlers(): void {
   if (!bot) return;
 
-  // Обработка входящих сообщений
-  bot.on('message', handleIncomingMessage);
+  // Обработка входящих сообщений с дедупликацией
+  bot.on('message', (msg, metadata) => {
+    // metadata содержит update_id при polling режиме
+    const updateId = (metadata as any)?.update_id;
+    if (updateId && isUpdateProcessed(updateId)) {
+      logWarning('Duplicate Telegram message detected in polling, skipping', {
+        updateId,
+        chatId: msg.chat.id,
+        messageId: msg.message_id,
+      });
+      return;
+    }
+    if (updateId) {
+      markUpdateProcessed(updateId);
+    }
+    handleIncomingMessage(msg);
+  });
 
   // Обработка нажатий на inline-кнопки
   bot.on('callback_query', handleIncomingCallback);
@@ -140,6 +193,8 @@ function setupMessageHandlers(): void {
  * 4. Текст? → Меню или парсинг транзакции
  */
 async function handleIncomingMessage(msg: TelegramBot.Message): Promise<void> {
+  // Примечание: дедупликация по update_id происходит на уровне webhook/polling
+  // Здесь мы просто обрабатываем сообщение
   try {
     // 1. Команды
     if (msg.text && isCommand(msg.text)) {

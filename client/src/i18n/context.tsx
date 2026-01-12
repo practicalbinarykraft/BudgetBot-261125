@@ -6,6 +6,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { type Language, t as translateFn } from '@shared/i18n';
 import { useQuery } from '@tanstack/react-query';
+import { getQueryFn } from '@/lib/queryClient';
 
 interface I18nContextType {
   language: Language;
@@ -42,9 +43,16 @@ function getInitialLanguage(): Language {
 export function I18nProvider({ children }: I18nProviderProps) {
   const [language, setLanguageState] = useState<Language>(getInitialLanguage());
 
+  // Проверяем, находимся ли мы в админ-панели
+  // В админ-панели используется отдельная система аутентификации
+  const isAdminRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
+
   // Fetch user settings to get language preference
+  // Не загружаем данные в админ-панели
   const { data: settings } = useQuery<any>({
     queryKey: ['/api/settings'],
+    queryFn: getQueryFn({ on401: "returnNull" }), // Явно указываем queryFn
+    enabled: !isAdminRoute, // Не загружать в админ-панели
   });
 
   // Sync language with settings when loaded (authenticated users)

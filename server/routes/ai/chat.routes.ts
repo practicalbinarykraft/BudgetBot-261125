@@ -110,7 +110,7 @@ router.post("/", withAuth(async (req, res) => {
       })).reverse();
 
       // Build system prompt with financial context
-      const contextData = await buildFinancialContext(userId);
+      const contextData = await buildFinancialContext({ userId });
       const systemPrompt = buildFinancialAdvisorPrompt(contextData);
 
       // Call OpenRouter with DeepSeek

@@ -18,6 +18,7 @@ import { env } from "./lib/env";
 import { grantWelcomeBonus } from "./services/credits.service";
 import authTelegramRouter from "./routes/auth-telegram.routes";
 import authMiniAppRouter from "./routes/auth-miniapp.routes";
+import passwordRecoveryRouter from "./routes/password-recovery.routes";
 
 const PgSession = connectPgSimple(session);
 const MemoryStore = memorystore(session);
@@ -139,7 +140,7 @@ export async function setupAuth(app: Express) {
             return done(null, false, { message: "Incorrect email or password" });
           }
 
-          const isMatch = await bcrypt.compare(password, user.password);
+          const isMatch = await bcrypt.compare(password, user.password || '');
           if (!isMatch) {
             return done(null, false, { message: "Incorrect email or password" });
           }
@@ -293,4 +294,7 @@ export async function setupAuth(app: Express) {
   
   // Telegram Mini App routes
   app.use("/api/auth", authMiniAppRouter);
+  
+  // Password recovery routes
+  app.use("/api/auth", passwordRecoveryRouter);
 }

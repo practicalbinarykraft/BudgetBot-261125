@@ -31,13 +31,30 @@ import { t } from '@shared/i18n';
  * Возвращает null если пользователь не найден
  */
 export async function findUserByTelegramId(telegramId: string): Promise<User | null> {
+  // Используем явное указание полей, исключая isBlocked, так как колонка может отсутствовать
   const [user] = await db
-    .select()
+    .select({
+      id: users.id,
+      email: users.email,
+      password: users.password,
+      name: users.name,
+      telegramId: users.telegramId,
+      telegramUsername: users.telegramUsername,
+      telegramFirstName: users.telegramFirstName,
+      telegramPhotoUrl: users.telegramPhotoUrl,
+      twoFactorEnabled: users.twoFactorEnabled,
+      twoFactorSecret: users.twoFactorSecret,
+      createdAt: users.createdAt,
+    })
     .from(users)
     .where(eq(users.telegramId, telegramId))
     .limit(1);
 
-  return user || null;
+  // Добавляем значение по умолчанию для isBlocked
+  if (user) {
+    return { ...user, isBlocked: false } as User;
+  }
+  return null;
 }
 
 /**

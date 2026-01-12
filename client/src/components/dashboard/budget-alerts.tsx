@@ -6,7 +6,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 // ⏰ Budget calculation helpers extracted to separate file for reusability
 import { calculateBudgetProgress } from "@/lib/budget-helpers";
-import { useTranslation } from "@/i18n";
+import { useTranslation } from "@/i18n/context";
 
 // Helper to get correct plural form for Russian
 function getPluralKey(count: number, baseKey: string): string {
@@ -17,6 +17,7 @@ function getPluralKey(count: number, baseKey: string): string {
 
 export function BudgetAlerts() {
   const { t } = useTranslation();
+  const translateCategory = useTranslateCategory();
   
   const { data: budgets = [] } = useQuery<Budget[]>({
     queryKey: ["/api/budgets"],
@@ -78,7 +79,7 @@ export function BudgetAlerts() {
             <ul className="list-disc pl-5 space-y-1">
               {exceededBudgets.map(({ budget, category, progress }) => (
                 <li key={budget.id}>
-                  <strong>{category.name}</strong>: ${progress.spent.toFixed(2)} / ${parseFloat(budget.limitAmount).toFixed(2)} ({progress.percentage.toFixed(0)}%)
+                  <strong>{translateCategory(category.name)}</strong>: ${progress.spent.toFixed(2)} / ${parseFloat(budget.limitAmount).toFixed(2)} ({progress.percentage.toFixed(0)}%)
                 </li>
               ))}
             </ul>
@@ -107,7 +108,7 @@ export function BudgetAlerts() {
             <ul className="list-disc pl-5 space-y-1">
               {warningBudgets.map(({ budget, category, progress }) => (
                 <li key={budget.id}>
-                  <strong>{category.name}</strong>: ${progress.spent.toFixed(2)} / ${parseFloat(budget.limitAmount).toFixed(2)} ({progress.percentage.toFixed(0)}%)
+                  <strong>{translateCategory(category.name)}</strong>: ${progress.spent.toFixed(2)} / ${parseFloat(budget.limitAmount).toFixed(2)} ({progress.percentage.toFixed(0)}%)
                 </li>
               ))}
             </ul>

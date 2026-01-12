@@ -9,6 +9,7 @@
  */
 
 import { storage } from "../storage";
+import type { PlannedIncome } from "@shared/schema";
 import { generateForecast } from "./forecast";
 import { makeCumulative } from "../lib/charts/cumulative";
 import { 
@@ -311,9 +312,14 @@ async function generateAndProcessForecast(params: {
       const recurringData = await storage.getRecurringByUserId(userId);
       const activeRecurring = recurringData.recurring.filter(r => r.isActive);
 
-      // Pre-fetch planned transactions
+      // Pre-fetch planned transactions (expenses only)
       const plannedData = await storage.getPlannedByUserId(userId);
       const activePlanned = plannedData.filter(p => p.status === 'planned');
+      
+      // Pre-fetch planned income (separate table)
+      const plannedIncomeData = includePlannedIncome 
+        ? await storage.getPlannedIncomeByUserId(userId, { status: 'pending' })
+        : [];
 
       // Pre-fetch budgets for later per-day calculation
       let budgetsData: Array<{ limitAmount: string; period: string; startDate: string | null }> = [];
@@ -397,15 +403,25 @@ async function generateAndProcessForecast(params: {
           }
         }
 
-        // Apply planned transactions from pre-fetched data
-        if (includePlannedIncome || includePlannedExpenses) {
+        // Apply planned expenses from pre-fetched data
+        // Note: plannedTransactions table only contains expenses
+        if (includePlannedExpenses) {
           for (const planned of activePlanned) {
             const targetDate = new Date(planned.targetDate);
             if (targetDate.toISOString().split('T')[0] === f.date) {
               const amount = parseFloat(planned.amount) || 0;
-              const isIncome = planned.type === 'income';
-              if (isIncome && includePlannedIncome) income += amount;
-              if (!isIncome && includePlannedExpenses) expense += amount;
+              expense += amount;
+            }
+          }
+        }
+        
+        // Apply planned income from separate table
+        if (includePlannedIncome) {
+          for (const planned of plannedIncomeData) {
+            const expectedDate = planned.expectedDate ? new Date(planned.expectedDate) : null;
+            if (expectedDate && expectedDate.toISOString().split('T')[0] === f.date) {
+              const amount = parseFloat(planned.amount as unknown as string) || 0;
+              income += amount;
             }
           }
         }

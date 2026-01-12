@@ -25,6 +25,14 @@ export default defineConfig({
       "@shared": path.resolve(__dirname, "shared"),
       "@assets": path.resolve(__dirname, "attached_assets"),
     },
+    // Force single React instance for all @radix-ui packages
+    dedupe: [
+      'react',
+      'react-dom',
+      'react/jsx-runtime',
+      '@radix-ui/react-context',
+      '@radix-ui/react-primitive',
+    ],
   },
   root: "client",
   build: {

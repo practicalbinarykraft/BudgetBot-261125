@@ -13,7 +13,7 @@
  *   render(<MyComponent />, { wrapper: TestProviders });
  */
 
-import { ReactNode } from 'react';
+import React, { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, RenderOptions } from '@testing-library/react';
 import { vi } from 'vitest';

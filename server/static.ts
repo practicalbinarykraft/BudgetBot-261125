@@ -29,10 +29,24 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  app.use(express.static(distPath, {
+    // Don't serve index.html for static file requests
+    index: false,
+  }));
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
+  // fall through to index.html only for non-API and non-asset requests
+  app.use("*", (req, res, next) => {
+    const url = req.originalUrl;
+
+    // Skip fallback for API routes, static assets, and module requests
+    if (
+      url.startsWith("/api/") ||
+      url.startsWith("/socket.io/") ||
+      (url.includes(".") && !url.endsWith(".html")) // Has extension but not HTML
+    ) {
+      return next();
+    }
+
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

@@ -17,6 +17,7 @@ import { getUserLanguageByTelegramId, getUserLanguageByUserId } from '../../lang
 import { handleEditFlow } from './edit-flow.handler';
 import { handleShoppingList } from './shopping-list.handler';
 import { handleNormalTransaction } from './transaction.handler';
+import { logError, logInfo } from '../../../lib/logger';
 
 export async function handleTextMessage(bot: TelegramBot, msg: TelegramBot.Message) {
   const chatId = msg.chat.id;
@@ -28,29 +29,34 @@ export async function handleTextMessage(bot: TelegramBot, msg: TelegramBot.Messa
   }
 
   let lang = await getUserLanguageByTelegramId(telegramId);
+  let user: typeof users.$inferSelect | undefined;
+  let userSettings: typeof settings.$inferSelect | undefined;
+  let defaultCurrency: 'USD' | 'RUB' | 'IDR' = 'USD';
 
   try {
-    const [user] = await db
+    const [foundUser] = await db
       .select()
       .from(users)
       .where(eq(users.telegramId, telegramId))
       .limit(1);
 
-    if (!user) {
+    if (!foundUser) {
       await bot.sendMessage(chatId, t('verify.not_verified', lang), { parse_mode: 'Markdown' });
       return;
     }
 
+    user = foundUser;
     lang = await getUserLanguageByUserId(user.id);
 
     // Get user's default currency from settings
-    const [userSettings] = await db
+    const [foundSettings] = await db
       .select()
       .from(settings)
       .where(eq(settings.userId, user.id))
       .limit(1);
 
-    const defaultCurrency = (userSettings?.currency || 'USD') as 'USD' | 'RUB' | 'IDR';
+    userSettings = foundSettings;
+    defaultCurrency = (userSettings?.currency || 'USD') as 'USD' | 'RUB' | 'IDR';
 
     // Route 1: Check if user is editing a transaction
     const editHandled = await handleEditFlow(
@@ -92,8 +98,26 @@ export async function handleTextMessage(bot: TelegramBot, msg: TelegramBot.Messa
     );
 
   } catch (error) {
-    console.error('Text message handling error:', error);
-    const lang = await getUserLanguageByTelegramId(telegramId);
-    await bot.sendMessage(chatId, t('error.transaction', lang));
+    // Детальное логирование ошибки для диагностики
+    logError('Text message handling error', error as Error, {
+      chatId: msg.chat.id,
+      telegramId: msg.from?.id.toString(),
+      text: msg.text,
+      messageId: msg.message_id,
+      hasUser: !!user,
+      userId: user?.id,
+      defaultCurrency: user ? (userSettings?.currency || 'USD') : 'unknown',
+    });
+    
+    // Отправляем сообщение об ошибке пользователю
+    try {
+      const lang = await getUserLanguageByTelegramId(telegramId);
+      await bot.sendMessage(chatId, t('error.transaction', lang));
+    } catch (sendError) {
+      logError('Failed to send error message to user', sendError as Error, {
+        chatId: msg.chat.id,
+        telegramId: msg.from?.id.toString(),
+      });
+    }
   }
 }

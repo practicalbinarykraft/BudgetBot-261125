@@ -55,7 +55,9 @@ export const securityHeaders = helmet({
         "wss:", 
         "ws:",
         "http://localhost:*",
-        "ws://localhost:*"
+        "ws://localhost:*",
+        "http://127.0.0.1:*", // Allow debug logging endpoint
+        "ws://127.0.0.1:*"
       ],
       // Disable HTTPS upgrade for HTTP deployments
       upgradeInsecureRequests: null,

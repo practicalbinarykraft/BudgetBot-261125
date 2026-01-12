@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, Check, X, Calendar, Edit } from "lucide-react";
 import { format, parseISO, isPast, differenceInDays } from "date-fns";
 import { useTranslation } from "@/i18n/context";
+import { useTranslateCategory } from "@/lib/category-translations";
 
 interface PlannedIncomeCardProps {
   income: PlannedIncome;
@@ -30,6 +31,7 @@ export function PlannedIncomeCard({
   onEdit,
 }: PlannedIncomeCardProps) {
   const { t } = useTranslation();
+  const translateCategory = useTranslateCategory();
   const expectedDate = parseISO(income.expectedDate);
   const isOverdue = isPast(expectedDate) && income.status === "pending";
   const daysUntil = differenceInDays(expectedDate, new Date());
@@ -50,7 +52,7 @@ export function PlannedIncomeCard({
             </p>
             {category && (
               <p className="text-sm text-muted-foreground mt-1" data-testid={`text-category-${income.id}`}>
-                {category.name}
+                {translateCategory(category.name)}
               </p>
             )}
           </div>

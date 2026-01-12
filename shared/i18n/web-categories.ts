@@ -26,6 +26,7 @@ export const webCategoriesTranslations: Translations = {
   "categories.name.Salary": { en: "Salary", ru: "Зарплата" },
   "categories.name.Freelance": { en: "Freelance", ru: "Фриланс" },
   "categories.name.Food": { en: "Food", ru: "Еда" },
+  "categories.name.Food & Drinks": { en: "Food & Drinks", ru: "Еда и напитки" },
   "categories.name.Transport": { en: "Transport", ru: "Транспорт" },
   "categories.name.Entertainment": { en: "Entertainment", ru: "Развлечения" },
   "categories.name.Bills": { en: "Bills", ru: "Счета" },

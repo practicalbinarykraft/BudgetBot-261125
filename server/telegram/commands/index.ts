@@ -7,7 +7,7 @@
  * - Junior-friendly код
  */
 
-// ✅ Extracted command handlers (9/11 commands)
+// ✅ Extracted command handlers (10/12 commands)
 export { handleStartCommand } from './start.command';
 export { handleHelpCommand } from './help.command';
 export { handleLanguageCommand } from './language.command';
@@ -16,6 +16,7 @@ export { handleBalanceCommand } from './balance.command';
 export { handleLastCommand } from './last.command';
 export { handleStatusCommand } from './status.command';
 export { handleIncomeCommand } from './income.command';
+export { handleRecoverCommand } from './recover.command';
 
 // ✅ Extracted handlers
 export { handlePhotoMessage } from './photo.handler';

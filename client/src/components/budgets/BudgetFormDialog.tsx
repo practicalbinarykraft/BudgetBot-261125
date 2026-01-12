@@ -8,6 +8,7 @@ import { UseFormReturn } from "react-hook-form";
 import { insertBudgetSchema } from "@shared/schema";
 import { z } from "zod";
 import { useTranslation } from "@/i18n/context";
+import { useTranslateCategory } from "@/lib/category-translations";
 
 type FormData = z.infer<typeof insertBudgetSchema>;
 
@@ -29,6 +30,7 @@ export function BudgetFormDialog({
   isPending: boolean;
 }) {
   const { t } = useTranslation();
+  const translateCategory = useTranslateCategory();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -61,7 +63,7 @@ export function BudgetFormDialog({
                               className="h-3 w-3 rounded-full bg-muted-foreground"
                               style={category.color ? { backgroundColor: category.color } : undefined}
                             />
-                            {category.name}
+                            {translateCategory(category.name)}
                           </div>
                         </SelectItem>
                       ))}

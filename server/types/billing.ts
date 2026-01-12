@@ -86,11 +86,11 @@ export const SPECIAL_PRICING = {
  * Credit costs for common operations
  * 1 credit = ~$0.01 in actual cost (with margin)
  */
-export const OPERATION_CREDIT_COSTS = {
+export const OPERATION_CREDIT_COSTS: Record<AIOperation, number> = {
   voice_transcription: 1,      // ~30 sec voice message
   voice_normalization: 1,      // DeepSeek parsing
-  ocr_receipt: 1,              // Claude Vision
-  ai_chat_message: 2,          // Claude/GPT response
+  ocr: 1,                      // Claude Vision
+  financial_advisor: 2,        // Claude/GPT response
   categorization: 1,           // DeepSeek categorization
   text_parsing: 1,             // DeepSeek parsing
 };
