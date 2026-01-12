@@ -85,7 +85,26 @@ export async function handleNormalTransaction(
     let primaryWallet;
     try {
       primaryWallet = await getPrimaryWallet(userId);
-      logInfo('Primary wallet retrieved', { userId, walletId: primaryWallet.id, walletName: primaryWallet.name });
+      const balanceUsd = parseFloat(primaryWallet.balanceUsd || '0');
+      const balance = parseFloat(primaryWallet.balance || '0');
+      logInfo('Primary wallet retrieved', { 
+        userId, 
+        walletId: primaryWallet.id, 
+        walletName: primaryWallet.name,
+        balance: balance,
+        balanceUsd: balanceUsd,
+        currency: primaryWallet.currency,
+        isPrimary: primaryWallet.isPrimary
+      });
+      
+      // Warn if wallet has zero balance
+      if (balanceUsd === 0) {
+        logWarning('Primary wallet has zero balance', {
+          userId,
+          walletId: primaryWallet.id,
+          walletName: primaryWallet.name,
+        });
+      }
     } catch (error) {
       logError('Error getting primary wallet', error as Error, { userId });
       throw new Error('Failed to get wallet for transaction');
