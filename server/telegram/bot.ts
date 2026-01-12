@@ -196,30 +196,65 @@ async function handleIncomingMessage(msg: TelegramBot.Message): Promise<void> {
   // Примечание: дедупликация по update_id происходит на уровне webhook/polling
   // Здесь мы просто обрабатываем сообщение
   try {
-    // 1. Команды
+    // ВАЖНО: Порядок проверок критичен!
+    // Сначала обрабатываем медиа (фото, голос), потом команды, потом текст
+    
+    // 1. Фото (OCR) - проверяем ПЕРВЫМ, даже если есть подпись
+    if (msg.photo && msg.photo.length > 0) {
+      logInfo('Processing photo message', {
+        chatId: msg.chat.id,
+        messageId: msg.message_id,
+        hasCaption: !!msg.caption,
+      });
+      await handlePhotoMessage(bot!, msg);
+      return;
+    }
+
+    // 2. Голосовые сообщения - проверяем ВТОРЫМ
+    if (msg.voice || msg.audio) {
+      logInfo('Processing voice/audio message', {
+        chatId: msg.chat.id,
+        messageId: msg.message_id,
+        hasVoice: !!msg.voice,
+        hasAudio: !!msg.audio,
+      });
+      await handleVoiceMessage(bot!, msg);
+      return;
+    }
+
+    // 3. Команды - только если это ТОЛЬКО текст (без медиа)
     if (msg.text && isCommand(msg.text)) {
+      logInfo('Processing command', {
+        chatId: msg.chat.id,
+        messageId: msg.message_id,
+        command: msg.text,
+      });
       const { command, args } = parseCommand(msg.text);
       await dispatchCommand(bot!, msg, command, args);
       return;
     }
 
-    // 2. Фото (OCR)
-    if (msg.photo && msg.photo.length > 0) {
-      await handlePhotoMessage(bot!, msg);
-      return;
-    }
-
-    // 3. Голосовые сообщения
-    if (msg.voice || msg.audio) {
-      await handleVoiceMessage(bot!, msg);
-      return;
-    }
-
-    // 4. Текстовые сообщения
+    // 4. Текстовые сообщения (парсинг транзакций, меню, AI чат)
     if (msg.text) {
+      logInfo('Processing text message', {
+        chatId: msg.chat.id,
+        messageId: msg.message_id,
+        textLength: msg.text.length,
+      });
       await handleTextMessageWithContext(msg);
       return;
     }
+
+    // 5. Неизвестный тип сообщения
+    logWarning('Unhandled message type', {
+      chatId: msg.chat.id,
+      messageId: msg.message_id,
+      hasText: !!msg.text,
+      hasPhoto: !!msg.photo,
+      hasVoice: !!msg.voice,
+      hasAudio: !!msg.audio,
+      hasDocument: !!msg.document,
+    });
   } catch (error) {
     await handleMessageError(msg, error as Error);
   }

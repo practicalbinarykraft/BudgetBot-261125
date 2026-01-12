@@ -25,7 +25,23 @@ export async function handlePhotoMessage(bot: TelegramBot, msg: TelegramBot.Mess
   const chatId = msg.chat.id;
   const telegramId = msg.from?.id.toString();
 
-  if (!telegramId || !msg.photo || msg.photo.length === 0) {
+  // Логирование для отладки
+  const { logInfo, logWarning } = await import('../../lib/logger');
+  logInfo('Photo message handler called', {
+    chatId,
+    telegramId: telegramId || 'missing',
+    hasPhoto: !!msg.photo,
+    photoCount: msg.photo?.length || 0,
+    hasCaption: !!msg.caption,
+  });
+
+  if (!telegramId) {
+    logWarning('Photo message without telegramId', { chatId });
+    return;
+  }
+
+  if (!msg.photo || msg.photo.length === 0) {
+    logWarning('Photo message handler called but no photo found', { chatId, telegramId });
     return;
   }
 

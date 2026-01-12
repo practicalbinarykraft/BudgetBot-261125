@@ -28,7 +28,17 @@ export async function handleVoiceMessage(bot: TelegramBot, msg: TelegramBot.Mess
   const chatId = msg.chat.id;
   const telegramId = msg.from?.id.toString();
 
+  // Логирование для отладки
+  const { logInfo, logWarning, logError } = await import('../lib/logger');
+  logInfo('Voice message handler called', {
+    chatId,
+    telegramId: telegramId || 'missing',
+    hasVoice: !!msg.voice,
+    hasAudio: !!msg.audio,
+  });
+
   if (!telegramId) {
+    logWarning('Voice message without telegramId', { chatId });
     return;
   }
 
@@ -39,7 +49,12 @@ export async function handleVoiceMessage(bot: TelegramBot, msg: TelegramBot.Mess
     const voiceFile = msg.voice?.file_id || msg.audio?.file_id;
     
     if (!voiceFile) {
-      console.error('[Voice] No voice/audio file found in message');
+      logWarning('Voice message handler called but no voice/audio file found', {
+        chatId,
+        telegramId,
+        hasVoice: !!msg.voice,
+        hasAudio: !!msg.audio,
+      });
       return;
     }
 
