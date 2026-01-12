@@ -111,8 +111,17 @@ export async function handleTextMessage(bot: TelegramBot, msg: TelegramBot.Messa
     
     // Отправляем сообщение об ошибке пользователю
     try {
-      const lang = await getUserLanguageByTelegramId(telegramId);
-      await bot.sendMessage(chatId, t('error.transaction', lang));
+      const lang = user ? await getUserLanguageByUserId(user.id) : await getUserLanguageByTelegramId(telegramId || '');
+      
+      // Специальная обработка ошибки недостаточного баланса
+      if (error instanceof Error && error.message.includes('Insufficient balance')) {
+        await bot.sendMessage(chatId, t('error.insufficient_balance', lang), {
+          parse_mode: 'Markdown'
+        });
+      } else {
+        // Общая ошибка для остальных случаев
+        await bot.sendMessage(chatId, t('error.transaction', lang));
+      }
     } catch (sendError) {
       logError('Failed to send error message to user', sendError as Error, {
         chatId: msg.chat.id,

@@ -50,6 +50,10 @@ export const commonTranslations: Translations = {
     en: '❌ An error occurred while processing your transaction.',
     ru: '❌ Произошла ошибка при обработке транзакции.',
   },
+  'error.insufficient_balance': {
+    en: '❌ Insufficient balance in your wallet. Please add funds or use a different wallet.',
+    ru: '❌ Недостаточно средств в кошельке. Пополните баланс или используйте другой кошелёк.',
+  },
   'error.receipt': {
     en: '❌ An error occurred while processing your receipt.',
     ru: '❌ Произошла ошибка при обработке чека.',
