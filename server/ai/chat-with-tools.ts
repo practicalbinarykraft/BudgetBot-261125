@@ -1,22 +1,30 @@
-// AI Chat with Tool Calling - uses BYOK (Bring Your Own Key)
+// AI Chat with Tool Calling - uses smart routing (BYOK or system key with credits)
 import Anthropic from '@anthropic-ai/sdk';
 import { ANTHROPIC_TOOLS } from './tools';
 import { storage } from '../storage';
 import { getUserCategories } from '../services/categorization.service';
+import { getApiKey } from '../services/api-key-manager';
+import { chargeCredits } from '../services/billing.service';
+import { BillingError } from '../types/billing';
 
 export async function chatWithTools(
   message: string,
   userId: number
 ) {
-  // 🔐 Get user's decrypted Anthropic API key from settings (BYOK)
-  const { settingsRepository } = await import('../repositories/settings.repository');
-  const apiKey = await settingsRepository.getAnthropicApiKey(userId);
-
-  if (!apiKey) {
-    throw new Error(
-      'API key not configured. Please add your Anthropic API key in Settings.'
-    );
+  // 🎯 Smart API key selection: BYOK or system key with credits
+  let apiKeyInfo;
+  try {
+    apiKeyInfo = await getApiKey(userId, 'financial_advisor');
+  } catch (error) {
+    if (error instanceof BillingError && error.code === 'INSUFFICIENT_CREDITS') {
+      throw new Error(
+        'You have insufficient credits to use this feature. Add credits or switch to another tier.'
+      );
+    }
+    throw error;
   }
+
+  const apiKey = apiKeyInfo.key;
 
   // Get settings for other config (currency, etc)
   const settings = await storage.getSettingsByUserId(userId);
@@ -130,6 +138,20 @@ Be concise, friendly, and accurate.`;
     tools: ANTHROPIC_TOOLS, // Enable tool calling (clean definitions only)
     messages: [{ role: 'user', content: message }]
   });
+  
+  // 💳 Charge credits if using system key
+  if (apiKeyInfo.shouldCharge && response.usage) {
+    await chargeCredits(
+      userId,
+      'financial_advisor',
+      apiKeyInfo.provider,
+      {
+        input: response.usage.inputTokens || 2000,
+        output: response.usage.outputTokens || 500
+      },
+      apiKeyInfo.billingMode === 'free'
+    );
+  }
   
   return response;
 }

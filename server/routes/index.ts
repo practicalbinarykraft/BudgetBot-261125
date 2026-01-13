@@ -32,15 +32,6 @@ import calibrationsRouter from "./calibrations.routes";
 import telegramRouter from "./telegram.routes";
 import analyticsRouter from "./analytics.routes";
 import personalTagsRouter from "./personal-tags.routes";
-import migrationRouter from "./admin/migration.routes";
-import adminAuditLogRouter from "./admin/audit-log.routes";
-import adminMetricsRouter from "./admin/metrics.routes";
-import adminUsersRouter from "./admin/users.routes";
-import adminAnalyticsRouter from "./admin/analytics.routes";
-import adminSystemRouter from "./admin/system.routes";
-import adminBroadcastsRouter from "./admin/broadcasts.routes";
-import adminSupportRouter from "./admin/support.routes";
-import adminAuthRouter from "./admin-auth.routes";
 import sortingRouter from "./sorting.routes";
 import productCatalogRouter from "./product-catalog.routes";
 import assetsRouter from "./assets";
@@ -84,21 +75,6 @@ export function registerRoutes(app: Express) {
   app.use("/api/audit-logs", auditLogRouter);
   app.use("/api/backup", backupRouter);
 
-  // Admin routes - MUST be before generic /api routes to avoid conflicts
-  try {
-    app.use("/api/admin/auth", adminAuthRouter);
-    app.use("/api/admin/metrics", adminMetricsRouter);
-    app.use("/api/admin/users", adminUsersRouter);
-    app.use("/api/admin/analytics", adminAnalyticsRouter);
-    app.use("/api/admin/system", adminSystemRouter);
-    app.use("/api/admin/broadcasts", adminBroadcastsRouter);
-    app.use("/api/admin/support", adminSupportRouter);
-    app.use("/api/admin", migrationRouter);
-    app.use("/api/admin/audit-logs", adminAuditLogRouter);
-  } catch (error) {
-    console.error('Error registering admin routes:', error);
-    throw error;
-  }
 
   // Stats and analytics (mounted on /api for /api/stats and /api/financial-health)
   app.use("/api", statsRouter);

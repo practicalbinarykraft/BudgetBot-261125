@@ -17,6 +17,8 @@ export class UserRepository {
                 telegramPhotoUrl: users.telegramPhotoUrl,
                 twoFactorEnabled: users.twoFactorEnabled,
                 twoFactorSecret: users.twoFactorSecret,
+                isBlocked: users.isBlocked,
+                tier: users.tier,
                 createdAt: users.createdAt,
             })
             .from(users)
@@ -54,9 +56,9 @@ export class UserRepository {
             // #region agent log
             fetch('http://127.0.0.1:7243/ingest/69a6307d-1c32-43aa-a884-80c8c3bf30bb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'server/repositories/user.repository.ts:50',message:'Select without isBlocked succeeded',data:{id,hasResult:!!result[0]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
             // #endregion
-            // Добавляем значение по умолчанию для isBlocked
+            // Добавляем значения по умолчанию для isBlocked и tier
             if (result[0]) {
-                return { ...result[0], isBlocked: false } as User;
+                return { ...result[0], isBlocked: false, tier: result[0].tier || 'free' } as User;
             }
             return null;
         } catch (error: any) {

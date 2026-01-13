@@ -282,7 +282,24 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
                 width={isMobile ? 35 : undefined}
               />
 
-              <Tooltip key={forecastDays} content={createChartTooltip(chartData, t, config.capitalMode, graphMode)} />
+              <Tooltip 
+                key={forecastDays} 
+                content={createChartTooltip(chartData, t, config.capitalMode, graphMode)}
+                position={(props: any) => {
+                  // Размещаем tooltip снизу графика, под точкой
+                  if (!props.coordinate || !props.viewBox) {
+                    return { x: 0, y: 0 };
+                  }
+                  const chartHeight = props.viewBox.height;
+                  const bottomOffset = 60; // Отступ снизу для tooltip
+                  return {
+                    x: props.coordinate.x,
+                    y: chartHeight - bottomOffset
+                  };
+                }}
+                allowEscapeViewBox={{ x: false, y: true }}
+                wrapperStyle={{ zIndex: 10, pointerEvents: 'none' }}
+              />
 
               {/* "Today" vertical line */}
               <ReferenceLine

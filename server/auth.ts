@@ -209,6 +209,7 @@ export async function setupAuth(app: Express) {
           id: user.id,
           email: user.email,
           name: user.name,
+          tier: user.tier || 'free',
         });
       });
     } catch (error: unknown) {
@@ -247,6 +248,7 @@ export async function setupAuth(app: Express) {
           id: user.id,
           email: user.email,
           name: user.name,
+          tier: user.tier || 'free',
         });
       });
     })(req, res, next);
@@ -284,6 +286,7 @@ export async function setupAuth(app: Express) {
         name: user.name,
         telegramId: user.telegramId,
         telegramUsername: user.telegramUsername,
+        tier: user.tier || 'free',
       });
     }
     res.status(401).json({ error: "Not authenticated" });

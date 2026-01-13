@@ -147,6 +147,18 @@ export const PRICING_TIERS = {
       'Custom integrations',
     ],
   },
+  myself: {
+    name: 'MySelf',
+    monthlyPrice: 0,
+    credits: Infinity,
+    features: [
+      'Unlimited operations',
+      'Use your own API keys',
+      'Full cost control',
+      'All features unlocked',
+    ],
+    requiresKeys: true,
+  },
   byok: {
     name: 'BYOK',
     monthlyPrice: 0,
@@ -167,9 +179,10 @@ export const PRICING_TIERS = {
 export const RATE_LIMITS = {
   free: { max: 10, window: 3600 },      // 10 per hour
   basic: { max: 50, window: 3600 },     // 50 per hour
-  pro: { max: 200, window: 3600 },      // 200 per hour
+  pro: { max: 200, window: 3600 },       // 200 per hour
   mega: { max: 500, window: 3600 },     // 500 per hour
-  byok: { max: 1000, window: 3600 },    // 1000 per hour
+  myself: { max: 1000, window: 3600 },  // 1000 per hour
+  byok: { max: 1000, window: 3600 },    // 1000 per hour (legacy)
 } as const;
 
 /**

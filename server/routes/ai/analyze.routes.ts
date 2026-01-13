@@ -12,18 +12,38 @@ router.post("/analyze", withAuth(async (req, res) => {
   try {
     const userId = Number(req.user.id);
     
-    // Get API key from user settings (BYOK pattern)
-    const settings = await storage.getSettingsByUserId(userId);
-    const anthropicApiKey = settings?.anthropicApiKey;
+    // 🎯 Smart API key selection: BYOK or system key with credits
+    const { getApiKey } = await import('../../services/api-key-manager');
+    const { chargeCredits } = await import('../../services/billing.service');
+    const { BillingError } = await import('../../types/billing');
     
-    if (!anthropicApiKey) {
-      return res.status(400).json({
-        error: "Anthropic API key not configured. Please add it in Settings."
-      });
+    let apiKeyInfo;
+    try {
+      apiKeyInfo = await getApiKey(userId, 'financial_advisor');
+    } catch (error: any) {
+      if (error instanceof BillingError && error.code === 'INSUFFICIENT_CREDITS') {
+        return res.status(402).json({
+          error: "You have insufficient credits to use this feature. Add credits or switch to another tier.",
+          creditsExhausted: true
+        });
+      }
+      throw error;
     }
     
     const result = await storage.getTransactionsByUserId(userId);
-    const analysis = await analyzeSpending(result.transactions, anthropicApiKey);
+    const analysis = await analyzeSpending(result.transactions, apiKeyInfo.key);
+    
+    // 💳 Charge credits if using system key
+    if (apiKeyInfo.shouldCharge) {
+      await chargeCredits(
+        userId,
+        'financial_advisor',
+        apiKeyInfo.provider,
+        { input: 2000, output: 500 }, // Estimated tokens for analysis
+        apiKeyInfo.billingMode === 'free'
+      );
+    }
+    
     res.json({ analysis });
   } catch (error: unknown) {
     res.status(500).json({ error: getErrorMessage(error) });
@@ -40,17 +60,37 @@ router.post("/scan-receipt", withAuth(async (req, res) => {
       return res.status(400).json({ error: "Image required" });
     }
     
-    // Get API key from user settings (BYOK pattern)
-    const settings = await storage.getSettingsByUserId(userId);
-    const anthropicApiKey = settings?.anthropicApiKey;
+    // 🎯 Smart API key selection: BYOK or system key with credits
+    const { getApiKey } = await import('../../services/api-key-manager');
+    const { chargeCredits } = await import('../../services/billing.service');
+    const { BillingError } = await import('../../types/billing');
     
-    if (!anthropicApiKey) {
-      return res.status(400).json({
-        error: "Anthropic API key not configured. Please add it in Settings."
-      });
+    let apiKeyInfo;
+    try {
+      apiKeyInfo = await getApiKey(userId, 'ocr');
+    } catch (error: any) {
+      if (error instanceof BillingError && error.code === 'INSUFFICIENT_CREDITS') {
+        return res.status(402).json({
+          error: "You have insufficient credits to use this feature. Add credits or switch to another tier.",
+          creditsExhausted: true
+        });
+      }
+      throw error;
     }
     
-    const result = await scanReceipt(image, anthropicApiKey);
+    const result = await scanReceipt(image, apiKeyInfo.key);
+    
+    // 💳 Charge credits if using system key
+    if (apiKeyInfo.shouldCharge) {
+      await chargeCredits(
+        userId,
+        'ocr',
+        apiKeyInfo.provider,
+        { input: 1500, output: 200 }, // Typical tokens for receipt OCR
+        apiKeyInfo.billingMode === 'free'
+      );
+    }
+    
     res.json(result);
   } catch (error: unknown) {
     res.status(500).json({ error: getErrorMessage(error) });

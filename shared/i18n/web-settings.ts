@@ -133,6 +133,10 @@ export const webSettingsTranslations: Translations = {
     en: 'sk-proj-...',
     ru: 'sk-proj-...',
   },
+  'settings.api_keys_tier_required': {
+    en: '🔑 API keys are available only on the MySelf tier. To use your own API keys, please contact support to upgrade your plan.',
+    ru: '🔑 API ключи доступны только на тарифе MySelf. Для использования своих API ключей обратитесь в поддержку для перехода на этот тариф.',
+  },
   'settings.general_settings': {
     en: 'General Settings',
     ru: 'Общие настройки',

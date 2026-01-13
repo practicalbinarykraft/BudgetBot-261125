@@ -54,6 +54,14 @@ export const commonTranslations: Translations = {
     en: '❌ Insufficient balance in your wallet. Please add funds or use a different wallet.',
     ru: '❌ Недостаточно средств в кошельке. Пополните баланс или используйте другой кошелёк.',
   },
+  'error.api_key_required': {
+    en: 'For using this feature, please add an API key.',
+    ru: 'Для использования этой функции добавьте API ключ.',
+  },
+  'error.insufficient_credits': {
+    en: 'You have insufficient credits to use this feature. Add credits or switch to another tier.',
+    ru: 'У вас недостаточно кредитов для использования данной функции. Добавьте кредиты или перейдите на другой тариф.',
+  },
   'error.receipt': {
     en: '❌ An error occurred while processing your receipt.',
     ru: '❌ Произошла ошибка при обработке чека.',

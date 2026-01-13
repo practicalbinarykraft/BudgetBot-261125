@@ -20,7 +20,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useChatSidebar } from "@/stores/chat-sidebar-store";
 import { useTelegramPaddingTopStyle } from "@/hooks/use-telegram-safe-area";
 import { useEffect, useState, lazy, Suspense } from "react";
-import { AdminQueryClientProvider } from "@/components/admin/AdminQueryClientProvider";
 
 // ===== Lazy Load Pages for Better Performance =====
 // Critical pages (loaded immediately)
@@ -59,16 +58,6 @@ const AddTransactionDialog = lazy(() =>
   import("@/components/transactions/add-transaction-dialog").then(m => ({ default: m.AddTransactionDialog }))
 );
 
-// Admin pages (lazy loaded)
-const AdminLoginPage = lazy(() => import("@/pages/admin/auth/login"));
-const AdminDashboardPage = lazy(() => import("@/pages/admin/dashboard/index"));
-const AdminUsersListPage = lazy(() => import("@/pages/admin/users/list"));
-const AdminUserDetailPage = lazy(() => import("@/pages/admin/users/[id]"));
-const AdminAnalyticsPage = lazy(() => import("@/pages/admin/analytics/index"));
-const AdminSystemMonitoringPage = lazy(() => import("@/pages/admin/system/monitoring"));
-const AdminAuditLogPage = lazy(() => import("@/pages/admin/audit-log/index"));
-const AdminBroadcastsPage = lazy(() => import("@/pages/admin/broadcasts/index"));
-const AdminSupportPage = lazy(() => import("@/pages/admin/support/index"));
 
 // Landing page with redirect logic for authenticated users
 function LandingPageWrapper() {
@@ -77,22 +66,11 @@ function LandingPageWrapper() {
   const [location] = useLocation();
 
   useEffect(() => {
-    // НИКОГДА не редиректим если мы на админ-странице
-    // Админ-страницы имеют свою логику авторизации и не должны перенаправляться
-    if (location.startsWith('/admin')) {
-      return;
-    }
-    
-    // Редиректим обычных пользователей только если мы НЕ на админ-странице
-    if (user && !location.startsWith('/admin')) {
+    // Редиректим авторизованных пользователей на dashboard
+    if (user) {
       setLocation('/app/dashboard');
     }
-  }, [user, setLocation, location]);
-
-  // Не показываем landing page если мы на админ-странице
-  if (location.startsWith('/admin')) {
-    return null;
-  }
+  }, [user, setLocation]);
 
   if (user) {
     return null;
@@ -101,25 +79,6 @@ function LandingPageWrapper() {
   return <LandingPage />;
 }
 
-// Админ-маршруты (AdminQueryClientProvider оборачивается в App())
-function AdminRoutes() {
-  return (
-    <Suspense fallback={<PageLoading />}>
-      <Switch>
-        <Route path="/admin" component={() => <Redirect to="/admin/dashboard" />} />
-        <Route path="/admin/login" component={AdminLoginPage} />
-        <Route path="/admin/dashboard" component={AdminDashboardPage} />
-        <Route path="/admin/users/:id" component={AdminUserDetailPage} />
-        <Route path="/admin/users" component={AdminUsersListPage} />
-        <Route path="/admin/analytics" component={AdminAnalyticsPage} />
-        <Route path="/admin/broadcasts" component={AdminBroadcastsPage} />
-        <Route path="/admin/support" component={AdminSupportPage} />
-        <Route path="/admin/system" component={AdminSystemMonitoringPage} />
-        <Route path="/admin/audit-log" component={AdminAuditLogPage} />
-      </Switch>
-    </Suspense>
-  );
-}
 
 function Router() {
   return (
@@ -257,66 +216,17 @@ function AppContent() {
 }
 
 export default function App() {
-  // Определяем, находимся ли мы в админ-панели
-  const [isAdminRoute, setIsAdminRoute] = useState(
-    typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')
-  );
-
-  // Отслеживаем изменения маршрута
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
-    const checkAdminRoute = () => {
-      setIsAdminRoute(window.location.pathname.startsWith('/admin'));
-    };
-    
-    // Проверяем при навигации
-    window.addEventListener('popstate', checkAdminRoute);
-    const originalPushState = history.pushState;
-    const originalReplaceState = history.replaceState;
-    
-    history.pushState = function(...args) {
-      originalPushState.apply(history, args);
-      checkAdminRoute();
-    };
-    
-    history.replaceState = function(...args) {
-      originalReplaceState.apply(history, args);
-      checkAdminRoute();
-    };
-    
-    return () => {
-      window.removeEventListener('popstate', checkAdminRoute);
-      history.pushState = originalPushState;
-      history.replaceState = originalReplaceState;
-    };
-  }, []);
-
-  // TooltipProvider всегда доступен
-  // Для админ-панели используем AdminQueryClientProvider с I18nProvider (но без AuthProvider)
-  // I18nProvider условно загружает данные только вне админ-панели, но сам провайдер доступен
-  // Для обычного приложения используем обычный QueryClientProvider с AuthProvider и I18nProvider
   return (
     <TooltipProvider delayDuration={300}>
-      {isAdminRoute ? (
-        // Админ-панель - используем AdminQueryClientProvider с I18nProvider (без AuthProvider)
-        <AdminQueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
           <I18nProvider>
-            <AdminRoutes />
+            <WebSocketProvider>
+              <AppContent />
+            </WebSocketProvider>
           </I18nProvider>
-        </AdminQueryClientProvider>
-      ) : (
-        // Обычное приложение - используем обычный QueryClientProvider с AuthProvider и I18nProvider
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <I18nProvider>
-              <WebSocketProvider>
-                <AppContent />
-              </WebSocketProvider>
-            </I18nProvider>
-          </AuthProvider>
-        </QueryClientProvider>
-      )}
+        </AuthProvider>
+      </QueryClientProvider>
       <Toaster />
     </TooltipProvider>
   );

@@ -14,9 +14,11 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { UseFormReturn } from "react-hook-form";
 import { useTranslation } from "@/i18n";
+import { useAuth } from "@/hooks/use-auth";
 import { FormData } from "./types";
 import { Settings as SettingsType } from "@shared/schema";
 import { ExchangRatesSection } from "./exchange-rates-section";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface GeneralSettingsCardProps {
   form: UseFormReturn<FormData>;
@@ -32,6 +34,8 @@ export function GeneralSettingsCard({
   isPending,
 }: GeneralSettingsCardProps) {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const isMySelfTier = user?.tier === 'myself';
 
   return (
     <Card>
@@ -190,51 +194,63 @@ export function GeneralSettingsCard({
               </div>
             </div>
 
-            <FormField
-              control={form.control}
-              name="anthropicApiKey"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("settings.anthropic_api_key")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="password"
-                      placeholder={t("settings.anthropic_api_key.placeholder")}
-                      {...field}
-                      value={field.value || ""}
-                      data-testid="input-anthropic-key"
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    {t("settings.anthropic_api_key.description")}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {!isMySelfTier && (
+              <Alert>
+                <AlertDescription>
+                  {t("settings.api_keys_tier_required")}
+                </AlertDescription>
+              </Alert>
+            )}
 
-            <FormField
-              control={form.control}
-              name="openaiApiKey"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("settings.openai_api_key")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="password"
-                      placeholder={t("settings.openai_api_key.placeholder")}
-                      {...field}
-                      value={field.value || ""}
-                      data-testid="input-openai-key"
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    {t("settings.openai_api_key.description")}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {isMySelfTier && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="anthropicApiKey"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("settings.anthropic_api_key")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder={t("settings.anthropic_api_key.placeholder")}
+                          {...field}
+                          value={field.value || ""}
+                          data-testid="input-anthropic-key"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {t("settings.anthropic_api_key.description")}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="openaiApiKey"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("settings.openai_api_key")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder={t("settings.openai_api_key.placeholder")}
+                          {...field}
+                          value={field.value || ""}
+                          data-testid="input-openai-key"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {t("settings.openai_api_key.description")}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
 
             <ExchangRatesSection form={form} settings={settings} />
 

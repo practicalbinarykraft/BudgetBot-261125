@@ -51,7 +51,7 @@ export async function getApiKey(
 
   if (credits.messagesRemaining <= 0) {
     throw new BillingError(
-      'No credits remaining. Purchase more at /app/settings/billing or add your own API key.',
+      'You have insufficient credits to use this feature. Add credits or switch to another tier.',
       'INSUFFICIENT_CREDITS',
       userId
     );

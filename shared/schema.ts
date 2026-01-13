@@ -33,6 +33,8 @@ export const users = pgTable("users", {
   twoFactorSecret: text("two_factor_secret"), // Encrypted TOTP secret
   // Admin fields
   isBlocked: boolean("is_blocked").default(false).notNull(), // Blocked by admin
+  // Billing tier: 'free', 'basic', 'pro', 'mega', 'myself'
+  tier: text("tier").default("free").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({
   // CHECK constraint: user must have EITHER email OR telegram_id
