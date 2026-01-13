@@ -21,6 +21,10 @@
  *   npm run db:migrate:create add-user-avatar
  */
 
+// Load .env file FIRST, before importing anything that needs DATABASE_URL
+import dotenv from 'dotenv';
+dotenv.config();
+
 import { migrationService } from '../server/services/migration.service';
 
 // ========================================
@@ -177,21 +181,12 @@ async function validateChecksums(): Promise<void> {
 // ========================================
 
 async function main(): Promise<void> {
-  // Load .env file if DATABASE_URL is not set
-  if (!process.env.DATABASE_URL) {
-    try {
-      const dotenv = await import('dotenv');
-      dotenv.config();
-    } catch (e) {
-      // dotenv might not be available, continue
-    }
-  }
-
   const args = process.argv.slice(2);
   const command = args[0];
 
   if (!process.env.DATABASE_URL) {
     console.error('\n❌ Error: DATABASE_URL environment variable is required\n');
+    console.error('   Make sure .env file exists and contains DATABASE_URL\n');
     process.exit(1);
   }
 
