@@ -177,6 +177,16 @@ async function validateChecksums(): Promise<void> {
 // ========================================
 
 async function main(): Promise<void> {
+  // Load .env file if DATABASE_URL is not set
+  if (!process.env.DATABASE_URL) {
+    try {
+      const dotenv = await import('dotenv');
+      dotenv.config();
+    } catch (e) {
+      // dotenv might not be available, continue
+    }
+  }
+
   const args = process.argv.slice(2);
   const command = args[0];
 
