@@ -5,26 +5,61 @@ import { eq, sql } from "drizzle-orm";
 export class UserRepository {
     async getUserByEmail(email: string): Promise<User | null> {
         // Явно указываем поля для совместимости с БД без всех полей
-        const result = await db
-            .select({
-                id: users.id,
-                email: users.email,
-                password: users.password,
-                name: users.name,
-                telegramId: users.telegramId,
-                telegramUsername: users.telegramUsername,
-                telegramFirstName: users.telegramFirstName,
-                telegramPhotoUrl: users.telegramPhotoUrl,
-                twoFactorEnabled: users.twoFactorEnabled,
-                twoFactorSecret: users.twoFactorSecret,
-                isBlocked: users.isBlocked,
-                tier: users.tier,
-                createdAt: users.createdAt,
-            })
-            .from(users)
-            .where(eq(users.email, email))
-            .limit(1);
-        return result[0] as User | null;
+        try {
+            const result = await db
+                .select({
+                    id: users.id,
+                    email: users.email,
+                    password: users.password,
+                    name: users.name,
+                    telegramId: users.telegramId,
+                    telegramUsername: users.telegramUsername,
+                    telegramFirstName: users.telegramFirstName,
+                    telegramPhotoUrl: users.telegramPhotoUrl,
+                    twoFactorEnabled: users.twoFactorEnabled,
+                    twoFactorSecret: users.twoFactorSecret,
+                    isBlocked: users.isBlocked,
+                    tier: users.tier,
+                    createdAt: users.createdAt,
+                })
+                .from(users)
+                .where(eq(users.email, email))
+                .limit(1);
+            
+            if (result[0]) {
+                // Убеждаемся, что tier есть, если нет - используем значение по умолчанию
+                return { ...result[0], tier: result[0].tier || 'free' } as User;
+            }
+            return null;
+        } catch (error: any) {
+            // Если ошибка связана с отсутствием колонки tier, пробуем без неё
+            if (error?.message?.includes('tier') || error?.message?.includes('column')) {
+                const result = await db
+                    .select({
+                        id: users.id,
+                        email: users.email,
+                        password: users.password,
+                        name: users.name,
+                        telegramId: users.telegramId,
+                        telegramUsername: users.telegramUsername,
+                        telegramFirstName: users.telegramFirstName,
+                        telegramPhotoUrl: users.telegramPhotoUrl,
+                        twoFactorEnabled: users.twoFactorEnabled,
+                        twoFactorSecret: users.twoFactorSecret,
+                        isBlocked: users.isBlocked,
+                        createdAt: users.createdAt,
+                    })
+                    .from(users)
+                    .where(eq(users.email, email))
+                    .limit(1);
+                
+                if (result[0]) {
+                    return { ...result[0], tier: 'free' } as User;
+                }
+                return null;
+            }
+            throw error;
+        }
     }
 
     async getUserById(id: number): Promise<User | null> {
@@ -48,6 +83,8 @@ export class UserRepository {
                     telegramPhotoUrl: users.telegramPhotoUrl,
                     twoFactorEnabled: users.twoFactorEnabled,
                     twoFactorSecret: users.twoFactorSecret,
+                    isBlocked: users.isBlocked,
+                    tier: users.tier,
                     createdAt: users.createdAt,
                 })
                 .from(users)
@@ -58,7 +95,7 @@ export class UserRepository {
             // #endregion
             // Добавляем значения по умолчанию для isBlocked и tier
             if (result[0]) {
-                return { ...result[0], isBlocked: false, tier: result[0].tier || 'free' } as User;
+                return { ...result[0], isBlocked: result[0].isBlocked ?? false, tier: result[0].tier || 'free' } as User;
             }
             return null;
         } catch (error: any) {

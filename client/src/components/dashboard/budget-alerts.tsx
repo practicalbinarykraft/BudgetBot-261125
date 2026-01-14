@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 // ⏰ Budget calculation helpers extracted to separate file for reusability
 import { calculateBudgetProgress } from "@/lib/budget-helpers";
 import { useTranslation } from "@/i18n/context";
+import { useTranslateCategory } from "@/lib/category-translations";
 
 // Helper to get correct plural form for Russian
 function getPluralKey(count: number, baseKey: string): string {

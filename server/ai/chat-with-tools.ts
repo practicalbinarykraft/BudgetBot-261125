@@ -146,8 +146,8 @@ Be concise, friendly, and accurate.`;
       'financial_advisor',
       apiKeyInfo.provider,
       {
-        input: response.usage.inputTokens || 2000,
-        output: response.usage.outputTokens || 500
+        input: (response.usage as any).inputTokens || (response.usage as any).input_tokens || 2000,
+        output: (response.usage as any).outputTokens || (response.usage as any).output_tokens || 500
       },
       apiKeyInfo.billingMode === 'free'
     );

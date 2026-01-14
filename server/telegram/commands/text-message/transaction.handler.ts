@@ -15,7 +15,7 @@ import { convertToUSD, getUserExchangeRates } from '../../../services/currency-s
 import { resolveCategoryId } from '../../../services/category-resolution.service';
 import { getPrimaryWallet, updateWalletBalance } from '../../../services/wallet.service';
 import { formatTransactionMessage } from '../utils/format-transaction-message';
-import { logInfo, logError } from '../../../lib/logger';
+import { logInfo, logError, logWarning } from '../../../lib/logger';
 
 export async function handleNormalTransaction(
   bot: TelegramBot,

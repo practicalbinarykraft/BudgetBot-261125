@@ -232,23 +232,28 @@ export async function setupAuth(app: Express) {
           return next(err);
         }
 
-        // Log login audit event
-        await logAuditEvent({
-          userId: user.id,
-          action: AuditAction.LOGIN,
-          entityType: AuditEntityType.USER,
-          entityId: user.id,
-          metadata: {
-            email: user.email,
-          },
-          req,
-        });
+        try {
+          // Log login audit event (non-blocking)
+          await logAuditEvent({
+            userId: user.id,
+            action: AuditAction.LOGIN,
+            entityType: AuditEntityType.USER,
+            entityId: user.id,
+            metadata: {
+              email: user.email,
+            },
+            req,
+          });
+        } catch (auditError) {
+          // Don't fail login if audit logging fails
+          logError('Failed to log login audit event', auditError);
+        }
 
         return res.json({
           id: user.id,
           email: user.email,
           name: user.name,
-          tier: user.tier || 'free',
+          tier: (user as any).tier || 'free',
         });
       });
     })(req, res, next);

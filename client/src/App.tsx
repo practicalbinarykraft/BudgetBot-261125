@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState, lazy, Suspense } from "react";
 import { Switch, Route, Redirect, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -19,7 +19,6 @@ import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useChatSidebar } from "@/stores/chat-sidebar-store";
 import { useTelegramPaddingTopStyle } from "@/hooks/use-telegram-safe-area";
-import { useEffect, useState, lazy, Suspense } from "react";
 
 // ===== Lazy Load Pages for Better Performance =====
 // Critical pages (loaded immediately)
@@ -28,6 +27,7 @@ import AuthPage from "@/pages/auth-page";
 import RecoverPasswordPage from "@/pages/recover-password-page";
 import DashboardPage from "@/pages/dashboard-page";
 import DashboardMobileDemoPage from "@/pages/dashboard-mobile-demo-page";
+import DashboardV2Page from "@/pages/dashboard-v2-page";
 
 // Non-critical pages (lazy loaded on demand)
 const TransactionsPage = lazy(() => import("@/pages/transactions-page"));
@@ -91,6 +91,7 @@ function Router() {
 
         {/* Protected app routes */}
         <ProtectedRoute path="/app/dashboard-mobile-demo" component={DashboardMobileDemoPage} />
+        <ProtectedRoute path="/app/dashboard-v2" component={DashboardV2Page} />
         <ProtectedRoute path="/app/dashboard" component={DashboardPage} />
         <ProtectedRoute path="/app/billing" component={BillingPage} />
         <ProtectedRoute path="/app/transactions/sort" component={SwipeSortPage} />
@@ -131,6 +132,7 @@ function AppContent() {
   const { toggle: toggleAiChat } = useChatSidebar();
   const isMobile = useIsMobile();
   const telegramPaddingStyle = useTelegramPaddingTopStyle();
+  const [location] = useLocation();
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -138,6 +140,9 @@ function AppContent() {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
   };
+
+  // Check if we're on dashboard-v2 page (experimental page without header/nav)
+  const isDashboardV2 = location === '/app/dashboard-v2';
 
   // Show onboarding dialog after user logs in
   useEffect(() => {
@@ -152,6 +157,24 @@ function AppContent() {
       <main className="flex-1 overflow-auto bg-background">
         <Router />
       </main>
+    );
+  }
+
+  // Dashboard V2 - minimal layout without header and sidebar
+  if (isDashboardV2) {
+    return (
+      <>
+        <main className="flex-1 overflow-auto bg-background">
+          <Router />
+        </main>
+        {/* Onboarding dialog for new users */}
+        <WelcomeDialog
+          open={onboardingOpen}
+          onComplete={() => setOnboardingOpen(false)}
+        />
+        {/* AI Chat Sidebar - доступен везде */}
+        <AIChatSidebar />
+      </>
     );
   }
 
@@ -218,15 +241,15 @@ function AppContent() {
 export default function App() {
   return (
     <TooltipProvider delayDuration={300}>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <I18nProvider>
-            <WebSocketProvider>
-              <AppContent />
-            </WebSocketProvider>
-          </I18nProvider>
-        </AuthProvider>
-      </QueryClientProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <I18nProvider>
+              <WebSocketProvider>
+                <AppContent />
+              </WebSocketProvider>
+            </I18nProvider>
+          </AuthProvider>
+        </QueryClientProvider>
       <Toaster />
     </TooltipProvider>
   );
