@@ -29,7 +29,7 @@ import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
 import { AddTransactionDialog } from "@/components/transactions/add-transaction-dialog";
 import { EditTransactionDialog } from "@/components/transactions/edit-transaction-dialog";
 import { useChatSidebar } from "@/stores/chat-sidebar-store";
-import { VoiceRecorder } from "@/components/voice-recorder";
+import { VoiceRecorderAdaptive, ParsedVoiceResult } from "@/components/voice-recorder-adaptive";
 import { useTelegramSafeArea } from "@/hooks/use-telegram-safe-area";
 import { useTranslateCategory } from "@/lib/category-translations";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -45,6 +45,13 @@ export default function DashboardV2Page() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showVoiceInput, setShowVoiceInput] = useState(false);
+  const [voiceData, setVoiceData] = useState<{
+    description?: string;
+    amount?: string;
+    currency?: string;
+    category?: string;
+    type?: 'income' | 'expense';
+  }>({});
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showCategorySelect, setShowCategorySelect] = useState(false);
   const [transactionForCategory, setTransactionForCategory] = useState<Transaction | null>(null);
@@ -227,17 +234,33 @@ export default function DashboardV2Page() {
     }
   };
 
+  // Handler for Web Speech API (plain text) - used in regular browsers
   const handleVoiceResult = (text: string) => {
-    // Open add transaction dialog with voice input text
+    setVoiceData({ description: text });
     setShowAddDialog(true);
-    // TODO: Pass text to dialog if possible
     setShowVoiceInput(false);
   };
 
+  // Handler for server-side parsed result - used in Telegram Mini App
+  const handleVoiceParsedResult = (result: ParsedVoiceResult) => {
+    setVoiceData({
+      description: result.parsed.description,
+      amount: result.parsed.amount,
+      currency: result.parsed.currency,
+      category: result.parsed.category,
+      type: result.parsed.type,
+    });
+    setShowAddDialog(true);
+    setShowVoiceInput(false);
+  };
+
+  // Safety check for safeArea
+  const safeAreaBottom = safeArea?.bottom ?? 0;
+
   return (
-    <div className="min-h-screen bg-background pb-32" style={{ paddingBottom: `calc(6rem + ${safeArea.bottom}px)` }}>
+    <div className="min-h-screen bg-background pb-32" style={{ paddingBottom: `calc(6rem + ${safeAreaBottom}px)` }}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
+      <div className="flex items-center justify-between p-4">
         <Link href="/app/wallets" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           <Wallet className="h-5 w-5 text-muted-foreground" />
           <span className="text-sm font-medium">
@@ -247,7 +270,7 @@ export default function DashboardV2Page() {
         <div className="flex items-center gap-3">
           <Link href="/app/dashboard">
             <button
-              className="w-10 h-10 rounded-full bg-background border border-border shadow-lg flex items-center justify-center hover:bg-accent transition-colors hover:scale-105"
+              className="w-10 h-10 rounded-full flex items-center justify-center hover:opacity-70 transition-opacity"
               aria-label={language === 'ru' ? 'Панель управления' : 'Dashboard'}
             >
               <BarChart3 className="h-5 w-5 text-muted-foreground" />
@@ -255,7 +278,7 @@ export default function DashboardV2Page() {
           </Link>
           <button
             onClick={() => setShowMobileMenu(true)}
-            className="w-10 h-10 rounded-full bg-background border border-border shadow-lg flex items-center justify-center hover:bg-accent transition-colors hover:scale-105"
+            className="w-10 h-10 rounded-full flex items-center justify-center hover:opacity-70 transition-opacity"
             aria-label={language === 'ru' ? 'Меню' : 'Menu'}
           >
             <MenuIcon className="h-5 w-5 text-muted-foreground" />
@@ -448,7 +471,7 @@ export default function DashboardV2Page() {
       {/* Bottom Action Buttons - Floating overlay, no background */}
       <div className="fixed bottom-0 left-0 right-0 flex items-center justify-center gap-4 p-4 pointer-events-none z-50"
         style={{ 
-          paddingBottom: `calc(1rem + ${safeArea.bottom}px)`,
+          paddingBottom: `calc(1rem + ${safeAreaBottom}px)`,
         }}
       >
         {/* Add Transaction Button */}
@@ -488,7 +511,15 @@ export default function DashboardV2Page() {
       {/* Add Transaction Dialog */}
       <AddTransactionDialog
         open={showAddDialog}
-        onOpenChange={setShowAddDialog}
+        onOpenChange={(open) => {
+          setShowAddDialog(open);
+          if (!open) setVoiceData({}); // Clear voice data when dialog closes
+        }}
+        defaultDescription={voiceData.description}
+        defaultAmount={voiceData.amount}
+        defaultCurrency={voiceData.currency}
+        defaultCategory={voiceData.category}
+        defaultType={voiceData.type}
       />
 
       {/* Voice Input Dialog/Overlay */}
@@ -498,10 +529,18 @@ export default function DashboardV2Page() {
             <h3 className="text-lg font-semibold mb-4">
               {language === 'ru' ? 'Голосовой ввод' : 'Voice Input'}
             </h3>
-            <VoiceRecorder
-              onResult={handleVoiceResult}
-              className="w-full"
-            />
+            <p className="text-sm text-muted-foreground mb-4">
+              {language === 'ru'
+                ? 'Нажмите на микрофон и скажите, например: "Кофе 500 рублей"'
+                : 'Tap the microphone and say, for example: "Coffee 5 dollars"'}
+            </p>
+            <div className="flex justify-center">
+              <VoiceRecorderAdaptive
+                onResult={handleVoiceResult}
+                onParsedResult={handleVoiceParsedResult}
+                className="w-16 h-16"
+              />
+            </div>
             <button
               onClick={() => setShowVoiceInput(false)}
               className="mt-4 w-full py-2 px-4 bg-muted rounded-lg hover:bg-muted/80 transition-colors"

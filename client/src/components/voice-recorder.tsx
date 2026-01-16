@@ -16,10 +16,14 @@ interface VoiceRecorderProps {
 }
 
 // Type definitions for Web Speech API
+interface SpeechRecognitionConstructor {
+  new (): SpeechRecognition;
+}
+
 declare global {
   interface Window {
-    SpeechRecognition: typeof SpeechRecognition;
-    webkitSpeechRecognition: typeof SpeechRecognition;
+    SpeechRecognition: SpeechRecognitionConstructor;
+    webkitSpeechRecognition: SpeechRecognitionConstructor;
   }
 }
 

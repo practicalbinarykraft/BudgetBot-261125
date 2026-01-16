@@ -6,6 +6,10 @@ import { Translations } from './types';
 
 export const webCommonTranslations: Translations = {
   // Navigation
+  'nav.home': {
+    en: 'Home',
+    ru: 'Главная',
+  },
   'nav.dashboard': {
     en: 'Dashboard',
     ru: 'Панель управления',
@@ -522,5 +526,55 @@ export const webCommonTranslations: Translations = {
   'credits.tier.operations_500_1000': {
     en: '~500-1000 operations',
     ru: '~500-1000 операций',
+  },
+
+  // Voice Input
+  'voice.speak_now': {
+    en: 'Speak now...',
+    ru: 'Говорите...',
+  },
+  'voice.processing': {
+    en: 'Processing...',
+    ru: 'Обработка...',
+  },
+  'voice.no_credits_title': {
+    en: 'No Credits',
+    ru: 'Нет кредитов',
+  },
+  'voice.no_credits': {
+    en: 'You need credits for voice input. Add your OpenAI API key or purchase credits.',
+    ru: 'Для голосового ввода нужны кредиты. Добавьте свой OpenAI API ключ или пополните баланс.',
+  },
+  'voice.permission_denied_title': {
+    en: 'Permission Denied',
+    ru: 'Доступ запрещён',
+  },
+  'voice.permission_denied': {
+    en: 'Please allow microphone access to use voice input.',
+    ru: 'Пожалуйста, разрешите доступ к микрофону для использования голосового ввода.',
+  },
+  'voice.error_transcription': {
+    en: 'Failed to transcribe audio',
+    ru: 'Не удалось распознать аудио',
+  },
+  'voice.error_parsing': {
+    en: 'Failed to parse transaction',
+    ru: 'Не удалось разобрать транзакцию',
+  },
+  'voice.error_unexpected': {
+    en: 'Unexpected error occurred',
+    ru: 'Произошла непредвиденная ошибка',
+  },
+  'voice.start_recording': {
+    en: 'Start recording',
+    ru: 'Начать запись',
+  },
+  'voice.stop_recording': {
+    en: 'Stop recording',
+    ru: 'Остановить запись',
+  },
+  'voice.example_hint': {
+    en: 'Tap the microphone and say, for example: "Coffee 5 dollars"',
+    ru: 'Нажмите на микрофон и скажите, например: "Кофе 500 рублей"',
   },
 };
