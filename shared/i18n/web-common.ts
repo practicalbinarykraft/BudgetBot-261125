@@ -529,6 +529,14 @@ export const webCommonTranslations: Translations = {
   },
 
   // Voice Input
+  'voice_input.title': {
+    en: 'Voice Input',
+    ru: 'Голосовой ввод',
+  },
+  'voice_input.instructions': {
+    en: 'Tap the microphone and say, for example: "Coffee 5 dollars"',
+    ru: 'Нажмите на микрофон и скажите, например: "Кофе 500 рублей"',
+  },
   'voice.speak_now': {
     en: 'Speak now...',
     ru: 'Говорите...',
