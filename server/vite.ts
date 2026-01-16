@@ -50,11 +50,15 @@ export async function setupVite(app: Express, server: Server) {
     // - WebSocket
     // - Vite internal paths (@vite, @fs, @id, etc.)
     // - Source files (/src/)
+    // - Assets (/assets/)
+    // - Any file with extension (JS, CSS, images, etc.)
     if (
       url.startsWith("/api/") ||
       url.startsWith("/socket.io/") ||
       url.startsWith("/@") ||
-      url.startsWith("/src/")
+      url.startsWith("/src/") ||
+      url.startsWith("/assets/") ||
+      url.includes(".")
     ) {
       return next();
     }

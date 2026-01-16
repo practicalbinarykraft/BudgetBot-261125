@@ -32,6 +32,7 @@ import {
   ChevronDown,
   BarChart3,
   Target,
+  Home,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import * as React from "react";
@@ -118,7 +119,22 @@ export function MobileMenuSheet({ open, onOpenChange }: MobileMenuSheetProps) {
         {/* Content */}
         <div className="flex-1 overflow-y-visible mt-6 -mx-6 px-6">
           <div className="space-y-2">
-            {/* 1. Dashboard */}
+            {/* 1. Главная (Dashboard V2) - Только для мобильных */}
+            <Link href="/app/dashboard-v2">
+              <button
+                onClick={handleLinkClick}
+                className={cn(
+                  "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg transition-colors text-sm",
+                  "hover:bg-accent",
+                  location === "/app/dashboard-v2" ? "bg-accent text-primary font-medium" : "text-foreground"
+                )}
+              >
+                <Home className="h-5 w-5" />
+                <span>{t("nav.home")}</span>
+              </button>
+            </Link>
+
+            {/* 2. Dashboard */}
             <Link href="/app/dashboard">
               <button
                 onClick={handleLinkClick}
@@ -133,7 +149,7 @@ export function MobileMenuSheet({ open, onOpenChange }: MobileMenuSheetProps) {
               </button>
             </Link>
 
-            {/* 2. Money - Transactions, Wallets, Recurring */}
+            {/* 3. Money - Transactions, Wallets, Recurring */}
             <Collapsible
               open={openGroups.money}
               onOpenChange={() => toggleGroup('money')}
@@ -199,7 +215,7 @@ export function MobileMenuSheet({ open, onOpenChange }: MobileMenuSheetProps) {
               </CollapsibleContent>
             </Collapsible>
 
-            {/* 3. Analytics - Budgets, AI, Categories, Tags, Product Catalog */}
+            {/* 4. Analytics - Budgets, AI, Categories, Tags, Product Catalog */}
             <Collapsible
               open={openGroups.analytics}
               onOpenChange={() => toggleGroup('analytics')}
@@ -291,7 +307,7 @@ export function MobileMenuSheet({ open, onOpenChange }: MobileMenuSheetProps) {
               </CollapsibleContent>
             </Collapsible>
 
-            {/* 4. Goals - Wishlist, Planned Expenses, Planned Income, Assets */}
+            {/* 5. Goals - Wishlist, Planned Expenses, Planned Income, Assets */}
             <Collapsible
               open={openGroups.goals}
               onOpenChange={() => toggleGroup('goals')}
@@ -370,7 +386,7 @@ export function MobileMenuSheet({ open, onOpenChange }: MobileMenuSheetProps) {
               </CollapsibleContent>
             </Collapsible>
 
-            {/* 5. Settings */}
+            {/* 6. Settings */}
             <Link href="/app/settings">
               <button
                 onClick={handleLinkClick}
@@ -385,7 +401,7 @@ export function MobileMenuSheet({ open, onOpenChange }: MobileMenuSheetProps) {
               </button>
             </Link>
 
-            {/* 6. Billing */}
+            {/* 7. Billing */}
             <Link href="/app/billing">
               <button
                 onClick={handleLinkClick}
