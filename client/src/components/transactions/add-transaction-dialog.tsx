@@ -60,7 +60,7 @@ export function AddTransactionDialog({
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { t, language } = useTranslation();
+  const { t } = useTranslation();
   const translateCategory = useTranslateCategory();
   const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [showVoiceInput, setShowVoiceInput] = useState(false);
