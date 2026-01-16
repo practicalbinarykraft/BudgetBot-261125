@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,12 @@ interface AddTransactionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultPersonalTagId?: number | null;
+  // Props for voice input prefill
+  defaultDescription?: string;
+  defaultAmount?: string;
+  defaultCurrency?: string;
+  defaultCategory?: string;
+  defaultType?: 'income' | 'expense';
 }
 
 interface TransactionResponse {
@@ -40,7 +46,16 @@ interface TransactionResponse {
   mlConfidence: number;
 }
 
-export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId }: AddTransactionDialogProps) {
+export function AddTransactionDialog({
+  open,
+  onOpenChange,
+  defaultPersonalTagId,
+  defaultDescription,
+  defaultAmount,
+  defaultCurrency,
+  defaultCategory,
+  defaultType,
+}: AddTransactionDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -85,6 +100,17 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
       personalTagId: defaultPersonalTagId ?? null,
     },
   });
+
+  // Prefill form when dialog opens with voice input data
+  useEffect(() => {
+    if (open) {
+      if (defaultDescription) form.setValue("description", defaultDescription);
+      if (defaultAmount) form.setValue("amount", defaultAmount);
+      if (defaultCurrency) form.setValue("currency", defaultCurrency);
+      if (defaultCategory) form.setValue("category", defaultCategory);
+      if (defaultType) form.setValue("type", defaultType);
+    }
+  }, [open, defaultDescription, defaultAmount, defaultCurrency, defaultCategory, defaultType, form]);
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
@@ -143,12 +169,13 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-md !p-3 sm:!p-6 overflow-x-hidden">
-        <DialogHeader>
+      <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] flex flex-col !p-0 overflow-hidden">
+        <DialogHeader className="px-3 pt-3 pb-2 sm:px-6 sm:pt-6 sm:pb-4 flex-shrink-0">
           <DialogTitle className="text-base sm:text-lg">{t("transactions.add_transaction")}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 sm:space-y-4 overflow-x-hidden px-0.5">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+            <div className="px-3 sm:px-6 pb-3 sm:pb-6 space-y-3 sm:space-y-4 overflow-y-auto flex-1">
             <FormField
               control={form.control}
               name="type"
@@ -310,7 +337,8 @@ export function AddTransactionDialog({ open, onOpenChange, defaultPersonalTagId 
               )}
             />
 
-            <div className="flex gap-2 pt-2 sm:pt-4">
+            </div>
+            <div className="flex gap-2 pt-2 sm:pt-4 px-3 sm:px-6 pb-3 sm:pb-6 border-t flex-shrink-0">
               <Button
                 type="button"
                 variant="outline"

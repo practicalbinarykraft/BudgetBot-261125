@@ -5,6 +5,7 @@ import trainingRoutes from "./training.routes";
 import analyzeRoutes from "./analyze.routes";
 import receiptsRoutes from "./receipts.routes";
 import priceRoutes from "./price.routes";
+import voiceParseRoutes from "./voice-parse.routes";
 import { withAuth } from "../../middleware/auth-utils";
 import { executeTool } from "../../ai/tool-executor";
 import { type ToolName } from "../../ai/tool-types";
@@ -113,5 +114,6 @@ router.use("/", trainingRoutes);
 router.use("/", analyzeRoutes);
 router.use("/", receiptsRoutes);
 router.use("/", priceRoutes);
+router.use("/", voiceParseRoutes);
 
 export default router;
