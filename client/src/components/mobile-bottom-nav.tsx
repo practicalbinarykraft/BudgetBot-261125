@@ -48,11 +48,11 @@ export function MobileBottomNav({ onMenuClick, onAddClick, onAiChatClick }: Mobi
     >
       <div className="flex items-center justify-around h-16 px-1">
         {/* Главная */}
-        <Link href="/app/dashboard">
+        <Link href="/app/dashboard-v2">
           <button
             className={cn(
               "flex items-center justify-center w-12 h-12 rounded-xl transition-all",
-              location === "/app/dashboard" || location === "/app/dashboard-mobile-demo"
+              location === "/app/dashboard-v2" || location === "/app/dashboard-mobile-demo"
                 ? "text-primary bg-primary/10"
                 : "text-muted-foreground hover:bg-accent/50"
             )}

@@ -1,9 +1,13 @@
 import { MessageCircle } from 'lucide-react';
 import { useChatSidebar } from '@/stores/chat-sidebar-store';
 import { Button } from '@/components/ui/button';
+import { useLocation } from 'wouter';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export function FloatingChatButton() {
   const { open, unreadCount, markAsRead } = useChatSidebar();
+  const [location] = useLocation();
+  const isMobile = useIsMobile();
 
   // DEBUG: Log component mount
   console.log('🔵 FloatingChatButton rendered! unreadCount:', unreadCount);
@@ -13,6 +17,11 @@ export function FloatingChatButton() {
     open();
     markAsRead();
   };
+
+  // Скрываем кнопку на Dashboard V2 в мобильной версии
+  if (isMobile && location === '/app/dashboard-v2') {
+    return null;
+  }
 
   return (
     <Button
