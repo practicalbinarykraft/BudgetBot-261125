@@ -76,7 +76,7 @@ router.post("/voice-parse", withAuth(async (req, res) => {
     }
 
     // Get user's preferred currency
-    const userSettings = await settingsRepository.getUserSettings(userId);
+    const userSettings = await settingsRepository.getSettingsByUserId(userId);
     const userCurrency = userSettings?.currency || 'USD';
 
     // ========== STEP 1: Get API key for transcription ==========

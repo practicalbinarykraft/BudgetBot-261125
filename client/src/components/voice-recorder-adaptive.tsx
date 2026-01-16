@@ -46,21 +46,21 @@ export function VoiceRecorderAdaptive({
   }
 
   // In regular browser - use Web Speech API (faster, free)
+  // In Mini App with only onResult - use server transcription but return just text
   if (onResult) {
+    if (isMiniApp) {
+      // Mini App: use server transcription, extract just the text
+      return (
+        <VoiceRecorderMiniApp
+          onParsedResult={(result) => onResult(result.transcription)}
+          className={className}
+        />
+      );
+    }
+    // Regular browser: use Web Speech API
     return (
       <VoiceRecorder
         onResult={onResult}
-        className={className}
-      />
-    );
-  }
-
-  // Fallback: if in Mini App but only onResult provided, still use Mini App version
-  // and extract just the transcription
-  if (isMiniApp && onResult) {
-    return (
-      <VoiceRecorderMiniApp
-        onParsedResult={(result) => onResult(result.transcription)}
         className={className}
       />
     );
