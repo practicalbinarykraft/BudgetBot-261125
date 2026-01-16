@@ -37,6 +37,15 @@ describe('Password Reset Service', () => {
 
   beforeEach(async () => {
     if (!dbAvailable) return;
+    
+    // Cleanup перед созданием (на случай, если предыдущий тест не очистил)
+    try {
+      await db.delete(users).where(eq(users.email, 'test@example.com'));
+      await db.delete(users).where(eq(users.telegramId, '123456789'));
+      // Небольшая задержка для завершения транзакций
+      await new Promise(resolve => setTimeout(resolve, 50));
+    } catch {}
+    
     // Create test user
     const hashedPassword = await bcrypt.hash('oldpassword123', 10);
     const [user] = await db.insert(users).values({
@@ -44,6 +53,7 @@ describe('Password Reset Service', () => {
       password: hashedPassword,
       name: 'Test User',
       telegramId: '123456789',
+      isBlocked: false,
     }).returning();
 
     testUser = user;
@@ -52,16 +62,24 @@ describe('Password Reset Service', () => {
   afterEach(async () => {
     if (!dbAvailable) return;
     
-    if (testUser) {
-      await db.delete(users).where(eq(users.id, testUser.id));
-    }
+    try {
+      if (testUser) {
+        await db.delete(users).where(eq(users.id, testUser.id));
+      }
+      // Дополнительный cleanup
+      await db.delete(users).where(eq(users.email, 'test@example.com'));
+      await db.delete(users).where(eq(users.telegramId, '123456789'));
+    } catch {}
   });
 
   describe('verifyResetToken', () => {
     // verifyResetToken doesn't need DB - it's a pure function
+    // Эти тесты не требуют testUser, поэтому они могут выполняться без создания пользователя в БД
+    // Используем .skip для beforeEach, если тест не требует БД (но это сложно, поэтому просто убедимся, что cleanup работает)
     it('should verify valid token and return userId', () => {
-      // Arrange: Create valid token (use test user ID if available, otherwise use 1)
-      const expectedUserId = testUser?.id || 1;
+      // Arrange: Create valid token (use fixed user ID for consistency)
+      // Этот тест не требует БД, поэтому не зависит от testUser
+      const expectedUserId = 999; // Fixed ID для теста без зависимости от БД
       const timestamp = Date.now();
       const secret = process.env.SESSION_SECRET || 'default-secret-change-in-production';
       const tokenData = `${expectedUserId}:${timestamp}`;
@@ -80,7 +98,8 @@ describe('Password Reset Service', () => {
 
     it('should reject expired token', () => {
       // Arrange: Create expired token (2 hours ago)
-      const testUserId = testUser?.id || 1;
+      // Этот тест не требует БД, поэтому не зависит от testUser
+      const testUserId = 999; // Fixed ID для теста без зависимости от БД
       const timestamp = Date.now() - (2 * RESET_TOKEN_EXPIRY_MS);
       const secret = process.env.SESSION_SECRET || 'default-secret-change-in-production';
       const tokenData = `${testUserId}:${timestamp}`;
@@ -99,7 +118,7 @@ describe('Password Reset Service', () => {
 
     it('should reject token with invalid signature', () => {
       // Arrange: Create token with wrong hash
-      const testUserId = testUser?.id || 1;
+      const testUserId = 999; // Fixed ID для теста без зависимости от БД
       const timestamp = Date.now();
       const tokenData = `${testUserId}:${timestamp}`;
       const wrongHash = 'invalid-hash';

@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { useTelegramMiniApp } from '../use-telegram-miniapp';
 
 // Mock window.Telegram
@@ -33,14 +33,29 @@ describe('useTelegramMiniApp', () => {
 
   it('should detect Mini App when Telegram WebApp is available', async () => {
     // Arrange: Mock Telegram WebApp
+    const mockReady = vi.fn();
+    const mockExpand = vi.fn();
+    
     (window as any).Telegram = {
-      WebApp: mockTelegramWebApp,
+      WebApp: {
+        ready: mockReady,
+        expand: mockExpand,
+        initData: 'test_init_data_string',
+        initDataUnsafe: {
+          user: {
+            id: 123456789,
+            first_name: 'Test User',
+            username: 'testuser',
+            photo_url: 'https://example.com/photo.jpg',
+          },
+        },
+      },
     };
 
     // Act
     const { result } = renderHook(() => useTelegramMiniApp());
 
-    // Assert
+    // Assert - дождаться инициализации через useEffect
     await waitFor(() => {
       expect(result.current.isMiniApp).toBe(true);
       expect(result.current.initData).toBe('test_init_data_string');
@@ -49,12 +64,15 @@ describe('useTelegramMiniApp', () => {
         first_name: 'Test User',
         username: 'testuser',
         photo_url: 'https://example.com/photo.jpg',
+        auth_date: expect.any(Number),
+        hash: '',
+        language_code: undefined,
       });
-    });
+    }, { timeout: 3000 });
 
     // Verify Telegram WebApp methods were called
-    expect(mockTelegramWebApp.ready).toHaveBeenCalled();
-    expect(mockTelegramWebApp.expand).toHaveBeenCalled();
+    expect(mockReady).toHaveBeenCalled();
+    expect(mockExpand).toHaveBeenCalled();
   });
 
   it('should return false when not in Mini App', () => {

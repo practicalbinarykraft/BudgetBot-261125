@@ -77,10 +77,15 @@ export function FinancialTrendChart({ wishlistPredictions = [] }: FinancialTrend
   // Fetch long-term assets forecast (12 months)
   const { data: assetsForecast } = useAssetsForecast({ months: 12 });
 
-  // Show error toast when query fails
+  // Show error toast when query fails (but not for 401 - user will be redirected)
   useEffect(() => {
     if (error) {
       console.error('[FinancialTrendChart] Query failed:', error);
+      // Не показываем тост для 401 ошибок - пользователь будет перенаправлен на логин
+      if (error instanceof Error && error.message.includes('401')) {
+        console.log('[FinancialTrendChart] 401 error, skipping toast (user will be redirected)');
+        return;
+      }
       toast({
         title: t('common.error'),
         description: error instanceof Error ? error.message : t('dashboard.forecast_error_generic'),

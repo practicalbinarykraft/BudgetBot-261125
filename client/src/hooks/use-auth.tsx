@@ -42,6 +42,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryFn: getQueryFn({ on401: "returnNull" }),
     // Не загружаем данные в админ-панели
     enabled: !isAdminRoute,
+    retry: (failureCount, error) => {
+      // Логируем ошибки при запросе /api/user
+      if (error) {
+        console.log('[Auth] /api/user query error:', error.message);
+      }
+      // Не повторяем запрос при 401 (пользователь не авторизован)
+      if (error && error.message.includes('401')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
 
   const loginMutation = useMutation({
@@ -50,9 +61,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: (user: SelectUser) => {
-      queryClient.setQueryData(["/api/user"], user);
+      console.log('[Auth] Login successful, user:', user);
+      // Небольшая задержка перед инвалидацией, чтобы дать время сессии установиться
+      setTimeout(() => {
+        console.log('[Auth] Invalidating /api/user query after login');
+        // Инвалидируем запрос, чтобы сделать реальный запрос к /api/user
+        // Это проверит, что сессия действительно установлена
+        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      }, 200);
     },
     onError: (error: Error) => {
+      console.error('[Auth] Login failed:', error);
       toast({
         title: "Login failed",
         description: error.message,
@@ -67,9 +86,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: (user: SelectUser) => {
-      queryClient.setQueryData(["/api/user"], user);
+      console.log('[Auth] Registration successful, user:', user);
+      // Небольшая задержка перед инвалидацией, чтобы дать время сессии установиться
+      setTimeout(() => {
+        console.log('[Auth] Invalidating /api/user query after registration');
+        // Инвалидируем запрос, чтобы сделать реальный запрос к /api/user
+        // Это проверит, что сессия действительно установлена
+        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      }, 200);
     },
     onError: (error: Error) => {
+      console.error('[Auth] Registration failed:', error);
       toast({
         title: "Registration failed",
         description: error.message,

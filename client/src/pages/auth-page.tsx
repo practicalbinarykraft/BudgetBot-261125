@@ -85,7 +85,15 @@ export default function AuthPage() {
 
   const onLogin = async (data: { email: string; password: string }) => {
     try {
+      console.log('[AuthPage] Starting login...');
       const user = await loginMutation.mutateAsync(data);
+      console.log('[AuthPage] Login mutation successful, user:', user);
+      
+      // Увеличиваем задержку, чтобы сессия успела установиться
+      // invalidateQueries в use-auth.tsx также имеет задержку 200ms
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      console.log('[AuthPage] Delay completed, checking user state...');
       
       // After successful login, offer Telegram linking
       // Show in Mini App if initData available, or in web (always available via widget)
@@ -96,6 +104,7 @@ export default function AuthPage() {
         !localStorage.getItem('telegramLinkDismissed');
       
       if (shouldShow) {
+        console.log('[AuthPage] Showing Telegram link prompt');
         // In Mini App, use initData; in web, will use Telegram Login Widget
         if (isMiniApp && initData) {
           setPendingTelegramId(telegramUser?.id?.toString() || null);
@@ -105,9 +114,11 @@ export default function AuthPage() {
         }
         setShowLinkPrompt(true);
       } else {
+        console.log('[AuthPage] Redirecting to dashboard');
         setLocation('/app/dashboard');
       }
     } catch (error) {
+      console.error('[AuthPage] Login error caught:', error);
       // Error handled by mutation
     }
   };

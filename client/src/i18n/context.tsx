@@ -3,7 +3,7 @@
  * Syncs with user settings in database and localStorage for unauthenticated users
  */
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { type Language, t as translateFn } from '@shared/i18n';
 import { useQuery } from '@tanstack/react-query';
 import { getQueryFn } from '@/lib/queryClient';

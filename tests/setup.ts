@@ -10,9 +10,36 @@ import '@testing-library/jest-dom/vitest';
 
 // Set test environment variables
 process.env.NODE_ENV = 'test';
-process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test_db';
-process.env.SESSION_SECRET = 'test-session-secret-must-be-32-chars!!';
-process.env.ENCRYPTION_KEY = 'U4rnuZd9jFqJb5yokp5e1DrI8QCmSZx8HpDX4lLZUqI=';
+
+// Используем реальную БД из .env, если она доступна
+// Если DATABASE_URL уже установлен (из .env), используем его
+// Иначе пытаемся загрузить из .env файла
+if (!process.env.DATABASE_URL) {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const envPath = path.resolve(process.cwd(), '.env');
+    if (fs.existsSync(envPath)) {
+      const envContent = fs.readFileSync(envPath, 'utf-8');
+      const dbUrlMatch = envContent.match(/^DATABASE_URL=(.+)$/m);
+      if (dbUrlMatch) {
+        process.env.DATABASE_URL = dbUrlMatch[1].trim();
+        console.log('[Test Setup] Loaded DATABASE_URL from .env file');
+      }
+    }
+  } catch (error) {
+    // Если не удалось загрузить, используем тестовую БД
+    console.warn('[Test Setup] Could not load DATABASE_URL from .env, using test DB');
+  }
+}
+
+// Если все еще не установлено, используем тестовую БД
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test_db';
+}
+
+process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'test-session-secret-must-be-32-chars!!';
+process.env.ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'U4rnuZd9jFqJb5yokp5e1DrI8QCmSZx8HpDX4lLZUqI=';
 
 // Mock localStorage for frontend tests
 const localStorageMock = {

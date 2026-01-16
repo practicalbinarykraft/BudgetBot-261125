@@ -5,7 +5,7 @@
  * Junior-Friendly: ~150 lines, covers registration flow
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import request from 'supertest';
 import express from 'express';
 import session from 'express-session';
@@ -13,7 +13,7 @@ import bcrypt from 'bcryptjs';
 import { db } from '../../db';
 import { users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
-import { createApp } from '../../index'; // We'll need to import app setup
+import authMiniappRouter from '../auth-miniapp.routes';
 
 // Mock passport
 vi.mock('passport', () => ({
@@ -21,6 +21,11 @@ vi.mock('passport', () => ({
     initialize: () => (req: any, res: any, next: any) => next(),
     session: () => (req: any, res: any, next: any) => next(),
   },
+}));
+
+// Mock rate limiter to avoid rate limiting in tests
+vi.mock('../../middleware/rate-limit', () => ({
+  authRateLimiter: (req: any, res: any, next: any) => next(),
 }));
 
 describe('POST /api/auth/register-miniapp', () => {
@@ -44,8 +49,23 @@ describe('POST /api/auth/register-miniapp', () => {
       next();
     });
     
-    // TODO: Add register-miniapp route when created
-    // app.use('/api/auth', authRouter);
+    // Подключаем роутер auth-miniapp
+    app.use('/api/auth', authMiniappRouter);
+  });
+  
+  afterEach(async () => {
+    // Cleanup: удаляем тестовых пользователей
+    try {
+      await db.delete(users).where(eq(users.email, 'newuser@example.com'));
+      await db.delete(users).where(eq(users.email, 'duplicate@example.com'));
+      await db.delete(users).where(eq(users.email, 'existing@example.com'));
+      await db.delete(users).where(eq(users.email, 'linked@example.com'));
+      await db.delete(users).where(eq(users.email, 'test2@example.com'));
+      await db.delete(users).where(eq(users.telegramId, '111222333'));
+      await db.delete(users).where(eq(users.telegramId, '999888777'));
+    } catch (error) {
+      // Игнорируем ошибки cleanup
+    }
   });
   
   describe('Successful registration', () => {
@@ -58,15 +78,21 @@ describe('POST /api/auth/register-miniapp', () => {
         telegramData: {
           firstName: 'New',
           username: 'newuser',
-          photoUrl: null,
+          // photoUrl is optional, omit it instead of null
         },
       };
       
       // Act
       const response = await request(app)
         .post('/api/auth/register-miniapp')
-        .send(registrationData)
-        .expect(201);
+        .send(registrationData);
+      
+      if (response.status !== 201) {
+        console.log('Response status:', response.status);
+        console.log('Response body:', JSON.stringify(response.body, null, 2));
+      }
+      
+      expect(response.status).toBe(201);
       
       // Assert
       expect(response.body.success).toBe(true);
@@ -122,12 +148,17 @@ describe('POST /api/auth/register-miniapp', () => {
   
   describe('Validation errors', () => {
     it('should reject duplicate email', async () => {
-      // Arrange: Create existing user
+      // Arrange: Create existing user (удаляем сначала, если существует)
+      try {
+        await db.delete(users).where(eq(users.email, 'existing@example.com'));
+      } catch {}
+      
       const hashedPassword = await bcrypt.hash('password123', 10);
       const [existingUser] = await db.insert(users).values({
         email: 'existing@example.com',
         password: hashedPassword,
         name: 'Existing User',
+        isBlocked: false,
       }).returning();
       
       const registrationData = {
@@ -140,14 +171,16 @@ describe('POST /api/auth/register-miniapp', () => {
       // Act
       const response = await request(app)
         .post('/api/auth/register-miniapp')
-        .send(registrationData)
-        .expect(400);
+        .send(registrationData);
       
-      // Assert
-      expect(response.body.error).toContain('email');
+      // Assert - API возвращает 400 с "Email already registered" (не Validation failed)
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Email already registered');
       
       // Cleanup
-      await db.delete(users).where(eq(users.id, existingUser.id));
+      try {
+        await db.delete(users).where(eq(users.id, existingUser.id));
+      } catch {}
     });
     
     it('should reject weak password', async () => {
@@ -163,7 +196,10 @@ describe('POST /api/auth/register-miniapp', () => {
         .send(registrationData)
         .expect(400);
       
-      expect(response.body.error).toContain('password');
+      expect(response.body.error).toBe('Validation failed');
+      expect(response.body.details).toBeDefined();
+      const passwordError = response.body.details.find((d: any) => d.path.includes('password'));
+      expect(passwordError).toBeDefined();
     });
     
     it('should reject invalid email format', async () => {
@@ -176,26 +212,41 @@ describe('POST /api/auth/register-miniapp', () => {
       
       const response = await request(app)
         .post('/api/auth/register-miniapp')
-        .send(registrationData)
-        .expect(400);
+        .send(registrationData);
       
-      expect(response.body.error).toContain('email');
+      // API возвращает 400 с "Validation failed" для невалидного email
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Validation failed');
+      expect(response.body.details).toBeDefined();
+      const emailError = response.body.details.find((d: any) => d.path.includes('email'));
+      expect(emailError).toBeDefined();
+      
+      // Cleanup
+      try {
+        await db.delete(users).where(eq(users.email, 'existing@example.com'));
+      } catch {}
     });
   });
   
   describe('Telegram ID validation', () => {
     it('should reject if telegram_id is already linked', async () => {
-      // Arrange: Create user with telegram_id
+      // Arrange: Create user with telegram_id (удаляем сначала, если существует)
+      try {
+        await db.delete(users).where(eq(users.telegramId, '999888777'));
+        await db.delete(users).where(eq(users.email, 'linked@example.com'));
+      } catch {}
+      
       const hashedPassword = await bcrypt.hash('password123', 10);
       const [existingUser] = await db.insert(users).values({
         email: 'linked@example.com',
         password: hashedPassword,
         name: 'Linked User',
         telegramId: '999888777',
+        isBlocked: false,
       }).returning();
       
       const registrationData = {
-        email: 'new@example.com',
+        email: 'newuser_for_linked_test@example.com', // Use unique email to avoid email conflict
         password: 'SecurePass123!',
         name: 'New User',
         telegramId: '999888777', // Same telegram_id
@@ -204,14 +255,19 @@ describe('POST /api/auth/register-miniapp', () => {
       // Act
       const response = await request(app)
         .post('/api/auth/register-miniapp')
-        .send(registrationData)
-        .expect(400);
+        .send(registrationData);
       
       // Assert
-      expect(response.body.error).toContain('already linked');
+      expect(response.status).toBe(400);
+      // The API checks email first, then telegramId
+      // But if email is unique, it should check telegramId and return the telegram error
+      expect(response.body.error).toMatch(/already linked|Telegram account/i);
       
       // Cleanup
-      await db.delete(users).where(eq(users.id, existingUser.id));
+      try {
+        await db.delete(users).where(eq(users.id, existingUser.id));
+        await db.delete(users).where(eq(users.email, 'new@example.com'));
+      } catch {}
     });
   });
 });

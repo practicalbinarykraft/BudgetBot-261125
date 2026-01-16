@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, useCallback, useMemo } from "react";
 import type { GraphMode, GraphConfig } from '@shared/types/graph-mode';
 import { DEFAULT_LITE_CONFIG, DEFAULT_PRO_CONFIG } from '@shared/types/graph-mode';
+import { useAuth } from "./use-auth";
 
 export interface TrendDataPoint {
   date: string;
@@ -50,6 +51,9 @@ export function useFinancialTrend({
   historyDays = 30,
   forecastDays = 365,
 }: UseFinancialTrendOptions = {}) {
+  // Проверяем авторизацию - не делаем запрос, пока пользователь не авторизован
+  const { user, isLoading: isAuthLoading } = useAuth();
+  
   // Graph mode (lite/pro)
   const [graphMode, setGraphMode] = useState<GraphMode>(() => {
     const saved = localStorage.getItem('graphMode');
@@ -158,17 +162,41 @@ export function useFinancialTrend({
 
       const res = await fetch(`/api/analytics/trend?${searchParams}`, {
         cache: 'no-store',
+        credentials: 'include', // Важно: отправляем cookies для аутентификации
       });
 
       if (!res.ok) {
-        throw new Error("Failed to fetch trend data");
+        // Получаем детальное сообщение об ошибке
+        let errorMessage = "Failed to fetch trend data";
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch {
+          // Если не удалось распарсить JSON, используем статус
+          errorMessage = `${res.status}: ${res.statusText || "Failed to fetch trend data"}`;
+        }
+        console.error('[useFinancialTrend] Request failed:', {
+          status: res.status,
+          statusText: res.statusText,
+          errorMessage,
+        });
+        throw new Error(errorMessage);
       }
 
       return res.json();
     },
+    enabled: !isAuthLoading && !!user, // Запрос выполняется только когда пользователь авторизован
     placeholderData: (prev) => prev,
     staleTime: 0,
     refetchOnMount: 'always',
+    retry: (failureCount, error) => {
+      // Не повторяем запрос при 401 (пользователь не авторизован)
+      if (error instanceof Error && error.message.includes('401')) {
+        console.log('[useFinancialTrend] 401 error, not retrying');
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
 
   return {

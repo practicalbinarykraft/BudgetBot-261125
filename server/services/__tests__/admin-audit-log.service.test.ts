@@ -13,18 +13,28 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { logAdminAction } from '../admin-audit-log.service';
 import type { Request } from 'express';
 
-// Mock database
+// Mock database - создаем моки внутри factory функции
 const mockValues = vi.fn().mockReturnThis();
 const mockInsert = vi.fn().mockReturnValue({
   values: mockValues,
 });
 
-vi.mock('../../db', () => ({
-  db: {
-    insert: mockInsert,
-  },
-  adminAuditLog: {},
-}));
+vi.mock('../../db', () => {
+  const mockValues = vi.fn().mockReturnThis();
+  const mockInsert = vi.fn().mockReturnValue({
+    values: mockValues,
+  });
+  
+  return {
+    db: {
+      insert: mockInsert,
+    },
+    adminAuditLog: {},
+  };
+});
+
+// Импортируем после мока для получения типизированных моков
+import { db } from '../../db';
 
 // Mock logger
 vi.mock('../../lib/logger', () => ({
@@ -55,7 +65,8 @@ describe('Admin Audit Log Service', () => {
         req: mockReq,
       });
 
-      expect(mockValues).toHaveBeenCalled();
+      const mockedInsert = vi.mocked(db.insert);
+      expect(mockedInsert).toHaveBeenCalled();
     });
 
     it('should log action without request object', async () => {
@@ -66,7 +77,8 @@ describe('Admin Audit Log Service', () => {
         userAgent: 'Mozilla/5.0',
       });
 
-      expect(mockValues).toHaveBeenCalled();
+      const mockedInsert = vi.mocked(db.insert);
+      expect(mockedInsert).toHaveBeenCalled();
     });
 
     it('should extract IP from x-forwarded-for header', async () => {
@@ -82,7 +94,8 @@ describe('Admin Audit Log Service', () => {
         req: mockReq,
       });
 
-      expect(mockValues).toHaveBeenCalled();
+      const mockedInsert = vi.mocked(db.insert);
+      expect(mockedInsert).toHaveBeenCalled();
     });
 
     it('should extract IP from x-real-ip header', async () => {
@@ -98,13 +111,15 @@ describe('Admin Audit Log Service', () => {
         req: mockReq,
       });
 
-      expect(mockValues).toHaveBeenCalled();
+      const mockedInsert = vi.mocked(db.insert);
+      expect(mockedInsert).toHaveBeenCalled();
     });
 
     it('should use req.ip as fallback', async () => {
       const mockReq = {
         ip: '192.168.1.1',
         socket: { remoteAddress: '10.0.0.1' },
+        headers: {}, // Нет заголовков x-forwarded-for или x-real-ip
       } as unknown as Request;
 
       await logAdminAction({
@@ -113,7 +128,9 @@ describe('Admin Audit Log Service', () => {
         req: mockReq,
       });
 
-      expect(mockValues).toHaveBeenCalled();
+      // Проверяем, что insert был вызван
+      // Используем прямой доступ к моку через db
+      expect(db.insert).toHaveBeenCalled();
     });
 
     it('should handle null adminId', async () => {
@@ -122,12 +139,14 @@ describe('Admin Audit Log Service', () => {
         entityType: 'system',
       });
 
-      expect(mockValues).toHaveBeenCalled();
+      const mockedInsert = vi.mocked(db.insert);
+      expect(mockedInsert).toHaveBeenCalled();
     });
 
     it('should handle errors gracefully', async () => {
       const { logError } = await import('../../lib/logger');
-      mockInsert.mockRejectedValueOnce(new Error('Database error'));
+      const mockedInsert = vi.mocked(db.insert);
+      mockedInsert.mockRejectedValueOnce(new Error('Database error'));
 
       await logAdminAction({
         adminId: 1,
@@ -154,7 +173,8 @@ describe('Admin Audit Log Service', () => {
         userAgent: 'Custom Agent',
       });
 
-      expect(mockValues).toHaveBeenCalled();
+      const mockedInsert = vi.mocked(db.insert);
+      expect(mockedInsert).toHaveBeenCalled();
     });
   });
 });

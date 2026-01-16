@@ -5,6 +5,7 @@
  * Covers: script loading, callback handling, API calls, redirects
  */
 
+import React from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { TelegramLoginButton } from '../telegram-login-button';
@@ -29,6 +30,9 @@ describe('TelegramLoginButton', () => {
     vi.clearAllMocks();
     // Reset window.onTelegramAuth
     delete (window as any).onTelegramAuth;
+    
+    // Clear any existing scripts
+    document.querySelectorAll('script[src*="telegram-widget"]').forEach(el => el.remove());
   });
 
   afterEach(() => {
@@ -36,12 +40,16 @@ describe('TelegramLoginButton', () => {
     document.querySelectorAll('script[src*="telegram-widget"]').forEach(el => el.remove());
   });
 
-  it('should render Telegram widget script', () => {
+  it('should render Telegram widget script', async () => {
     render(<TelegramLoginButton />);
 
-    // Wait for script to be added
+    // Wait for script to be added (useEffect runs after render)
+    await waitFor(() => {
+      const script = document.querySelector('script[src*="telegram-widget"]');
+      expect(script).toBeTruthy();
+    });
+
     const script = document.querySelector('script[src*="telegram-widget"]');
-    expect(script).toBeTruthy();
     expect(script?.getAttribute('data-telegram-login')).toBe('BudgetBuddyAIBot');
     expect(script?.getAttribute('data-size')).toBe('large');
     expect(script?.getAttribute('data-onauth')).toBe('onTelegramAuth(user)');
@@ -272,18 +280,25 @@ describe('TelegramLoginButton', () => {
     expect(window.onTelegramAuth).toBeUndefined();
   });
 
-  it('should not add script twice if already loaded', () => {
+  it('should not add script twice if already loaded', async () => {
     const { rerender } = render(<TelegramLoginButton />);
+
+    // Wait for first script to be added
+    await waitFor(() => {
+      const scriptsCount1 = document.querySelectorAll('script[src*="telegram-widget"]').length;
+      expect(scriptsCount1).toBe(1);
+    });
 
     const scriptsCount1 = document.querySelectorAll('script[src*="telegram-widget"]').length;
 
     rerender(<TelegramLoginButton />);
 
-    const scriptsCount2 = document.querySelectorAll('script[src*="telegram-widget"]').length;
-
-    // Should only add script once
-    expect(scriptsCount1).toBe(1);
-    expect(scriptsCount2).toBe(1);
+    // Wait a bit for useEffect to run
+    await waitFor(() => {
+      const scriptsCount2 = document.querySelectorAll('script[src*="telegram-widget"]').length;
+      // Should only add script once (component checks if script already exists)
+      expect(scriptsCount2).toBe(1);
+    }, { timeout: 500 });
   });
 });
 

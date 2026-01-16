@@ -17,6 +17,7 @@ import React, { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, RenderOptions } from '@testing-library/react';
 import { vi } from 'vitest';
+import { AuthContext } from '@/hooks/use-auth';
 
 // ========================================
 // MOCK DATA
@@ -64,6 +65,15 @@ function createTestQueryClient() {
         retry: false,
         gcTime: 0,
         staleTime: 0,
+        queryFn: async ({ queryKey }) => {
+          // Default queryFn для тестов - используем fetch
+          const res = await fetch(queryKey.join("/") as string, {
+            credentials: "include",
+          });
+          if (res.status === 401) return null;
+          if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
+          return res.json();
+        },
       },
       mutations: {
         retry: false,
@@ -72,52 +82,10 @@ function createTestQueryClient() {
   });
 }
 
-// Mock i18n context
-const MockI18nProvider = ({ children }: { children: ReactNode }) => {
-  const mockContext = {
-    language: 'en' as const,
-    setLanguage: vi.fn(),
-    t: (key: string) => mockTranslations[key] || key,
-  };
+// Import the actual I18n context
+import { I18nProvider } from '@/i18n/context';
 
-  return (
-    <I18nContext.Provider value={mockContext}>
-      {children}
-    </I18nContext.Provider>
-  );
-};
-
-// Import the actual context to mock it
-import { createContext, useContext } from 'react';
-
-interface I18nContextType {
-  language: 'en' | 'ru';
-  setLanguage: (lang: 'en' | 'ru') => void;
-  t: (key: string) => string;
-}
-
-const I18nContext = createContext<I18nContextType | undefined>(undefined);
-
-// Mock Auth context
-interface AuthContextType {
-  user: typeof mockUser | null;
-  isLoading: boolean;
-  error: Error | null;
-  loginMutation: {
-    mutate: ReturnType<typeof vi.fn>;
-    isPending: boolean;
-  };
-  logoutMutation: {
-    mutate: ReturnType<typeof vi.fn>;
-    isPending: boolean;
-  };
-  registerMutation: {
-    mutate: ReturnType<typeof vi.fn>;
-    isPending: boolean;
-  };
-}
-
-const AuthContext = createContext<AuthContextType | null>(null);
+// Используем реальный AuthContext, но создаем мокированные значения
 
 interface MockAuthProviderProps {
   children: ReactNode;
@@ -130,26 +98,29 @@ export const MockAuthProvider = ({
   user = null,
   isLoading = false,
 }: MockAuthProviderProps) => {
-  const mockAuthContext: AuthContextType = {
+  const mockAuthContext = {
     user,
     isLoading,
     error: null,
     loginMutation: {
       mutate: vi.fn(),
+      mutateAsync: vi.fn(),
       isPending: false,
     },
     logoutMutation: {
       mutate: vi.fn(),
+      mutateAsync: vi.fn(),
       isPending: false,
     },
     registerMutation: {
       mutate: vi.fn(),
+      mutateAsync: vi.fn(),
       isPending: false,
     },
   };
 
   return (
-    <AuthContext.Provider value={mockAuthContext}>
+    <AuthContext.Provider value={mockAuthContext as any}>
       {children}
     </AuthContext.Provider>
   );
@@ -174,11 +145,11 @@ export function TestProviders({
 
   return (
     <QueryClientProvider client={queryClient}>
-      <MockI18nProvider>
+      <I18nProvider>
         <MockAuthProvider user={user} isLoading={isLoading}>
           {children}
         </MockAuthProvider>
-      </MockI18nProvider>
+      </I18nProvider>
     </QueryClientProvider>
   );
 }

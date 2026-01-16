@@ -229,8 +229,18 @@ export async function setupAuth(app: Express) {
 
       req.login(user, async (err) => {
         if (err) {
+          logError('Failed to establish session', err as Error, { userId: user.id, email: user.email });
           return next(err);
         }
+
+        // Проверить, что сессия создана
+        if (req.sessionID) {
+          logInfo('Session ID created', { sessionId: req.sessionID, userId: user.id, email: user.email });
+        } else {
+          logWarning('Session ID not created after login', { userId: user.id, email: user.email });
+        }
+
+        logInfo('Session established', { userId: user.id, email: user.email, sessionId: req.sessionID });
 
         try {
           // Log login audit event (non-blocking)

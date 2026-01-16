@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { Redirect, Route } from "wouter";
-import { ComponentType, LazyExoticComponent } from "react";
+import { ComponentType, LazyExoticComponent, useEffect } from "react";
 
 type LazyComponent = LazyExoticComponent<ComponentType<any>> | ComponentType<any>;
 
@@ -13,6 +13,14 @@ export function ProtectedRoute({
   component: LazyComponent;
 }) {
   const { user, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      console.log('[ProtectedRoute] User not authenticated, redirecting to /login', { path });
+    } else if (!isLoading && user) {
+      console.log('[ProtectedRoute] User authenticated, allowing access', { path, userId: user.id });
+    }
+  }, [user, isLoading, path]);
 
   if (isLoading) {
     return (
