@@ -12,20 +12,15 @@ export function useIsMobile() {
   React.useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
     const onChange = (e: MediaQueryListEvent) => {
-      const newValue = e.matches
-      console.log('📱 useIsMobile onChange:', JSON.stringify({ matches: newValue, isMobile: newValue }))
-      setIsMobile(newValue)
+      setIsMobile(e.matches)
     }
     
     // Проверяем сразу при монтировании
-    const currentMatches = mql.matches
-    console.log('📱 useIsMobile MOUNT:', JSON.stringify({ matches: currentMatches, isMobile: currentMatches }))
-    setIsMobile(currentMatches)
+    setIsMobile(mql.matches)
     
     mql.addEventListener("change", onChange)
     return () => mql.removeEventListener("change", onChange)
   }, [])
 
-  console.log('📱 useIsMobile RENDER:', JSON.stringify({ isMobile }))
   return isMobile
 }
