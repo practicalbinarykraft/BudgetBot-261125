@@ -1,3 +1,10 @@
+/**
+ * TransactionService Tests
+ * 
+ * NOTE: These tests verify TransactionService methods delegate correctly to repositories.
+ * For full integration tests with real database, see integration test suite.
+ */
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock dependencies
@@ -43,16 +50,20 @@ vi.mock('../budget/limits-checker.service', () => ({
   sendBudgetAlert: vi.fn(),
 }));
 
+import { TransactionService } from '../transaction.service';
 import { transactionRepository } from '../../repositories/transaction.repository';
 import { walletRepository } from '../../repositories/wallet.repository';
 
 describe('TransactionService', () => {
+  let service: TransactionService;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    service = new TransactionService();
   });
 
   describe('getTransactions', () => {
-    it('should return transactions for user', async () => {
+    it('should delegate to repository and return transactions for user', async () => {
       const mockTransactions = [
         { id: 1, userId: 1, amount: '100.00', type: 'expense' },
         { id: 2, userId: 1, amount: '50.00', type: 'income' },
@@ -63,45 +74,34 @@ describe('TransactionService', () => {
         total: 2,
       });
 
-      const result = await transactionRepository.getTransactionsByUserId(1, {});
+      const result = await service.getTransactions(1, {});
       
+      expect(transactionRepository.getTransactionsByUserId).toHaveBeenCalledWith(1, {});
       expect(result.transactions).toHaveLength(2);
       expect(result.total).toBe(2);
     });
 
-    it('should filter by date range', async () => {
-      const mockTransactions = [
-        { id: 1, userId: 1, amount: '100.00', date: '2024-01-15' },
-      ];
-      
-      (transactionRepository.getTransactionsByUserId as any).mockResolvedValue({
-        transactions: mockTransactions,
-        total: 1,
-      });
-
-      const result = await transactionRepository.getTransactionsByUserId(1, {
+    it('should pass filters to repository', async () => {
+      const filters = {
         from: '2024-01-01',
         to: '2024-01-31',
-      });
+        limit: 10,
+        offset: 0,
+      };
       
-      expect(result.transactions).toHaveLength(1);
-    });
-
-    it('should return empty array for user with no transactions', async () => {
       (transactionRepository.getTransactionsByUserId as any).mockResolvedValue({
         transactions: [],
         total: 0,
       });
 
-      const result = await transactionRepository.getTransactionsByUserId(999, {});
+      await service.getTransactions(1, filters);
       
-      expect(result.transactions).toHaveLength(0);
-      expect(result.total).toBe(0);
+      expect(transactionRepository.getTransactionsByUserId).toHaveBeenCalledWith(1, filters);
     });
   });
 
   describe('getTransaction', () => {
-    it('should return single transaction by id', async () => {
+    it('should return transaction if it belongs to user', async () => {
       const mockTransaction = { 
         id: 1, 
         userId: 1, 
@@ -112,96 +112,77 @@ describe('TransactionService', () => {
       
       (transactionRepository.getTransactionById as any).mockResolvedValue(mockTransaction);
 
-      const result = await transactionRepository.getTransactionById(1);
+      const result = await service.getTransaction(1, 1);
       
+      expect(transactionRepository.getTransactionById).toHaveBeenCalledWith(1);
       expect(result).toEqual(mockTransaction);
-      expect(result.id).toBe(1);
+    });
+
+    it('should return null if transaction does not belong to user', async () => {
+      const mockTransaction = { 
+        id: 1, 
+        userId: 2, // Different user
+        amount: '100.00',
+        type: 'expense',
+      };
+      
+      (transactionRepository.getTransactionById as any).mockResolvedValue(mockTransaction);
+
+      const result = await service.getTransaction(1, 1);
+      
+      expect(result).toBeNull();
     });
 
     it('should return null for non-existent transaction', async () => {
       (transactionRepository.getTransactionById as any).mockResolvedValue(null);
 
-      const result = await transactionRepository.getTransactionById(999);
+      const result = await service.getTransaction(999, 1);
       
       expect(result).toBeNull();
     });
   });
 
-  describe('Transaction validation', () => {
-    it('should validate transaction type', () => {
-      const validTypes = ['income', 'expense'];
-      
-      expect(validTypes.includes('income')).toBe(true);
-      expect(validTypes.includes('expense')).toBe(true);
-      expect(validTypes.includes('invalid')).toBe(false);
-    });
-
-    it('should validate positive amount', () => {
-      const amount = 100;
-      expect(amount > 0).toBe(true);
-      
-      const negativeAmount = -50;
-      expect(negativeAmount > 0).toBe(false);
-    });
-
-    it('should validate date format', () => {
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      
-      expect(dateRegex.test('2024-01-15')).toBe(true);
-      expect(dateRegex.test('01-15-2024')).toBe(false);
-      expect(dateRegex.test('2024/01/15')).toBe(false);
-    });
-  });
-
-  describe('Wallet verification', () => {
-    it('should verify wallet belongs to user', async () => {
+  describe('createTransaction', () => {
+    it('should verify wallet ownership before creating transaction', async () => {
       const mockWallet = { id: 1, userId: 1, balance: '1000.00' };
       (walletRepository.getWalletById as any).mockResolvedValue(mockWallet);
-
-      const wallet = await walletRepository.getWalletById(1);
       
-      expect(wallet).not.toBeNull();
-      expect(wallet?.userId).toBe(1);
-    });
-
-    it('should reject wallet of different user', async () => {
-      const mockWallet = { id: 1, userId: 2, balance: '1000.00' };
-      (walletRepository.getWalletById as any).mockResolvedValue(mockWallet);
-
-      const wallet = await walletRepository.getWalletById(1);
-      const requestingUserId = 1;
-      
-      expect(wallet?.userId).not.toBe(requestingUserId);
-    });
-  });
-
-  describe('createTransaction', () => {
-    it('should create transaction with required fields', async () => {
-      const newTransaction = {
+      const mockTransaction = {
         id: 1,
         userId: 1,
-        type: 'expense',
+        type: 'expense' as const,
         amount: '50.00',
-        description: 'Grocery shopping',
+        description: 'Test',
         date: '2024-01-15',
+        walletId: 1,
       };
       
-      (transactionRepository.createTransaction as any).mockResolvedValue(newTransaction);
+      (transactionRepository.createTransaction as any).mockResolvedValue(mockTransaction);
 
-      const result = await transactionRepository.createTransaction(newTransaction);
+      await service.createTransaction(1, {
+        type: 'expense',
+        amount: 50,
+        description: 'Test',
+        date: '2024-01-15',
+        walletId: 1,
+      });
       
-      expect(result.id).toBe(1);
-      expect(result.type).toBe('expense');
-      expect(result.amount).toBe('50.00');
+      expect(walletRepository.getWalletById).toHaveBeenCalledWith(1);
     });
-  });
 
-  describe('deleteTransaction', () => {
-    it('should delete transaction', async () => {
-      (transactionRepository.deleteTransaction as any).mockResolvedValue(undefined);
+    it('should throw error if wallet does not belong to user', async () => {
+      const mockWallet = { id: 1, userId: 2, balance: '1000.00' }; // Different user
+      (walletRepository.getWalletById as any).mockResolvedValue(mockWallet);
 
-      await expect(transactionRepository.deleteTransaction(1)).resolves.not.toThrow();
-      expect(transactionRepository.deleteTransaction).toHaveBeenCalledWith(1);
+      await expect(
+        service.createTransaction(1, {
+          type: 'expense',
+          amount: 50,
+          description: 'Test',
+          date: '2024-01-15',
+          walletId: 1,
+        })
+      ).rejects.toThrow('Invalid wallet');
     });
   });
 });
