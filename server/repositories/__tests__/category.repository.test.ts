@@ -41,22 +41,22 @@ describe('CategoryRepository', () => {
         { id: 2, userId: 1, name: 'Salary', type: 'income', icon: '💰', color: '#10b981' },
       ];
 
-      // Mock count query
-      const mockCount = vi.fn().mockResolvedValue([{ count: 2 }]);
-      const mockCountWhere = vi.fn().mockReturnValue({ count: mockCount });
+      // Mock count query: select().from().where() returns Promise<[{ count: 2 }]>
+      const mockCountWhere = vi.fn().mockResolvedValue([{ count: 2 }]);
       const mockCountFrom = vi.fn().mockReturnValue({ where: mockCountWhere });
-      
-      // Mock select query
-      const mockOrderBy = vi.fn().mockResolvedValue(mockCategories);
+
+      // Mock select query with $dynamic() support
+      const mockDynamic = vi.fn().mockResolvedValue(mockCategories);
+      const mockOrderBy = vi.fn().mockReturnValue({ $dynamic: mockDynamic });
       const mockWhere = vi.fn().mockReturnValue({ orderBy: mockOrderBy });
       const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
-      
+
       (db.select as any)
         .mockReturnValueOnce({ from: mockCountFrom }) // First call for count
         .mockReturnValueOnce({ from: mockFrom }); // Second call for categories
 
       const result = await repository.getCategoriesByUserId(1);
-      
+
       expect(result.categories).toHaveLength(2);
       expect(result.total).toBe(2);
       expect(result.categories[0].name).toBe('Food');
@@ -68,18 +68,25 @@ describe('CategoryRepository', () => {
       const mockCount = vi.fn().mockResolvedValue([{ count: 0 }]);
       const mockCountWhere = vi.fn().mockReturnValue({ count: mockCount });
       const mockCountFrom = vi.fn().mockReturnValue({ where: mockCountWhere });
-      
-      // Mock select query
-      const mockOrderBy = vi.fn().mockResolvedValue([]);
+
+      // Mock select query with $dynamic() support
+      const mockDynamic = vi.fn().mockImplementation(function(this: any) {
+        return Object.assign(Promise.resolve([]), {
+          limit: vi.fn().mockReturnThis(),
+          offset: vi.fn().mockReturnThis(),
+          then: (resolve: any) => resolve([]),
+        });
+      });
+      const mockOrderBy = vi.fn().mockReturnValue({ $dynamic: mockDynamic });
       const mockWhere = vi.fn().mockReturnValue({ orderBy: mockOrderBy });
       const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
-      
+
       (db.select as any)
         .mockReturnValueOnce({ from: mockCountFrom })
         .mockReturnValueOnce({ from: mockFrom });
 
       const result = await repository.getCategoriesByUserId(999);
-      
+
       expect(result.categories).toHaveLength(0);
       expect(result.total).toBe(0);
     });
@@ -89,22 +96,36 @@ describe('CategoryRepository', () => {
         { id: 1, userId: 1, name: 'Food', type: 'expense' },
       ];
 
-      const mockLimit = vi.fn().mockReturnValue(mockCategories);
-      const mockOffset = vi.fn().mockReturnValue({ limit: mockLimit });
-      const mockOrderBy = vi.fn().mockReturnValue({ offset: mockOffset });
+      // Track calls to limit and offset
+      const mockLimit = vi.fn().mockReturnThis();
+      const mockOffset = vi.fn().mockReturnThis();
+
+      // Mock $dynamic to return chainable object that resolves to categories
+      const mockDynamic = vi.fn().mockImplementation(function(this: any) {
+        const chainable = {
+          limit: mockLimit,
+          offset: mockOffset,
+          then: (resolve: any) => resolve(mockCategories),
+        };
+        // Make limit and offset return the chainable object
+        mockLimit.mockReturnValue(chainable);
+        mockOffset.mockReturnValue(chainable);
+        return chainable;
+      });
+      const mockOrderBy = vi.fn().mockReturnValue({ $dynamic: mockDynamic });
       const mockWhere = vi.fn().mockReturnValue({ orderBy: mockOrderBy });
       const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
-      
+
       const mockCount = vi.fn().mockResolvedValue([{ count: 1 }]);
       const mockCountWhere = vi.fn().mockReturnValue({ count: mockCount });
       const mockCountFrom = vi.fn().mockReturnValue({ where: mockCountWhere });
-      
+
       (db.select as any)
         .mockReturnValueOnce({ from: mockCountFrom })
         .mockReturnValueOnce({ from: mockFrom });
 
       await repository.getCategoriesByUserId(1, { limit: 10, offset: 0 });
-      
+
       expect(mockLimit).toHaveBeenCalledWith(10);
       expect(mockOffset).toHaveBeenCalledWith(0);
     });
