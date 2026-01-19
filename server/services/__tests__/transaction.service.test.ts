@@ -27,7 +27,7 @@ vi.mock('../../repositories/wallet.repository', () => ({
 
 vi.mock('../../repositories/category.repository', () => ({
   categoryRepository: {
-    getCategoryByName: vi.fn(),
+    getCategoryByNameAndUserId: vi.fn(),
   },
 }));
 
