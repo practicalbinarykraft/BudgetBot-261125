@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { PageHelper } from './helpers/page.helper';
 
 /**
  * Health Check E2E Test
@@ -14,13 +13,11 @@ import { PageHelper } from './helpers/page.helper';
  */
 test.describe('Health Check', () => {
   test('should load main page', async ({ page }) => {
-    const pageHelper = new PageHelper(page);
-    
     // Navigate to main page
     await page.goto('/');
     
-    // Wait for page to load
-    await pageHelper.waitForPageLoad();
+    // Wait for page to load (wait for network to be idle)
+    await page.waitForLoadState('networkidle');
     
     // Check that page loaded (no errors)
     expect(page.url()).toContain('localhost:5000');
@@ -41,10 +38,10 @@ test.describe('Health Check', () => {
   });
 
   test('should load login page', async ({ page }) => {
-    const pageHelper = new PageHelper(page);
-    
     await page.goto('/login');
-    await pageHelper.waitForPageLoad();
+    
+    // Wait for page to load
+    await page.waitForLoadState('networkidle');
     
     // Check that we're on login page
     expect(page.url()).toContain('/login');
