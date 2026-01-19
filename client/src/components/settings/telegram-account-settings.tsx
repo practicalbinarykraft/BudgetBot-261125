@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useTelegramMiniApp } from '@/hooks/use-telegram-miniapp';
+import { getTelegramBotUsername } from '@/lib/env';
 import { Send, CheckCircle } from 'lucide-react';
 
 interface User {
@@ -180,8 +181,7 @@ export function TelegramAccountSettings() {
     if (!user?.telegramId && containerRef.current && !containerRef.current.querySelector('script')) {
       const script = document.createElement('script');
       script.src = 'https://telegram.org/js/telegram-widget.js?22';
-      // IMPORTANT: Replace with your actual bot username (without @)
-      script.setAttribute('data-telegram-login', 'BudgetBuddyAIBot'); // TODO: Update with your bot username!
+      script.setAttribute('data-telegram-login', getTelegramBotUsername());
       script.setAttribute('data-size', 'medium');
       script.setAttribute('data-radius', '8');
       script.setAttribute('data-onauth', 'onTelegramLinkAuth(user)');

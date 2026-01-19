@@ -40,6 +40,10 @@ const envSchema = z.object({
     .transform(val => val === 'true')
     .optional()
     .describe('Enable analytics (optional)'),
+
+  VITE_TELEGRAM_BOT_USERNAME: z.string()
+    .optional()
+    .describe('Telegram bot username for Login Widget (without @)'),
 });
 
 /**
@@ -66,6 +70,7 @@ export const env = (() => {
         API_URL: parsed.VITE_API_URL || '(same origin)',
         SENTRY: parsed.VITE_SENTRY_DSN ? 'enabled' : 'disabled',
         ANALYTICS: parsed.VITE_ENABLE_ANALYTICS ? 'enabled' : 'disabled',
+        TELEGRAM_BOT: parsed.VITE_TELEGRAM_BOT_USERNAME || '(not set)',
       });
     }
 
@@ -122,4 +127,12 @@ export const getApiUrl = (): string => {
 export const features = {
   sentry: !!env.VITE_SENTRY_DSN,
   analytics: !!env.VITE_ENABLE_ANALYTICS,
+};
+
+/**
+ * Get Telegram bot username for Login Widget
+ * Falls back to 'BudgetBuddyAIBot' if not configured
+ */
+export const getTelegramBotUsername = (): string => {
+  return env.VITE_TELEGRAM_BOT_USERNAME || 'BudgetBuddyAIBot';
 };

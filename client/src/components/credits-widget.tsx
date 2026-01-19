@@ -42,7 +42,6 @@ export function CreditsWidget() {
 
   // Показываем skeleton при ошибке или отсутствии данных
   if (error) {
-    console.error('❌ CreditsWidget ERROR:', error);
     return (
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-muted-foreground">Кредиты:</span>

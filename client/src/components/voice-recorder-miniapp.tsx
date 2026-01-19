@@ -124,8 +124,6 @@ export function VoiceRecorderMiniApp({ onParsedResult, className }: VoiceRecorde
           setState("idle");
 
         } catch (error: any) {
-          console.error("Voice parse error:", error);
-
           if (error.message?.includes("INSUFFICIENT_CREDITS") || error.code === "INSUFFICIENT_CREDITS") {
             toast({
               title: t("voice.no_credits_title") || (language === 'ru' ? "Нет кредитов" : "No Credits"),
@@ -150,7 +148,6 @@ export function VoiceRecorderMiniApp({ onParsedResult, className }: VoiceRecorde
       setState("recording");
 
     } catch (error: any) {
-      console.error("Failed to start recording:", error);
 
       if (error.name === "NotAllowedError") {
         toast({
