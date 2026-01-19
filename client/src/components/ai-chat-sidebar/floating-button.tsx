@@ -9,11 +9,7 @@ export function FloatingChatButton() {
   const [location] = useLocation();
   const isMobile = useIsMobile();
 
-  // DEBUG: Log component mount
-  console.log('🔵 FloatingChatButton rendered! unreadCount:', unreadCount);
-
   const handleClick = () => {
-    console.log('🔵 FloatingChatButton clicked!');
     open();
     markAsRead();
   };

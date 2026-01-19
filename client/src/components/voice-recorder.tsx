@@ -110,29 +110,7 @@ export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, cl
       recognition.interimResults = true; // Включаем промежуточные результаты для транскрипции в реальном времени
       recognition.lang = language === 'ru' ? 'ru-RU' : 'en-US';
 
-      // Отладочные обработчики
-      recognition.onstart = () => {
-        console.log('🎤 Recognition started');
-      };
-
-      recognition.onaudiostart = () => {
-        console.log('🔊 Audio capturing started');
-      };
-
-      recognition.onspeechstart = () => {
-        console.log('🗣️ Speech detected');
-      };
-
-      recognition.onspeechend = () => {
-        console.log('🔇 Speech ended');
-      };
-
-      recognition.onaudioend = () => {
-        console.log('🔊 Audio capturing ended');
-      };
-
       recognition.onresult = (event: SpeechRecognitionEvent) => {
-        console.log('📝 Result received:', event.results);
         let newFinalTranscript = "";
         let interimTranscript = "";
 
@@ -188,7 +166,6 @@ export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, cl
               if (e?.message?.includes('already started')) {
                 return;
               }
-              console.error('Failed to restart recognition:', e);
               setIsRecording(false);
               onRecordingChangeRef.current?.(false);
             }
@@ -197,8 +174,6 @@ export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, cl
       };
 
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error('❌ Speech recognition error:', event.error, event.message);
-        
         // Handle specific errors
         if (event.error === 'no-speech') {
           // Пользователь не говорит - НЕ перезапускаем автоматически
@@ -221,7 +196,6 @@ export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, cl
         if (event.error === 'network') {
           // Сетевая ошибка - показываем сообщение пользователю
           // Причины: нет HTTPS, страница не через localhost, rate limiting, региональные ограничения
-          console.warn('Network error occurred - check: HTTPS, localhost, rate limits');
           hasErrorRef.current = true; // Предотвращаем автоматический перезапуск
           setErrorMessage(language === 'ru'
             ? 'Ошибка подключения к сервису распознавания речи. Убедитесь, что страница открыта через localhost или HTTPS.'
@@ -250,8 +224,6 @@ export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, cl
       };
 
       recognition.onend = () => {
-        console.log('🏁 Recognition ended, manual stop:', isManualStopRef.current, 'hasError:', hasErrorRef.current);
-
         // Если была ошибка - НЕ перезапускаем
         if (hasErrorRef.current) {
           hasErrorRef.current = false;
@@ -290,7 +262,6 @@ export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, cl
                 if (e?.message?.includes('already started')) {
                   return;
                 }
-                console.error('Failed to restart recognition after pause:', e);
                 setIsRecording(false);
                 onRecordingChangeRef.current?.(false);
               }
@@ -332,7 +303,7 @@ export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, cl
         recognitionRef.current.stop();
         // onend вызовет onResult с полным текстом автоматически
       } catch (e) {
-        console.error('Error stopping recognition:', e);
+        // Ignore errors when stopping
       }
       setIsRecording(false);
       onRecordingChangeRef.current?.(false); // Уведомляем родителя об остановке
@@ -346,12 +317,10 @@ export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, cl
 
       // Запускаем распознавание (Web Speech API сам запросит разрешение на микрофон)
       try {
-        console.log('🚀 Starting recognition, lang:', recognitionRef.current.lang);
         recognitionRef.current.start();
         setIsRecording(true);
         onRecordingChangeRef.current?.(true);
       } catch (e) {
-        console.error('Error starting recognition:', e);
         setIsRecording(false);
         onRecordingChangeRef.current?.(false);
       }

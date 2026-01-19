@@ -253,19 +253,14 @@ export default function DashboardV2Page() {
   const handleVoiceResult = async (text: string) => {
     // НЕ закрываем модал и не открываем диалог, если текст пустой
     if (!text || text.trim().length === 0) {
-      console.warn('Empty text received, ignoring');
       return;
     }
 
-    console.log('🎤 Voice result:', text);
-
     // Step 1: Try local parsing first (instant, free)
     const localParsed = parseTransactionText(text);
-    console.log('📝 Local parse result:', localParsed);
 
     // Step 2: If local parsing got amount - use it
     if (isParseSuccessful(localParsed)) {
-      console.log('✅ Using local parsing result');
       setVoiceData({
         description: localParsed.description,
         amount: localParsed.amount?.toString(),
@@ -281,13 +276,11 @@ export default function DashboardV2Page() {
     }
 
     // Step 3: Local parsing failed - try AI parsing (fallback)
-    console.log('🤖 Local parsing incomplete, trying AI...');
     try {
       const response = await apiRequest('POST', '/api/ai/parse-text', { text });
       const data = await response.json();
 
       if (data.success && data.parsed) {
-        console.log('✅ AI parse result:', data.parsed);
         setVoiceData({
           description: data.parsed.description,
           amount: data.parsed.amount,
@@ -297,7 +290,6 @@ export default function DashboardV2Page() {
         });
       } else {
         // AI also failed - use local result as best effort
-        console.warn('⚠️ AI parsing failed, using local result');
         setVoiceData({
           description: localParsed.description,
           amount: localParsed.amount?.toString(),
@@ -308,7 +300,6 @@ export default function DashboardV2Page() {
       }
     } catch (error) {
       // Network error or API error - use local result
-      console.error('❌ AI parsing error:', error);
       setVoiceData({
         description: localParsed.description,
         amount: localParsed.amount?.toString(),
@@ -714,7 +705,7 @@ export default function DashboardV2Page() {
                         setTransactionForCategory(null);
                       }
                     } catch (error) {
-                      console.error('Failed to update transaction:', error);
+                      // Ignore update errors
                     }
                   }}
                 >

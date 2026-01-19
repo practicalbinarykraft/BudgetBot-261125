@@ -8,6 +8,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 import type { TelegramUser } from '@shared/types/telegram';
 
@@ -20,6 +21,7 @@ declare global {
 export function TelegramLoginButton() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const isLoadingRef = useRef(false);
 
@@ -27,15 +29,12 @@ export function TelegramLoginButton() {
     // Define callback for Telegram widget
     window.onTelegramAuth = async (user: TelegramUser) => {
       if (isLoadingRef.current) {
-        console.log('Already processing Telegram auth, ignoring duplicate call');
         return;
       }
 
       isLoadingRef.current = true;
 
       try {
-        console.log('Telegram auth callback received:', user);
-
         const response = await fetch('/api/auth/telegram', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -46,21 +45,21 @@ export function TelegramLoginButton() {
         const data = await response.json();
 
         if (response.ok) {
-          console.log('Telegram login successful:', data);
+          const isNewUser = data.isNewUser === true;
 
           toast({
-            title: data.isNewUser ? '🎉 Welcome!' : '👋 Welcome back!',
-            description: data.isNewUser
+            title: isNewUser ? '🎉 Welcome!' : '👋 Welcome back!',
+            description: isNewUser
               ? 'Your account has been created via Telegram'
               : 'Logged in successfully via Telegram',
           });
 
-          // Redirect to dashboard
+          // Redirect to dashboard-v2 on mobile devices, otherwise to dashboard
           setTimeout(() => {
-            setLocation('/app/dashboard');
+            const dashboardPath = isMobile ? '/app/dashboard-v2' : '/app/dashboard';
+            setLocation(dashboardPath);
           }, 500);
         } else {
-          console.error('Telegram login failed:', data);
 
           toast({
             title: '❌ Login failed',
@@ -71,8 +70,6 @@ export function TelegramLoginButton() {
           isLoadingRef.current = false;
         }
       } catch (error) {
-        console.error('Telegram login error:', error);
-
         toast({
           title: '❌ Error',
           description: 'An error occurred during Telegram login',
