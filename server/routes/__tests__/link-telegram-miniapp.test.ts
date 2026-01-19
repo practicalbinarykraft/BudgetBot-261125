@@ -134,19 +134,24 @@ describe.skipIf(process.env.CI)('POST /api/auth/link-telegram-miniapp', () => {
   
   afterEach(async () => {
     try {
-      if (testUser) {
-        await db.delete(users).where(eq(users.id, testUser.id));
-      }
-      // Cleanup всех тестовых пользователей
+      // Cleanup всех тестовых пользователей по telegramId (приоритет)
+      await db.delete(users).where(eq(users.telegramId, '123456789'));
+      await db.delete(users).where(eq(users.telegramId, '999888777'));
+      await db.delete(users).where(eq(users.telegramId, '111222333'));
+      
+      // Cleanup по email
       if (uniqueEmail) {
         await db.delete(users).where(eq(users.email, uniqueEmail));
       }
       await db.delete(users).where(eq(users.email, 'other@example.com'));
-      await db.delete(users).where(eq(users.telegramId, '123456789'));
-      await db.delete(users).where(eq(users.telegramId, '999888777'));
-      await db.delete(users).where(eq(users.telegramId, '111222333'));
+      
+      // Cleanup по ID если есть
+      if (testUser?.id) {
+        await db.delete(users).where(eq(users.id, testUser.id));
+      }
+      
       // Небольшая задержка для завершения транзакций
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error) {
       // Игнорируем ошибки cleanup
     }
@@ -154,6 +159,12 @@ describe.skipIf(process.env.CI)('POST /api/auth/link-telegram-miniapp', () => {
   
   describe('Successful linking', () => {
     it('should link telegram_id to authenticated user', async () => {
+      // Cleanup перед тестом на случай остатков от предыдущих запусков
+      try {
+        await db.delete(users).where(eq(users.telegramId, '123456789'));
+        await new Promise(resolve => setTimeout(resolve, 50));
+      } catch {}
+      
       const telegramId = '123456789';
       const initData = createValidInitData({
         id: 123456789,
