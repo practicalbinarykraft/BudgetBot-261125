@@ -73,7 +73,7 @@ function createValidInitData(telegramUser: {
   return params.toString();
 }
 
-describe.skipIf(process.env.CI)('POST /api/telegram/webapp-auth', () => {
+describe('POST /api/telegram/webapp-auth', () => {
   let app: express.Application;
   
   beforeEach(async () => {
@@ -175,24 +175,6 @@ describe.skipIf(process.env.CI)('POST /api/telegram/webapp-auth', () => {
       const response = await request(app)
         .post('/api/telegram/webapp-auth')
         .send({ initData });
-      
-      // Debug if needed
-      if (response.status !== 200 || !response.body.autoLogin) {
-        console.log('Response status:', response.status);
-        console.log('Response body:', JSON.stringify(response.body, null, 2));
-        console.log('Test user:', JSON.stringify(testUser, null, 2));
-        console.log('Expected telegramId:', telegramId);
-        const userFromInitData = JSON.parse(new URLSearchParams(initData).get('user') || '{}');
-        console.log('InitData user:', JSON.stringify(userFromInitData, null, 2));
-        
-        // Try to find user in DB
-        const [dbUser] = await db
-          .select()
-          .from(users)
-          .where(eq(users.telegramId, telegramId))
-          .limit(1);
-        console.log('User in DB:', JSON.stringify(dbUser, null, 2));
-      }
       
       // Assert
       expect(response.status).toBe(200);

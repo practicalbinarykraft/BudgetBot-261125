@@ -67,10 +67,11 @@ function createValidInitData(telegramUser: {
   return params.toString();
 }
 
-describe.skipIf(process.env.CI)('POST /api/auth/link-telegram-miniapp', () => {
+describe('POST /api/auth/link-telegram-miniapp', () => {
   let app: express.Application;
   let testUser: any;
   let uniqueEmail: string;
+  const createdUserIds: number[] = []; // Track created users for cleanup
   
   beforeEach(async () => {
     // Устанавливаем тестовый токен для валидации
@@ -90,8 +91,7 @@ describe.skipIf(process.env.CI)('POST /api/auth/link-telegram-miniapp', () => {
       // Небольшая задержка для завершения транзакций
       await new Promise(resolve => setTimeout(resolve, 200));
     } catch (error) {
-      // Игнорируем ошибки cleanup, но логируем для отладки
-      console.warn('Cleanup warning in beforeEach:', error);
+      // Игнорируем ошибки cleanup
     }
     
     app = express();
@@ -126,6 +126,11 @@ describe.skipIf(process.env.CI)('POST /api/auth/link-telegram-miniapp', () => {
     
     testUser = user;
     
+    // Track testUser for cleanup
+    if (testUser?.id) {
+      createdUserIds.push(testUser.id);
+    }
+    
     // Устанавливаем testUser в middleware после его создания
     app.use((req: any, res: any, next: any) => {
       if (testUser) {
@@ -140,18 +145,24 @@ describe.skipIf(process.env.CI)('POST /api/auth/link-telegram-miniapp', () => {
   
   afterEach(async () => {
     try {
-      // Cleanup всех тестовых пользователей по telegramId (приоритет)
+      // Cleanup всех созданных пользователей по ID (приоритет)
+      for (const userId of createdUserIds) {
+        await db.delete(users).where(eq(users.id, userId));
+      }
+      createdUserIds.length = 0; // Clear array
+      
+      // Cleanup по telegramId (fallback)
       await db.delete(users).where(eq(users.telegramId, '123456789'));
       await db.delete(users).where(eq(users.telegramId, '999888777'));
       await db.delete(users).where(eq(users.telegramId, '111222333'));
       
-      // Cleanup по email
+      // Cleanup по email (fallback)
       if (uniqueEmail) {
         await db.delete(users).where(eq(users.email, uniqueEmail));
       }
       await db.delete(users).where(eq(users.email, 'other@example.com'));
       
-      // Cleanup по ID если есть
+      // Cleanup testUser по ID если есть
       if (testUser?.id) {
         await db.delete(users).where(eq(users.id, testUser.id));
       }
@@ -190,7 +201,7 @@ describe.skipIf(process.env.CI)('POST /api/auth/link-telegram-miniapp', () => {
         
         await new Promise(resolve => setTimeout(resolve, 100));
       } catch (error) {
-        console.warn('Pre-test cleanup warning:', error);
+        // Игнорируем ошибки cleanup
       }
       
       const telegramId = '123456789';
@@ -204,14 +215,6 @@ describe.skipIf(process.env.CI)('POST /api/auth/link-telegram-miniapp', () => {
       const response = await request(app)
         .post('/api/auth/link-telegram-miniapp')
         .send({ telegramId, initData });
-      
-      if (response.status !== 200) {
-        console.log('Response status:', response.status);
-        console.log('Response body:', JSON.stringify(response.body, null, 2));
-        console.log('InitData:', initData);
-        console.log('TelegramId:', telegramId);
-        console.log('Bot token:', process.env.TELEGRAM_BOT_TOKEN);
-      }
       
       expect(response.status).toBe(200);
       
@@ -244,11 +247,8 @@ describe.skipIf(process.env.CI)('POST /api/auth/link-telegram-miniapp', () => {
       if (updatedUser) {
         expect(updatedUser.telegramId).toBe(telegramId);
         expect(updatedUser.id).toBe(testUser.id);
-      } else {
-        // If user not found, log a warning but don't fail the test
-        // The API already confirmed the linking was successful
-        console.warn('User not found in DB after linking, but API returned success. This might be a transaction delay issue.');
       }
+      // Note: If user not found, the API already confirmed the linking was successful
       // telegramUsername should be set from initData (we pass username: 'testuser')
       // However, if it's null, that's acceptable as the main goal is to link telegramId
       // The username might not be preserved if there's an issue with the validation service
@@ -289,8 +289,10 @@ describe.skipIf(process.env.CI)('POST /api/auth/link-telegram-miniapp', () => {
       // Assert
       expect(response.body.error).toContain('already linked');
       
-      // Cleanup
-      await db.delete(users).where(eq(users.id, otherUser.id));
+      // Track for cleanup
+      if (otherUser?.id) {
+        createdUserIds.push(otherUser.id);
+      }
     });
     
     it('should reject invalid initData signature', async () => {
