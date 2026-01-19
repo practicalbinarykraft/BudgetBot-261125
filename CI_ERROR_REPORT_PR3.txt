@@ -1,0 +1,67 @@
+CI Error Report - PR #3: Feature/dashboard v2 dark theme
+================================================================
+
+Summary:
+--------
+Initial CI failure: 1 test failing in link-telegram-miniapp.test.ts
+After fixes: All tests passing ✅
+
+Failed Test (Initial):
+----------------------
+Test: "should link telegram_id to authenticated user"
+Error: duplicate key value violates unique constraint "users_telegram_id_unique"
+Status: 500 Internal Server Error (expected 200)
+
+Root Causes:
+------------
+1. Cleanup order issue:
+   - afterEach was deleting by email first, then by telegramId
+   - This could leave orphaned telegramId records
+
+2. API logic issue:
+   - API tried to UPDATE user even when telegram_id already linked to same user
+   - Could cause unique constraint violations in edge cases
+
+3. No pre-test cleanup:
+   - Previous test runs could leave data in database
+   - No cleanup before test execution
+
+Fixes Applied:
+--------------
+1. Improved cleanup order in afterEach:
+   - Delete by telegramId FIRST (priority)
+   - Then delete by email
+   - Finally delete by ID
+   - Increased delay to 100ms for transaction completion
+
+2. Added pre-test cleanup:
+   - Clean up telegramId '123456789' before running the test
+   - Prevents conflicts from previous test runs
+
+3. Fixed API logic in auth-miniapp.routes.ts:
+   - If telegram_id already linked to same user: update and return success (idempotent)
+   - If telegram_id linked to different user: return 400 error
+   - If telegram_id not linked: create new link
+
+Files Changed:
+--------------
+- server/routes/__tests__/link-telegram-miniapp.test.ts
+- server/routes/auth-miniapp.routes.ts
+
+Test Results (After Fixes):
+----------------------------
+✓ should link telegram_id to authenticated user
+✓ should reject if telegram_id is already linked to another user
+✓ should reject invalid initData signature
+✓ should reject old initData (replay attack prevention)
+✓ should reject if user is not authenticated
+
+All 5 tests passing ✅
+
+Commits:
+--------
+1. feat(dashboard-v2): add dark theme toggle for Dashboard V2
+2. fix(tests): fix failing link-telegram-miniapp tests
+3. fix(tests): fix duplicate key constraint violation in link-telegram-miniapp test
+
+Status: READY FOR MERGE ✅
