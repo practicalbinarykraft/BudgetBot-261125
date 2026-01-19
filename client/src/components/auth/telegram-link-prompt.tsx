@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Bot } from 'lucide-react';
 import { useTranslation } from '@/i18n/context';
 import { useToast } from '@/hooks/use-toast';
+import { getTelegramBotUsername } from '@/lib/env';
 import type { TelegramUser } from '@shared/types/telegram';
 
 interface TelegramLinkPromptProps {
@@ -110,7 +111,7 @@ export function TelegramLinkPrompt({
     if (widgetContainerRef.current && !widgetContainerRef.current.querySelector('script')) {
       const script = document.createElement('script');
       script.src = 'https://telegram.org/js/telegram-widget.js?22';
-      script.setAttribute('data-telegram-login', 'BudgetBuddyAIBot');
+      script.setAttribute('data-telegram-login', getTelegramBotUsername());
       script.setAttribute('data-size', 'medium');
       script.setAttribute('data-radius', '8');
       script.setAttribute('data-onauth', 'onTelegramLinkAuth(user)');

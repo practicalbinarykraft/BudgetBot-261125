@@ -41,13 +41,6 @@ export default function DashboardMobileDemoPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
-  
-  // DEBUG
-  console.log('📱📱📱 DashboardMobileDemoPage RENDER:', JSON.stringify({ 
-    isMobile, 
-    width: typeof window !== 'undefined' ? window.innerWidth : 'SSR',
-    height: typeof window !== 'undefined' ? window.innerHeight : 'SSR'
-  }));
 
   const dateRange = getDateRange(dateFilter);
   const queryParams = dateRange 

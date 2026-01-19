@@ -120,7 +120,6 @@ export function AddTransactionDialog({
   const handleVoiceResult = (text: string) => {
     // НЕ закрываем модал, если текст пустой
     if (!text || text.trim().length === 0) {
-      console.warn('Empty text received, ignoring');
       return;
     }
     
