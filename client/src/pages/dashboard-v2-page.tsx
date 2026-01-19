@@ -743,7 +743,7 @@ export default function DashboardV2Page() {
       <CategoryCreateDialog
         open={showCreateCategory}
         onOpenChange={setShowCreateCategory}
-        defaultType={transactionForCategory?.type || 'expense'}
+        defaultType={(transactionForCategory?.type as 'income' | 'expense') || 'expense'}
         onSuccess={(categoryName) => {
           // After creating category, refresh categories and reopen selection dialog
           queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
