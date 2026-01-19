@@ -373,16 +373,22 @@ router.post('/link-telegram-miniapp', authRateLimiter, withAuth(async (req: Requ
     }
 
     // STEP 4: Check if telegram_id is already linked to another user
-    const existingUser = await db
+    const existingUsers = await db
       .select()
       .from(users)
       .where(eq(users.telegramId, telegramId))
       .limit(1);
 
-    if (existingUser.length > 0 && existingUser[0].id !== userId) {
-      return res.status(400).json({
-        error: 'This Telegram account is already linked to another user',
-      });
+    if (existingUsers.length > 0) {
+      const existingUser = existingUsers[0];
+      // If telegram_id is already linked to a different user, reject
+      if (existingUser.id !== userId) {
+        return res.status(400).json({
+          error: 'This Telegram account is already linked to another user',
+        });
+      }
+      // If telegram_id is already linked to the same user, return success (idempotent)
+      // This allows re-linking with updated username/photo
     }
 
     // STEP 5: Link telegram_id to current user

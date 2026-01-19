@@ -70,14 +70,17 @@ function createValidInitData(telegramUser: {
 describe.skipIf(process.env.CI)('POST /api/auth/link-telegram-miniapp', () => {
   let app: express.Application;
   let testUser: any;
+  let uniqueEmail: string;
   
   beforeEach(async () => {
     // Устанавливаем тестовый токен для валидации
     process.env.TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || 'test-token';
     
+    // Генерируем уникальный email для каждого теста (избегаем конфликтов при параллельном выполнении)
+    uniqueEmail = `test-${Date.now()}-${Math.random().toString(36).substring(7)}@example.com`;
+    
     // Cleanup перед созданием (на случай параллельного выполнения)
     try {
-      await db.delete(users).where(eq(users.email, 'test@example.com'));
       await db.delete(users).where(eq(users.telegramId, '123456789'));
       await db.delete(users).where(eq(users.telegramId, '999888777'));
       await db.delete(users).where(eq(users.telegramId, '111222333'));
@@ -105,36 +108,17 @@ describe.skipIf(process.env.CI)('POST /api/auth/link-telegram-miniapp', () => {
     });
     
     // Create test user with email+password (not linked to Telegram)
-    // Используем try-catch для обработки возможных конфликтов
-    try {
-      const hashedPassword = await bcrypt.hash('testpassword123', 10);
-      const [user] = await db.insert(users).values({
-        email: 'test@example.com',
-        password: hashedPassword,
-        name: 'Test User',
-        telegramId: null, // Not linked yet
-        isBlocked: false,
-      }).returning();
-      
-      testUser = user;
-    } catch (error: any) {
-      // Если пользователь уже существует (конфликт при параллельном выполнении),
-      // пытаемся найти его и использовать
-      if (error?.code === '23505' || error?.message?.includes('duplicate key')) {
-        const [existingUser] = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, 'test@example.com'))
-          .limit(1);
-        if (existingUser) {
-          testUser = existingUser;
-        } else {
-          throw error;
-        }
-      } else {
-        throw error;
-      }
-    }
+    // Используем уникальный email для избежания конфликтов
+    const hashedPassword = await bcrypt.hash('testpassword123', 10);
+    const [user] = await db.insert(users).values({
+      email: uniqueEmail,
+      password: hashedPassword,
+      name: 'Test User',
+      telegramId: null, // Not linked yet
+      isBlocked: false,
+    }).returning();
+    
+    testUser = user;
     
     // Устанавливаем testUser в middleware после его создания
     app.use((req: any, res: any, next: any) => {
@@ -154,7 +138,9 @@ describe.skipIf(process.env.CI)('POST /api/auth/link-telegram-miniapp', () => {
         await db.delete(users).where(eq(users.id, testUser.id));
       }
       // Cleanup всех тестовых пользователей
-      await db.delete(users).where(eq(users.email, 'test@example.com'));
+      if (uniqueEmail) {
+        await db.delete(users).where(eq(users.email, uniqueEmail));
+      }
       await db.delete(users).where(eq(users.email, 'other@example.com'));
       await db.delete(users).where(eq(users.telegramId, '123456789'));
       await db.delete(users).where(eq(users.telegramId, '999888777'));
