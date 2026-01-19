@@ -21,6 +21,7 @@ declare global {
 export function TelegramLoginButton() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const isLoadingRef = useRef(false);
 
