@@ -29,5 +29,10 @@ yarn-error.log*
 # Coverage
 coverage/
 
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+
 # OS
 Thumbs.db
