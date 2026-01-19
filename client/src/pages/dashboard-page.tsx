@@ -76,6 +76,11 @@ export default function DashboardPage() {
     data: NetWorthSummary;
   }>({
     queryKey: ["/api/assets/summary"],
+    queryFn: async () => {
+      const res = await fetch("/api/assets/summary");
+      if (!res.ok) throw new Error("Failed to fetch assets summary");
+      return res.json();
+    },
   });
   
   const netWorthSummary = netWorthResponse?.data;
@@ -219,27 +224,25 @@ export default function DashboardPage() {
               </div>
             }
           />
-          {netWorthSummary && (
-            <StatCard
-              title={t("assets.net_worth")}
-              value={`$${(netWorthSummary.netWorth ?? 0).toFixed(0)}`}
-              icon={Wallet}
-              className="border-l-4 border-l-yellow-500"
-              action={
-                <div className="space-y-1">
-                  <div className="text-xs text-muted-foreground space-y-0.5" data-testid="assets-breakdown">
-                    <div>{t("assets.assets")}: {formatCurrency(netWorthSummary.totalAssets ?? 0)}</div>
-                    <div>{t("assets.liabilities")}: {formatCurrency(netWorthSummary.totalLiabilities ?? 0)}</div>
-                  </div>
-                  <Link href="/app/assets">
-                    <span className="text-sm text-primary hover:underline flex items-center gap-1 cursor-pointer" data-testid="link-view-assets">
-                      {t("dashboard.view_details")} <ArrowRight className="h-3 w-3" />
-                    </span>
-                  </Link>
+          <StatCard
+            title={t("assets.net_worth")}
+            value={`$${(netWorthSummary?.netWorth ?? 0).toFixed(0)}`}
+            icon={Wallet}
+            className="border-l-4 border-l-yellow-500"
+            action={
+              <div className="space-y-1">
+                <div className="text-xs text-muted-foreground space-y-0.5" data-testid="assets-breakdown">
+                  <div>{t("assets.assets")}: {formatCurrency(netWorthSummary?.totalAssets ?? 0)}</div>
+                  <div>{t("assets.liabilities")}: {formatCurrency(netWorthSummary?.totalLiabilities ?? 0)}</div>
                 </div>
-              }
-            />
-          )}
+                <Link href="/app/assets">
+                  <span className="text-sm text-primary hover:underline flex items-center gap-1 cursor-pointer" data-testid="link-view-assets">
+                    {t("dashboard.view_details")} <ArrowRight className="h-3 w-3" />
+                  </span>
+                </Link>
+              </div>
+            }
+          />
         </div>
 
         <FinancialTrendChart wishlistPredictions={wishlistItems} />

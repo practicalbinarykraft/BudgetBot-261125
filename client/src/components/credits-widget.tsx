@@ -24,6 +24,15 @@ export function CreditsWidget() {
 
   const { data, isLoading, error } = useQuery<CreditsData>({
     queryKey: ['/api/credits'],
+    queryFn: async () => {
+      const res = await fetch('/api/credits', {
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to fetch credits: ${res.status}`);
+      }
+      return res.json();
+    },
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 

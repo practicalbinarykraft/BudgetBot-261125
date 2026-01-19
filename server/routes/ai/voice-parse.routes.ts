@@ -221,10 +221,31 @@ router.post("/voice-parse", withAuth(async (req, res) => {
 
   } catch (error: unknown) {
     console.error("💥 Voice parse error:", error);
+    
+    // Более детальная обработка ошибок для отладки
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    console.error("Error details:", {
+      message: errorMessage,
+      stack: errorStack?.substring(0, 500), // Ограничиваем длину стека
+      userId: req.user?.id,
+      hasAudioBase64: !!req.body?.audioBase64
+    });
+    
+    // Если это известная ошибка - возвращаем её код
+    if (error instanceof BillingError) {
+      return res.status(402).json({
+        success: false,
+        error: error.message,
+        code: error.code
+      });
+    }
+    
     res.status(500).json({
       success: false,
       error: "Failed to process voice input",
-      details: getErrorMessage(error)
+      details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
     });
   } finally {
     // Cleanup temp file
@@ -232,9 +253,139 @@ router.post("/voice-parse", withAuth(async (req, res) => {
       try {
         await fsp.unlink(tempFilePath);
       } catch (e) {
-        // Ignore cleanup errors
+        console.error("Failed to cleanup temp file:", e);
       }
     }
+  }
+}));
+
+/**
+ * POST /api/ai/parse-text
+ *
+ * Parse plain text into structured transaction data using AI
+ * Used as fallback when local parsing fails
+ *
+ * Body:
+ * - text: Plain text to parse (e.g., "вчера потратил на такси триста рублей")
+ *
+ * Response:
+ * {
+ *   success: true,
+ *   parsed: {
+ *     amount: "300",
+ *     currency: "RUB",
+ *     description: "Такси",
+ *     category: "Transport",
+ *     type: "expense",
+ *     confidence: "high"
+ *   },
+ *   creditsUsed: 1
+ * }
+ */
+router.post("/parse-text", withAuth(async (req, res) => {
+  try {
+    const { text } = req.body as { text: string };
+    const userId = Number(req.user.id);
+
+    if (!text || typeof text !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: "text is required"
+      });
+    }
+
+    // Get user's preferred currency
+    const userSettings = await settingsRepository.getSettingsByUserId(userId);
+    const userCurrency = userSettings?.currency || 'USD';
+
+    // Get API key for parsing
+    let parseApiKey;
+    try {
+      parseApiKey = await getApiKey(userId, 'voice_normalization');
+    } catch (error) {
+      if (error instanceof BillingError && error.code === 'INSUFFICIENT_CREDITS') {
+        return res.status(402).json({
+          success: false,
+          error: "Insufficient credits for AI parsing",
+          code: "INSUFFICIENT_CREDITS"
+        });
+      }
+      throw error;
+    }
+
+    // Parse with DeepSeek
+    let parsed: ParsedTransaction;
+    let creditsUsed = 0;
+
+    try {
+      const parseResult = await parseTransactionWithDeepSeek(
+        parseApiKey.key,
+        text,
+        userCurrency
+      );
+
+      parsed = {
+        amount: String(parseResult.amount || 0),
+        currency: parseResult.currency || userCurrency,
+        description: parseResult.description || text,
+        category: parseResult.category,
+        type: 'expense',
+        confidence: parseResult.amount > 0 ? 'high' : 'low',
+      };
+
+      // Detect income keywords
+      const incomeKeywords = /получил|зарплата|доход|income|salary|received|earned/i;
+      if (incomeKeywords.test(text)) {
+        parsed.type = 'income';
+      }
+
+      // Charge for parsing
+      if (parseApiKey.shouldCharge) {
+        await chargeCredits(
+          userId,
+          'voice_normalization',
+          parseApiKey.provider,
+          { input: text.length * 4, output: 200 },
+          parseApiKey.billingMode === 'free'
+        );
+        creditsUsed = 1;
+      }
+
+      console.log(`✅ [User ${userId}] AI parsed text:`, parsed);
+
+    } catch (parseError) {
+      console.error(`⚠️ [User ${userId}] AI parse error:`, parseError);
+
+      // Return error - local parsing should be used as fallback on client
+      return res.status(500).json({
+        success: false,
+        error: "AI parsing failed",
+        details: getErrorMessage(parseError)
+      });
+    }
+
+    res.json({
+      success: true,
+      parsed,
+      creditsUsed,
+    });
+
+  } catch (error: unknown) {
+    console.error("💥 Parse text error:", error);
+
+    if (error instanceof BillingError) {
+      return res.status(402).json({
+        success: false,
+        error: error.message,
+        code: error.code
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: "Failed to parse text",
+      details: process.env.NODE_ENV === 'development' ? getErrorMessage(error) : undefined
+    });
   }
 }));
 

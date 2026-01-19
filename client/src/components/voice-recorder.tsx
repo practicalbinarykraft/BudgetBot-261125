@@ -2,6 +2,8 @@
  * Voice Recorder Component
  * 
  * Records audio using Web Speech API and converts to text.
+ * Shows real-time transcription as user speaks (like Google Translate).
+ * Accumulates final results and shows them together with interim results.
  * Supports Russian and English languages.
  */
 
@@ -12,6 +14,8 @@ import { cn } from "@/lib/utils";
 
 interface VoiceRecorderProps {
   onResult: (text: string) => void;
+  onInterimResult?: (text: string) => void; // Callback для промежуточных результатов (полный текст: накопленный + текущий промежуточный)
+  onRecordingChange?: (isRecording: boolean) => void; // Callback для изменения состояния записи
   className?: string;
 }
 
@@ -37,6 +41,11 @@ interface SpeechRecognition extends EventTarget {
   onresult: ((event: SpeechRecognitionEvent) => void) | null;
   onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
   onend: (() => void) | null;
+  onstart: (() => void) | null;
+  onaudiostart: (() => void) | null;
+  onspeechstart: (() => void) | null;
+  onspeechend: (() => void) | null;
+  onaudioend: (() => void) | null;
 }
 
 interface SpeechRecognitionEvent {
@@ -67,11 +76,28 @@ interface SpeechRecognitionAlternative {
   confidence: number;
 }
 
-export function VoiceRecorder({ onResult, className }: VoiceRecorderProps) {
+export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, className }: VoiceRecorderProps) {
   const { language } = useTranslation();
   const [isRecording, setIsRecording] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
+  const [interimText, setInterimText] = useState(""); // Текущий промежуточный текст
+  const [errorMessage, setErrorMessage] = useState<string | null>(null); // Сообщение об ошибке
+  const finalTextRef = useRef(""); // Накопленный финальный текст (накапливается по мере распознавания)
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const isManualStopRef = useRef(false); // Флаг ручной остановки (для различения от автоматического завершения)
+  const hasErrorRef = useRef(false); // Флаг ошибки (предотвращает перезапуск после ошибки)
+  
+  // Храним callback'и в ref, чтобы они не вызывали пересоздание recognition
+  const onResultRef = useRef(onResult);
+  const onInterimResultRef = useRef(onInterimResult);
+  const onRecordingChangeRef = useRef(onRecordingChange);
+  
+  // Обновляем ref'ы при изменении callback'ов (без пересоздания recognition)
+  useEffect(() => {
+    onResultRef.current = onResult;
+    onInterimResultRef.current = onInterimResult;
+    onRecordingChangeRef.current = onRecordingChange;
+  });
 
   useEffect(() => {
     // Check if browser supports Web Speech API
@@ -80,33 +106,197 @@ export function VoiceRecorder({ onResult, className }: VoiceRecorderProps) {
     if (SpeechRecognition) {
       setIsSupported(true);
       const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
+      recognition.continuous = true; // Включаем непрерывное распознавание
+      recognition.interimResults = true; // Включаем промежуточные результаты для транскрипции в реальном времени
       recognition.lang = language === 'ru' ? 'ru-RU' : 'en-US';
 
+      // Отладочные обработчики
+      recognition.onstart = () => {
+        console.log('🎤 Recognition started');
+      };
+
+      recognition.onaudiostart = () => {
+        console.log('🔊 Audio capturing started');
+      };
+
+      recognition.onspeechstart = () => {
+        console.log('🗣️ Speech detected');
+      };
+
+      recognition.onspeechend = () => {
+        console.log('🔇 Speech ended');
+      };
+
+      recognition.onaudioend = () => {
+        console.log('🔊 Audio capturing ended');
+      };
+
       recognition.onresult = (event: SpeechRecognitionEvent) => {
-        const transcript = event.results[event.resultIndex][0].transcript;
-        onResult(transcript.trim());
-        setIsRecording(false);
+        console.log('📝 Result received:', event.results);
+        let newFinalTranscript = "";
+        let interimTranscript = "";
+
+        // Обрабатываем все результаты (и финальные, и промежуточные)
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          
+          if (event.results[i].isFinal) {
+            // Финальный результат - добавляем к накопленному финальному тексту
+            newFinalTranscript += transcript + " ";
+          } else {
+            // Промежуточный результат - показываем в реальном времени
+            interimTranscript += transcript;
+          }
+        }
+
+        // Накапливаем финальные результаты
+        if (newFinalTranscript) {
+          finalTextRef.current += newFinalTranscript;
+        }
+
+        // ВСЕГДА обновляем промежуточный текст (даже если пустой)
+        // Это позволяет показывать накопленные финальные результаты, даже когда нет промежуточного текста
+        setInterimText(interimTranscript);
+
+        // Формируем полный текст: накопленный финальный + текущий промежуточный
+        const fullText = (finalTextRef.current + interimTranscript).trim();
+        
+        // ВСЕГДА вызываем callback с полным текстом (как в Google Translate)
+        // Это позволяет видеть весь текст в реальном времени, даже если промежуточный текст пустой
+        onInterimResultRef.current?.(fullText);
+      };
+
+      // Функция безопасного перезапуска распознавания
+      const restartRecognition = () => {
+        if (!recognitionRef.current || isManualStopRef.current) return;
+        
+        // Используем abort() для полной остановки перед перезапуском
+        try {
+          recognitionRef.current.abort(); // Полная остановка вместо stop()
+        } catch (e) {
+          // Игнорируем ошибки при abort
+        }
+        
+        setTimeout(() => {
+          if (recognitionRef.current && !isManualStopRef.current) {
+            try {
+              recognitionRef.current.start();
+              setIsRecording(true);
+              onRecordingChangeRef.current?.(true);
+            } catch (e: any) {
+              // Если ошибка "already started" - игнорируем, значит уже работает
+              if (e?.message?.includes('already started')) {
+                return;
+              }
+              console.error('Failed to restart recognition:', e);
+              setIsRecording(false);
+              onRecordingChangeRef.current?.(false);
+            }
+          }
+        }, 300); // Увеличиваем задержку для гарантии остановки
       };
 
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error('Speech recognition error:', event.error);
-        setIsRecording(false);
+        console.error('❌ Speech recognition error:', event.error, event.message);
         
         // Handle specific errors
         if (event.error === 'no-speech') {
-          // User didn't speak, just stop recording
+          // Пользователь не говорит - НЕ перезапускаем автоматически
+          // Web Speech API сам перезапустится через onend
+          return;
+        }
+        
+        if (event.error === 'not-allowed') {
+          // Разрешение не предоставлено
           setIsRecording(false);
-        } else if (event.error === 'not-allowed') {
+          onRecordingChangeRef.current?.(false);
+          setInterimText("");
+          finalTextRef.current = "";
           alert(language === 'ru' 
             ? 'Разрешение на использование микрофона не предоставлено. Пожалуйста, разрешите доступ в настройках браузера.'
             : 'Microphone permission not granted. Please allow access in browser settings.');
+          return;
         }
+        
+        if (event.error === 'network') {
+          // Сетевая ошибка - показываем сообщение пользователю
+          // Причины: нет HTTPS, страница не через localhost, rate limiting, региональные ограничения
+          console.warn('Network error occurred - check: HTTPS, localhost, rate limits');
+          hasErrorRef.current = true; // Предотвращаем автоматический перезапуск
+          setErrorMessage(language === 'ru'
+            ? 'Ошибка подключения к сервису распознавания речи. Убедитесь, что страница открыта через localhost или HTTPS.'
+            : 'Speech recognition service connection error. Make sure the page is opened via localhost or HTTPS.');
+          setIsRecording(false);
+          onRecordingChangeRef.current?.(false);
+          return;
+        }
+        
+        if (event.error === 'aborted') {
+          // Распознавание было прервано - игнорируем если это была ручная остановка
+          if (isManualStopRef.current) {
+            return;
+          }
+          // Иначе просто останавливаем
+          setIsRecording(false);
+          onRecordingChangeRef.current?.(false);
+          return;
+        }
+        
+        // Для других ошибок - останавливаем
+        setIsRecording(false);
+        onRecordingChangeRef.current?.(false);
+        setInterimText("");
+        finalTextRef.current = "";
       };
 
       recognition.onend = () => {
-        setIsRecording(false);
+        console.log('🏁 Recognition ended, manual stop:', isManualStopRef.current, 'hasError:', hasErrorRef.current);
+
+        // Если была ошибка - НЕ перезапускаем
+        if (hasErrorRef.current) {
+          hasErrorRef.current = false;
+          setIsRecording(false);
+          onRecordingChangeRef.current?.(false);
+          return;
+        }
+
+        // Если была ручная остановка - завершаем и отправляем результат
+        if (isManualStopRef.current) {
+          isManualStopRef.current = false;
+          setIsRecording(false);
+          onRecordingChangeRef.current?.(false);
+
+          const completeText = finalTextRef.current.trim();
+          if (completeText) {
+            onResultRef.current(completeText);
+          }
+
+          setInterimText("");
+          finalTextRef.current = "";
+          return;
+        }
+
+        // Автоматическое завершение (пауза в речи) - перезапускаем распознавание
+        // Но только если пользователь не остановил вручную и не было ошибки
+        if (recognitionRef.current && !isManualStopRef.current && !hasErrorRef.current) {
+          setTimeout(() => {
+            if (recognitionRef.current && !isManualStopRef.current && !hasErrorRef.current) {
+              try {
+                recognitionRef.current.start();
+                setIsRecording(true);
+                onRecordingChangeRef.current?.(true);
+              } catch (e: any) {
+                // Если ошибка "already started" - игнорируем, значит уже работает
+                if (e?.message?.includes('already started')) {
+                  return;
+                }
+                console.error('Failed to restart recognition after pause:', e);
+                setIsRecording(false);
+                onRecordingChangeRef.current?.(false);
+              }
+            }
+          }, 200); // Задержка для гарантии полной остановки
+        }
       };
 
       recognitionRef.current = recognition;
@@ -123,7 +313,7 @@ export function VoiceRecorder({ onResult, className }: VoiceRecorderProps) {
         }
       }
     };
-  }, [language, onResult]);
+  }, [language]); // Только language в зависимостях! Callback'и хранятся в ref
 
   const handleClick = () => {
     if (!isSupported) {
@@ -136,19 +326,34 @@ export function VoiceRecorder({ onResult, className }: VoiceRecorderProps) {
     if (!recognitionRef.current) return;
 
     if (isRecording) {
+      // Ручная остановка записи
+      isManualStopRef.current = true;
       try {
         recognitionRef.current.stop();
+        // onend вызовет onResult с полным текстом автоматически
       } catch (e) {
         console.error('Error stopping recognition:', e);
       }
       setIsRecording(false);
+      onRecordingChangeRef.current?.(false); // Уведомляем родителя об остановке
     } else {
+      // Начинаем новую запись - сбрасываем накопленный текст и флаги
+      isManualStopRef.current = false;
+      hasErrorRef.current = false;
+      finalTextRef.current = "";
+      setInterimText("");
+      setErrorMessage(null); // Сбрасываем предыдущую ошибку
+
+      // Запускаем распознавание (Web Speech API сам запросит разрешение на микрофон)
       try {
+        console.log('🚀 Starting recognition, lang:', recognitionRef.current.lang);
         recognitionRef.current.start();
         setIsRecording(true);
+        onRecordingChangeRef.current?.(true);
       } catch (e) {
         console.error('Error starting recognition:', e);
         setIsRecording(false);
+        onRecordingChangeRef.current?.(false);
       }
     }
   };
@@ -157,19 +362,47 @@ export function VoiceRecorder({ onResult, className }: VoiceRecorderProps) {
     return null;
   }
 
+  // Формируем полный текст для отображения: накопленный финальный + текущий промежуточный
+  const displayText = (finalTextRef.current + interimText).trim();
+
   return (
-    <button
-      onClick={handleClick}
-      className={cn(
-        "w-10 h-10 rounded-full flex items-center justify-center transition-all",
-        isRecording
-          ? "bg-red-500 text-white animate-pulse"
-          : "bg-blue-500 text-white hover:bg-blue-600",
-        className
+    <div className="flex flex-col items-center gap-2">
+      <button
+        onClick={handleClick}
+        className={cn(
+          "w-16 h-16 rounded-full flex items-center justify-center transition-all",
+          isRecording
+            ? "bg-red-500 text-white animate-pulse"
+            : "bg-blue-500 text-white hover:bg-blue-600",
+          className
+        )}
+        aria-label={language === 'ru' ? 'Запись голоса' : 'Record voice'}
+      >
+        <Mic className="h-6 w-6" />
+      </button>
+      
+      {/* Показываем полный текст в реальном времени (как в Google Translate!) */}
+      {displayText && (
+        <div className="text-sm max-w-xs text-center px-4 py-2 bg-muted rounded-lg border border-border">
+          <span className="text-foreground">{finalTextRef.current}</span>
+          {interimText && (
+            <span className="text-muted-foreground italic">{interimText}</span>
+          )}
+        </div>
       )}
-      aria-label={language === 'ru' ? 'Запись голоса' : 'Record voice'}
-    >
-      <Mic className="h-5 w-5" />
-    </button>
+      
+      {isRecording && !displayText && (
+        <div className="text-sm text-muted-foreground">
+          {language === 'ru' ? 'Говорите...' : 'Listening...'}
+        </div>
+      )}
+
+      {/* Показываем ошибку */}
+      {errorMessage && (
+        <div className="text-sm text-red-500 text-center px-4 py-2 bg-red-50 dark:bg-red-950 rounded-lg border border-red-200 dark:border-red-800">
+          {errorMessage}
+        </div>
+      )}
+    </div>
   );
 }

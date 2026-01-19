@@ -37,6 +37,8 @@ import { Button } from "@/components/ui/button";
 import { calculateBudgetProgress, getBudgetPeriodDates } from "@/lib/budget-helpers";
 import { parseISO } from "date-fns";
 import { useTheme } from "@/hooks/use-theme";
+import { parseTransactionText, isParseSuccessful } from "@/lib/parse-transaction-text";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function DashboardV2Page() {
   const { t, language } = useTranslation();
@@ -245,17 +247,77 @@ export default function DashboardV2Page() {
   };
 
   // Handler for Web Speech API (plain text) - used in regular browsers
-  const handleVoiceResult = (text: string) => {
+  // Uses combined parsing: local first, then AI fallback
+  const handleVoiceResult = async (text: string) => {
     // НЕ закрываем модал и не открываем диалог, если текст пустой
-    // Это предотвращает закрытие модала при ошибках или пустых результатах
     if (!text || text.trim().length === 0) {
       console.warn('Empty text received, ignoring');
       return;
     }
-    
-    setVoiceData({ description: text });
-    setInterimTranscription(""); // Очищаем промежуточную транскрипцию
-    setIsVoiceRecording(false); // Сбрасываем флаг записи
+
+    console.log('🎤 Voice result:', text);
+
+    // Step 1: Try local parsing first (instant, free)
+    const localParsed = parseTransactionText(text);
+    console.log('📝 Local parse result:', localParsed);
+
+    // Step 2: If local parsing got amount - use it
+    if (isParseSuccessful(localParsed)) {
+      console.log('✅ Using local parsing result');
+      setVoiceData({
+        description: localParsed.description,
+        amount: localParsed.amount?.toString(),
+        currency: localParsed.currency || undefined,
+        category: localParsed.category || undefined,
+        type: localParsed.type,
+      });
+      setInterimTranscription("");
+      setIsVoiceRecording(false);
+      setShowAddDialog(true);
+      setShowVoiceInput(false);
+      return;
+    }
+
+    // Step 3: Local parsing failed - try AI parsing (fallback)
+    console.log('🤖 Local parsing incomplete, trying AI...');
+    try {
+      const response = await apiRequest('POST', '/api/ai/parse-text', { text });
+      const data = await response.json();
+
+      if (data.success && data.parsed) {
+        console.log('✅ AI parse result:', data.parsed);
+        setVoiceData({
+          description: data.parsed.description,
+          amount: data.parsed.amount,
+          currency: data.parsed.currency,
+          category: data.parsed.category,
+          type: data.parsed.type,
+        });
+      } else {
+        // AI also failed - use local result as best effort
+        console.warn('⚠️ AI parsing failed, using local result');
+        setVoiceData({
+          description: localParsed.description,
+          amount: localParsed.amount?.toString(),
+          currency: localParsed.currency || undefined,
+          category: localParsed.category || undefined,
+          type: localParsed.type,
+        });
+      }
+    } catch (error) {
+      // Network error or API error - use local result
+      console.error('❌ AI parsing error:', error);
+      setVoiceData({
+        description: localParsed.description,
+        amount: localParsed.amount?.toString(),
+        currency: localParsed.currency || undefined,
+        category: localParsed.category || undefined,
+        type: localParsed.type,
+      });
+    }
+
+    setInterimTranscription("");
+    setIsVoiceRecording(false);
     setShowAddDialog(true);
     setShowVoiceInput(false);
   };

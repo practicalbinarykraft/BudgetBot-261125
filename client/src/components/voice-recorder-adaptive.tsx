@@ -25,15 +25,47 @@ interface VoiceRecorderAdaptiveProps {
    */
   onParsedResult?: (result: ParsedVoiceResult) => void;
 
+  /**
+   * Callback for interim results (real-time transcription)
+   * Shows text as user speaks (like competitors)
+   */
+  onInterimResult?: (text: string) => void;
+
+  /**
+   * Callback for recording state changes
+   * Used to show/hide transcription area
+   */
+  onRecordingChange?: (isRecording: boolean) => void;
+
   className?: string;
 }
 
 export function VoiceRecorderAdaptive({
   onResult,
   onParsedResult,
+  onInterimResult,
+  onRecordingChange,
   className,
 }: VoiceRecorderAdaptiveProps) {
   const { isMiniApp } = useTelegramMiniApp();
+
+  // Проверяем, доступен ли Web Speech API (для real-time транскрипции)
+  const isWebSpeechAvailable = typeof window !== 'undefined' && 
+    (window.SpeechRecognition || window.webkitSpeechRecognition);
+
+  // ПРИОРИТЕТ: Если Web Speech API доступен И нужна real-time транскрипция (onInterimResult)
+  // → используем Web Speech API даже если есть onParsedResult
+  // Это дает real-time транскрипцию в обычном браузере
+  if (isWebSpeechAvailable && onResult && onInterimResult) {
+    return (
+      <VoiceRecorder
+        onResult={onResult}
+        onInterimResult={onInterimResult}
+        onRecordingChange={onRecordingChange}
+        className={className}
+      />
+    );
+  }
 
   // In Mini App - use MediaRecorder + server-side Whisper + AI parsing
   if (isMiniApp && onParsedResult) {
@@ -45,7 +77,7 @@ export function VoiceRecorderAdaptive({
     );
   }
 
-  // In regular browser - use Web Speech API (faster, free)
+  // In regular browser - use Web Speech API (faster, free) with real-time transcription
   // In Mini App with only onResult - use server transcription but return just text
   if (onResult) {
     if (isMiniApp) {
@@ -57,10 +89,12 @@ export function VoiceRecorderAdaptive({
         />
       );
     }
-    // Regular browser: use Web Speech API
+    // Regular browser: use Web Speech API with real-time transcription
     return (
       <VoiceRecorder
         onResult={onResult}
+        onInterimResult={onInterimResult}
+        onRecordingChange={onRecordingChange}
         className={className}
       />
     );
