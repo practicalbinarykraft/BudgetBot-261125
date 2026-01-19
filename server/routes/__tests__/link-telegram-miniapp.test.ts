@@ -13,7 +13,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { db } from '../../db';
 import { users } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { eq, or } from 'drizzle-orm';
 import { TELEGRAM_BOT_TOKEN } from '../../telegram/config';
 import authMiniappRouter from '../auth-miniapp.routes';
 
@@ -80,13 +80,19 @@ describe.skipIf(process.env.CI)('POST /api/auth/link-telegram-miniapp', () => {
     uniqueEmail = `test-${Date.now()}-${Math.random().toString(36).substring(7)}@example.com`;
     
     // Cleanup перед созданием (на случай параллельного выполнения)
+    // ВАЖНО: Удаляем ВСЕ записи с этими telegramId, независимо от того, к какому пользователю они привязаны
     try {
+      // Удаляем напрямую по telegramId (самый надежный способ)
       await db.delete(users).where(eq(users.telegramId, '123456789'));
       await db.delete(users).where(eq(users.telegramId, '999888777'));
       await db.delete(users).where(eq(users.telegramId, '111222333'));
+      
       // Небольшая задержка для завершения транзакций
-      await new Promise(resolve => setTimeout(resolve, 100));
-    } catch {}
+      await new Promise(resolve => setTimeout(resolve, 200));
+    } catch (error) {
+      // Игнорируем ошибки cleanup, но логируем для отладки
+      console.warn('Cleanup warning in beforeEach:', error);
+    }
     
     app = express();
     app.use(express.json());
@@ -160,10 +166,32 @@ describe.skipIf(process.env.CI)('POST /api/auth/link-telegram-miniapp', () => {
   describe('Successful linking', () => {
     it('should link telegram_id to authenticated user', async () => {
       // Cleanup перед тестом на случай остатков от предыдущих запусков
+      // Убеждаемся, что telegramId '123456789' не связан ни с каким пользователем
       try {
+        // Находим пользователя с этим telegramId
+        const existingUsers = await db
+          .select({ id: users.id, telegramId: users.telegramId })
+          .from(users)
+          .where(eq(users.telegramId, '123456789'))
+          .limit(1);
+        
+        // Если нашли, удаляем связь (обнуляем telegramId) или удаляем пользователя
+        for (const user of existingUsers) {
+          // Если это не наш testUser, удаляем связь
+          if (user.id !== testUser?.id) {
+            await db.update(users)
+              .set({ telegramId: null })
+              .where(eq(users.id, user.id));
+          }
+        }
+        
+        // Также удаляем напрямую по telegramId
         await db.delete(users).where(eq(users.telegramId, '123456789'));
-        await new Promise(resolve => setTimeout(resolve, 50));
-      } catch {}
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        console.warn('Pre-test cleanup warning:', error);
+      }
       
       const telegramId = '123456789';
       const initData = createValidInitData({

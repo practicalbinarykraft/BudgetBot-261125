@@ -1,0 +1,45 @@
+CI Error Report - PR #3: Feature/dashboard v2 dark theme (FINAL)
+================================================================
+
+Issue:
+------
+Test "should link telegram_id to authenticated user" failing with:
+- Status: 400 Bad Request
+- Error: "This Telegram account is already linked to another user"
+- Expected: 200 OK
+
+Root Cause:
+----------
+Cleanup before test execution was not properly removing users with telegramId '123456789'.
+The telegramId remained linked to a user from a previous test run, causing the API to reject
+the linking attempt with 400 error.
+
+Fix Applied:
+------------
+1. Improved cleanup in beforeEach:
+   - Increased delay from 100ms to 200ms for transaction completion
+   - Added error logging for debugging
+
+2. Enhanced pre-test cleanup:
+   - Check if telegramId '123456789' is linked to any user
+   - If linked to a different user (not testUser), nullify the telegramId
+   - Also delete directly by telegramId as fallback
+   - Increased delay to 100ms
+
+3. Better error handling:
+   - Added console.warn for cleanup errors to help debug issues
+
+Test Results:
+-------------
+All 5 tests passing:
+✓ should link telegram_id to authenticated user
+✓ should reject if telegram_id is already linked to another user
+✓ should reject invalid initData signature
+✓ should reject old initData (replay attack prevention)
+✓ should reject if user is not authenticated
+
+Files Changed:
+--------------
+- server/routes/__tests__/link-telegram-miniapp.test.ts
+
+Status: FIXED ✅
