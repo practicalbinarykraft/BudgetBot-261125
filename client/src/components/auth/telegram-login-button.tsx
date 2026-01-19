@@ -7,6 +7,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
 
 import type { TelegramUser } from '@shared/types/telegram';
@@ -20,6 +21,7 @@ declare global {
 export function TelegramLoginButton() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const isLoadingRef = useRef(false);
 
@@ -55,9 +57,10 @@ export function TelegramLoginButton() {
               : 'Logged in successfully via Telegram',
           });
 
-          // Redirect to dashboard
+          // Redirect to dashboard-v2 on mobile devices, otherwise to dashboard
           setTimeout(() => {
-            setLocation('/app/dashboard');
+            const dashboardPath = isMobile ? '/app/dashboard-v2' : '/app/dashboard';
+            setLocation(dashboardPath);
           }, 500);
         } else {
           console.error('Telegram login failed:', data);

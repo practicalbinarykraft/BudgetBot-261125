@@ -15,6 +15,7 @@ import { useTelegramMiniApp } from "@/hooks/use-telegram-miniapp";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { Wallet, TrendingUp, Bot, Camera, DollarSign } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
@@ -22,6 +23,7 @@ export default function AuthPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { isMiniApp, initData, telegramUser } = useTelegramMiniApp();
+  const isMobile = useIsMobile();
   
   const [activeTab, setActiveTab] = useState("login");
   const [showLinkPrompt, setShowLinkPrompt] = useState(false);
@@ -115,7 +117,9 @@ export default function AuthPage() {
         setShowLinkPrompt(true);
       } else {
         console.log('[AuthPage] Redirecting to dashboard');
-        setLocation('/app/dashboard');
+        // Redirect to dashboard-v2 on mobile devices, otherwise to dashboard
+        const dashboardPath = isMobile ? '/app/dashboard-v2' : '/app/dashboard';
+        setLocation(dashboardPath);
       }
     } catch (error) {
       console.error('[AuthPage] Login error caught:', error);
@@ -159,7 +163,9 @@ export default function AuthPage() {
         setPendingTelegramId(result.telegramId);
         setShowLinkPrompt(true);
       } else {
-        setLocation('/app/dashboard');
+        // Redirect to dashboard-v2 on mobile devices, otherwise to dashboard
+        const dashboardPath = isMobile ? '/app/dashboard-v2' : '/app/dashboard';
+        setLocation(dashboardPath);
       }
     } catch (error: any) {
       toast({
@@ -267,7 +273,9 @@ export default function AuthPage() {
       if (isMiniApp && initData && pendingTelegramId) {
         setShowLinkPrompt(true);
       } else {
-        setLocation('/app/dashboard');
+        // Redirect to dashboard-v2 on mobile devices, otherwise to dashboard
+        const dashboardPath = isMobile ? '/app/dashboard-v2' : '/app/dashboard';
+        setLocation(dashboardPath);
       }
     } catch (error: any) {
       toast({
