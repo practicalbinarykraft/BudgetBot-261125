@@ -220,6 +220,14 @@ export const webCommonTranslations: Translations = {
     en: 'Logout',
     ru: 'Выйти',
   },
+  'common.dark_theme': {
+    en: 'Dark theme',
+    ru: 'Темная тема',
+  },
+  'common.light_theme': {
+    en: 'Light theme',
+    ru: 'Светлая тема',
+  },
 
   // Onboarding
   'onboarding.welcome_title': {
@@ -529,6 +537,18 @@ export const webCommonTranslations: Translations = {
   },
 
   // Voice Input
+  'voice_input.title': {
+    en: 'Voice Input',
+    ru: 'Голосовой ввод',
+  },
+  'voice_input.instructions': {
+    en: 'Tap the microphone and say, for example: "Coffee 5 dollars"',
+    ru: 'Нажмите на микрофон и скажите, например: "Кофе 500 рублей"',
+  },
+  'voice_input.transcribing': {
+    en: 'Transcribing...',
+    ru: 'Распознавание...',
+  },
   'voice.speak_now': {
     en: 'Speak now...',
     ru: 'Говорите...',

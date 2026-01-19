@@ -28,8 +28,9 @@ vi.mock('../../middleware/rate-limit', () => ({
   authRateLimiter: (req: any, res: any, next: any) => next(),
 }));
 
-describe.skipIf(process.env.CI)('POST /api/auth/register-miniapp', () => {
+describe('POST /api/auth/register-miniapp', () => {
   let app: express.Application;
+  const createdUserIds: number[] = []; // Track created users for cleanup
   
   beforeEach(() => {
     app = express();
@@ -54,8 +55,14 @@ describe.skipIf(process.env.CI)('POST /api/auth/register-miniapp', () => {
   });
   
   afterEach(async () => {
-    // Cleanup: удаляем тестовых пользователей
+    // Cleanup: удаляем всех созданных пользователей
     try {
+      for (const userId of createdUserIds) {
+        await db.delete(users).where(eq(users.id, userId));
+      }
+      createdUserIds.length = 0; // Clear array
+      
+      // Also cleanup by email/telegramId as fallback
       await db.delete(users).where(eq(users.email, 'newuser@example.com'));
       await db.delete(users).where(eq(users.email, 'duplicate@example.com'));
       await db.delete(users).where(eq(users.email, 'existing@example.com'));
@@ -63,6 +70,13 @@ describe.skipIf(process.env.CI)('POST /api/auth/register-miniapp', () => {
       await db.delete(users).where(eq(users.email, 'test2@example.com'));
       await db.delete(users).where(eq(users.telegramId, '111222333'));
       await db.delete(users).where(eq(users.telegramId, '999888777'));
+      await db.delete(users).where(eq(users.telegramId, '444555666'));
+      await db.delete(users).where(eq(users.telegramId, '777888999'));
+      await db.delete(users).where(eq(users.telegramId, '000111222'));
+      await db.delete(users).where(eq(users.telegramId, '333444555'));
+      
+      // Small delay to ensure transactions complete
+      await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error) {
       // Игнорируем ошибки cleanup
     }
@@ -87,11 +101,6 @@ describe.skipIf(process.env.CI)('POST /api/auth/register-miniapp', () => {
         .post('/api/auth/register-miniapp')
         .send(registrationData);
       
-      if (response.status !== 201) {
-        console.log('Response status:', response.status);
-        console.log('Response body:', JSON.stringify(response.body, null, 2));
-      }
-      
       expect(response.status).toBe(201);
       
       // Assert
@@ -111,8 +120,10 @@ describe.skipIf(process.env.CI)('POST /api/auth/register-miniapp', () => {
       expect(createdUser).toBeDefined();
       expect(createdUser.telegramId).toBeNull(); // Not linked yet
       
-      // Cleanup
-      await db.delete(users).where(eq(users.id, createdUser.id));
+      // Track for cleanup
+      if (createdUser?.id) {
+        createdUserIds.push(createdUser.id);
+      }
     });
     
     it('should NOT link telegram_id immediately', async () => {
@@ -141,8 +152,10 @@ describe.skipIf(process.env.CI)('POST /api/auth/register-miniapp', () => {
       
       expect(createdUser.telegramId).toBeNull();
       
-      // Cleanup
-      await db.delete(users).where(eq(users.id, createdUser.id));
+      // Track for cleanup
+      if (createdUser?.id) {
+        createdUserIds.push(createdUser.id);
+      }
     });
   });
   
@@ -177,10 +190,10 @@ describe.skipIf(process.env.CI)('POST /api/auth/register-miniapp', () => {
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('Email already registered');
       
-      // Cleanup
-      try {
-        await db.delete(users).where(eq(users.id, existingUser.id));
-      } catch {}
+      // Track for cleanup
+      if (existingUser?.id) {
+        createdUserIds.push(existingUser.id);
+      }
     });
     
     it('should reject weak password', async () => {
@@ -220,20 +233,18 @@ describe.skipIf(process.env.CI)('POST /api/auth/register-miniapp', () => {
       expect(response.body.details).toBeDefined();
       const emailError = response.body.details.find((d: any) => d.path.includes('email'));
       expect(emailError).toBeDefined();
-      
-      // Cleanup
-      try {
-        await db.delete(users).where(eq(users.email, 'existing@example.com'));
-      } catch {}
+      // No cleanup needed - validation failed, no user was created
     });
   });
   
   describe('Telegram ID validation', () => {
     it('should reject if telegram_id is already linked', async () => {
-      // Arrange: Create user with telegram_id (удаляем сначала, если существует)
+      // Arrange: Cleanup before test
       try {
         await db.delete(users).where(eq(users.telegramId, '999888777'));
         await db.delete(users).where(eq(users.email, 'linked@example.com'));
+        await db.delete(users).where(eq(users.email, 'newuser_for_linked_test@example.com'));
+        await new Promise(resolve => setTimeout(resolve, 100));
       } catch {}
       
       const hashedPassword = await bcrypt.hash('password123', 10);
@@ -244,6 +255,11 @@ describe.skipIf(process.env.CI)('POST /api/auth/register-miniapp', () => {
         telegramId: '999888777',
         isBlocked: false,
       }).returning();
+      
+      // Track for cleanup
+      if (existingUser?.id) {
+        createdUserIds.push(existingUser.id);
+      }
       
       const registrationData = {
         email: 'newuser_for_linked_test@example.com', // Use unique email to avoid email conflict
@@ -262,12 +278,6 @@ describe.skipIf(process.env.CI)('POST /api/auth/register-miniapp', () => {
       // The API checks email first, then telegramId
       // But if email is unique, it should check telegramId and return the telegram error
       expect(response.body.error).toMatch(/already linked|Telegram account/i);
-      
-      // Cleanup
-      try {
-        await db.delete(users).where(eq(users.id, existingUser.id));
-        await db.delete(users).where(eq(users.email, 'new@example.com'));
-      } catch {}
     });
   });
 });

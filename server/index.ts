@@ -82,6 +82,18 @@ app.use((req, res, next) => {
   registerRoutes(app);
   console.log('[SERVER] Routes registered');
 
+  // Setup static file serving BEFORE error handler
+  // This ensures SPA routes work correctly in production
+  if (app.get("env") === "development") {
+    // Dynamic import to avoid loading vite in production
+    const { setupVite } = await import("./vite");
+    await setupVite(app, server);
+    logInfo("✅ Vite dev server setup complete");
+  } else {
+    serveStatic(app);
+    logInfo("✅ Static file serving setup complete");
+  }
+
   // Global error handler - MUST be last middleware
   app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
     // Convert to AppError for consistent handling
@@ -132,19 +144,6 @@ app.use((req, res, next) => {
     // ⚠️ DO NOT throw here! It will crash the server.
     // Errors are already handled and logged.
   });
-
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    // Dynamic import to avoid loading vite in production
-    const { setupVite } = await import("./vite");
-    await setupVite(app, server);
-    logInfo("✅ Vite dev server setup complete");
-  } else {
-    serveStatic(app);
-    logInfo("✅ Static file serving setup complete");
-  }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
   // Other ports are firewalled. Default to 5000 if not specified.

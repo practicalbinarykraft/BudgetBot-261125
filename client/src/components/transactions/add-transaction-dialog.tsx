@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,10 +14,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "@/i18n/context";
 import { Category, PersonalTag } from "@shared/schema";
-import { Plus } from "lucide-react";
+import { Plus, Mic } from "lucide-react";
 import { CategoryCreateDialog } from "@/components/categories/category-create-dialog";
 import { TagSelector } from "@/components/tags/tag-selector";
 import { useTranslateCategory } from "@/lib/category-translations";
+import { VoiceRecorderAdaptive, ParsedVoiceResult } from "@/components/voice-recorder-adaptive";
 
 interface AddTransactionDialogProps {
   open: boolean;
@@ -59,9 +60,12 @@ export function AddTransactionDialog({
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const translateCategory = useTranslateCategory();
   const [showCreateCategory, setShowCreateCategory] = useState(false);
+  const [showVoiceInput, setShowVoiceInput] = useState(false);
+  const [interimTranscription, setInterimTranscription] = useState(""); // Промежуточная транскрипция для показа в реальном времени
+  const [isVoiceRecording, setIsVoiceRecording] = useState(false); // Состояние записи голоса
 
   // Client-side validation schema - simpler than server schema
   const formSchema = z.object({
@@ -111,6 +115,37 @@ export function AddTransactionDialog({
       if (defaultType) form.setValue("type", defaultType);
     }
   }, [open, defaultDescription, defaultAmount, defaultCurrency, defaultCategory, defaultType, form]);
+
+  // Handler for Web Speech API (plain text) - used in regular browsers
+  const handleVoiceResult = (text: string) => {
+    // НЕ закрываем модал, если текст пустой
+    if (!text || text.trim().length === 0) {
+      console.warn('Empty text received, ignoring');
+      return;
+    }
+    
+    form.setValue("description", text);
+    setInterimTranscription(""); // Очищаем промежуточную транскрипцию
+    setShowVoiceInput(false);
+  };
+
+  // Handler for server-side parsed result - used in Telegram Mini App
+  const handleVoiceParsedResult = (result: ParsedVoiceResult) => {
+    if (result.parsed.description) form.setValue("description", result.parsed.description);
+    if (result.parsed.amount) form.setValue("amount", result.parsed.amount);
+    if (result.parsed.currency) form.setValue("currency", result.parsed.currency);
+    if (result.parsed.category) form.setValue("category", result.parsed.category);
+    if (result.parsed.type) form.setValue("type", result.parsed.type);
+    setInterimTranscription(""); // Очищаем промежуточную транскрипцию
+    setShowVoiceInput(false);
+  };
+
+  // Handler для промежуточных результатов (транскрипция в реальном времени)
+  // Теперь получаем полный текст: накопленный финальный + текущий промежуточный
+  const handleInterimResult = (fullText: string) => {
+    setInterimTranscription(fullText);
+    setIsVoiceRecording(true); // Устанавливаем флаг записи
+  };
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
@@ -168,8 +203,9 @@ export function AddTransactionDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] flex flex-col !p-0 overflow-hidden">
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] flex flex-col !p-0 overflow-hidden">
         <DialogHeader className="px-3 pt-3 pb-2 sm:px-6 sm:pt-6 sm:pb-4 flex-shrink-0">
           <DialogTitle className="text-base sm:text-lg">{t("transactions.add_transaction")}</DialogTitle>
         </DialogHeader>
@@ -349,6 +385,15 @@ export function AddTransactionDialog({
                 {t("transactions.cancel")}
               </Button>
               <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowVoiceInput(true)}
+                className="px-3 sm:px-4 text-sm"
+                aria-label={t("voice_input.title")}
+              >
+                <Mic className="h-4 w-4 sm:h-5 sm:w-5" />
+              </Button>
+              <Button
                 type="submit"
                 disabled={createMutation.isPending}
                 className="flex-1 text-sm"
@@ -360,6 +405,7 @@ export function AddTransactionDialog({
           </form>
         </Form>
       </DialogContent>
+      </Dialog>
 
       <CategoryCreateDialog
         open={showCreateCategory}
@@ -369,6 +415,66 @@ export function AddTransactionDialog({
           form.setValue("category", categoryName);
         }}
       />
-    </Dialog>
+
+      {/* Voice Input Dialog - Separate Dialog to avoid z-index conflicts */}
+      <Dialog open={showVoiceInput} onOpenChange={(open) => {
+        setShowVoiceInput(open);
+        if (!open) {
+          setInterimTranscription(""); // Очищаем промежуточную транскрипцию при закрытии
+          setIsVoiceRecording(false); // Сбрасываем флаг записи
+        }
+      }}>
+        <DialogContent className="max-w-sm z-[200]">
+          <DialogHeader>
+            <DialogTitle>{t("voice_input.title")}</DialogTitle>
+            <DialogDescription>
+              {t("voice_input.instructions")}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex flex-col items-center gap-4 mb-4">
+            <VoiceRecorderAdaptive
+              onResult={handleVoiceResult}
+              onParsedResult={handleVoiceParsedResult}
+              onInterimResult={handleInterimResult}
+              onRecordingChange={setIsVoiceRecording}
+              className="w-16 h-16"
+            />
+            
+            {/* Показываем транскрипцию в реальном времени (как у конкурентов!) */}
+            {/* Показываем поле всегда, когда идет запись или есть текст */}
+            {(isVoiceRecording || interimTranscription) && (
+              <div className="w-full px-4 py-3 bg-muted rounded-lg border border-border min-h-[80px] flex flex-col justify-center">
+                {interimTranscription ? (
+                  <>
+                    <p className="text-xs text-muted-foreground mb-1">
+                      {t("voice_input.transcribing") || "Распознавание..."}
+                    </p>
+                    <p className="text-base font-medium break-words">
+                      {interimTranscription}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center">
+                    {language === 'ru' ? 'Говорите...' : 'Listening...'}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+          
+          <Button
+            variant="outline"
+            onClick={() => {
+              setShowVoiceInput(false);
+              setInterimTranscription(""); // Очищаем при закрытии
+            }}
+            className="w-full"
+          >
+            {t("common.cancel")}
+          </Button>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

@@ -1,0 +1,46 @@
+CI Test Failure Report - PR: feature/dashboard-v2-dark-theme
+================================================================
+
+Test Run Summary:
+-----------------
+Test Files:  1 failed | 34 passed | 1 skipped (36)
+Tests:       2 failed | 383 passed | 14 skipped (399)
+Duration:    27.20s
+
+Failed Tests:
+-------------
+
+1. FAIL: server/routes/__tests__/link-telegram-miniapp.test.ts > POST /api/auth/link-telegram-miniapp > Successful linking > should link telegram_id to authenticated user
+   
+   Error: duplicate key value violates unique constraint "users_email_unique"
+   
+   Location: server/routes/__tests__/link-telegram-miniapp.test.ts:111:22
+   
+   Issue: Test is trying to insert a user with email 'test@example.com' that already exists in the database.
+   This is a test isolation issue - the test is not properly cleaning up after itself or there's a conflict with other tests.
+
+2. FAIL: server/routes/__tests__/link-telegram-miniapp.test.ts > POST /api/auth/link-telegram-miniapp > Validation errors > should reject if telegram_id is already linked to another user
+   
+   Error: expected 400 "Bad Request", got 200 "OK"
+   
+   Location: server/routes/__tests__/link-telegram-miniapp.test.ts:262:10
+   
+   Issue: The API endpoint is returning 200 OK instead of 400 Bad Request when trying to link a telegram_id that is already linked to another user.
+   This suggests the validation logic is not working correctly.
+
+Analysis:
+---------
+These failures are NOT related to the dark theme changes in this PR.
+The failures are in existing tests for the Telegram Mini App linking functionality.
+
+Root Causes:
+1. Test isolation problem - tests are not properly cleaning up database state
+2. Missing validation logic - API should reject duplicate telegram_id links but doesn't
+
+Recommendations:
+----------------
+1. Fix test isolation by ensuring proper cleanup in beforeEach/afterEach hooks
+2. Add validation to reject telegram_id that is already linked to another user
+3. Use unique test data (e.g., timestamps or UUIDs) to avoid conflicts
+
+Note: These are pre-existing issues and should be fixed separately from the dark theme feature.

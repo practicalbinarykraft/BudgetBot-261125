@@ -36,15 +36,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { calculateBudgetProgress, getBudgetPeriodDates } from "@/lib/budget-helpers";
 import { parseISO } from "date-fns";
+import { useTheme } from "@/hooks/use-theme";
+import { parseTransactionText, isParseSuccessful } from "@/lib/parse-transaction-text";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function DashboardV2Page() {
   const { t, language } = useTranslation();
+  // useTheme hook автоматически применяет темную тему только для Dashboard V2
   const translateCategory = useTranslateCategory();
   const queryClient = useQueryClient();
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showVoiceInput, setShowVoiceInput] = useState(false);
+  const [interimTranscription, setInterimTranscription] = useState(""); // Промежуточная транскрипция для показа в реальном времени
+  const [isVoiceRecording, setIsVoiceRecording] = useState(false); // Состояние записи голоса
   const [voiceData, setVoiceData] = useState<{
     description?: string;
     amount?: string;
@@ -234,9 +240,84 @@ export default function DashboardV2Page() {
     }
   };
 
+  // Handler для промежуточных результатов (транскрипция в реальном времени)
+  const handleInterimResult = (fullText: string) => {
+    setInterimTranscription(fullText);
+    setIsVoiceRecording(true); // Устанавливаем флаг записи
+  };
+
   // Handler for Web Speech API (plain text) - used in regular browsers
-  const handleVoiceResult = (text: string) => {
-    setVoiceData({ description: text });
+  // Uses combined parsing: local first, then AI fallback
+  const handleVoiceResult = async (text: string) => {
+    // НЕ закрываем модал и не открываем диалог, если текст пустой
+    if (!text || text.trim().length === 0) {
+      console.warn('Empty text received, ignoring');
+      return;
+    }
+
+    console.log('🎤 Voice result:', text);
+
+    // Step 1: Try local parsing first (instant, free)
+    const localParsed = parseTransactionText(text);
+    console.log('📝 Local parse result:', localParsed);
+
+    // Step 2: If local parsing got amount - use it
+    if (isParseSuccessful(localParsed)) {
+      console.log('✅ Using local parsing result');
+      setVoiceData({
+        description: localParsed.description,
+        amount: localParsed.amount?.toString(),
+        currency: localParsed.currency || undefined,
+        category: localParsed.category || undefined,
+        type: localParsed.type,
+      });
+      setInterimTranscription("");
+      setIsVoiceRecording(false);
+      setShowAddDialog(true);
+      setShowVoiceInput(false);
+      return;
+    }
+
+    // Step 3: Local parsing failed - try AI parsing (fallback)
+    console.log('🤖 Local parsing incomplete, trying AI...');
+    try {
+      const response = await apiRequest('POST', '/api/ai/parse-text', { text });
+      const data = await response.json();
+
+      if (data.success && data.parsed) {
+        console.log('✅ AI parse result:', data.parsed);
+        setVoiceData({
+          description: data.parsed.description,
+          amount: data.parsed.amount,
+          currency: data.parsed.currency,
+          category: data.parsed.category,
+          type: data.parsed.type,
+        });
+      } else {
+        // AI also failed - use local result as best effort
+        console.warn('⚠️ AI parsing failed, using local result');
+        setVoiceData({
+          description: localParsed.description,
+          amount: localParsed.amount?.toString(),
+          currency: localParsed.currency || undefined,
+          category: localParsed.category || undefined,
+          type: localParsed.type,
+        });
+      }
+    } catch (error) {
+      // Network error or API error - use local result
+      console.error('❌ AI parsing error:', error);
+      setVoiceData({
+        description: localParsed.description,
+        amount: localParsed.amount?.toString(),
+        currency: localParsed.currency || undefined,
+        category: localParsed.category || undefined,
+        type: localParsed.type,
+      });
+    }
+
+    setInterimTranscription("");
+    setIsVoiceRecording(false);
     setShowAddDialog(true);
     setShowVoiceInput(false);
   };
@@ -250,6 +331,8 @@ export default function DashboardV2Page() {
       category: result.parsed.category,
       type: result.parsed.type,
     });
+    setInterimTranscription(""); // Очищаем промежуточную транскрипцию
+    setIsVoiceRecording(false); // Сбрасываем флаг записи
     setShowAddDialog(true);
     setShowVoiceInput(false);
   };
@@ -534,15 +617,45 @@ export default function DashboardV2Page() {
                 ? 'Нажмите на микрофон и скажите, например: "Кофе 500 рублей"'
                 : 'Tap the microphone and say, for example: "Coffee 5 dollars"'}
             </p>
-            <div className="flex justify-center">
+            
+            <div className="flex flex-col items-center gap-4 mb-4">
               <VoiceRecorderAdaptive
                 onResult={handleVoiceResult}
                 onParsedResult={handleVoiceParsedResult}
+                onInterimResult={handleInterimResult}
+                onRecordingChange={setIsVoiceRecording}
                 className="w-16 h-16"
               />
+              
+              {/* Показываем транскрипцию в реальном времени (как у конкурентов!) */}
+              {/* Показываем поле ВСЕГДА, когда модал открыт */}
+              <div className="w-full px-4 py-3 bg-muted rounded-lg border border-border min-h-[80px] flex flex-col justify-center">
+                {interimTranscription ? (
+                  <>
+                    <p className="text-xs text-muted-foreground mb-1">
+                      {language === 'ru' ? 'Распознавание...' : 'Transcribing...'}
+                    </p>
+                    <p className="text-base font-medium break-words text-foreground">
+                      {interimTranscription}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center">
+                    {isVoiceRecording 
+                      ? (language === 'ru' ? 'Говорите...' : 'Listening...')
+                      : (language === 'ru' ? 'Нажмите на микрофон для начала записи' : 'Tap the microphone to start recording')
+                    }
+                  </p>
+                )}
+              </div>
             </div>
+            
             <button
-              onClick={() => setShowVoiceInput(false)}
+              onClick={() => {
+                setShowVoiceInput(false);
+                setInterimTranscription(""); // Очищаем при закрытии
+                setIsVoiceRecording(false); // Сбрасываем флаг записи
+              }}
               className="mt-4 w-full py-2 px-4 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
             >
               {language === 'ru' ? 'Отмена' : 'Cancel'}

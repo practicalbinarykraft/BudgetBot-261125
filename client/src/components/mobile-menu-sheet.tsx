@@ -33,6 +33,8 @@ import {
   BarChart3,
   Target,
   Home,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import * as React from "react";
@@ -41,6 +43,7 @@ import { useTranslation } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { useTelegramSafeArea } from "@/hooks/use-telegram-safe-area";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useTheme } from "@/hooks/use-theme";
 import {
   Collapsible,
   CollapsibleContent,
@@ -58,6 +61,7 @@ export function MobileMenuSheet({ open, onOpenChange }: MobileMenuSheetProps) {
   const { t } = useTranslation();
   const safeArea = useTelegramSafeArea();
   const isMobile = useIsMobile();
+  const { theme, toggleTheme } = useTheme();
 
   // Track which groups are expanded
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
@@ -421,12 +425,34 @@ export function MobileMenuSheet({ open, onOpenChange }: MobileMenuSheetProps) {
           </div>
         </div>
 
-        {/* Fixed footer - Пользователь и выход */}
+        {/* Fixed footer - Пользователь, тема и выход */}
         <div className="flex-shrink-0 border-t pt-4 mt-4 space-y-2">
           <div className="px-3 py-2 text-sm text-muted-foreground">
             <div className="font-medium text-foreground mb-1">{t("common.signed_in_as")}</div>
             <div className="truncate">{user?.email || user?.telegramUsername || user?.name}</div>
           </div>
+
+          {/* Theme toggle - только для Dashboard V2 */}
+          {location === "/app/dashboard-v2" && (
+            <button
+              onClick={() => {
+                toggleTheme();
+              }}
+              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg transition-colors hover:bg-accent text-foreground"
+            >
+              {theme === 'dark' ? (
+                <>
+                  <Sun className="h-5 w-5" />
+                  <span>{t("common.light_theme") || "Светлая тема"}</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="h-5 w-5" />
+                  <span>{t("common.dark_theme") || "Темная тема"}</span>
+                </>
+              )}
+            </button>
+          )}
 
           <button
             onClick={() => {
