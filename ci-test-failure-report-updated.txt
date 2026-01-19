@@ -1,0 +1,41 @@
+CI Test Failure Report - Updated
+==================================
+
+Issue Found:
+------------
+Test "should link telegram_id to authenticated user" was failing with:
+- Error: duplicate key value violates unique constraint "users_telegram_id_unique"
+- Status: 500 instead of expected 200
+
+Root Cause:
+-----------
+1. Cleanup in afterEach was not properly removing records by telegramId before email
+2. API was trying to UPDATE user even when telegram_id was already linked to the same user,
+   which could cause unique constraint violations in edge cases
+3. No cleanup before test execution to handle leftover data from previous runs
+
+Fixes Applied:
+--------------
+1. Improved cleanup order in afterEach:
+   - First delete by telegramId (priority)
+   - Then delete by email
+   - Finally delete by ID
+   - Increased delay to 100ms for transaction completion
+
+2. Added cleanup before test execution:
+   - Clean up telegramId '123456789' before running the test
+   - Prevents conflicts from previous test runs
+
+3. Fixed API logic in auth-miniapp.routes.ts:
+   - If telegram_id already linked to same user: update and return success (idempotent)
+   - If telegram_id linked to different user: return 400 error
+   - If telegram_id not linked: create new link
+
+Test Results:
+-------------
+All 5 tests in link-telegram-miniapp.test.ts now pass:
+✓ should link telegram_id to authenticated user
+✓ should reject if telegram_id is already linked to another user
+✓ should reject invalid initData signature
+✓ should reject old initData (replay attack prevention)
+✓ should reject if user is not authenticated

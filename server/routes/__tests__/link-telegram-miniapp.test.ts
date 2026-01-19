@@ -13,7 +13,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { db } from '../../db';
 import { users } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { eq, or } from 'drizzle-orm';
 import { TELEGRAM_BOT_TOKEN } from '../../telegram/config';
 import authMiniappRouter from '../auth-miniapp.routes';
 
@@ -70,20 +70,29 @@ function createValidInitData(telegramUser: {
 describe.skipIf(process.env.CI)('POST /api/auth/link-telegram-miniapp', () => {
   let app: express.Application;
   let testUser: any;
+  let uniqueEmail: string;
   
   beforeEach(async () => {
     // Устанавливаем тестовый токен для валидации
     process.env.TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || 'test-token';
     
+    // Генерируем уникальный email для каждого теста (избегаем конфликтов при параллельном выполнении)
+    uniqueEmail = `test-${Date.now()}-${Math.random().toString(36).substring(7)}@example.com`;
+    
     // Cleanup перед созданием (на случай параллельного выполнения)
+    // ВАЖНО: Удаляем ВСЕ записи с этими telegramId, независимо от того, к какому пользователю они привязаны
     try {
-      await db.delete(users).where(eq(users.email, 'test@example.com'));
+      // Удаляем напрямую по telegramId (самый надежный способ)
       await db.delete(users).where(eq(users.telegramId, '123456789'));
       await db.delete(users).where(eq(users.telegramId, '999888777'));
       await db.delete(users).where(eq(users.telegramId, '111222333'));
+      
       // Небольшая задержка для завершения транзакций
-      await new Promise(resolve => setTimeout(resolve, 100));
-    } catch {}
+      await new Promise(resolve => setTimeout(resolve, 200));
+    } catch (error) {
+      // Игнорируем ошибки cleanup, но логируем для отладки
+      console.warn('Cleanup warning in beforeEach:', error);
+    }
     
     app = express();
     app.use(express.json());
@@ -105,36 +114,17 @@ describe.skipIf(process.env.CI)('POST /api/auth/link-telegram-miniapp', () => {
     });
     
     // Create test user with email+password (not linked to Telegram)
-    // Используем try-catch для обработки возможных конфликтов
-    try {
-      const hashedPassword = await bcrypt.hash('testpassword123', 10);
-      const [user] = await db.insert(users).values({
-        email: 'test@example.com',
-        password: hashedPassword,
-        name: 'Test User',
-        telegramId: null, // Not linked yet
-        isBlocked: false,
-      }).returning();
-      
-      testUser = user;
-    } catch (error: any) {
-      // Если пользователь уже существует (конфликт при параллельном выполнении),
-      // пытаемся найти его и использовать
-      if (error?.code === '23505' || error?.message?.includes('duplicate key')) {
-        const [existingUser] = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, 'test@example.com'))
-          .limit(1);
-        if (existingUser) {
-          testUser = existingUser;
-        } else {
-          throw error;
-        }
-      } else {
-        throw error;
-      }
-    }
+    // Используем уникальный email для избежания конфликтов
+    const hashedPassword = await bcrypt.hash('testpassword123', 10);
+    const [user] = await db.insert(users).values({
+      email: uniqueEmail,
+      password: hashedPassword,
+      name: 'Test User',
+      telegramId: null, // Not linked yet
+      isBlocked: false,
+    }).returning();
+    
+    testUser = user;
     
     // Устанавливаем testUser в middleware после его создания
     app.use((req: any, res: any, next: any) => {
@@ -150,17 +140,24 @@ describe.skipIf(process.env.CI)('POST /api/auth/link-telegram-miniapp', () => {
   
   afterEach(async () => {
     try {
-      if (testUser) {
-        await db.delete(users).where(eq(users.id, testUser.id));
-      }
-      // Cleanup всех тестовых пользователей
-      await db.delete(users).where(eq(users.email, 'test@example.com'));
-      await db.delete(users).where(eq(users.email, 'other@example.com'));
+      // Cleanup всех тестовых пользователей по telegramId (приоритет)
       await db.delete(users).where(eq(users.telegramId, '123456789'));
       await db.delete(users).where(eq(users.telegramId, '999888777'));
       await db.delete(users).where(eq(users.telegramId, '111222333'));
+      
+      // Cleanup по email
+      if (uniqueEmail) {
+        await db.delete(users).where(eq(users.email, uniqueEmail));
+      }
+      await db.delete(users).where(eq(users.email, 'other@example.com'));
+      
+      // Cleanup по ID если есть
+      if (testUser?.id) {
+        await db.delete(users).where(eq(users.id, testUser.id));
+      }
+      
       // Небольшая задержка для завершения транзакций
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error) {
       // Игнорируем ошибки cleanup
     }
@@ -168,6 +165,34 @@ describe.skipIf(process.env.CI)('POST /api/auth/link-telegram-miniapp', () => {
   
   describe('Successful linking', () => {
     it('should link telegram_id to authenticated user', async () => {
+      // Cleanup перед тестом на случай остатков от предыдущих запусков
+      // Убеждаемся, что telegramId '123456789' не связан ни с каким пользователем
+      try {
+        // Находим пользователя с этим telegramId
+        const existingUsers = await db
+          .select({ id: users.id, telegramId: users.telegramId })
+          .from(users)
+          .where(eq(users.telegramId, '123456789'))
+          .limit(1);
+        
+        // Если нашли, удаляем связь (обнуляем telegramId) или удаляем пользователя
+        for (const user of existingUsers) {
+          // Если это не наш testUser, удаляем связь
+          if (user.id !== testUser?.id) {
+            await db.update(users)
+              .set({ telegramId: null })
+              .where(eq(users.id, user.id));
+          }
+        }
+        
+        // Также удаляем напрямую по telegramId
+        await db.delete(users).where(eq(users.telegramId, '123456789'));
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        console.warn('Pre-test cleanup warning:', error);
+      }
+      
       const telegramId = '123456789';
       const initData = createValidInitData({
         id: 123456789,

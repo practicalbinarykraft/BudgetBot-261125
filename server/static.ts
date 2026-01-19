@@ -42,11 +42,26 @@ export function serveStatic(app: Express) {
     if (
       url.startsWith("/api/") ||
       url.startsWith("/socket.io/") ||
+      url.startsWith("/@") ||
+      url.startsWith("/src/") ||
+      url.startsWith("/assets/") ||
       (url.includes(".") && !url.endsWith(".html")) // Has extension but not HTML
     ) {
       return next();
     }
 
-    res.sendFile(path.resolve(distPath, "index.html"));
+    // For all other routes (SPA routes), serve index.html
+    // This allows client-side routing to work
+    const indexPath = path.resolve(distPath, "index.html");
+    
+    // Check if index.html exists
+    if (!fs.existsSync(indexPath)) {
+      return res.status(404).json({
+        error: "Not Found",
+        message: "index.html not found. Make sure to build the client first.",
+      });
+    }
+
+    res.sendFile(indexPath);
   });
 }
