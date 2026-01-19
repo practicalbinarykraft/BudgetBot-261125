@@ -34,6 +34,7 @@ import { useTelegramSafeArea } from "@/hooks/use-telegram-safe-area";
 import { useTranslateCategory } from "@/lib/category-translations";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { CategoryCreateDialog } from "@/components/categories/category-create-dialog";
 import { calculateBudgetProgress, getBudgetPeriodDates } from "@/lib/budget-helpers";
 import { parseISO } from "date-fns";
 import { useTheme } from "@/hooks/use-theme";
@@ -61,6 +62,7 @@ export default function DashboardV2Page() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showCategorySelect, setShowCategorySelect] = useState(false);
   const [transactionForCategory, setTransactionForCategory] = useState<Transaction | null>(null);
+  const [showCreateCategory, setShowCreateCategory] = useState(false);
   const { open: openAiChat } = useChatSidebar();
   const safeArea = useTelegramSafeArea();
 
@@ -677,13 +679,13 @@ export default function DashboardV2Page() {
 
       {/* Category Selection Dialog */}
       <Dialog open={showCategorySelect} onOpenChange={setShowCategorySelect}>
-        <DialogContent>
+        <DialogContent className="flex flex-col">
           <DialogHeader>
             <DialogTitle>
               {language === 'ru' ? 'Выберите категорию' : 'Select Category'}
             </DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-2 max-h-[60vh] overflow-y-auto">
+          <div className="grid grid-cols-2 gap-2">
             {categories
               .filter(cat => cat.type === (transactionForCategory?.type || 'expense'))
               .map((category) => (
@@ -721,8 +723,34 @@ export default function DashboardV2Page() {
                 </Button>
               ))}
           </div>
+          <div className="border-t pt-4 mt-4">
+            <Button
+              variant="outline"
+              className="w-full flex items-center justify-center gap-2"
+              onClick={() => {
+                setShowCategorySelect(false);
+                setShowCreateCategory(true);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              {language === 'ru' ? 'Добавить категорию' : 'Add Category'}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
+
+      {/* Category Create Dialog */}
+      <CategoryCreateDialog
+        open={showCreateCategory}
+        onOpenChange={setShowCreateCategory}
+        defaultType={(transactionForCategory?.type as 'income' | 'expense') || 'expense'}
+        onSuccess={(categoryName) => {
+          // After creating category, refresh categories and reopen selection dialog
+          queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+          setShowCreateCategory(false);
+          setShowCategorySelect(true);
+        }}
+      />
     </div>
   );
 }
