@@ -7,6 +7,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 

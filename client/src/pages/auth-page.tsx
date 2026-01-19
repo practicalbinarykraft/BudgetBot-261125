@@ -155,7 +155,9 @@ export default function AuthPage() {
         setPendingTelegramId(result.telegramId);
         setShowLinkPrompt(true);
       } else {
-        setLocation('/app/dashboard');
+        // Redirect to dashboard-v2 on mobile devices, otherwise to dashboard
+        const dashboardPath = isMobile ? '/app/dashboard-v2' : '/app/dashboard';
+        setLocation(dashboardPath);
       }
     } catch (error: any) {
       toast({
@@ -263,7 +265,9 @@ export default function AuthPage() {
       if (isMiniApp && initData && pendingTelegramId) {
         setShowLinkPrompt(true);
       } else {
-        setLocation('/app/dashboard');
+        // Redirect to dashboard-v2 on mobile devices, otherwise to dashboard
+        const dashboardPath = isMobile ? '/app/dashboard-v2' : '/app/dashboard';
+        setLocation(dashboardPath);
       }
     } catch (error: any) {
       toast({
