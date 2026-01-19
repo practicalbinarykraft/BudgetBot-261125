@@ -176,7 +176,4 @@
     "vite": "^5.4.20",
     "vitest": "^4.0.13"
   },
-  "optionalDependencies": {
-    "bufferutil": "4.1.0"
-  }
 }
