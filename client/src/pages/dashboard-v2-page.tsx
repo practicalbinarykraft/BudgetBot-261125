@@ -43,7 +43,7 @@ import { apiRequest } from "@/lib/queryClient";
 
 export default function DashboardV2Page() {
   const { t, language } = useTranslation();
-  // useTheme hook автоматически применяет темную тему только для Dashboard V2
+  // useTheme hook применяет глобальную темную тему
   const translateCategory = useTranslateCategory();
   const queryClient = useQueryClient();
   const [selectedMonth, setSelectedMonth] = useState(new Date());

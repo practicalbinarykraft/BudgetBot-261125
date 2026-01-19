@@ -64,13 +64,16 @@ function LandingPageWrapper() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [location] = useLocation();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     // Редиректим авторизованных пользователей на dashboard
+    // На мобильных устройствах редиректим на dashboard-v2
     if (user) {
-      setLocation('/app/dashboard');
+      const dashboardPath = isMobile ? '/app/dashboard-v2' : '/app/dashboard';
+      setLocation(dashboardPath);
     }
-  }, [user, setLocation]);
+  }, [user, setLocation, isMobile]);
 
   if (user) {
     return null;
