@@ -20,8 +20,8 @@ import {
   FAQSection,
   CTASection,
   LandingFooter,
-  InstallPrompt,
 } from "@/components/landing/sections";
+import { InstallPrompt } from "@/components/landing/install-prompt";
 
 export default function LandingPage() {
   const scrollToFeatures = () => {
