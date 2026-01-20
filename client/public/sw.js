@@ -7,7 +7,7 @@
  * - Background sync for offline transactions (future)
  */
 
-const CACHE_NAME = 'budgetbuddy-v3'; // Обновлена версия для сброса кэша
+const CACHE_NAME = 'budgetbuddy-v4'; // Update version when deploying new code
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -104,4 +104,15 @@ self.addEventListener('fetch', (event) => {
       });
     })
   );
+});
+
+// Handle messages from client (for manual updates)
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  
+  if (event.data && event.data.type === 'CACHE_VERSION') {
+    event.ports[0].postMessage({ version: CACHE_NAME });
+  }
 });

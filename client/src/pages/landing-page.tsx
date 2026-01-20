@@ -20,6 +20,7 @@ import {
   FAQSection,
   CTASection,
   LandingFooter,
+  InstallPrompt,
 } from "@/components/landing/sections";
 
 export default function LandingPage() {
@@ -31,6 +32,9 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background">
       <LandingNavbar />
       <HeroSection onScrollToFeatures={scrollToFeatures} />
+      <div className="container mx-auto px-4 py-8">
+        <InstallPrompt />
+      </div>
       <ProblemSection />
       <SolutionSection />
       <FeaturesSection />
