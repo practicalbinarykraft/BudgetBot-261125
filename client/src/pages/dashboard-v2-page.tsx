@@ -709,7 +709,7 @@ export default function DashboardV2Page() {
                     }
                   }}
                 >
-                  <span className="text-2xl">{category.icon || '📁'}</span>
+                  <span className="text-2xl">{category.icon && category.icon !== 'Tag' ? category.icon : '📁'}</span>
                   <span className="text-xs">{translateCategory(category.name)}</span>
                 </Button>
               ))}

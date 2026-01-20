@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -8,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, DollarSign, Tag } from "lucide-react";
+import { Calendar, DollarSign, Tag, Plus } from "lucide-react";
 import type { Category } from "@shared/schema";
 import { useTranslation } from "@/i18n/context";
 import { useTranslateCategory } from "@/lib/category-translations";
+import { CategoryCreateDialog } from "@/components/categories/category-create-dialog";
 
 interface AddPlannedDialogProps {
   open: boolean;
@@ -25,17 +26,20 @@ type FormData = {
   amount: string;
   targetDate: string;
   category?: string;
+  currency?: string;
 };
 
 export function AddPlannedDialog({ open, onOpenChange, onAdd, isSubmitting }: AddPlannedDialogProps) {
   const { t, language } = useTranslation();
   const translateCategory = useTranslateCategory();
+  const [showCreateCategory, setShowCreateCategory] = useState(false);
   
   const formSchema = useMemo(() => z.object({
     name: z.string().min(1, t("planned.validation_name_required")),
     amount: z.string().regex(/^\d+(\.\d{1,2})?$/, t("planned.validation_amount_invalid")),
     targetDate: z.string().min(1, t("planned.validation_date_required")),
     category: z.string().optional(),
+    currency: z.string().default("USD"),
   }), [t, language]);
   
   const form = useForm<FormData>({
@@ -45,6 +49,7 @@ export function AddPlannedDialog({ open, onOpenChange, onAdd, isSubmitting }: Ad
       amount: "",
       targetDate: "",
       category: "",
+      currency: "USD",
     },
   });
 
@@ -71,6 +76,7 @@ export function AddPlannedDialog({ open, onOpenChange, onAdd, isSubmitting }: Ad
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent data-testid="dialog-add-planned">
         <DialogHeader>
@@ -97,28 +103,56 @@ export function AddPlannedDialog({ open, onOpenChange, onAdd, isSubmitting }: Ad
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("planned.field_amount")}</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        {...field}
-                        type="text"
-                        placeholder={t("planned.field_amount_placeholder")}
-                        className="pl-10"
-                        data-testid="input-planned-amount"
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("planned.field_amount")}</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          {...field}
+                          type="text"
+                          placeholder={t("planned.field_amount_placeholder")}
+                          className="pl-10"
+                          data-testid="input-planned-amount"
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="currency"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("planned.field_currency")}</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-planned-currency">
+                          <SelectValue placeholder={t("planned.field_currency")} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="USD">USD ($)</SelectItem>
+                        <SelectItem value="RUB">RUB (₽)</SelectItem>
+                        <SelectItem value="EUR">EUR (€)</SelectItem>
+                        <SelectItem value="KRW">KRW (₩)</SelectItem>
+                        <SelectItem value="CNY">CNY (¥)</SelectItem>
+                        <SelectItem value="IDR">IDR (Rp)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
@@ -163,9 +197,27 @@ export function AddPlannedDialog({ open, onOpenChange, onAdd, isSubmitting }: Ad
                     <SelectContent>
                       {categories?.map((cat) => (
                         <SelectItem key={cat.id} value={cat.name}>
-                          {translateCategory(cat.name)}
+                          <div className="flex items-center gap-2">
+                            {cat.icon && cat.icon !== 'Tag' && (
+                              <span className="text-base">{cat.icon}</span>
+                            )}
+                            <span>{translateCategory(cat.name)}</span>
+                          </div>
                         </SelectItem>
                       ))}
+                      
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setShowCreateCategory(true);
+                        }}
+                        className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent active:bg-accent/80 rounded-sm flex items-center gap-2 text-primary"
+                        data-testid="button-create-category-planned"
+                      >
+                        <Plus className="h-4 w-4" />
+                        {t("transactions.create_new_category")}
+                      </button>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -195,5 +247,15 @@ export function AddPlannedDialog({ open, onOpenChange, onAdd, isSubmitting }: Ad
         </Form>
       </DialogContent>
     </Dialog>
+
+    <CategoryCreateDialog
+      open={showCreateCategory}
+      onOpenChange={setShowCreateCategory}
+      defaultType="expense"
+      onSuccess={(categoryName) => {
+        form.setValue("category", categoryName);
+      }}
+    />
+    </>
   );
 }

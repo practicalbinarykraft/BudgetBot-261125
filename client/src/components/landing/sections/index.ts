@@ -13,3 +13,4 @@ export { HowItWorksSection } from "./how-it-works-section";
 export { FAQSection } from "./faq-section";
 export { CTASection } from "./cta-section";
 export { LandingFooter } from "./landing-footer";
+export { InstallPrompt } from "../install-prompt";

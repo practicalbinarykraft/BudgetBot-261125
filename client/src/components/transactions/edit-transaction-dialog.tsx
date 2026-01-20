@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -24,6 +25,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/i18n/context";
 import { useTranslateCategory } from "@/lib/category-translations";
+import { CategoryCreateDialog } from "@/components/categories/category-create-dialog";
+import { Plus } from "lucide-react";
 import { z } from "zod";
 
 interface EditTransactionDialogProps {
@@ -37,6 +40,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
   const queryClient = useQueryClient();
   const { t } = useTranslation();
   const translateCategory = useTranslateCategory();
+  const [showCreateCategory, setShowCreateCategory] = useState(false);
 
   // Client-side validation schema
   const formSchema = z.object({
@@ -125,6 +129,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
   if (!transaction) return null;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
         <DialogHeader>
@@ -228,9 +233,27 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
                     <SelectContent>
                       {categories.map((cat) => (
                         <SelectItem key={cat.id} value={cat.name}>
-                          {translateCategory(cat.name)}
+                          <div className="flex items-center gap-2">
+                            {cat.icon && cat.icon !== 'Tag' && (
+                              <span className="text-base">{cat.icon}</span>
+                            )}
+                            <span>{translateCategory(cat.name)}</span>
+                          </div>
                         </SelectItem>
                       ))}
+                      
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setShowCreateCategory(true);
+                        }}
+                        className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent active:bg-accent/80 rounded-sm flex items-center gap-2 text-primary"
+                        data-testid="button-create-category-edit"
+                      >
+                        <Plus className="h-4 w-4" />
+                        {t("transactions.create_new_category")}
+                      </button>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -314,5 +337,15 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
         </Form>
       </DialogContent>
     </Dialog>
+
+    <CategoryCreateDialog
+      open={showCreateCategory}
+      onOpenChange={setShowCreateCategory}
+      defaultType={form.watch("type") as "income" | "expense"}
+      onSuccess={(categoryName) => {
+        form.setValue("category", categoryName);
+      }}
+    />
+    </>
   );
 }

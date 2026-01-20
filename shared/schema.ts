@@ -142,6 +142,8 @@ export const plannedTransactions = pgTable("planned_transactions", {
   showOnChart: boolean("show_on_chart").default(true).notNull(), // Show goal marker on forecast chart
   purchasedAt: timestamp("purchased_at"),
   transactionId: integer("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
+  // 💱 Multi-currency support
+  currency: text("currency").default("USD"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -585,6 +587,7 @@ export const insertPlannedTransactionSchema = createInsertSchema(plannedTransact
   targetDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
   source: z.enum(["manual", "wishlist"]).optional(),
   status: z.enum(["planned", "purchased", "cancelled"]).optional(),
+  currency: z.string().default("USD"),
 }).omit({ 
   id: true,
   createdAt: true,

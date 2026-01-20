@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Category } from "@shared/schema";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,8 @@ import { insertBudgetSchema } from "@shared/schema";
 import { z } from "zod";
 import { useTranslation } from "@/i18n/context";
 import { useTranslateCategory } from "@/lib/category-translations";
+import { CategoryCreateDialog } from "@/components/categories/category-create-dialog";
+import { Plus } from "lucide-react";
 
 type FormData = z.infer<typeof insertBudgetSchema>;
 
@@ -31,8 +34,10 @@ export function BudgetFormDialog({
 }) {
   const { t } = useTranslation();
   const translateCategory = useTranslateCategory();
+  const [showCreateCategory, setShowCreateCategory] = useState(false);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent data-testid="dialog-budget-form">
         <DialogHeader>
@@ -59,14 +64,32 @@ export function BudgetFormDialog({
                       {expenseCategories.map((category) => (
                         <SelectItem key={category.id} value={category.id.toString()}>
                           <div className="flex items-center gap-2">
-                            <div
-                              className="h-3 w-3 rounded-full bg-muted-foreground"
-                              style={category.color ? { backgroundColor: category.color } : undefined}
-                            />
+                            {category.icon && category.icon !== 'Tag' && (
+                              <span className="text-base">{category.icon}</span>
+                            )}
+                            {!category.icon || category.icon === 'Tag' ? (
+                              <div
+                                className="h-3 w-3 rounded-full bg-muted-foreground"
+                                style={category.color ? { backgroundColor: category.color } : undefined}
+                              />
+                            ) : null}
                             {translateCategory(category.name)}
                           </div>
                         </SelectItem>
                       ))}
+                      
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setShowCreateCategory(true);
+                        }}
+                        className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent active:bg-accent/80 rounded-sm flex items-center gap-2 text-primary"
+                        data-testid="button-create-category-budget"
+                      >
+                        <Plus className="h-4 w-4" />
+                        {t("transactions.create_new_category")}
+                      </button>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -156,5 +179,19 @@ export function BudgetFormDialog({
         </Form>
       </DialogContent>
     </Dialog>
+
+    <CategoryCreateDialog
+      open={showCreateCategory}
+      onOpenChange={setShowCreateCategory}
+      defaultType="expense"
+      onSuccess={(categoryName) => {
+        // Find category by name and set categoryId
+        const category = expenseCategories.find(c => c.name === categoryName);
+        if (category) {
+          form.setValue("categoryId", category.id);
+        }
+      }}
+    />
+    </>
   );
 }

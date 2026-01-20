@@ -3,6 +3,7 @@ import { storage } from "../storage";
 import { insertPlannedTransactionSchema, insertTransactionSchema } from "@shared/schema";
 import { withAuth } from "../middleware/auth-utils";
 import { getErrorMessage } from "../lib/errors";
+import { getUserExchangeRates, convertToUSD } from "../services/currency-service";
 
 const router = Router();
 
@@ -20,6 +21,7 @@ router.post("/", withAuth(async (req, res) => {
     const data = insertPlannedTransactionSchema.parse({
       ...req.body,
       userId: Number(req.user.id),
+      currency: req.body.currency || "USD", // Default to USD if not provided
     });
     const plannedItem = await storage.createPlanned(data);
     res.json(plannedItem);
@@ -76,6 +78,19 @@ router.post("/:id/purchase", withAuth(async (req, res) => {
     const { wallets } = await storage.getWalletsByUserId(Number(req.user.id));
     const primaryWallet = wallets.find(w => w.type === "card") || wallets[0];
 
+    // Get currency from planned item or fallback to wallet/USD
+    const currency = plannedItem.currency || primaryWallet?.currency || "USD";
+    
+    // Convert amount to USD if currency is not USD
+    let amountUsd: string;
+    if (currency !== "USD") {
+      const rates = await getUserExchangeRates(Number(req.user.id));
+      const usdValue = convertToUSD(parseFloat(plannedItem.amount), currency, rates);
+      amountUsd = usdValue.toFixed(2);
+    } else {
+      amountUsd = plannedItem.amount;
+    }
+
     const transactionData = insertTransactionSchema.parse({
       userId: Number(req.user.id),
       date: new Date().toISOString().split('T')[0],
@@ -83,8 +98,8 @@ router.post("/:id/purchase", withAuth(async (req, res) => {
       amount: plannedItem.amount,
       description: plannedItem.name,
       category: plannedItem.category,
-      currency: primaryWallet?.currency || "USD",
-      amountUsd: plannedItem.amount,
+      currency: currency,
+      amountUsd: amountUsd,
       walletId: primaryWallet?.id || null,
       source: "manual",
     });

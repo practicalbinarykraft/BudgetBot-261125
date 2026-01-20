@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Category } from "@shared/schema";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,8 @@ import { insertPlannedIncomeSchema } from "@shared/schema";
 import { z } from "zod";
 import { useTranslation } from "@/i18n/context";
 import { useTranslateCategory } from "@/lib/category-translations";
+import { CategoryCreateDialog } from "@/components/categories/category-create-dialog";
+import { Plus } from "lucide-react";
 
 type FormData = z.infer<typeof insertPlannedIncomeSchema>;
 
@@ -41,8 +44,10 @@ export function PlannedIncomeFormDialog({
 }) {
   const { t } = useTranslation();
   const translateCategory = useTranslateCategory();
+  const [showCreateCategory, setShowCreateCategory] = useState(false);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent data-testid="dialog-planned-income-form">
         <DialogHeader>
@@ -151,14 +156,32 @@ export function PlannedIncomeFormDialog({
                       {incomeCategories.map((category) => (
                         <SelectItem key={category.id} value={category.id.toString()}>
                           <div className="flex items-center gap-2">
-                            <div
-                              className="h-3 w-3 rounded-full bg-muted-foreground"
-                              style={category.color ? { backgroundColor: category.color } : undefined}
-                            />
+                            {category.icon && category.icon !== 'Tag' && (
+                              <span className="text-base">{category.icon}</span>
+                            )}
+                            {!category.icon || category.icon === 'Tag' ? (
+                              <div
+                                className="h-3 w-3 rounded-full bg-muted-foreground"
+                                style={category.color ? { backgroundColor: category.color } : undefined}
+                              />
+                            ) : null}
                             {translateCategory(category.name)}
                           </div>
                         </SelectItem>
                       ))}
+                      
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setShowCreateCategory(true);
+                        }}
+                        className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent active:bg-accent/80 rounded-sm flex items-center gap-2 text-primary"
+                        data-testid="button-create-category-planned-income"
+                      >
+                        <Plus className="h-4 w-4" />
+                        {t("transactions.create_new_category")}
+                      </button>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -202,5 +225,19 @@ export function PlannedIncomeFormDialog({
         </Form>
       </DialogContent>
     </Dialog>
+
+    <CategoryCreateDialog
+      open={showCreateCategory}
+      onOpenChange={setShowCreateCategory}
+      defaultType="income"
+      onSuccess={(categoryName) => {
+        // Find category by name and set categoryId
+        const category = incomeCategories.find(c => c.name === categoryName);
+        if (category) {
+          form.setValue("categoryId", category.id);
+        }
+      }}
+    />
+    </>
   );
 }

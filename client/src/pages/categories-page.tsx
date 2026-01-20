@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Category } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Tag, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,6 +22,31 @@ import { useTranslateCategory } from "@/lib/category-translations";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Label } from "@/components/ui/label";
+
+// Popular emoji icons for categories
+const CATEGORY_ICONS = [
+  { emoji: '🍔', name: 'Food' },
+  { emoji: '🚗', name: 'Transport' },
+  { emoji: '🛍️', name: 'Shopping' },
+  { emoji: '🎮', name: 'Entertainment' },
+  { emoji: '💳', name: 'Bills' },
+  { emoji: '💰', name: 'Salary' },
+  { emoji: '💻', name: 'Freelance' },
+  { emoji: '❓', name: 'Unaccounted' },
+  { emoji: '🏠', name: 'Home' },
+  { emoji: '🏥', name: 'Health' },
+  { emoji: '📚', name: 'Education' },
+  { emoji: '✈️', name: 'Travel' },
+  { emoji: '☕', name: 'Coffee' },
+  { emoji: '🍕', name: 'Pizza' },
+  { emoji: '🎬', name: 'Movies' },
+  { emoji: '🎵', name: 'Music' },
+  { emoji: '🏋️', name: 'Fitness' },
+  { emoji: '💊', name: 'Medicine' },
+  { emoji: '🎁', name: 'Gifts' },
+  { emoji: '🐾', name: 'Pets' },
+];
 
 type FormData = z.infer<typeof insertCategorySchema>;
 
@@ -39,13 +64,15 @@ export default function CategoriesPage() {
     queryKey: ["/api/categories"],
   });
 
+  const [selectedIcon, setSelectedIcon] = useState('🍔');
+
   // userId is added by server from session - don't include in client form
   const form = useForm<Omit<FormData, "userId">>({
     resolver: zodResolver(insertCategorySchema.omit({ userId: true })),
     defaultValues: {
       name: "",
       type: "expense",
-      icon: "Tag",
+      icon: "🍔",
       color: "#3b82f6",
     },
   });
@@ -62,6 +89,7 @@ export default function CategoriesPage() {
         description: t("categories.added_successfully"),
       });
       form.reset();
+      setSelectedIcon('🍔');
       setShowAddDialog(false);
     },
     onError: (error: Error) => {
@@ -97,7 +125,10 @@ export default function CategoriesPage() {
   });
 
   const onSubmit = (data: Omit<FormData, "userId">) => {
-    createMutation.mutate(data);
+    createMutation.mutate({
+      ...data,
+      icon: selectedIcon,
+    });
   };
 
   if (isLoading) {
@@ -146,10 +177,10 @@ export default function CategoriesPage() {
                 <CardContent className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
                     <div
-                      className="w-10 h-10 rounded-md flex items-center justify-center"
+                      className="w-10 h-10 rounded-md flex items-center justify-center text-2xl"
                       style={{ backgroundColor: category.color ?? undefined }}
                     >
-                      <Tag className="w-5 h-5 text-white" />
+                      {category.icon && category.icon !== 'Tag' ? category.icon : '📁'}
                     </div>
                     <div>
                       <p className="font-medium">{translateCategory(category.name)}</p>
@@ -185,10 +216,10 @@ export default function CategoriesPage() {
                 <CardContent className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
                     <div
-                      className="w-10 h-10 rounded-md flex items-center justify-center"
+                      className="w-10 h-10 rounded-md flex items-center justify-center text-2xl"
                       style={{ backgroundColor: category.color ?? undefined }}
                     >
-                      <Tag className="w-5 h-5 text-white" />
+                      {category.icon && category.icon !== 'Tag' ? category.icon : '📁'}
                     </div>
                     <div>
                       <p className="font-medium">{translateCategory(category.name)}</p>
@@ -259,6 +290,29 @@ export default function CategoriesPage() {
                   </FormItem>
                 )}
               />
+
+              <div className="space-y-2">
+                <Label>{t("categories.icon")}</Label>
+                <div className="grid grid-cols-5 gap-2 max-h-48 overflow-y-auto p-2 border rounded-md">
+                  {CATEGORY_ICONS.map(({ emoji, name: iconName }) => (
+                    <button
+                      key={iconName}
+                      type="button"
+                      onClick={() => {
+                        setSelectedIcon(emoji);
+                        form.setValue("icon", emoji);
+                      }}
+                      className={`w-12 h-12 rounded-lg border-2 flex items-center justify-center text-2xl transition-all hover:scale-110 ${
+                        selectedIcon === emoji ? 'border-primary bg-primary/10' : 'border-transparent hover:bg-muted'
+                      }`}
+                      data-testid={`icon-option-${iconName}`}
+                      aria-label={iconName}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <FormField
                 control={form.control}
