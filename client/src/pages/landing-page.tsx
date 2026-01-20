@@ -21,6 +21,7 @@ import {
   CTASection,
   LandingFooter,
 } from "@/components/landing/sections";
+import { InstallPrompt } from "@/components/landing/install-prompt";
 
 export default function LandingPage() {
   const scrollToFeatures = () => {
@@ -31,6 +32,9 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background">
       <LandingNavbar />
       <HeroSection onScrollToFeatures={scrollToFeatures} />
+      <div className="container mx-auto px-4 py-8">
+        <InstallPrompt />
+      </div>
       <ProblemSection />
       <SolutionSection />
       <FeaturesSection />
