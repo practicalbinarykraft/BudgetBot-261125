@@ -233,7 +233,12 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
                     <SelectContent>
                       {categories.map((cat) => (
                         <SelectItem key={cat.id} value={cat.name}>
-                          {translateCategory(cat.name)}
+                          <div className="flex items-center gap-2">
+                            {cat.icon && cat.icon !== 'Tag' && (
+                              <span className="text-base">{cat.icon}</span>
+                            )}
+                            <span>{translateCategory(cat.name)}</span>
+                          </div>
                         </SelectItem>
                       ))}
                       

@@ -64,10 +64,15 @@ export function BudgetFormDialog({
                       {expenseCategories.map((category) => (
                         <SelectItem key={category.id} value={category.id.toString()}>
                           <div className="flex items-center gap-2">
-                            <div
-                              className="h-3 w-3 rounded-full bg-muted-foreground"
-                              style={category.color ? { backgroundColor: category.color } : undefined}
-                            />
+                            {category.icon && category.icon !== 'Tag' && (
+                              <span className="text-base">{category.icon}</span>
+                            )}
+                            {!category.icon || category.icon === 'Tag' ? (
+                              <div
+                                className="h-3 w-3 rounded-full bg-muted-foreground"
+                                style={category.color ? { backgroundColor: category.color } : undefined}
+                              />
+                            ) : null}
                             {translateCategory(category.name)}
                           </div>
                         </SelectItem>
