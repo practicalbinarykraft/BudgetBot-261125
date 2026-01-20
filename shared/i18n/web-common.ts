@@ -597,4 +597,30 @@ export const webCommonTranslations: Translations = {
     en: 'Tap the microphone and say, for example: "Coffee 5 dollars"',
     ru: 'Нажмите на микрофон и скажите, например: "Кофе 500 рублей"',
   },
+
+  // Receipt Scanner
+  'receipt.scan': {
+    en: 'Scan receipt',
+    ru: 'Сканировать чек',
+  },
+  'receipt.scanning': {
+    en: 'Scanning...',
+    ru: 'Сканирование...',
+  },
+  'receipt.scan_label': {
+    en: 'Scan receipt',
+    ru: 'Сканировать чек',
+  },
+  'receipt.scanned_successfully': {
+    en: 'Receipt scanned successfully',
+    ru: 'Чек успешно отсканирован',
+  },
+  'receipt.failed_to_scan': {
+    en: 'Failed to scan receipt',
+    ru: 'Не удалось отсканировать чек',
+  },
+  'receipt.items_found': {
+    en: '{count} items found from {merchant}',
+    ru: 'Найдено {count} товаров из {merchant}',
+  },
 };
