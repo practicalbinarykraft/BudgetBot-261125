@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "@/i18n/context";
 import { Category, PersonalTag } from "@shared/schema";
-import { Plus, Mic } from "lucide-react";
+import { Plus, Mic, Camera, Loader2 } from "lucide-react";
 import { CategoryCreateDialog } from "@/components/categories/category-create-dialog";
 import { TagSelector } from "@/components/tags/tag-selector";
 import { useTranslateCategory } from "@/lib/category-translations";
@@ -66,6 +66,8 @@ export function AddTransactionDialog({
   const [showVoiceInput, setShowVoiceInput] = useState(false);
   const [interimTranscription, setInterimTranscription] = useState(""); // Промежуточная транскрипция для показа в реальном времени
   const [isVoiceRecording, setIsVoiceRecording] = useState(false); // Состояние записи голоса
+  const [isReceiptUploading, setIsReceiptUploading] = useState(false); // Состояние загрузки чека
+  const receiptFileInputRef = useRef<HTMLInputElement>(null); // Ref для скрытого input файла
 
   // Client-side validation schema - simpler than server schema
   const formSchema = z.object({
@@ -145,6 +147,94 @@ export function AddTransactionDialog({
   const handleInterimResult = (fullText: string) => {
     setInterimTranscription(fullText);
     setIsVoiceRecording(true); // Устанавливаем флаг записи
+  };
+
+  /**
+   * Обработчик загрузки и распознавания чека
+   * 
+   * Junior-Friendly:
+   * - Конвертирует файл в base64
+   * - Отправляет на сервер для OCR
+   * - Заполняет форму данными из чека
+   */
+  const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsReceiptUploading(true);
+    
+    try {
+      // Конвертируем файл в base64
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Убираем префикс data:image/...;base64,
+          resolve(result.split(',')[1]);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const mimeType = file.type || 'image/jpeg';
+      
+      // Отправляем на сервер для OCR
+      const response = await fetch('/api/ai/receipt-with-items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          imageBase64: base64,
+          mimeType: mimeType
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to parse receipt');
+      }
+
+      const data = await response.json();
+      const receipt = data.receipt;
+
+      // Заполняем форму данными из чека
+      if (receipt.merchant) {
+        form.setValue("description", receipt.merchant);
+      }
+      if (receipt.total) {
+        form.setValue("amount", receipt.total.toString());
+      }
+      if (receipt.currency) {
+        form.setValue("currency", receipt.currency);
+      }
+      if (receipt.date) {
+        form.setValue("date", receipt.date);
+      }
+      // Тип всегда expense для чеков
+      form.setValue("type", "expense");
+
+      // Показываем успешное уведомление
+      const itemsCount = data.itemsCount || 0;
+      const merchant = receipt.merchant || 'receipt';
+      toast({
+        title: t("receipt.scanned_successfully"),
+        description: t("receipt.items_found")
+          .replace("{count}", itemsCount.toString())
+          .replace("{merchant}", merchant),
+      });
+    } catch (error: any) {
+      toast({
+        title: t("receipt.failed_to_scan"),
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsReceiptUploading(false);
+      // Сбрасываем input для возможности повторной загрузки
+      if (receiptFileInputRef.current) {
+        receiptFileInputRef.current.value = '';
+      }
+    }
   };
 
   const createMutation = useMutation({
@@ -375,6 +465,7 @@ export function AddTransactionDialog({
 
             </div>
             <div className="flex gap-2 pt-2 sm:pt-4 px-3 sm:px-6 pb-3 sm:pb-6 border-t flex-shrink-0">
+              {/* Отмена - слева */}
               <Button
                 type="button"
                 variant="outline"
@@ -384,18 +475,50 @@ export function AddTransactionDialog({
               >
                 {t("transactions.cancel")}
               </Button>
+              
+              {/* Микрофон - центр слева */}
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setShowVoiceInput(true)}
                 className="px-3 sm:px-4 text-sm"
                 aria-label={t("voice_input.title")}
+                disabled={isReceiptUploading}
               >
                 <Mic className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
+              
+              {/* Фотоаппарат - центр справа */}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => receiptFileInputRef.current?.click()}
+                className="px-3 sm:px-4 text-sm"
+                aria-label={t("receipt.scan_label")}
+                disabled={isReceiptUploading}
+                data-testid="button-scan-receipt"
+              >
+                {isReceiptUploading ? (
+                  <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                ) : (
+                  <Camera className="h-4 w-4 sm:h-5 sm:w-5" />
+                )}
+              </Button>
+              
+              {/* Скрытый input для файлов */}
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={handleReceiptUpload}
+                ref={receiptFileInputRef}
+                className="hidden"
+                data-testid="input-receipt-file"
+              />
+              
+              {/* Добавить транзакцию - справа */}
               <Button
                 type="submit"
-                disabled={createMutation.isPending}
+                disabled={createMutation.isPending || isReceiptUploading}
                 className="flex-1 text-sm"
                 data-testid="button-submit-transaction"
               >
