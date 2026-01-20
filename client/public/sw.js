@@ -5,9 +5,18 @@
  * - Cache static assets for offline access
  * - Network-first strategy for API calls
  * - Background sync for offline transactions (future)
+ *
+ * ⚠️ ВАЖНО: При каждом изменении кода ОБЯЗАТЕЛЬНО обновить версию кэша!
+ * 
+ * ИНСТРУКЦИЯ ПО ОБНОВЛЕНИЮ:
+ * 1. Измени CACHE_NAME ниже (например: v4 → v5)
+ * 2. Измени SW_VERSION в client/index.html (например: v4 → v5)
+ * 3. Закоммить и задеплоить
+ * 
+ * Без обновления версии пользователи НЕ получат новые изменения автоматически!
  */
 
-const CACHE_NAME = 'budgetbuddy-v4'; // Update version when deploying new code
+const CACHE_NAME = 'budgetbuddy-v4'; // ⚠️ ОБЯЗАТЕЛЬНО обновить при изменении кода!
 const STATIC_ASSETS = [
   '/',
   '/index.html',
