@@ -118,7 +118,7 @@ export default function PlannedExpensesPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: { name: string; amount: string; targetDate: string; category?: string }) => {
+    mutationFn: async (data: { name: string; amount: string; targetDate: string; category?: string; currency?: string }) => {
       const res = await apiRequest("POST", "/api/planned", data);
       return res.json();
     },
@@ -151,7 +151,7 @@ export default function PlannedExpensesPage() {
     },
   });
 
-  const handleAddPlanned = (data: { name: string; amount: string; targetDate: string; category?: string }) => {
+  const handleAddPlanned = (data: { name: string; amount: string; targetDate: string; category?: string; currency?: string }) => {
     createMutation.mutate(data);
   };
 

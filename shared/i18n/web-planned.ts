@@ -28,6 +28,7 @@ export const webPlannedTranslations: Translations = {
   "planned.field_name_placeholder": { en: "Enter item name", ru: "Введите название" },
   "planned.field_amount": { en: "Amount", ru: "Сумма" },
   "planned.field_amount_placeholder": { en: "0.00", ru: "0.00" },
+  "planned.field_currency": { en: "Currency", ru: "Валюта" },
   "planned.field_target_date": { en: "Target Date", ru: "Дата покупки" },
   "planned.field_category": { en: "Category (Optional)", ru: "Категория (опционально)" },
   "planned.field_category_placeholder": { en: "Select category", ru: "Выберите категорию" },

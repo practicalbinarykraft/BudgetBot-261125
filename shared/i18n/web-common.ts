@@ -172,6 +172,34 @@ export const webCommonTranslations: Translations = {
     en: 'An error occurred',
     ru: 'Произошла ошибка',
   },
+  'common.error': {
+    en: 'Error',
+    ru: 'Ошибка',
+  },
+  'error.server_unavailable': {
+    en: 'Server is temporarily unavailable. Please try again in a few moments.',
+    ru: 'Сервер временно недоступен. Пожалуйста, попробуйте еще раз через несколько секунд.',
+  },
+  'error.bad_gateway': {
+    en: 'Server connection error. The service may be temporarily unavailable. Please try again later.',
+    ru: 'Ошибка подключения к серверу. Сервис может быть временно недоступен. Пожалуйста, попробуйте позже.',
+  },
+  'error.service_unavailable': {
+    en: 'Service is temporarily unavailable due to maintenance. Please try again later.',
+    ru: 'Сервис временно недоступен из-за технических работ. Пожалуйста, попробуйте позже.',
+  },
+  'error.gateway_timeout': {
+    en: 'Request timeout. The server is taking too long to respond. Please try again.',
+    ru: 'Превышено время ожидания ответа. Сервер слишком долго отвечает. Пожалуйста, попробуйте еще раз.',
+  },
+  'error.network': {
+    en: 'Network error. Please check your internet connection and try again.',
+    ru: 'Ошибка сети. Пожалуйста, проверьте подключение к интернету и попробуйте еще раз.',
+  },
+  'error.unknown': {
+    en: 'An unexpected error occurred. Please try again or contact support if the problem persists.',
+    ru: 'Произошла непредвиденная ошибка. Пожалуйста, попробуйте еще раз или обратитесь в поддержку, если проблема сохраняется.',
+  },
   'common.success': {
     en: 'Success',
     ru: 'Успешно',
