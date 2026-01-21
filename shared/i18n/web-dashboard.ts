@@ -455,4 +455,20 @@ export const webDashboardTranslations: Translations = {
     en: 'Settings changed. Click to update the chart.',
     ru: 'Настройки изменены. Нажмите для обновления графика.',
   },
+  'dashboard.select_categories': {
+    en: 'Select Categories',
+    ru: 'Выберите категории',
+  },
+  'dashboard.select_categories_description': {
+    en: 'Select categories to display on the category panel. If none selected, top 3 categories by spending will be shown.',
+    ru: 'Выберите категории, которые будут отображаться на панели категорий. Если ничего не выбрано, будут показаны топ-3 категории по расходам.',
+  },
+  'dashboard.no_categories_available': {
+    en: 'No categories available',
+    ru: 'Нет доступных категорий',
+  },
+  'dashboard.select_categories_aria': {
+    en: 'Select categories to display',
+    ru: 'Выбрать категории для отображения',
+  },
 };
