@@ -117,24 +117,29 @@ describe('AddTransactionDialog - Receipt Scanner', () => {
   it('should show loading state when scanning receipt', async () => {
     const user = userEvent.setup();
     
-    // Mock FileReader to resolve immediately
-    const mockFileReader = {
-      readAsDataURL: vi.fn(function(this: FileReader, file: File) {
-        // Simulate async FileReader behavior
-        setTimeout(() => {
-          if (this.onload) {
-            this.result = `data:image/jpeg;base64,${btoa('test')}`;
-            this.onload({} as ProgressEvent);
-          }
-        }, 0);
-      }),
-      result: null,
-      onload: null as ((e: ProgressEvent) => void) | null,
-      onerror: null as ((e: ProgressEvent) => void) | null,
-    };
+    // Mock FileReader to resolve synchronously
+    let onloadCallback: ((e: ProgressEvent) => void) | null = null;
+    let fileReaderInstance: any = null;
     
-    // Replace FileReader with mock
-    global.FileReader = vi.fn(() => mockFileReader) as any;
+    const FileReaderMock = vi.fn(function(this: any) {
+      fileReaderInstance = this;
+      this.result = null;
+      this.onload = null;
+      this.onerror = null;
+      this.readAsDataURL = vi.fn((file: File) => {
+        // Set result and trigger onload synchronously
+        this.result = `data:image/jpeg;base64,${btoa('test')}`;
+        if (this.onload) {
+          // Use setTimeout to make it async but fast
+          setTimeout(() => {
+            this.onload({} as ProgressEvent);
+          }, 10);
+        }
+      });
+      return this;
+    });
+    
+    global.FileReader = FileReaderMock as any;
     
     // Mock successful receipt scan
     (global.fetch as any).mockResolvedValueOnce({
@@ -177,31 +182,36 @@ describe('AddTransactionDialog - Receipt Scanner', () => {
     });
     fileInput.dispatchEvent(changeEvent);
 
-    // Check that button shows loading state - wait for FileReader to trigger
+    // Check that button shows loading state after upload
+    // Wait for React to update the disabled state
     await waitFor(() => {
       expect(receiptButton).toBeDisabled();
     }, { timeout: 2000 });
+    
+    // Also verify that FileReader was called
+    expect(FileReaderMock).toHaveBeenCalled();
   });
 
   it('should prefill form with receipt data on successful scan', async () => {
     const user = userEvent.setup();
     
-    // Mock FileReader to resolve immediately
-    const mockFileReader = {
-      readAsDataURL: vi.fn(function(this: FileReader, file: File) {
-        setTimeout(() => {
-          if (this.onload) {
-            this.result = `data:image/jpeg;base64,${btoa('test')}`;
+    // Mock FileReader
+    const FileReaderMock = vi.fn(function(this: any) {
+      this.result = null;
+      this.onload = null;
+      this.onerror = null;
+      this.readAsDataURL = vi.fn((file: File) => {
+        this.result = `data:image/jpeg;base64,${btoa('test')}`;
+        if (this.onload) {
+          setTimeout(() => {
             this.onload({} as ProgressEvent);
-          }
-        }, 0);
-      }),
-      result: null,
-      onload: null as ((e: ProgressEvent) => void) | null,
-      onerror: null as ((e: ProgressEvent) => void) | null,
-    };
+          }, 10);
+        }
+      });
+      return this;
+    });
     
-    global.FileReader = vi.fn(() => mockFileReader) as any;
+    global.FileReader = FileReaderMock as any;
     
     // Mock successful receipt scan
     (global.fetch as any).mockResolvedValueOnce({
@@ -243,22 +253,23 @@ describe('AddTransactionDialog - Receipt Scanner', () => {
   it('should handle receipt scan error', async () => {
     const user = userEvent.setup();
     
-    // Mock FileReader to resolve immediately
-    const mockFileReader = {
-      readAsDataURL: vi.fn(function(this: FileReader, file: File) {
-        setTimeout(() => {
-          if (this.onload) {
-            this.result = `data:image/jpeg;base64,${btoa('test')}`;
+    // Mock FileReader
+    const FileReaderMock = vi.fn(function(this: any) {
+      this.result = null;
+      this.onload = null;
+      this.onerror = null;
+      this.readAsDataURL = vi.fn((file: File) => {
+        this.result = `data:image/jpeg;base64,${btoa('test')}`;
+        if (this.onload) {
+          setTimeout(() => {
             this.onload({} as ProgressEvent);
-          }
-        }, 0);
-      }),
-      result: null,
-      onload: null as ((e: ProgressEvent) => void) | null,
-      onerror: null as ((e: ProgressEvent) => void) | null,
-    };
+          }, 10);
+        }
+      });
+      return this;
+    });
     
-    global.FileReader = vi.fn(() => mockFileReader) as any;
+    global.FileReader = FileReaderMock as any;
     
     // Mock error response
     (global.fetch as any).mockResolvedValueOnce({
@@ -288,22 +299,23 @@ describe('AddTransactionDialog - Receipt Scanner', () => {
   it('should set transaction type to expense when scanning receipt', async () => {
     const user = userEvent.setup();
     
-    // Mock FileReader to resolve immediately
-    const mockFileReader = {
-      readAsDataURL: vi.fn(function(this: FileReader, file: File) {
-        setTimeout(() => {
-          if (this.onload) {
-            this.result = `data:image/jpeg;base64,${btoa('test')}`;
+    // Mock FileReader
+    const FileReaderMock = vi.fn(function(this: any) {
+      this.result = null;
+      this.onload = null;
+      this.onerror = null;
+      this.readAsDataURL = vi.fn((file: File) => {
+        this.result = `data:image/jpeg;base64,${btoa('test')}`;
+        if (this.onload) {
+          setTimeout(() => {
             this.onload({} as ProgressEvent);
-          }
-        }, 0);
-      }),
-      result: null,
-      onload: null as ((e: ProgressEvent) => void) | null,
-      onerror: null as ((e: ProgressEvent) => void) | null,
-    };
+          }, 10);
+        }
+      });
+      return this;
+    });
     
-    global.FileReader = vi.fn(() => mockFileReader) as any;
+    global.FileReader = FileReaderMock as any;
     
     // Mock successful receipt scan
     (global.fetch as any).mockResolvedValueOnce({
