@@ -87,7 +87,16 @@ export const env = (() => {
         };
       }
 
-      throw error;
+      // In development, log error but don't crash - use safe defaults
+      console.error('⚠️  Env validation failed, using safe defaults in development');
+      return {
+        MODE: 'development' as const,
+        DEV: true,
+        PROD: false,
+        VITE_API_URL: undefined,
+        VITE_SENTRY_DSN: undefined,
+        VITE_ENABLE_ANALYTICS: undefined,
+      };
     }
 
     throw error;

@@ -8,5 +8,6 @@
 export {
   parseTransactionText,
   isParseSuccessful,
-  ParsedTransaction,
 } from './parser';
+
+export type { ParsedTransaction } from './parser';

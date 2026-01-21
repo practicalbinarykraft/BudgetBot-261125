@@ -40,6 +40,7 @@ import { parseISO } from "date-fns";
 import { useTheme } from "@/hooks/use-theme";
 import { parseTransactionText, isParseSuccessful } from "@/lib/parse-transaction-text";
 import { apiRequest } from "@/lib/queryClient";
+import { CircularProgress } from "@/components/ui/circular-progress";
 
 export default function DashboardV2Page() {
   const { t, language } = useTranslation();
@@ -406,7 +407,7 @@ export default function DashboardV2Page() {
 
       {/* Categories */}
       <div className="px-4 mb-6">
-        <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex gap-6 overflow-x-auto pb-2 scrollbar-hide">
           {topCategories.map((cat) => {
             // Display icon: if it's an emoji (not a Lucide icon name), show it directly
             const iconDisplay = cat.icon && !cat.icon.match(/^[A-Z][a-zA-Z]*$/) 
@@ -420,20 +421,47 @@ export default function DashboardV2Page() {
             // Calculate spent amount for budget
             let spent = cat.amount;
             let limitAmount = 0;
+            let progress = 0;
             if (budget && category) {
               spent = getBudgetSpent(budget, category);
               limitAmount = parseFloat(budget.limitAmount);
+              // Calculate progress (0-1), cap at 1.0 (100%)
+              progress = limitAmount > 0 ? Math.min(spent / limitAmount, 1.0) : 0;
+            } else {
+              // If no budget, calculate progress relative to max category amount
+              const maxAmount = Math.max(...topCategories.map(c => c.amount), 1);
+              progress = cat.amount / maxAmount;
             }
             
+            // Determine color based on progress
+            const progressColor = budget && limitAmount > 0
+              ? progress >= 1.0 
+                ? '#ef4444' // Red when over budget
+                : progress >= 0.8
+                ? '#f59e0b' // Orange when close to limit
+                : cat.color || '#3b82f6' // Category color or blue
+              : cat.color || '#3b82f6';
+            
             return (
-              <div key={cat.id} className="flex-shrink-0 text-center">
-                <div 
-                  className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-2"
-                  style={{ backgroundColor: `${cat.color}20` }}
-                >
-                  <span className="text-2xl">{iconDisplay}</span>
+              <div key={cat.id} className="flex-shrink-0 text-center" style={{ minWidth: '80px' }}>
+                <div className="flex justify-center mb-2">
+                  <CircularProgress
+                    progress={progress}
+                    size={64}
+                    strokeWidth={4}
+                    color={progressColor}
+                    backgroundColor="rgba(0, 0, 0, 0.1)"
+                    className="dark:bg-background"
+                  >
+                    <div 
+                      className="w-12 h-12 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: `${cat.color || '#3b82f6'}20` }}
+                    >
+                      <span className="text-2xl">{iconDisplay}</span>
+                    </div>
+                  </CircularProgress>
                 </div>
-                <div className="text-xs font-medium">{translateCategory(cat.name)}</div>
+                <div className="text-xs font-medium mb-1">{translateCategory(cat.name)}</div>
                 <div className="text-xs text-muted-foreground">
                   {budget ? (
                     <span>
@@ -447,7 +475,7 @@ export default function DashboardV2Page() {
             );
           })}
           {topCategories.length > 0 && (
-            <div className="flex-shrink-0 flex items-center">
+            <div className="flex-shrink-0 flex items-center min-w-[24px]">
               <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </div>
           )}
