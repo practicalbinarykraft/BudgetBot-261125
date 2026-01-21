@@ -18,7 +18,7 @@ import { parseDate } from './dates';
 import { findCategoryFuzzy } from './fuzzy';
 
 // Re-export types
-export { ParsedTransaction } from './types';
+export type { ParsedTransaction } from './types';
 
 // Income keywords
 const INCOME_KEYWORDS = /получил[аи]?|зарплат[ау]|доход|премия|бонус|вернули|income|salary|received|earned|bonus|refund|кэшбэк|кешбек|cashback|возврат|скинули|зачислили|пришло|поступило/i;
