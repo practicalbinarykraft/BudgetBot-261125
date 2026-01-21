@@ -186,33 +186,36 @@ export default function TransactionsPage() {
     const newFilters = { ...currentFilters };
     
     if (filterType === 'categoryId') {
+      const value = pendingValue as number;
       const existingIds = currentFilters.categoryIds || [];
-      if (!existingIds.includes(pendingValue)) {
-        newFilters.categoryIds = [...existingIds, pendingValue];
+      if (!existingIds.includes(value)) {
+        newFilters.categoryIds = [...existingIds, value];
       } else {
         // Если уже есть, не добавляем повторно
         return;
       }
     } else if (filterType === 'personalTagId') {
+      const value = pendingValue as number;
       const existingIds = currentFilters.personalTagIds || [];
-      if (!existingIds.includes(pendingValue)) {
-        newFilters.personalTagIds = [...existingIds, pendingValue];
+      if (!existingIds.includes(value)) {
+        newFilters.personalTagIds = [...existingIds, value];
       } else {
         // Если уже есть, не добавляем повторно
         return;
       }
     } else if (filterType === 'type') {
+      const value = pendingValue as 'income' | 'expense';
       const existingTypes = currentFilters.types || [];
-      if (!existingTypes.includes(pendingValue)) {
-        newFilters.types = [...existingTypes, pendingValue];
+      if (!existingTypes.includes(value)) {
+        newFilters.types = [...existingTypes, value];
       } else {
         // Если уже есть, не добавляем повторно
         return;
       }
     } else if (filterType === 'from') {
-      newFilters.from = pendingValue;
+      newFilters.from = pendingValue as string;
     } else if (filterType === 'to') {
-      newFilters.to = pendingValue;
+      newFilters.to = pendingValue as string;
     }
     
     handleApplyFilters(newFilters);
@@ -228,18 +231,21 @@ export default function TransactionsPage() {
     }
     
     if (filterType === 'categoryId') {
+      const value = pendingValue as number;
       const existingIds = currentFilters.categoryIds || [];
-      return !existingIds.includes(pendingValue);
+      return !existingIds.includes(value);
     } else if (filterType === 'personalTagId') {
+      const value = pendingValue as number;
       const existingIds = currentFilters.personalTagIds || [];
-      return !existingIds.includes(pendingValue);
+      return !existingIds.includes(value);
     } else if (filterType === 'type') {
+      const value = pendingValue as 'income' | 'expense';
       const existingTypes = currentFilters.types || [];
-      return !existingTypes.includes(pendingValue);
+      return !existingTypes.includes(value);
     } else if (filterType === 'from') {
-      return pendingValue !== currentFilters.from;
+      return (pendingValue as string) !== currentFilters.from;
     } else if (filterType === 'to') {
-      return pendingValue !== currentFilters.to;
+      return (pendingValue as string) !== currentFilters.to;
     }
     
     return false;
