@@ -45,7 +45,9 @@ export class TransactionService {
   async getTransactions(
     userId: number,
     filters?: {
-      personalTagId?: number;
+      personalTagIds?: number[];
+      categoryIds?: number[];
+      types?: ('income' | 'expense')[];
       from?: string;
       to?: string;
       limit?: number;

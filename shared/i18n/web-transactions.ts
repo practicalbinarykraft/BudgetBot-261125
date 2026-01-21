@@ -113,6 +113,22 @@ export const webTransactionsTranslations: Translations = {
     en: 'Filter by Date',
     ru: 'Фильтр по дате',
   },
+  'transactions.filter_by_date_from': {
+    en: 'Date From',
+    ru: 'Дата от',
+  },
+  'transactions.filter_by_date_to': {
+    en: 'Date To',
+    ru: 'Дата до',
+  },
+  'transactions.filter_description': {
+    en: 'Select filters to narrow down transactions',
+    ru: 'Выберите фильтры для поиска транзакций',
+  },
+  'transactions.select_tag': {
+    en: 'Select tag',
+    ru: 'Выберите тег',
+  },
   'transactions.clear_filters': {
     en: 'Clear Filters',
     ru: 'Очистить фильтры',

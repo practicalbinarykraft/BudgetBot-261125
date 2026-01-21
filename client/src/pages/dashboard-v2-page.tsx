@@ -5,7 +5,7 @@
  * Available at /app/dashboard-v2 route.
  */
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -41,6 +41,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { parseTransactionText, isParseSuccessful } from "@/lib/parse-transaction-text";
 import { apiRequest } from "@/lib/queryClient";
 import { CircularProgress } from "@/components/ui/circular-progress";
+import { CategorySelectDialog, loadSelectedCategories } from "@/components/dashboard/category-select-dialog";
 
 export default function DashboardV2Page() {
   const { t, language } = useTranslation();
@@ -64,6 +65,19 @@ export default function DashboardV2Page() {
   const [showCategorySelect, setShowCategorySelect] = useState(false);
   const [transactionForCategory, setTransactionForCategory] = useState<Transaction | null>(null);
   const [showCreateCategory, setShowCreateCategory] = useState(false);
+  const [showCategorySelectDialog, setShowCategorySelectDialog] = useState(false);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>(() => {
+    // Load from localStorage on mount (only in browser)
+    if (typeof window !== 'undefined') {
+      try {
+        return loadSelectedCategories();
+      } catch (error) {
+        console.error('Failed to load selected categories:', error);
+        return [];
+      }
+    }
+    return [];
+  });
   const { open: openAiChat } = useChatSidebar();
   const safeArea = useTelegramSafeArea();
 
@@ -204,7 +218,45 @@ export default function DashboardV2Page() {
   });
 
   const recentTransactions = transactionsResponse?.data || [];
-  const topCategories = categoryBreakdown?.items.slice(0, 3) || [];
+  
+  // Filter categories based on user selection
+  // If no categories selected, show top 3 by default
+  let topCategories = categoryBreakdown?.items || [];
+  if (selectedCategoryIds.length > 0) {
+    // Load order from localStorage (only in browser)
+    let categoryOrder: number[] = [];
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('dashboard-v2-categories-order');
+        if (saved) {
+          categoryOrder = JSON.parse(saved);
+        }
+      } catch (error) {
+        console.error('Failed to load category order:', error);
+      }
+    }
+    
+    // Filter to only selected categories
+    const selectedSet = new Set(selectedCategoryIds);
+    const filtered = topCategories.filter((cat) => selectedSet.has(cat.id));
+    
+    // Sort by order if available
+    if (categoryOrder.length > 0) {
+      topCategories = filtered.sort((a, b) => {
+        const aIndex = categoryOrder.indexOf(a.id);
+        const bIndex = categoryOrder.indexOf(b.id);
+        if (aIndex === -1 && bIndex === -1) return 0;
+        if (aIndex === -1) return 1;
+        if (bIndex === -1) return -1;
+        return aIndex - bIndex;
+      });
+    } else {
+      topCategories = filtered;
+    }
+  } else {
+    // Default: show top 3
+    topCategories = topCategories.slice(0, 3);
+  }
 
 
   // Helper to get category for transaction
@@ -226,8 +278,16 @@ export default function DashboardV2Page() {
 
   // Helper to calculate spent amount for budget
   const getBudgetSpent = (budget: Budget, category: Category): number => {
-    const progress = calculateBudgetProgress(budget, allTransactions, category.name);
-    return progress.spent;
+    try {
+      if (!budget || !category || !allTransactions || allTransactions.length === 0) {
+        return 0;
+      }
+      const progress = calculateBudgetProgress(budget, allTransactions, category.name);
+      return progress.spent;
+    } catch (error) {
+      console.error('Error calculating budget spent:', error, { budgetId: budget?.id, categoryId: category?.id });
+      return 0;
+    }
   };
 
   // Handle transaction click
@@ -407,7 +467,18 @@ export default function DashboardV2Page() {
 
       {/* Categories */}
       <div className="px-4 mb-6">
-        <div className="flex gap-6 overflow-x-auto pb-2 scrollbar-hide">
+        <div 
+          className={`flex gap-6 pb-2 scrollbar-hide ${
+            topCategories.length >= 5 
+              ? 'overflow-x-auto touch-pan-x' 
+              : 'overflow-x-auto'
+          }`}
+          style={{
+            WebkitOverflowScrolling: topCategories.length >= 5 ? 'touch' : 'auto',
+            scrollBehavior: 'smooth',
+            touchAction: topCategories.length >= 5 ? 'pan-x' : 'auto',
+          }}
+        >
           {topCategories.map((cat) => {
             // Display icon: if it's an emoji (not a Lucide icon name), show it directly
             const iconDisplay = cat.icon && !cat.icon.match(/^[A-Z][a-zA-Z]*$/) 
@@ -474,11 +545,21 @@ export default function DashboardV2Page() {
               </div>
             );
           })}
-          {topCategories.length > 0 && (
-            <div className="flex-shrink-0 flex items-center min-w-[24px]">
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-          )}
+          <div 
+            className="flex-shrink-0 flex items-center min-w-[24px] cursor-pointer hover:bg-muted/50 rounded-lg p-1 transition-colors"
+            onClick={() => setShowCategorySelectDialog(true)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setShowCategorySelectDialog(true);
+              }
+            }}
+            aria-label={t('dashboard.select_categories_aria')}
+          >
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          </div>
         </div>
       </div>
 
@@ -757,6 +838,44 @@ export default function DashboardV2Page() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Category Select Dialog */}
+      <CategorySelectDialog
+        open={showCategorySelectDialog}
+        onOpenChange={setShowCategorySelectDialog}
+        categories={categories}
+        selectedCategoryIds={selectedCategoryIds}
+        onSelectionChange={setSelectedCategoryIds}
+        categoryBreakdown={categoryBreakdown?.items || []}
+        budgets={budgets}
+        budgetSpentMap={useMemo(() => {
+          if (!categories.length || !allTransactions.length) {
+            return new Map<number, number>();
+          }
+          try {
+            return new Map(
+              categories.map(cat => {
+                try {
+                  const budget = budgets.find(b => b.categoryId === cat.id);
+                  if (budget && cat) {
+                    const progress = calculateBudgetProgress(budget, allTransactions, cat.name);
+                    return [cat.id, progress.spent];
+                  }
+                  return [cat.id, 0];
+                } catch (error) {
+                  console.error(`Error calculating budget spent for category ${cat.id}:`, error);
+                  return [cat.id, 0];
+                }
+              })
+            );
+          } catch (error) {
+            console.error('Error creating budgetSpentMap:', error);
+            return new Map<number, number>();
+          }
+        }, [categories, budgets, allTransactions])}
+        currencySymbol={currencySymbol}
+        formatCurrency={(amount: number) => Math.round(amount).toString()}
+      />
 
       {/* Category Create Dialog */}
       <CategoryCreateDialog

@@ -1,12 +1,14 @@
 import { db } from "../db";
 import { transactions, InsertTransaction, Transaction, categories, wallets, personalTags } from "@shared/schema";
-import { eq, and, desc, gte, lte, sql } from "drizzle-orm";
+import { eq, and, desc, gte, lte, sql, inArray } from "drizzle-orm";
 
 export class TransactionRepository {
     async getTransactionsByUserId(
         userId: number,
         filters?: {
-            personalTagId?: number;
+            personalTagIds?: number[];
+            categoryIds?: number[];
+            types?: ('income' | 'expense')[];
             from?: string;
             to?: string;
             limit?: number;
@@ -15,8 +17,16 @@ export class TransactionRepository {
     ): Promise<{ transactions: Transaction[]; total: number }> {
         const conditions = [eq(transactions.userId, userId)];
 
-        if (filters?.personalTagId !== undefined) {
-            conditions.push(eq(transactions.personalTagId, filters.personalTagId));
+        if (filters?.personalTagIds && filters.personalTagIds.length > 0) {
+            conditions.push(inArray(transactions.personalTagId, filters.personalTagIds));
+        }
+
+        if (filters?.categoryIds && filters.categoryIds.length > 0) {
+            conditions.push(inArray(transactions.categoryId, filters.categoryIds));
+        }
+
+        if (filters?.types && filters.types.length > 0) {
+            conditions.push(inArray(transactions.type, filters.types));
         }
 
         if (filters?.from) {

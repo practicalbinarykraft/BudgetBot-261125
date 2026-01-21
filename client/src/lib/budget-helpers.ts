@@ -32,7 +32,15 @@ import type { Budget, Transaction } from "@shared/schema";
  */
 export function getBudgetPeriodDates(budget: Budget): { start: Date; end: Date } {
   // ⏰ parseISO correctly parses "2024-01-15" without timezone shifts
+  if (!budget.startDate) {
+    throw new Error(`Budget ${budget.id} has no startDate`);
+  }
   const startDate = parseISO(budget.startDate);
+  
+  // Validate date
+  if (isNaN(startDate.getTime())) {
+    throw new Error(`Invalid startDate format: ${budget.startDate}`);
+  }
   
   switch (budget.period) {
     case "week":
@@ -81,7 +89,24 @@ export function calculateBudgetProgress(
   transactions: Transaction[],
   categoryName: string // Still needed for legacy transactions without categoryId
 ): { spent: number; percentage: number; status: "ok" | "warning" | "exceeded" } {
-  const { start, end } = getBudgetPeriodDates(budget);
+  if (!budget || !budget.startDate) {
+    return { spent: 0, percentage: 0, status: "ok" };
+  }
+  
+  if (!transactions || transactions.length === 0) {
+    return { spent: 0, percentage: 0, status: "ok" };
+  }
+  
+  let start: Date;
+  let end: Date;
+  try {
+    const dates = getBudgetPeriodDates(budget);
+    start = dates.start;
+    end = dates.end;
+  } catch (error) {
+    console.error('Error getting budget period dates:', error, { budgetId: budget.id });
+    return { spent: 0, percentage: 0, status: "ok" };
+  }
   
   // 🔄 Hybrid filter: Match by categoryId (new) OR category text (legacy)
   const categoryTransactions = transactions.filter((t) => {
@@ -104,7 +129,10 @@ export function calculateBudgetProgress(
 
   // Sum up spending in USD
   const spent = categoryTransactions.reduce(
-    (sum, t) => sum + parseFloat(t.amountUsd),
+    (sum, t) => {
+      const amount = parseFloat(t.amountUsd || '0');
+      return sum + (isNaN(amount) ? 0 : amount);
+    },
     0
   );
 

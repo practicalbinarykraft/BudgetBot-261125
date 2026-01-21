@@ -144,6 +144,14 @@ export const webCommonTranslations: Translations = {
     en: 'Clear',
     ru: 'Очистить',
   },
+  'common.all': {
+    en: 'All',
+    ru: 'Все',
+  },
+  'common.apply': {
+    en: 'Apply',
+    ru: 'Применить',
+  },
   'common.confirm': {
     en: 'Confirm',
     ru: 'Подтвердить',

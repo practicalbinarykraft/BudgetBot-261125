@@ -94,10 +94,12 @@ const router = Router();
  */
 router.get("/", withAuth(async (req, res) => {
   try {
-    const { from, to, personalTagId, limit, offset } = req.query;
+    const { from, to, personalTagId, categoryId, type, limit, offset } = req.query;
 
     const filters: {
-      personalTagId?: number;
+      personalTagIds?: number[];
+      categoryIds?: number[];
+      types?: ('income' | 'expense')[];
       from?: string;
       to?: string;
       limit?: number;
@@ -129,16 +131,67 @@ router.get("/", withAuth(async (req, res) => {
       }
       filters.to = result.data;
     }
+    
+    // Поддержка множественных значений для personalTagId
     if (personalTagId) {
-      const tagIdStr = String(personalTagId);
-      if (!/^\d+$/.test(tagIdStr)) {
-        throw new BadRequestError("Invalid tag ID. Please provide a valid number.");
+      const tagIds = Array.isArray(personalTagId) ? personalTagId : [personalTagId];
+      const parsedIds = tagIds
+        .map(id => {
+          const tagIdStr = String(id);
+          if (!/^\d+$/.test(tagIdStr)) {
+            throw new BadRequestError("Invalid tag ID. Please provide a valid number.");
+          }
+          const parsedId = parseInt(tagIdStr);
+          if (parsedId <= 0) {
+            throw new BadRequestError("Invalid tag ID. Please provide a valid number.");
+          }
+          return parsedId;
+        })
+        .filter((id, index, self) => self.indexOf(id) === index); // Убираем дубликаты
+      
+      if (parsedIds.length > 0) {
+        filters.personalTagIds = parsedIds;
       }
-      const parsedId = parseInt(tagIdStr);
-      if (parsedId <= 0) {
-        throw new BadRequestError("Invalid tag ID. Please provide a valid number.");
+    }
+    
+    // Поддержка множественных значений для categoryId
+    if (categoryId) {
+      const categoryIds = Array.isArray(categoryId) ? categoryId : [categoryId];
+      const parsedIds = categoryIds
+        .map(id => {
+          const categoryIdStr = String(id);
+          if (!/^\d+$/.test(categoryIdStr)) {
+            throw new BadRequestError("Invalid category ID. Please provide a valid number.");
+          }
+          const parsedId = parseInt(categoryIdStr);
+          if (parsedId <= 0) {
+            throw new BadRequestError("Invalid category ID. Please provide a valid number.");
+          }
+          return parsedId;
+        })
+        .filter((id, index, self) => self.indexOf(id) === index); // Убираем дубликаты
+      
+      if (parsedIds.length > 0) {
+        filters.categoryIds = parsedIds;
       }
-      filters.personalTagId = parsedId;
+    }
+    
+    // Поддержка множественных значений для type
+    if (type) {
+      const types = Array.isArray(type) ? type : [type];
+      const validTypes = types
+        .map(t => {
+          const typeStr = String(t);
+          if (typeStr !== 'income' && typeStr !== 'expense') {
+            throw new BadRequestError("Invalid type. Must be 'income' or 'expense'.");
+          }
+          return typeStr as 'income' | 'expense';
+        })
+        .filter((t, index, self) => self.indexOf(t) === index); // Убираем дубликаты
+      
+      if (validTypes.length > 0) {
+        filters.types = validTypes;
+      }
     }
 
     // Parse pagination parameters
