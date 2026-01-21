@@ -432,27 +432,25 @@ export function MobileMenuSheet({ open, onOpenChange }: MobileMenuSheetProps) {
             <div className="truncate">{user?.email || user?.telegramUsername || user?.name}</div>
           </div>
 
-          {/* Theme toggle - только для Dashboard V2 */}
-          {location === "/app/dashboard-v2" && (
-            <button
-              onClick={() => {
-                toggleTheme();
-              }}
-              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg transition-colors hover:bg-accent text-foreground"
-            >
-              {theme === 'dark' ? (
-                <>
-                  <Sun className="h-5 w-5" />
-                  <span>{t("common.light_theme") || "Светлая тема"}</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="h-5 w-5" />
-                  <span>{t("common.dark_theme") || "Темная тема"}</span>
-                </>
-              )}
-            </button>
-          )}
+          {/* Theme toggle - доступен на всех страницах */}
+          <button
+            onClick={() => {
+              toggleTheme();
+            }}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg transition-colors hover:bg-accent text-foreground"
+          >
+            {theme === 'dark' ? (
+              <>
+                <Sun className="h-5 w-5" />
+                <span>{t("common.light_theme") || "Светлая тема"}</span>
+              </>
+            ) : (
+              <>
+                <Moon className="h-5 w-5" />
+                <span>{t("common.dark_theme") || "Темная тема"}</span>
+              </>
+            )}
+          </button>
 
           <button
             onClick={() => {

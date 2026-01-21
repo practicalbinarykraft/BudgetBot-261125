@@ -18,6 +18,8 @@ import {
   BarChart3,
   Target,
   Cog,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -46,6 +48,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "@/i18n";
+import { useTheme } from "@/hooks/use-theme";
 
 /**
  * App Sidebar - Navigation with 5 main groups
@@ -62,6 +65,7 @@ export function AppSidebar() {
   const { user, logoutMutation } = useAuth();
   const { t } = useTranslation();
   const { isMobile, setOpenMobile } = useSidebar();
+  const { theme, toggleTheme } = useTheme();
 
   // Track which groups are expanded
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
@@ -321,6 +325,25 @@ export function AppSidebar() {
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground">{t("common.signed_in_as")}</p>
           <p className="text-sm font-medium truncate">{user?.email}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={toggleTheme}
+            aria-label={theme === 'dark' ? t("common.light_theme") : t("common.dark_theme")}
+          >
+            {theme === 'dark' ? (
+              <>
+                <Sun className="w-4 h-4 mr-2" aria-hidden="true" />
+                {t("common.light_theme") || "Светлая тема"}
+              </>
+            ) : (
+              <>
+                <Moon className="w-4 h-4 mr-2" aria-hidden="true" />
+                {t("common.dark_theme") || "Темная тема"}
+              </>
+            )}
+          </Button>
           <Button
             variant="outline"
             size="sm"
