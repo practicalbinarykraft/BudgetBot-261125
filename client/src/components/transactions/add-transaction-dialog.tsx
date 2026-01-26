@@ -30,6 +30,8 @@ interface AddTransactionDialogProps {
   defaultCurrency?: string;
   defaultCategory?: string;
   defaultType?: 'income' | 'expense';
+  defaultDate?: string; // For notifications - prefill date from planned transaction
+  defaultCategoryId?: number | null; // For notifications - prefill categoryId
 }
 
 interface TransactionResponse {
@@ -56,6 +58,8 @@ export function AddTransactionDialog({
   defaultCurrency,
   defaultCategory,
   defaultType,
+  defaultDate,
+  defaultCategoryId,
 }: AddTransactionDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -107,7 +111,7 @@ export function AddTransactionDialog({
     },
   });
 
-  // Prefill form when dialog opens with voice input data
+  // Prefill form when dialog opens with voice input data or notification data
   useEffect(() => {
     if (open) {
       if (defaultDescription) form.setValue("description", defaultDescription);
@@ -115,8 +119,22 @@ export function AddTransactionDialog({
       if (defaultCurrency) form.setValue("currency", defaultCurrency);
       if (defaultCategory) form.setValue("category", defaultCategory);
       if (defaultType) form.setValue("type", defaultType);
+      if (defaultDate) form.setValue("date", defaultDate);
+      // Note: defaultCategoryId is stored in component state and used in mutation
+    } else {
+      // Reset form when dialog closes
+      form.reset({
+        date: new Date().toISOString().split("T")[0],
+        type: "expense",
+        amount: "",
+        description: "",
+        category: "",
+        currency: "USD",
+        walletId: undefined,
+        personalTagId: defaultPersonalTagId ?? null,
+      });
     }
-  }, [open, defaultDescription, defaultAmount, defaultCurrency, defaultCategory, defaultType, form]);
+  }, [open, defaultDescription, defaultAmount, defaultCurrency, defaultCategory, defaultType, defaultDate, defaultPersonalTagId, form]);
 
   // Handler for Web Speech API (plain text) - used in regular browsers
   const handleVoiceResult = (text: string) => {
@@ -239,7 +257,7 @@ export function AddTransactionDialog({
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const payload = {
+      const payload: any = {
         type: data.type,
         amount: data.amount,
         amountUsd: data.amount,
@@ -251,15 +269,48 @@ export function AddTransactionDialog({
         walletId: data.walletId,
         source: 'manual',
       };
+      // Add categoryId if provided (from notifications)
+      if (defaultCategoryId) {
+        payload.categoryId = defaultCategoryId;
+      }
       const res = await apiRequest("POST", "/api/transactions", payload);
       return res.json() as Promise<TransactionResponse>;
     },
-    onSuccess: (transaction: TransactionResponse) => {
+    onSuccess: async (transaction: TransactionResponse) => {
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tags"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["/api/sorting/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/unsorted"], exact: false });
+      
+      // If transaction was created from notification, mark notification as completed
+      // Check if we have notification data (via defaultDate or other notification-specific fields)
+      if (defaultDate && defaultDescription) {
+        // Try to find and mark notification as completed
+        try {
+          const notificationsRes = await fetch("/api/notifications", {
+            credentials: "include",
+          });
+          if (notificationsRes.ok) {
+            const notifications = await notificationsRes.json();
+            const matchingNotification = notifications.find((n: any) => 
+              n.transactionData?.description === defaultDescription &&
+              n.transactionData?.date === defaultDate &&
+              n.status !== "completed"
+            );
+            if (matchingNotification) {
+              await fetch(`/api/notifications/${matchingNotification.id}/complete`, {
+                method: "PATCH",
+                credentials: "include",
+              });
+              queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
+            }
+          }
+        } catch (error) {
+          console.error("Failed to mark notification as completed:", error);
+        }
+      }
       
       if (transaction.mlSuggested && transaction.category) {
         const confidence = Math.round(transaction.mlConfidence * 100);
