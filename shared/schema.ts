@@ -178,6 +178,33 @@ export const plannedIncome = pgTable("planned_income", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Notifications table (for planned transactions reminders)
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Notification type and data
+  type: text("type").notNull(), // 'planned_expense' | 'planned_income'
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  
+  // Reference to planned transaction
+  plannedTransactionId: integer("planned_transaction_id").references(() => plannedTransactions.id, { onDelete: "cascade" }),
+  plannedIncomeId: integer("planned_income_id").references(() => plannedIncome.id, { onDelete: "cascade" }),
+  
+  // Transaction data for pre-filling form
+  transactionData: jsonb("transaction_data"), // { amount, currency, description, category, type, date }
+  
+  // Status
+  status: text("status").default("unread").notNull(), // 'unread' | 'read' | 'dismissed' | 'completed'
+  
+  // Dates
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  readAt: timestamp("read_at"),
+  dismissedAt: timestamp("dismissed_at"),
+  completedAt: timestamp("completed_at"),
+});
+
 // Settings table
 export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
@@ -612,6 +639,18 @@ export const insertPlannedIncomeSchema = createInsertSchema(plannedIncome, {
   transactionId: true,
 });
 
+export const insertNotificationSchema = createInsertSchema(notifications, {
+  type: z.enum(["planned_expense", "planned_income"]),
+  status: z.enum(["unread", "read", "dismissed", "completed"]).optional(),
+}).omit({
+  id: true,
+  userId: true,  // Server-side only
+  createdAt: true,
+  readAt: true,
+  dismissedAt: true,
+  completedAt: true,
+});
+
 const VALID_TIMEZONES = [
   "UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
   "America/Phoenix", "America/Toronto", "America/Mexico_City", "America/Sao_Paulo",
@@ -744,6 +783,11 @@ export type PlannedTransaction = typeof plannedTransactions.$inferSelect;
 
 export type InsertPlannedIncome = z.infer<typeof insertPlannedIncomeSchema>;
 export type PlannedIncome = typeof plannedIncome.$inferSelect;
+
+export const insertNotificationSchema = createInsertSchema(notifications);
+export const selectNotificationSchema = createSelectSchema(notifications);
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
 
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;

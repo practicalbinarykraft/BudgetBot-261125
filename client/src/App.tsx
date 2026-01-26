@@ -14,6 +14,8 @@ import { PageLoading } from "@/components/loading-spinner";
 import { WebSocketProvider } from "@/components/WebSocketProvider";
 import { WelcomeDialog, useOnboarding } from "@/components/onboarding/welcome-dialog";
 import { CreditsWidget } from "@/components/credits-widget";
+import { NotificationsBell } from "@/components/notifications-bell";
+import { Notification } from "@shared/schema";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -139,6 +141,15 @@ function AppContent() {
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [notificationData, setNotificationData] = useState<{
+    description?: string;
+    amount?: string;
+    currency?: string;
+    category?: string;
+    type?: 'income' | 'expense';
+    date?: string;
+    categoryId?: number | null;
+  } | null>(null);
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
@@ -146,6 +157,18 @@ function AppContent() {
 
   // Check if we're on dashboard-v2 page (experimental page without header/nav)
   const isDashboardV2 = location === '/app/dashboard-v2';
+
+  // Hide body scrollbar for dashboard-v2
+  useEffect(() => {
+    if (isDashboardV2) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isDashboardV2]);
 
   // Show onboarding dialog after user logs in
   useEffect(() => {
@@ -167,8 +190,10 @@ function AppContent() {
   if (isDashboardV2) {
     return (
       <>
-        <main className="flex-1 overflow-auto bg-background">
-          <Router />
+        <main className="h-screen w-full overflow-hidden bg-background">
+          <div className="h-full overflow-y-auto scrollbar-hide">
+            <Router />
+          </div>
         </main>
         {/* Onboarding dialog for new users */}
         <WelcomeDialog
@@ -193,13 +218,31 @@ function AppContent() {
           <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
             {/* Header - ВНУТРИ контентной области */}
             <header 
-              className="flex-shrink-0 flex items-center justify-center relative p-3 sm:p-4 border-b bg-background"
+              className="flex-shrink-0 flex items-center justify-center relative p-3 sm:p-4 border-b bg-background h-[72px] sm:h-[80px]"
               style={telegramPaddingStyle}
             >
               <div className="hidden sm:flex absolute left-3 sm:left-4">
                 <SidebarTrigger data-testid="button-sidebar-toggle" />
               </div>
-              <CreditsWidget />
+              <div className="flex items-center gap-2">
+                <NotificationsBell 
+                  onNotificationClick={(notification: Notification) => {
+                    // Extract transaction data from notification
+                    const transactionData = notification.transactionData as any;
+                    setNotificationData({
+                      description: transactionData?.description || notification.message,
+                      amount: transactionData?.amount?.toString(),
+                      currency: transactionData?.currency,
+                      category: transactionData?.category,
+                      type: transactionData?.type || (notification.type === 'planned_income' ? 'income' : 'expense'),
+                      date: transactionData?.date,
+                      categoryId: transactionData?.categoryId,
+                    });
+                    setShowAddDialog(true);
+                  }}
+                />
+                <CreditsWidget />
+              </div>
             </header>
             <main className="flex-1 overflow-y-auto px-4 sm:px-6 pt-4 sm:pt-6 pb-20 sm:pb-6 bg-background">
               <Router />
@@ -232,7 +275,20 @@ function AppContent() {
           <Suspense fallback={null}>
             <AddTransactionDialog
               open={showAddDialog}
-              onOpenChange={setShowAddDialog}
+              onOpenChange={(open) => {
+                setShowAddDialog(open);
+                if (!open) {
+                  // Clear notification data when dialog closes
+                  setNotificationData(null);
+                }
+              }}
+              defaultDescription={notificationData?.description}
+              defaultAmount={notificationData?.amount}
+              defaultCurrency={notificationData?.currency}
+              defaultCategory={notificationData?.category}
+              defaultType={notificationData?.type}
+              defaultDate={notificationData?.date}
+              defaultCategoryId={notificationData?.categoryId}
             />
           </Suspense>
         </>
