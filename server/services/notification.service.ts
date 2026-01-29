@@ -46,7 +46,6 @@ export class NotificationService {
         if (!hasNotification) {
           // Create notification
           const notificationData: InsertNotification = {
-            userId,
             type: "planned_expense",
             title: "Запланированный расход",
             message: `Был запланированный расход "${planned.name}" на сумму ${planned.amount} ${planned.currency || "USD"}. Подтвердите транзакцию.`,
@@ -62,7 +61,7 @@ export class NotificationService {
             status: "unread",
           };
 
-          await notificationRepository.createNotification(notificationData);
+          await notificationRepository.createNotification(notificationData, userId);
           console.log(`[NotificationService] Created notification for planned ${planned.id} with targetDate ${planned.targetDate}`);
         }
       } else {
@@ -88,7 +87,6 @@ export class NotificationService {
         if (!hasNotification) {
           // Create notification
           const notificationData: InsertNotification = {
-            userId,
             type: "planned_income",
             title: "Запланированный доход",
             message: `Был запланированный доход "${income.description}" на сумму ${income.amount} ${income.currency || "USD"}. Подтвердите транзакцию.`,
@@ -104,7 +102,7 @@ export class NotificationService {
             status: "unread",
           };
 
-          await notificationRepository.createNotification(notificationData);
+          await notificationRepository.createNotification(notificationData, userId);
         }
       }
     }
@@ -161,9 +159,11 @@ export class NotificationService {
       
       // Generate notifications for all future occurrences up to 6 months ahead
       // Ensure nextDate is a Date object (it might be a string from DB)
-      const nextDateObj = recurring.nextDate instanceof Date 
-        ? recurring.nextDate 
-        : new Date(recurring.nextDate);
+      const nextDateObj = typeof recurring.nextDate === 'string' 
+        ? new Date(recurring.nextDate)
+        : (recurring.nextDate as any) instanceof Date
+        ? (recurring.nextDate as Date)
+        : new Date(recurring.nextDate as string | Date);
       let currentDate = new Date(nextDateObj);
       currentDate.setHours(0, 0, 0, 0);
       const todayDate = new Date(todayStr);
@@ -196,7 +196,6 @@ export class NotificationService {
         if (!hasNotification) {
           // Create notification for this occurrence
           const notificationData: InsertNotification = {
-            userId,
             type: recurring.type === "expense" ? "recurring_expense" : "recurring_income",
             title: recurring.type === "expense" 
               ? "Повторяющийся расход" 
@@ -218,7 +217,7 @@ export class NotificationService {
             status: "unread",
           };
 
-          await notificationRepository.createNotification(notificationData);
+          await notificationRepository.createNotification(notificationData, userId);
         }
         
         // Move to next occurrence

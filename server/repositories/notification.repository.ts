@@ -34,10 +34,13 @@ export class NotificationRepository {
   /**
    * Create a new notification
    */
-  async createNotification(data: InsertNotification): Promise<Notification> {
+  async createNotification(data: InsertNotification, userId: number): Promise<Notification> {
     const [notification] = await db
       .insert(notifications)
-      .values(data)
+      .values({
+        ...data,
+        userId,
+      })
       .returning();
     
     return notification;

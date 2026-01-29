@@ -92,11 +92,11 @@ describe('NotificationService', () => {
       expect(notificationRepository.getNotificationsByUserId).toHaveBeenCalledWith(userId);
       expect(notificationRepository.createNotification).toHaveBeenCalledWith(
         expect.objectContaining({
-          userId: 1,
           type: 'planned_expense',
           plannedTransactionId: 1,
           status: 'unread',
-        })
+        }),
+        userId
       );
     });
 
@@ -263,11 +263,11 @@ describe('NotificationService', () => {
       expect(plannedIncomeRepository.getPlannedIncomeByUserId).toHaveBeenCalledWith(userId, { status: 'pending' });
       expect(notificationRepository.createNotification).toHaveBeenCalledWith(
         expect.objectContaining({
-          userId: 1,
           type: 'planned_income',
           plannedIncomeId: 1,
           status: 'unread',
-        })
+        }),
+        userId
       );
     });
 

@@ -33,7 +33,6 @@ export const webPlannedTranslations: Translations = {
   "planned.field_target_date": { en: "Target Date", ru: "Дата покупки" },
   "planned.field_category": { en: "Category (Optional)", ru: "Категория (опционально)" },
   "planned.field_category_placeholder": { en: "Select category", ru: "Выберите категорию" },
-  "planned.button_cancel": { en: "Cancel", ru: "Отмена" },
   "planned.button_add": { en: "Add Plan", ru: "Добавить план" },
   "planned.button_adding": { en: "Adding...", ru: "Добавление..." },
   

@@ -37,7 +37,7 @@ const createMockNotification = (overrides?: Partial<Notification>): Notification
     date: new Date().toISOString().split('T')[0],
   },
   status: 'unread',
-  createdAt: new Date().toISOString(),
+  createdAt: new Date(),
   readAt: null,
   dismissedAt: null,
   completedAt: null,
@@ -155,18 +155,19 @@ describe('NotificationsList', () => {
       const nextWeek = new Date(today);
       nextWeek.setDate(nextWeek.getDate() + 7);
 
+      const baseTransactionData = createMockNotification().transactionData as Record<string, any>;
       const notifications = [
         createMockNotification({
           id: 1,
-          transactionData: { ...createMockNotification().transactionData, date: today.toISOString().split('T')[0] },
+          transactionData: { ...baseTransactionData, date: today.toISOString().split('T')[0] },
         }),
         createMockNotification({
           id: 2,
-          transactionData: { ...createMockNotification().transactionData, date: tomorrow.toISOString().split('T')[0] },
+          transactionData: { ...baseTransactionData, date: tomorrow.toISOString().split('T')[0] },
         }),
         createMockNotification({
           id: 3,
-          transactionData: { ...createMockNotification().transactionData, date: nextWeek.toISOString().split('T')[0] },
+          transactionData: { ...baseTransactionData, date: nextWeek.toISOString().split('T')[0] },
         }),
       ];
 
@@ -199,12 +200,13 @@ describe('NotificationsList', () => {
       yesterday.setDate(yesterday.getDate() - 1);
       const today = new Date();
 
+      const baseTransactionData = createMockNotification().transactionData as Record<string, any>;
       const notifications = [
         createMockNotification({
           id: 1,
           status: 'unread',
           transactionData: {
-            ...createMockNotification().transactionData,
+            ...baseTransactionData,
             date: yesterday.toISOString().split('T')[0],
           },
         }),
@@ -212,7 +214,7 @@ describe('NotificationsList', () => {
           id: 2,
           status: 'unread',
           transactionData: {
-            ...createMockNotification().transactionData,
+            ...baseTransactionData,
             date: today.toISOString().split('T')[0],
           },
         }),
@@ -249,18 +251,19 @@ describe('NotificationsList', () => {
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
 
+      const baseTransactionData = createMockNotification().transactionData as Record<string, any>;
       const notifications = [
         createMockNotification({
           id: 1,
           transactionData: {
-            ...createMockNotification().transactionData,
+            ...baseTransactionData,
             date: today.toISOString().split('T')[0],
           },
         }),
         createMockNotification({
           id: 2,
           transactionData: {
-            ...createMockNotification().transactionData,
+            ...baseTransactionData,
             date: tomorrow.toISOString().split('T')[0],
           },
         }),
@@ -299,18 +302,19 @@ describe('NotificationsList', () => {
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
 
+      const baseTransactionData = createMockNotification().transactionData as Record<string, any>;
       const notifications = [
         createMockNotification({
           id: 1,
           transactionData: {
-            ...createMockNotification().transactionData,
+            ...baseTransactionData,
             date: yesterday.toISOString().split('T')[0],
           },
         }),
         createMockNotification({
           id: 2,
           transactionData: {
-            ...createMockNotification().transactionData,
+            ...baseTransactionData,
             date: tomorrow.toISOString().split('T')[0],
           },
         }),

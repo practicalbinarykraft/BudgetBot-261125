@@ -114,8 +114,8 @@ describe('NotificationRepository', () => {
 
   describe('createNotification', () => {
     it('should create and return new notification', async () => {
+      const userId = 1;
       const notificationData = {
-        userId: 1,
         type: 'planned_expense' as const,
         title: 'Test Notification',
         message: 'Test message',
@@ -132,6 +132,7 @@ describe('NotificationRepository', () => {
 
       const createdNotification = {
         id: 1,
+        userId,
         ...notificationData,
         plannedIncomeId: null,
         createdAt: new Date(),
@@ -147,10 +148,13 @@ describe('NotificationRepository', () => {
 
       vi.mocked(db.insert).mockReturnValue(mockInsert as any);
 
-      const result = await notificationRepository.createNotification(notificationData);
+      const result = await notificationRepository.createNotification(notificationData, userId);
 
       expect(db.insert).toHaveBeenCalledWith(notifications);
-      expect(mockInsert.values).toHaveBeenCalledWith(notificationData);
+      expect(mockInsert.values).toHaveBeenCalledWith({
+        ...notificationData,
+        userId,
+      });
       expect(result).toEqual(createdNotification);
     });
   });
