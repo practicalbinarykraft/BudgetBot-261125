@@ -32,6 +32,7 @@ interface AddTransactionDialogProps {
   defaultType?: 'income' | 'expense';
   defaultDate?: string; // For notifications - prefill date from planned transaction
   defaultCategoryId?: number | null; // For notifications - prefill categoryId
+  notificationId?: number; // For notifications - ID of the notification being approved
 }
 
 interface TransactionResponse {
@@ -60,6 +61,7 @@ export function AddTransactionDialog({
   defaultType,
   defaultDate,
   defaultCategoryId,
+  notificationId,
 }: AddTransactionDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -278,37 +280,78 @@ export function AddTransactionDialog({
     },
     onSuccess: async (transaction: TransactionResponse) => {
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"], exact: false });
-      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["/api/tags"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["/api/sorting/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/unsorted"], exact: false });
       
-      // If transaction was created from notification, mark notification as completed
-      // Check if we have notification data (via defaultDate or other notification-specific fields)
-      if (defaultDate && defaultDescription) {
-        // Try to find and mark notification as completed
+      // If transaction was created from notification, update statuses and mark as completed
+      if (notificationId) {
         try {
-          const notificationsRes = await fetch("/api/notifications", {
+          // Get notification to determine its type
+          const notificationRes = await fetch(`/api/notifications/${notificationId}`, {
             credentials: "include",
           });
-          if (notificationsRes.ok) {
-            const notifications = await notificationsRes.json();
-            const matchingNotification = notifications.find((n: any) => 
-              n.transactionData?.description === defaultDescription &&
-              n.transactionData?.date === defaultDate &&
-              n.status !== "completed"
-            );
-            if (matchingNotification) {
-              await fetch(`/api/notifications/${matchingNotification.id}/complete`, {
-                method: "PATCH",
-                credentials: "include",
-              });
-              queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
-              queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
-            }
+          
+          if (!notificationRes.ok) {
+            throw new Error("Failed to fetch notification");
           }
+          
+          const notification = await notificationRes.json();
+          const transactionData = notification.transactionData as any;
+          
+          // Update status based on notification type
+          if (notification.type === 'planned_expense' && transactionData?.plannedTransactionId) {
+            // Update planned expense status
+            await fetch(`/api/planned/${transactionData.plannedTransactionId}/mark-purchased`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ transactionId: transaction.id }),
+            });
+          } else if (notification.type === 'planned_income' && transactionData?.plannedIncomeId) {
+            // Update planned income status
+            await fetch(`/api/planned-income/${transactionData.plannedIncomeId}/mark-received`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ transactionId: transaction.id }),
+            });
+          }
+          
+          // Update nextDate for recurring transactions
+          if ((notification.type === 'recurring_expense' || notification.type === 'recurring_income') 
+              && transactionData?.recurringId && transactionData?.frequency) {
+            // Use transaction date from created transaction (user may have changed it in dialog)
+            await fetch(`/api/recurring/${transactionData.recurringId}/update-next-date`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ 
+                transactionDate: transaction.date,
+                frequency: transactionData.frequency 
+              }),
+            });
+          }
+          
+          // Mark notification as completed
+          await fetch(`/api/notifications/${notificationId}/mark-completed`, {
+            method: "PATCH",
+            credentials: "include",
+          });
+          
+          queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/planned"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/planned-income"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/recurring"] });
         } catch (error) {
-          console.error("Failed to mark notification as completed:", error);
+          console.error("Failed to update notification status:", error);
+          toast({
+            title: t("common.error_occurred"),
+            description: "Transaction created but failed to update notification status",
+            variant: "destructive",
+          });
         }
       }
       

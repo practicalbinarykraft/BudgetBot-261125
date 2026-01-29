@@ -290,5 +290,28 @@
   .safe-area-inset-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0);
   }
+
+  /* Hide scrollbar but keep scrolling functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari, Opera */
+    width: 0;
+    height: 0;
+    background: transparent;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar-track {
+    display: none;
+    background: transparent;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar-thumb {
+    display: none;
+    background: transparent;
+  }
 }
 

@@ -184,7 +184,7 @@ export const notifications = pgTable("notifications", {
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   
   // Notification type and data
-  type: text("type").notNull(), // 'planned_expense' | 'planned_income'
+  type: text("type").notNull(), // 'planned_expense' | 'planned_income' | 'recurring_expense' | 'recurring_income'
   title: text("title").notNull(),
   message: text("message").notNull(),
   
@@ -640,7 +640,7 @@ export const insertPlannedIncomeSchema = createInsertSchema(plannedIncome, {
 });
 
 export const insertNotificationSchema = createInsertSchema(notifications, {
-  type: z.enum(["planned_expense", "planned_income"]),
+  type: z.enum(["planned_expense", "planned_income", "recurring_expense", "recurring_income"]),
   status: z.enum(["unread", "read", "dismissed", "completed"]).optional(),
 }).omit({
   id: true,
@@ -710,7 +710,7 @@ export const insertTelegramVerificationCodeSchema = createInsertSchema(telegramV
 });
 
 export const insertPersonalTagSchema = createInsertSchema(personalTags, {
-  type: z.enum(["personal", "shared", "person"]).optional(),
+  type: z.enum(["personal", "shared", "person", "project"]).optional(),
   name: z.string().min(1, "Name is required"),
   icon: z.string().optional(),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format").optional(),
@@ -784,7 +784,6 @@ export type PlannedTransaction = typeof plannedTransactions.$inferSelect;
 export type InsertPlannedIncome = z.infer<typeof insertPlannedIncomeSchema>;
 export type PlannedIncome = typeof plannedIncome.$inferSelect;
 
-export const insertNotificationSchema = createInsertSchema(notifications);
 export const selectNotificationSchema = createSelectSchema(notifications);
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;

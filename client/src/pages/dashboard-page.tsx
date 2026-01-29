@@ -20,7 +20,6 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { useTranslation } from "@/i18n";
-import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -141,18 +140,6 @@ export default function DashboardPage() {
           </div>
           <Skeleton className="h-96" />
         </div>
-        {isMobile && (
-          <MobileBottomNav
-            onMenuClick={() => setShowMobileMenu(true)}
-            onAddClick={() => setShowAddDialog(true)}
-            onAiChatClick={() => {
-              toast({
-                title: "AI Chat",
-                description: "Функция AI чата скоро будет доступна!",
-              });
-            }}
-          />
-        )}
       </>
     );
   }
@@ -256,19 +243,6 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Mobile Navigation */}
-      {isMobile && (
-        <MobileBottomNav
-          onMenuClick={() => setShowMobileMenu(true)}
-          onAddClick={() => setShowAddDialog(true)}
-          onAiChatClick={() => {
-            toast({
-              title: "AI Chat",
-              description: "Функция AI чата скоро будет доступна!",
-            });
-          }}
-        />
-      )}
 
       <MobileMenuSheet
         open={showMobileMenu}

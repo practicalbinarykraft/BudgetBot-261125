@@ -1,13 +1,17 @@
-import { Transaction } from "@shared/schema";
+import { Transaction, PersonalTag, Category, Budget } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2, Pencil } from "lucide-react";
+import { Trash2, Pencil, User, Heart, Home, Users, Baby, UserPlus, Briefcase, Gift, Dog, Cat } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 // ⏰ parseISO prevents timezone bugs when parsing date strings from DB
 import { format, parseISO, isToday, isYesterday } from "date-fns";
 import { ru, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/i18n";
+import { useQuery } from "@tanstack/react-query";
+import { useTranslateCategory } from "@/lib/category-translations";
+import { calculateBudgetProgress } from "@/lib/budget-helpers";
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -17,16 +21,21 @@ interface TransactionListProps {
   showEdit?: boolean;
 }
 
-// System categories that have translations
-const SYSTEM_CATEGORIES = ['Unaccounted', 'Salary', 'Freelance', 'Food', 'Transport', 'Entertainment', 'Bills', 'Shopping', 'Healthcare', 'Education', 'Housing', 'Travel', 'Other'];
+// Icon map for tags (same as in dashboard-v2)
+const ICON_MAP: Record<string, LucideIcon> = {
+  User,
+  Heart,
+  Home,
+  Users,
+  Baby,
+  UserPlus,
+  Briefcase,
+  Gift,
+  Dog,
+  Cat,
+};
 
-// Helper to translate category name
-function translateCategory(category: string, t: (key: string) => string): string {
-  if (SYSTEM_CATEGORIES.includes(category)) {
-    return t(`categories.name.${category}`);
-  }
-  return category;
-}
+const DEFAULT_TAG_NAMES = ['Personal', 'Shared'];
 
 // Helper to translate source
 function translateSource(source: string, t: (key: string) => string): string {
@@ -70,6 +79,66 @@ function groupTransactionsByDate(transactions: Transaction[]): Map<string, Trans
 
 export function TransactionList({ transactions, onDelete, onEdit, showDelete = false, showEdit = false }: TransactionListProps) {
   const { t, language } = useTranslation();
+  const translateCategory = useTranslateCategory();
+  
+  // Fetch tags for displaying personal tags
+  const { data: tagsResponse } = useQuery<PersonalTag[] | { data: PersonalTag[] }>({
+    queryKey: ["/api/tags"],
+  });
+  const tags = Array.isArray(tagsResponse) ? tagsResponse : (tagsResponse?.data || []);
+  
+  // Fetch categories for displaying category names
+  const { data: categoriesResponse } = useQuery<Category[] | { data: Category[] }>({
+    queryKey: ["/api/categories"],
+  });
+  const categories = Array.isArray(categoriesResponse) ? categoriesResponse : (categoriesResponse?.data || []);
+  
+  // Fetch budgets for displaying budget limits
+  const { data: budgetsResponse } = useQuery<Budget[] | { data: Budget[] }>({
+    queryKey: ["/api/budgets"],
+  });
+  const budgets = Array.isArray(budgetsResponse) ? budgetsResponse : (budgetsResponse?.data || []);
+  
+  // Helper to get category for transaction
+  const getCategoryForTransaction = (transaction: Transaction): Category | undefined => {
+    if (transaction.categoryId) {
+      return categories.find(c => c.id === transaction.categoryId);
+    }
+    if (transaction.category) {
+      return categories.find(c => c.name === transaction.category);
+    }
+    return undefined;
+  };
+  
+  // Helper to get budget for category
+  const getBudgetForCategory = (categoryId: number | null | undefined): Budget | undefined => {
+    if (!categoryId) return undefined;
+    return budgets.find(b => b.categoryId === categoryId);
+  };
+  
+  // Helper to calculate spent amount for budget
+  const getBudgetSpent = (budget: Budget, category: Category): number => {
+    try {
+      if (!budget || !category || !transactions || transactions.length === 0) {
+        return 0;
+      }
+      const progress = calculateBudgetProgress(budget, transactions, category.name);
+      return progress.spent;
+    } catch (error) {
+      console.error('Error calculating budget spent:', error, { budgetId: budget?.id, categoryId: category?.id });
+      return 0;
+    }
+  };
+  
+  // Format currency amount
+  const formatCurrency = (usdAmount: number): string => {
+    return new Intl.NumberFormat(language === 'ru' ? 'ru-RU' : 'en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(usdAmount);
+  };
   
   if (!transactions.length) {
     return (
@@ -101,86 +170,98 @@ export function TransactionList({ transactions, onDelete, onEdit, showDelete = f
               {getDateHeader(date, language, t)}
             </h3>
             <div className="space-y-2">
-              {dateTransactions.map((transaction) => (
-          <div
-            key={transaction.id}
-            className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 px-3 sm:px-4 rounded-md border hover-elevate gap-2"
-            data-testid={`transaction-${transaction.id}`}
-          >
-            {/* Main content - full width on mobile, flex on desktop */}
-            <div className="flex-1 min-w-0">
-              {/* Description and Amount row */}
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <p className="font-medium text-sm sm:text-base truncate flex-1">{transaction.description}</p>
-                {/* Amount - always visible, right aligned */}
-                <div className="text-right shrink-0">
-                  <div className={cn(
-                    "font-mono font-semibold text-base sm:text-lg whitespace-nowrap",
-                    transaction.type === "income"
-                      ? "text-green-600 dark:text-green-400"
-                      : "text-red-600 dark:text-red-400"
-                  )}
-                  data-testid={`amount-${transaction.id}`}
+              {dateTransactions.map((transaction) => {
+                const amount = parseFloat(transaction.amountUsd || '0');
+                const isExpense = transaction.type === 'expense';
+                const displayAmount = formatCurrency(Math.abs(amount));
+                const category = getCategoryForTransaction(transaction);
+                const budget = getBudgetForCategory(category?.id);
+                const categoryName = category ? translateCategory(category.name) : (transaction.category || (language === 'ru' ? 'Без категории' : 'No category'));
+                const personalTag = transaction.personalTagId ? tags.find(t => t.id === transaction.personalTagId) : null;
+                
+                // Calculate spent amount for budget
+                let spent = 0;
+                let limitAmount = 0;
+                let remaining = 0;
+                if (budget && category) {
+                  spent = getBudgetSpent(budget, category);
+                  limitAmount = parseFloat(budget.limitAmount);
+                  remaining = Math.max(0, limitAmount - spent);
+                }
+                
+                return (
+                  <div
+                    key={transaction.id}
+                    onClick={() => onEdit?.(transaction)}
+                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted/70 transition-colors"
+                    data-testid={`transaction-${transaction.id}`}
                   >
-                    {transaction.type === "income" ? "+" : "-"}
-                    {transaction.originalAmount && transaction.originalCurrency
-                      ? `${transaction.originalCurrency === "RUB" ? "₽" : transaction.originalCurrency === "IDR" ? "Rp" : "$"}${transaction.originalAmount}`
-                      : `$${transaction.amountUsd}`
-                    }
-                  </div>
-                  {transaction.originalAmount && transaction.originalCurrency && transaction.originalCurrency !== "USD" && (
-                    <div className="text-xs text-muted-foreground">
-                      ≈ ${transaction.amountUsd}
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">{transaction.description}</div>
+                      <div className="text-xs text-muted-foreground space-y-1">
+                        <div>
+                          {format(parseISO(transaction.date), 'd MMM yyyy', { 
+                            locale: language === 'ru' ? ru : enUS 
+                          })}
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {/* Tag first */}
+                          {personalTag ? (
+                            <span 
+                              className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium gap-1"
+                              style={{ 
+                                backgroundColor: `${personalTag.color || '#3b82f6'}20`,
+                                color: personalTag.color || '#3b82f6'
+                              }}
+                            >
+                              {(() => {
+                                const IconComponent = personalTag.icon && ICON_MAP[personalTag.icon] 
+                                  ? ICON_MAP[personalTag.icon] 
+                                  : User;
+                                const displayName = DEFAULT_TAG_NAMES.includes(personalTag.name)
+                                  ? t(`tags.default_name.${personalTag.name}`)
+                                  : personalTag.name;
+                                return (
+                                  <>
+                                    <IconComponent className="h-3 w-3 flex-shrink-0" />
+                                    <span>{displayName}</span>
+                                  </>
+                                );
+                              })()}
+                            </span>
+                          ) : null}
+                          {/* Category second */}
+                          {category ? (
+                            <span 
+                              className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                              style={{ 
+                                backgroundColor: `${category.color || '#3b82f6'}20`,
+                                color: category.color || '#3b82f6'
+                              }}
+                            >
+                              {categoryName}
+                            </span>
+                          ) : null}
+                          {/* Budget limit third */}
+                          {budget && category && (
+                            <span className="text-xs font-medium">
+                              {formatCurrency(spent).replace(/\s/g, '')}/{formatCurrency(limitAmount).replace(/\s/g, '')}
+                              {remaining > 0 && (
+                                <span className="text-muted-foreground ml-1">
+                                  ({language === 'ru' ? 'осталось' : 'left'} {formatCurrency(remaining).replace(/\s/g, '')})
+                                </span>
+                              )}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  )}
-                </div>
-              </div>
-              {/* Meta info row */}
-              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  {format(parseISO(transaction.date), "d MMM", { locale: language === 'ru' ? ru : enUS })}
-                </p>
-                {transaction.category && (
-                  <Badge variant="secondary" className="text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2">
-                    {translateCategory(transaction.category, t)}
-                  </Badge>
-                )}
-                {transaction.source !== "manual" && (
-                  <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2 hidden sm:inline-flex">
-                    {translateSource(transaction.source || 'manual', t)}
-                  </Badge>
-                )}
-              </div>
-            </div>
-            {/* Action buttons - full width on mobile, compact on desktop */}
-            <div className="flex gap-1 sm:gap-1 w-full sm:w-auto sm:shrink-0">
-              {showEdit && onEdit && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex-1 sm:flex-none h-8 sm:h-9 sm:w-9 sm:px-0"
-                  onClick={() => onEdit(transaction)}
-                  data-testid={`button-edit-${transaction.id}`}
-                >
-                  <Pencil className="h-4 w-4 sm:mr-0" />
-                  <span className="sm:hidden ml-2">{t("common.edit")}</span>
-                </Button>
-              )}
-              {showDelete && onDelete && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex-1 sm:flex-none h-8 sm:h-9 sm:w-9 sm:px-0"
-                  onClick={() => onDelete(transaction.id)}
-                  data-testid={`button-delete-${transaction.id}`}
-                >
-                  <Trash2 className="h-4 w-4 sm:mr-0" />
-                  <span className="sm:hidden ml-2">{t("common.delete")}</span>
-                </Button>
-              )}
-            </div>
-          </div>
-              ))}
+                    <div className={`font-semibold ${isExpense ? 'text-red-600' : 'text-green-600'}`}>
+                      {isExpense ? '-' : '+'}{displayAmount}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         ))}

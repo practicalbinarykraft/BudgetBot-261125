@@ -92,6 +92,54 @@ export class RecurringRepository {
     async deleteRecurring(id: number): Promise<void> {
         await db.delete(recurring).where(eq(recurring.id, id));
     }
+
+    /**
+     * Calculate and update next occurrence date based on frequency
+     */
+    async updateNextDate(id: number, currentDate: Date, frequency: string): Promise<Recurring> {
+        const nextDate = this.calculateNextOccurrenceDate(currentDate, frequency);
+        // Convert Date to ISO string format (YYYY-MM-DD)
+        const nextDateStr = nextDate.toISOString().split('T')[0];
+        return await this.updateRecurring(id, { nextDate: nextDateStr });
+    }
+
+    /**
+     * Calculate next occurrence date based on frequency
+     */
+    calculateNextOccurrenceDate(currentDate: Date, frequency: string): Date {
+        const next = new Date(currentDate);
+        switch (frequency) {
+            case 'daily':
+                next.setDate(next.getDate() + 1);
+                break;
+            case 'weekly':
+                next.setDate(next.getDate() + 7);
+                break;
+            case 'monthly':
+                next.setMonth(next.getMonth() + 1);
+                // Handle month-end rollover (e.g., Jan 31 → Feb 28/29)
+                const daysInMonth = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+                const originalDay = currentDate.getDate();
+                if (originalDay > daysInMonth) {
+                    next.setDate(daysInMonth);
+                }
+                break;
+            case 'quarterly':
+                next.setMonth(next.getMonth() + 3);
+                const daysInQuarterMonth = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+                const originalDayQuarter = currentDate.getDate();
+                if (originalDayQuarter > daysInQuarterMonth) {
+                    next.setDate(daysInQuarterMonth);
+                }
+                break;
+            case 'yearly':
+                next.setFullYear(next.getFullYear() + 1);
+                break;
+            default:
+                next.setDate(next.getDate() + 1);
+        }
+        return next;
+    }
 }
 
 export const recurringRepository = new RecurringRepository();

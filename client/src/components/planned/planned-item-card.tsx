@@ -5,7 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2, Check, X, Calendar } from "lucide-react";
 import { format, parseISO, isPast, differenceInDays } from "date-fns";
+import { ru } from "date-fns/locale";
 import { useTranslation } from "@/i18n";
+import { useTranslateCategory } from "@/lib/category-translations";
 
 interface PlannedItemCardProps {
   item: PlannedTransaction;
@@ -22,11 +24,36 @@ const statusColors = {
 };
 
 export function PlannedItemCard({ item, onDelete, onPurchase, onCancel, onToggleChart }: PlannedItemCardProps) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+  const translateCategory = useTranslateCategory();
   const targetDate = parseISO(item.targetDate);
   const isOverdue = isPast(targetDate) && item.status === "planned";
   const daysUntil = differenceInDays(targetDate, new Date());
   const isDueSoon = daysUntil >= 0 && daysUntil <= 7 && item.status === "planned";
+  
+  // Format date with locale
+  const formatDate = (date: Date) => {
+    return format(date, "MMM dd, yyyy", { locale: language === 'ru' ? ru : undefined });
+  };
+  
+  // Get status translation
+  const getStatusLabel = (status: string) => {
+    return t(`planned.status.${status}`) || status;
+  };
+  
+  // Format "due in X days" text
+  const getDueText = () => {
+    if (isOverdue) {
+      return t("planned.overdue_label");
+    }
+    if (isDueSoon) {
+      if (daysUntil === 1) {
+        return t("planned.due_in_one_day");
+      }
+      return t("planned.due_in_days").replace("{days}", String(daysUntil));
+    }
+    return formatDate(targetDate);
+  };
 
   return (
     <Card className="hover-elevate" data-testid={`planned-${item.id}`}>
@@ -36,7 +63,7 @@ export function PlannedItemCard({ item, onDelete, onPurchase, onCancel, onToggle
             <h3 className="font-medium text-lg">{item.name}</h3>
             <p className="text-2xl font-mono font-bold mt-2">${item.amount}</p>
             {item.category && (
-              <p className="text-sm text-muted-foreground mt-1">{item.category}</p>
+              <p className="text-sm text-muted-foreground mt-1">{translateCategory(item.category)}</p>
             )}
           </div>
           <div className={`w-2 h-2 rounded-full ${statusColors[item.status as keyof typeof statusColors]}`} />
@@ -45,10 +72,10 @@ export function PlannedItemCard({ item, onDelete, onPurchase, onCancel, onToggle
         <div className="flex items-center gap-2 mb-3">
           <Calendar className="h-3 w-3 text-muted-foreground" />
           <p className={`text-xs ${isOverdue ? 'text-red-500 font-medium' : isDueSoon ? 'text-yellow-600 font-medium' : 'text-muted-foreground'}`}>
-            {isOverdue ? 'Overdue' : isDueSoon ? `Due in ${daysUntil} days` : format(targetDate, "MMM dd, yyyy")}
+            {getDueText()}
           </p>
-          <Badge variant="secondary" className="text-xs capitalize">
-            {item.status}
+          <Badge variant="secondary" className="text-xs">
+            {getStatusLabel(item.status)}
           </Badge>
         </div>
 
@@ -79,7 +106,7 @@ export function PlannedItemCard({ item, onDelete, onPurchase, onCancel, onToggle
               data-testid={`button-purchase-${item.id}`}
             >
               <Check className="h-4 w-4 mr-2" />
-              Purchase
+              {t("planned.button_purchase")}
             </Button>
             <Button
               variant="outline"
@@ -89,7 +116,7 @@ export function PlannedItemCard({ item, onDelete, onPurchase, onCancel, onToggle
               data-testid={`button-cancel-${item.id}`}
             >
               <X className="h-4 w-4 mr-2" />
-              Cancel
+              {t("planned.button_cancel")}
             </Button>
           </div>
         )}
@@ -103,7 +130,7 @@ export function PlannedItemCard({ item, onDelete, onPurchase, onCancel, onToggle
             data-testid={`button-delete-planned-${item.id}`}
           >
             <Trash2 className="h-4 w-4 mr-2" />
-            Remove
+            {t("planned.button_remove")}
           </Button>
         )}
       </CardContent>

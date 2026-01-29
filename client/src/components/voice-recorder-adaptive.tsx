@@ -1,11 +1,11 @@
 /**
  * Adaptive Voice Recorder
  *
- * Automatically selects between:
- * - Web Speech API (fast, free) for regular browsers
- * - MediaRecorder + Whisper API (reliable) for Telegram Mini App
+ * Автоматически выбирает между:
+ * - Web Speech API (быстро, бесплатно) для Chrome/Edge на десктопе
+ * - MediaRecorder + Whisper API (надёжно) для iOS, Brave, Telegram Mini App
  *
- * This ensures voice input works in all environments.
+ * Использует feature detection вместо userAgent для надёжного определения.
  */
 
 import { useTelegramMiniApp } from "@/hooks/use-telegram-miniapp";
@@ -37,6 +37,12 @@ interface VoiceRecorderAdaptiveProps {
    */
   onRecordingChange?: (isRecording: boolean) => void;
 
+  /**
+   * Callback for errors
+   * Used to show error messages in parent components
+   */
+  onError?: (error: string) => void;
+
   className?: string;
 }
 
@@ -45,59 +51,107 @@ export function VoiceRecorderAdaptive({
   onParsedResult,
   onInterimResult,
   onRecordingChange,
+  onError,
   className,
 }: VoiceRecorderAdaptiveProps) {
   const { isMiniApp } = useTelegramMiniApp();
 
-  // Проверяем, доступен ли Web Speech API (для real-time транскрипции)
-  const isWebSpeechAvailable = typeof window !== 'undefined' && 
-    (window.SpeechRecognition || window.webkitSpeechRecognition);
+  // Feature detection согласно ТЗ (НЕ userAgent!)
+  const isWebSpeechAvailable = typeof window !== 'undefined' &&
+    (window.SpeechRecognition || window.webkitSpeechRecognition) &&
+    window.isSecureContext; // Web Speech API требует безопасный контекст
 
-  // ПРИОРИТЕТ: Если Web Speech API доступен И нужна real-time транскрипция (onInterimResult)
-  // → используем Web Speech API даже если есть onParsedResult
-  // Это дает real-time транскрипцию в обычном браузере
+  const isMediaRecorderAvailable = typeof window !== 'undefined' &&
+    typeof navigator !== 'undefined' &&
+    typeof navigator.mediaDevices !== 'undefined' &&
+    typeof navigator.mediaDevices.getUserMedia === 'function' &&
+    typeof MediaRecorder !== 'undefined';
+
+  // Определяем, какой режим использовать
+  // ПРИОРИТЕТ 1: Telegram Mini App - всегда используем Whisper
+  if (isMiniApp && onParsedResult) {
+    return (
+      <VoiceRecorderMiniApp
+        onParsedResult={onParsedResult}
+        onInterimResult={onInterimResult}
+        onRecordingChange={onRecordingChange}
+        onError={onError}
+        className={className}
+      />
+    );
+  }
+
+  // ПРИОРИТЕТ 2: Web Speech API доступен - используем его (Chrome/Edge на десктопе)
+  // Это дает моментальную транскрипцию в реальном времени
   if (isWebSpeechAvailable && onResult && onInterimResult) {
     return (
       <VoiceRecorder
         onResult={onResult}
         onInterimResult={onInterimResult}
         onRecordingChange={onRecordingChange}
+        onError={onError}
         className={className}
       />
     );
   }
 
-  // In Mini App - use MediaRecorder + server-side Whisper + AI parsing
-  if (isMiniApp && onParsedResult) {
-    return (
-      <VoiceRecorderMiniApp
-        onParsedResult={onParsedResult}
-        className={className}
-      />
-    );
-  }
-
-  // In regular browser - use Web Speech API (faster, free) with real-time transcription
-  // In Mini App with only onResult - use server transcription but return just text
-  if (onResult) {
-    if (isMiniApp) {
-      // Mini App: use server transcription, extract just the text
+  // ПРИОРИТЕТ 3: Web Speech недоступен, но MediaRecorder доступен - используем Whisper
+  // Это работает для iOS, Brave и других браузеров без Web Speech API
+  if (!isWebSpeechAvailable && isMediaRecorderAvailable) {
+    if (onParsedResult) {
       return (
         <VoiceRecorderMiniApp
-          onParsedResult={(result) => onResult(result.transcription)}
+          onParsedResult={onParsedResult}
+          onInterimResult={onInterimResult}
+          onRecordingChange={onRecordingChange}
+          onError={onError}
           className={className}
         />
       );
     }
-    // Regular browser: use Web Speech API with real-time transcription
+    
+    if (onResult) {
+      // Fallback: если только onResult без onParsedResult
+      return (
+        <VoiceRecorderMiniApp
+          onParsedResult={(result) => onResult(result.transcription)}
+          onInterimResult={onInterimResult}
+          onRecordingChange={onRecordingChange}
+          onError={onError}
+          className={className}
+        />
+      );
+    }
+  }
+
+  // ПРИОРИТЕТ 4: Fallback для обычных браузеров с Web Speech API (без onInterimResult)
+  if (isWebSpeechAvailable && onResult) {
     return (
       <VoiceRecorder
         onResult={onResult}
         onInterimResult={onInterimResult}
         onRecordingChange={onRecordingChange}
+        onError={onError}
         className={className}
       />
     );
+  }
+
+  // ОШИБКА: Ни Web Speech, ни MediaRecorder не доступны
+  if (!isWebSpeechAvailable && !isMediaRecorderAvailable) {
+    const errorMsg = typeof window !== 'undefined' && window.navigator
+      ? (window.navigator.language === 'ru' || window.navigator.language.startsWith('ru')
+          ? 'Голосовой ввод не поддерживается на этом устройстве. Пожалуйста, используйте Chrome, Edge или Safari на iOS.'
+          : 'Voice input is not supported on this device. Please use Chrome, Edge, or Safari on iOS.')
+      : 'Voice input not supported';
+    
+    // Показываем ошибку через callback
+    if (onError) {
+      onError(errorMsg);
+    }
+    
+    // Возвращаем null - ошибка будет показана через onError callback
+    return null;
   }
 
   // No callbacks provided

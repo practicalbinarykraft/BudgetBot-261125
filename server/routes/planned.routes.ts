@@ -149,4 +149,31 @@ router.post("/:id/cancel", withAuth(async (req, res) => {
   }
 }));
 
+router.patch("/:id/mark-purchased", withAuth(async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const plannedItem = await storage.getPlannedById(id);
+    
+    if (!plannedItem || plannedItem.userId !== Number(req.user.id)) {
+      return res.status(404).json({ error: "Planned transaction not found" });
+    }
+    
+    const { transactionId } = req.body;
+    if (!transactionId || typeof transactionId !== 'number') {
+      return res.status(400).json({ error: "transactionId is required" });
+    }
+    
+    await storage.updatePlanned(id, {
+      status: "purchased",
+      purchasedAt: new Date(),
+      transactionId: transactionId,
+    });
+    
+    const updated = await storage.getPlannedById(id);
+    res.json(updated);
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
+  }
+}));
+
 export default router;

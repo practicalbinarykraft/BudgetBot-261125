@@ -9,6 +9,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -131,12 +132,13 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-md max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>{t("transactions.edit_transaction")}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-4 overflow-y-auto flex-1 pr-2">
+          <form onSubmit={form.handleSubmit(onSubmit as any)} className="flex flex-col flex-1 min-h-0">
+            <div className="space-y-4 overflow-y-auto flex-1 pr-2">
             <FormField
               control={form.control}
               name="type"
@@ -315,8 +317,8 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
                 </FormItem>
               )}
             />
-
-            <div className="flex gap-3 justify-end">
+            </div>
+            <DialogFooter className="mt-4 flex-shrink-0">
               <Button
                 type="button"
                 variant="outline"
@@ -332,7 +334,7 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
               >
                 {updateMutation.isPending ? t("transactions.updating") : t("transactions.update_transaction")}
               </Button>
-            </div>
+            </DialogFooter>
           </form>
         </Form>
       </DialogContent>

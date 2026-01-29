@@ -11,8 +11,15 @@ import "./lib/env";
 import { initSentry } from "./lib/sentry";
 initSentry();
 
-createRoot(document.getElementById("root")!).render(
-  <ErrorBoundaryWrapper>
-    <App />
-  </ErrorBoundaryWrapper>
-);
+console.log('[main] Starting app...');
+const rootElement = document.getElementById("root");
+if (!rootElement) {
+  console.error('[main] Root element not found!');
+} else {
+  console.log('[main] Root element found, rendering App...');
+  createRoot(rootElement).render(
+    <ErrorBoundaryWrapper>
+      <App />
+    </ErrorBoundaryWrapper>
+  );
+}

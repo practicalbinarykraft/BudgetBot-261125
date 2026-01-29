@@ -76,6 +76,10 @@ export const webCreditsTranslations: Translations = {
     en: 'credits',
     ru: 'кредитов',
   },
+  'credits.label': {
+    en: 'Credits:',
+    ru: 'Кредиты:',
+  },
 
   // Pricing Plans Section
   'credits.pricing_plans': {

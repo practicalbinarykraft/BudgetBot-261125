@@ -100,11 +100,10 @@ export function AIChatSidebar() {
         className={`
           fixed right-0 w-full sm:w-[400px]
           bg-background
-          shadow-2xl z-40
+          z-40
           transform transition-transform duration-300
           flex flex-col
-          border-l border-border
-          ${isOpen ? 'translate-x-0' : 'translate-x-full'}
+          ${isOpen ? 'translate-x-0 shadow-2xl border-l border-border' : 'translate-x-full'}
         `}
         style={{
           // Смещаем контейнер только если есть шторка (не развернуто на весь экран)
@@ -117,8 +116,10 @@ export function AIChatSidebar() {
         {/* Заголовок */}
         <ChatHeader onClose={close} />
 
-        {/* Быстрые действия */}
-        <QuickActions onSendMessage={handleQuickAction} />
+        {/* Быстрые действия - показываем только если нет сообщений */}
+        {!hasContent && !isLoading && (
+          <QuickActions onSendMessage={handleQuickAction} />
+        )}
 
         {/* Контент */}
         {isLoading ? (

@@ -7,6 +7,8 @@ import { parse, isValid, format } from "date-fns";
 import { BadRequestError, NotFoundError, ValidationError, getErrorMessage } from "../lib/errors";
 import { logAuditEvent, AuditAction, AuditEntityType } from "../services/audit-log.service";
 import { checkBudgetAlert, notifyTransactionCreated } from "../services/realtime-notifications.service";
+import { getPrimaryWallet, updateWalletBalance } from "../services/wallet.service";
+import logger from "../lib/logger";
 
 const router = Router();
 
@@ -304,8 +306,16 @@ router.get("/", withAuth(async (req, res) => {
 router.post("/", withAuth(async (req, res) => {
   try {
     const validated = insertTransactionSchema.omit({ userId: true }).parse(req.body);
+    const userId = Number(req.user.id);
 
-    const transaction = await transactionService.createTransaction(Number(req.user.id), {
+    // Get wallet for balance update
+    let walletId = validated.walletId;
+    if (!walletId) {
+      const primaryWallet = await getPrimaryWallet(userId);
+      walletId = primaryWallet.id;
+    }
+
+    const transaction = await transactionService.createTransaction(userId, {
       type: validated.type,
       amount: parseFloat(validated.amount),
       description: validated.description,
@@ -313,10 +323,31 @@ router.post("/", withAuth(async (req, res) => {
       date: validated.date,
       currency: validated.currency || undefined,
       source: 'manual',
-      walletId: validated.walletId || undefined,
+      walletId: walletId,
       personalTagId: validated.personalTagId !== undefined ? validated.personalTagId : null,
       financialType: validated.financialType || undefined,
     });
+
+    // Update wallet balance
+    try {
+      const amountUsd = parseFloat(transaction.amountUsd);
+      await updateWalletBalance(walletId, userId, amountUsd, validated.type);
+      logger.info('Wallet balance updated after transaction creation', {
+        userId,
+        walletId,
+        transactionId: transaction.id,
+        type: validated.type,
+        amountUsd,
+      });
+    } catch (balanceError) {
+      // Log error but don't fail the transaction creation
+      logger.error('Failed to update wallet balance after transaction creation', {
+        error: balanceError instanceof Error ? balanceError.message : String(balanceError),
+        userId,
+        walletId,
+        transactionId: transaction.id,
+      });
+    }
 
     // Log audit event
     await logAuditEvent({
@@ -371,6 +402,7 @@ router.post("/", withAuth(async (req, res) => {
 router.patch("/:id", withAuth(async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    const authUserId = Number(req.user.id);
 
     // 🔒 Security: Strip categoryId AND userId from client - always resolve server-side!
     const { categoryId, userId, ...sanitizedBody } = req.body;
@@ -378,11 +410,52 @@ router.patch("/:id", withAuth(async (req, res) => {
     // Validate update data
     const data = insertTransactionSchema.partial().parse(sanitizedBody);
 
-    const updated = await transactionService.updateTransaction(id, Number(req.user.id), data);
+    // Get old transaction before update (for balance adjustment)
+    const oldTransaction = await transactionService.getTransaction(id, authUserId);
+    if (!oldTransaction) {
+      return res.status(404).json({ error: "Transaction not found" });
+    }
+
+    const updated = await transactionService.updateTransaction(id, authUserId, data);
+
+    // Update wallet balance if amount or type changed
+    const oldAmountUsd = parseFloat(oldTransaction.amountUsd);
+    const newAmountUsd = parseFloat(updated.amountUsd);
+    const oldType = oldTransaction.type as 'income' | 'expense';
+    const newType = updated.type as 'income' | 'expense';
+    const walletId = updated.walletId || oldTransaction.walletId;
+
+    if (walletId && (oldAmountUsd !== newAmountUsd || oldType !== newType)) {
+      try {
+        // Reverse old transaction effect
+        const reverseType = oldType === 'income' ? 'expense' : 'income';
+        await updateWalletBalance(walletId, authUserId, oldAmountUsd, reverseType);
+
+        // Apply new transaction effect
+        await updateWalletBalance(walletId, authUserId, newAmountUsd, newType);
+
+        logger.info('Wallet balance updated after transaction update', {
+          userId: authUserId,
+          walletId,
+          transactionId: id,
+          oldAmountUsd,
+          newAmountUsd,
+          oldType,
+          newType,
+        });
+      } catch (balanceError) {
+        logger.error('Failed to update wallet balance after transaction update', {
+          error: balanceError instanceof Error ? balanceError.message : String(balanceError),
+          userId: authUserId,
+          walletId,
+          transactionId: id,
+        });
+      }
+    }
 
     // Log audit event
     await logAuditEvent({
-      userId: Number(req.user.id),
+      userId: authUserId,
       action: AuditAction.UPDATE,
       entityType: AuditEntityType.TRANSACTION,
       entityId: id,
@@ -406,11 +479,48 @@ router.patch("/:id", withAuth(async (req, res) => {
 router.delete("/:id", withAuth(async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    await transactionService.deleteTransaction(id, Number(req.user.id));
+    const authUserId = Number(req.user.id);
+
+    // Get transaction before deletion (for balance reversal)
+    const transaction = await transactionService.getTransaction(id, authUserId);
+    if (!transaction) {
+      return res.status(404).json({ error: "Transaction not found" });
+    }
+
+    // Delete the transaction
+    await transactionService.deleteTransaction(id, authUserId);
+
+    // Reverse wallet balance
+    if (transaction.walletId) {
+      try {
+        const amountUsd = parseFloat(transaction.amountUsd);
+        const transactionType = transaction.type as 'income' | 'expense';
+        // Reverse: if it was income, subtract; if it was expense, add back
+        const reverseType = transactionType === 'income' ? 'expense' : 'income';
+
+        await updateWalletBalance(transaction.walletId, authUserId, amountUsd, reverseType);
+
+        logger.info('Wallet balance reversed after transaction deletion', {
+          userId: authUserId,
+          walletId: transaction.walletId,
+          transactionId: id,
+          amountUsd,
+          originalType: transactionType,
+          reverseType,
+        });
+      } catch (balanceError) {
+        logger.error('Failed to reverse wallet balance after transaction deletion', {
+          error: balanceError instanceof Error ? balanceError.message : String(balanceError),
+          userId: authUserId,
+          walletId: transaction.walletId,
+          transactionId: id,
+        });
+      }
+    }
 
     // Log audit event
     await logAuditEvent({
-      userId: Number(req.user.id),
+      userId: authUserId,
       action: AuditAction.DELETE,
       entityType: AuditEntityType.TRANSACTION,
       entityId: id,

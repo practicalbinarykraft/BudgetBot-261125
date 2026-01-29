@@ -37,4 +37,22 @@ export const webWishlistTranslations: Translations = {
   "wishlist.schedule_purchase": { en: "Schedule Purchase", ru: "Запланировать покупку" },
   "wishlist.item": { en: "Item", ru: "Товар" },
   "wishlist.schedule": { en: "Schedule", ru: "Запланировать" },
+  "wishlist.remove": { en: "Remove", ru: "Удалить" },
+  "wishlist.target_label": { en: "Target", ru: "Цель" },
+  "wishlist.sort_by": { en: "Sort by", ru: "Сортировать по" },
+  "wishlist.sort_amount": { en: "Amount", ru: "Сумма" },
+  "wishlist.amount_required": { en: "Amount is required", ru: "Сумма обязательна" },
+  
+  // Goal Prediction Card
+  "wishlist.prediction.add_transactions": { en: "Add transactions to see AI predictions", ru: "Добавьте транзакции, чтобы увидеть прогнозы ИИ" },
+  "wishlist.prediction.can_afford_now": { en: "Can Afford Now", ru: "Можно купить сейчас" },
+  "wishlist.prediction.free_capital": { en: "Free capital", ru: "Свободный капитал" },
+  "wishlist.prediction.not_affordable": { en: "Not Affordable", ru: "Недоступно" },
+  "wishlist.prediction.not_affordable_description": { en: "Current income doesn't cover expenses + this goal", ru: "Текущий доход не покрывает расходы + эту цель" },
+  "wishlist.prediction.shortage": { en: "Shortage", ru: "Нехватка" },
+  "wishlist.prediction.affordable_soon": { en: "Affordable Soon", ru: "Скоро будет доступно" },
+  "wishlist.prediction.estimated": { en: "Estimated", ru: "Примерно" },
+  "wishlist.prediction.month": { en: "month", ru: "месяц" },
+  "wishlist.prediction.months": { en: "months", ru: "месяцев" },
+  "wishlist.prediction.by": { en: "By", ru: "К" },
 };

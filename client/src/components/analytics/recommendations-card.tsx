@@ -9,12 +9,15 @@ import { CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BudgetRecommendation, getStatusColor } from "./types";
+import { useTranslateCategory } from "@/lib/category-translations";
 
 interface RecommendationsCardProps {
   recommendations: BudgetRecommendation[];
 }
 
 export function RecommendationsCard({ recommendations }: RecommendationsCardProps) {
+  const translateCategory = useTranslateCategory();
+  
   if (recommendations.length === 0) {
     return null;
   }
@@ -38,7 +41,7 @@ export function RecommendationsCard({ recommendations }: RecommendationsCardProp
               className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors gap-3"
             >
               <div className="flex-1 min-w-0">
-                <div className="font-medium truncate">{rec.categoryName}</div>
+                <div className="font-medium truncate">{translateCategory(rec.categoryName)}</div>
                 <div className="text-sm text-muted-foreground">{rec.message}</div>
               </div>
               <div className="flex flex-wrap items-center gap-3 sm:gap-4">

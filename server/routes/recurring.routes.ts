@@ -4,6 +4,7 @@ import { insertRecurringSchema } from "@shared/schema";
 import { withAuth } from "../middleware/auth-utils";
 import { convertToUSD, getExchangeRate } from "../services/currency-service";
 import { getErrorMessage } from "../lib/errors";
+import { recurringRepository } from "../repositories/recurring.repository";
 
 const router = Router();
 
@@ -108,6 +109,33 @@ router.delete("/:id", withAuth(async (req, res) => {
     }
     await storage.deleteRecurring(id);
     res.json({ success: true });
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
+  }
+}));
+
+// PATCH /api/recurring/:id/update-next-date
+router.patch("/:id/update-next-date", withAuth(async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const recurringItem = await storage.getRecurringById(id);
+    
+    if (!recurringItem || recurringItem.userId !== Number(req.user.id)) {
+      return res.status(404).json({ error: "Recurring payment not found" });
+    }
+    
+    const { transactionDate, frequency } = req.body;
+    if (!transactionDate || !frequency) {
+      return res.status(400).json({ error: "transactionDate and frequency are required" });
+    }
+    
+    const date = new Date(transactionDate);
+    if (isNaN(date.getTime())) {
+      return res.status(400).json({ error: "Invalid transactionDate format" });
+    }
+    
+    const updated = await recurringRepository.updateNextDate(id, date, frequency);
+    res.json(updated);
   } catch (error: unknown) {
     res.status(400).json({ error: getErrorMessage(error) });
   }

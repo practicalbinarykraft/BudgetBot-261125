@@ -96,13 +96,35 @@ router.post("/voice-parse", withAuth(async (req, res) => {
 
     // ========== STEP 2: Decode and save audio file ==========
     const audioBuffer = Buffer.from(audioBase64, 'base64');
-    const extension = mimeType?.includes('webm') ? 'webm' :
-                      mimeType?.includes('ogg') ? 'ogg' :
-                      mimeType?.includes('mp3') ? 'mp3' : 'wav';
+    
+    // Определяем расширение файла согласно mimeType (поддержка iOS форматов)
+    let extension = 'wav'; // fallback
+    if (mimeType) {
+      if (mimeType.includes('mp4') || mimeType.includes('aac')) {
+        extension = 'm4a'; // iOS использует m4a для audio/mp4 и audio/aac
+      } else if (mimeType.includes('webm')) {
+        extension = 'webm';
+      } else if (mimeType.includes('ogg')) {
+        extension = 'ogg';
+      } else if (mimeType.includes('mp3')) {
+        extension = 'mp3';
+      } else if (mimeType.includes('wav')) {
+        extension = 'wav';
+      }
+    }
+    
     tempFilePath = path.join(tmpdir(), `voice_web_${Date.now()}.${extension}`);
     await fsp.writeFile(tempFilePath, audioBuffer);
 
-    console.log(`📁 [User ${userId}] Saved audio file: ${tempFilePath} (${audioBuffer.length} bytes)`);
+    // Логирование согласно ТЗ: mimeType, filename, size, userAgent
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    console.log(`📁 [User ${userId}] Saved audio file:`, {
+      filename: tempFilePath,
+      size: `${audioBuffer.length} bytes (${Math.round(audioBuffer.length / 1024)}KB)`,
+      mimeType: mimeType || 'unknown',
+      extension,
+      userAgent: userAgent.substring(0, 100), // Ограничиваем длину
+    });
 
     // ========== STEP 3: Transcribe with Whisper ==========
     const openai = new OpenAI({ apiKey: whisperApiKey.key });

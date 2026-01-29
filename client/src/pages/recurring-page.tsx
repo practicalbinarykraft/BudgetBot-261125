@@ -23,7 +23,6 @@ import { ru, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/i18n/context";
-import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -343,24 +342,6 @@ export default function RecurringPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Mobile Navigation */}
-      {isMobile && (
-        <MobileBottomNav
-          onMenuClick={() => setShowMobileMenu(true)}
-          onAddClick={() => {
-            toast({
-              title: "Добавить транзакцию",
-              description: "Функция скоро будет доступна!",
-            });
-          }}
-          onAiChatClick={() => {
-            toast({
-              title: "AI Chat",
-              description: "Функция AI чата скоро будет доступна!",
-            });
-          }}
-        />
-      )}
 
       <MobileMenuSheet
         open={showMobileMenu}

@@ -73,7 +73,10 @@ export function NotificationsBell({ onNotificationClick }: NotificationsBellProp
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 sm:w-96 p-0" align="end">
+      <PopoverContent 
+        className="w-[420px] sm:w-[480px] p-0 ml-4" 
+        align="end"
+      >
         <NotificationsList 
           onClose={() => setOpen(false)} 
           onOpenTransactionDialog={onNotificationClick}

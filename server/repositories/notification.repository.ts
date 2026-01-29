@@ -119,7 +119,7 @@ export class NotificationRepository {
         )
       );
     
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   /**

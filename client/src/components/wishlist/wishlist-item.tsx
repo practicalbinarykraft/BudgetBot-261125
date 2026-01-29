@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, Check, Calendar } from "lucide-react";
 import { GoalPredictionCard } from "@/components/wishlist/goal-prediction-card";
 import { format, parseISO } from "date-fns";
+import { useTranslation } from "@/i18n/context";
 
 interface WishlistItemProps {
   item: WishlistItemWithPrediction;
@@ -20,6 +21,8 @@ const priorityColors = {
 };
 
 export function WishlistItem({ item, onDelete, onTogglePurchased, onSchedule }: WishlistItemProps) {
+  const { t } = useTranslation();
+  
   return (
     <Card className="hover-elevate" data-testid={`wishlist-${item.id}`}>
       <CardContent className="p-4">
@@ -41,11 +44,11 @@ export function WishlistItem({ item, onDelete, onTogglePurchased, onSchedule }: 
         <div className="flex items-center gap-2 mb-3">
           <div className={`w-2 h-2 rounded-full ${priorityColors[item.priority as keyof typeof priorityColors]}`} />
           <Badge variant="secondary" className="text-xs capitalize">
-            {item.priority}
+            {t(`wishlist.priority_${item.priority}`)}
           </Badge>
           {item.targetDate && (
             <p className="text-xs text-muted-foreground">
-              Target: {format(parseISO(item.targetDate), "MMM dd, yyyy")}
+              {t("wishlist.target_label")}: {format(parseISO(item.targetDate), "MMM dd, yyyy")}
             </p>
           )}
         </div>
@@ -61,7 +64,7 @@ export function WishlistItem({ item, onDelete, onTogglePurchased, onSchedule }: 
             data-testid={`button-schedule-${item.id}`}
           >
             <Calendar className="h-4 w-4 mr-2" />
-            Schedule
+            {t("wishlist.schedule")}
           </Button>
           <Button
             variant="outline"
@@ -71,7 +74,7 @@ export function WishlistItem({ item, onDelete, onTogglePurchased, onSchedule }: 
             data-testid={`button-delete-wishlist-${item.id}`}
           >
             <Trash2 className="h-4 w-4 mr-2" />
-            Remove
+            {t("wishlist.remove")}
           </Button>
         </div>
       </CardContent>
