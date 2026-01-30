@@ -306,7 +306,7 @@ describe('NotificationsList', () => {
 
       // Wait for option to appear, then click it (same pattern as "today" test)
       await waitFor(() => {
-        const missedOption = screen.getByRole('option', { name: 'Пропущенные' });
+        const missedOption = screen.getByText('Пропущенные');
         fireEvent.click(missedOption);
       });
 
@@ -453,7 +453,7 @@ describe('NotificationsList', () => {
 
       // Wait for option to appear, then click it (same pattern as "today" test)
       await waitFor(() => {
-        const upcomingOption = screen.getByRole('option', { name: 'Предстоящие' });
+        const upcomingOption = screen.getByText('Предстоящие');
         fireEvent.click(upcomingOption);
       });
 
