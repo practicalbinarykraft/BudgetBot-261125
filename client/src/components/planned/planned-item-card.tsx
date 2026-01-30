@@ -75,7 +75,7 @@ export function PlannedItemCard({ item, onDelete, onPurchase, onCancel, onToggle
             {getDueText()}
           </p>
           <Badge variant="secondary" className="text-xs">
-            {getStatusLabel(item.status || 'planned')}
+            {getStatusLabel(item.status)}
           </Badge>
         </div>
 
