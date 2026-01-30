@@ -37,6 +37,8 @@ describe('NotificationService', () => {
     vi.clearAllMocks();
     // Default mock: return empty array for planned income
     vi.mocked(plannedIncomeRepository.getPlannedIncomeByUserId).mockResolvedValue([]);
+    // Default mock: return empty array for notifications (will be overridden in specific tests)
+    vi.mocked(notificationRepository.getNotificationsByUserId).mockResolvedValue([]);
   });
 
   describe('checkAndCreateNotifications', () => {
@@ -144,12 +146,15 @@ describe('NotificationService', () => {
       vi.mocked(plannedRepository.getPlannedByUserId).mockResolvedValue([plannedExpense]);
       vi.mocked(plannedIncomeRepository.getPlannedIncomeByUserId).mockResolvedValue([]);
       // getNotificationsByUserId is called once for planned expense check, once for planned income check (empty)
+      // We need to mock it to return the existing notification for the planned expense check
       vi.mocked(notificationRepository.getNotificationsByUserId)
         .mockResolvedValueOnce([existingNotification]) // For planned expense check
         .mockResolvedValueOnce([]); // For planned income check (empty array)
 
       await notificationService.checkAndCreateNotifications(userId);
 
+      // Verify that getNotificationsByUserId was called (at least once for planned expense check)
+      expect(notificationRepository.getNotificationsByUserId).toHaveBeenCalled();
       expect(notificationRepository.createNotification).not.toHaveBeenCalled();
     });
 

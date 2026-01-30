@@ -99,7 +99,26 @@ describe('Notifications Routes', () => {
 
       expect(notificationService.checkAndCreateNotifications).toHaveBeenCalledWith(1);
       expect(notificationRepository.getNotificationsByUserId).toHaveBeenCalledWith(1);
-      expect(response.body).toEqual(mockNotifications);
+      // Compare only serializable fields (Date objects are serialized to strings)
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0]).toMatchObject({
+        id: 1,
+        userId: 1,
+        type: 'planned_expense',
+        title: 'Test Notification',
+        message: 'Test message',
+        plannedTransactionId: 1,
+        plannedIncomeId: null,
+        transactionData: {
+          amount: '100.00',
+          currency: 'USD',
+          description: 'Test',
+          type: 'expense',
+          date: '2026-01-30',
+        },
+        status: 'unread',
+      });
+      expect(response.body[0].createdAt).toBeDefined();
     });
   });
 
@@ -160,7 +179,25 @@ describe('Notifications Routes', () => {
         .expect(200);
 
       expect(notificationRepository.markAsRead).toHaveBeenCalledWith(1, 1);
-      expect(response.body).toEqual(notification);
+      // Compare only serializable fields
+      expect(response.body).toMatchObject({
+        id: 1,
+        userId: 1,
+        type: 'planned_expense',
+        title: 'Test',
+        message: 'Test',
+        plannedTransactionId: 1,
+        plannedIncomeId: null,
+        transactionData: {
+          amount: '100.00',
+          currency: 'USD',
+          description: 'Test',
+          type: 'expense',
+          date: '2026-01-30',
+        },
+        status: 'read',
+      });
+      expect(response.body.readAt).toBeDefined();
     });
 
     it('should return 404 if notification not found', async () => {
@@ -203,7 +240,25 @@ describe('Notifications Routes', () => {
         .expect(200);
 
       expect(notificationRepository.markAsDismissed).toHaveBeenCalledWith(1, 1);
-      expect(response.body).toEqual(notification);
+      // Compare only serializable fields
+      expect(response.body).toMatchObject({
+        id: 1,
+        userId: 1,
+        type: 'planned_expense',
+        title: 'Test',
+        message: 'Test',
+        plannedTransactionId: 1,
+        plannedIncomeId: null,
+        transactionData: {
+          amount: '100.00',
+          currency: 'USD',
+          description: 'Test',
+          type: 'expense',
+          date: '2026-01-30',
+        },
+        status: 'dismissed',
+      });
+      expect(response.body.dismissedAt).toBeDefined();
     });
 
     it('should return 404 if notification not found', async () => {
@@ -279,7 +334,25 @@ describe('Notifications Routes', () => {
       expect(getPrimaryWallet).toHaveBeenCalledWith(1);
       expect(transactionService.createTransaction).toHaveBeenCalled();
       expect(notificationRepository.markAsCompleted).toHaveBeenCalledWith(1, 1);
-      expect(response.body).toEqual(notification);
+      // Compare only serializable fields
+      expect(response.body).toMatchObject({
+        id: 1,
+        userId: 1,
+        type: 'planned_expense',
+        title: 'Test',
+        message: 'Test',
+        plannedTransactionId: 1,
+        plannedIncomeId: null,
+        transactionData: {
+          amount: '100.00',
+          currency: 'USD',
+          description: 'Test',
+          type: 'expense',
+          date: '2026-01-30',
+        },
+        status: 'completed',
+      });
+      expect(response.body.completedAt).toBeDefined();
     });
 
     it('should return 404 if notification not found', async () => {
@@ -343,7 +416,25 @@ describe('Notifications Routes', () => {
         .expect(200);
 
       expect(notificationRepository.getNotificationById).toHaveBeenCalledWith(1, 1);
-      expect(response.body).toEqual(notification);
+      // Compare only serializable fields
+      expect(response.body).toMatchObject({
+        id: 1,
+        userId: 1,
+        type: 'planned_expense',
+        title: 'Test',
+        message: 'Test',
+        plannedTransactionId: 1,
+        plannedIncomeId: null,
+        transactionData: {
+          amount: '100.00',
+          currency: 'USD',
+          description: 'Test',
+          type: 'expense',
+          date: '2026-01-30',
+        },
+        status: 'unread',
+      });
+      expect(response.body.createdAt).toBeDefined();
     });
 
     it('should return 404 if notification not found', async () => {
