@@ -238,11 +238,10 @@ describe('NotificationsList', () => {
     });
 
     it('should filter notifications by type - missed', async () => {
+      // Use UTC date strings directly to match component logic (avoid timezone issues)
       const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      yesterday.setHours(0, 0, 0, 0);
+      yesterday.setUTCDate(yesterday.getUTCDate() - 1);
       const today = new Date();
-      today.setHours(0, 0, 0, 0);
 
       const baseTransactionData = createMockNotification().transactionData as NotificationTransactionData;
       const notifications = [
@@ -376,14 +375,12 @@ describe('NotificationsList', () => {
     });
 
     it('should filter notifications by type - upcoming', async () => {
+      // Use UTC date strings directly to match component logic (avoid timezone issues)
       const today = new Date();
-      today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(0, 0, 0, 0);
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
       const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      yesterday.setHours(0, 0, 0, 0);
+      yesterday.setUTCDate(yesterday.getUTCDate() - 1);
 
       const baseTransactionData = createMockNotification().transactionData as NotificationTransactionData;
       const notifications = [

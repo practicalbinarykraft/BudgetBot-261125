@@ -41,8 +41,10 @@ export function NotificationsList({ onClose, onNotificationClick, onOpenTransact
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [showRead, setShowRead] = useState<boolean>(false); // Показывать прочитанные уведомления
   const [startDate, setStartDate] = useState<string>(() => {
-    // По умолчанию: сегодня
-    return new Date().toISOString().split('T')[0];
+    // По умолчанию: месяц назад (чтобы показывать пропущенные уведомления)
+    const date = new Date();
+    date.setMonth(date.getMonth() - 1);
+    return date.toISOString().split('T')[0];
   });
   const [endDate, setEndDate] = useState<string>(() => {
     // По умолчанию: месяц вперед от сегодня
@@ -97,10 +99,8 @@ export function NotificationsList({ onClose, onNotificationClick, onOpenTransact
 
   // Filter notifications based on selected filters
   const notifications = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    // Use toISOString() to match test data format (UTC, more predictable in CI)
-    const todayStr = today.toISOString().split('T')[0];
+    // Use UTC date string directly to avoid timezone issues (matches test data format)
+    const todayStr = new Date().toISOString().split('T')[0];
     
     const startDateObj = new Date(startDate);
     startDateObj.setHours(0, 0, 0, 0);
