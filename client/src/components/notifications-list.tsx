@@ -4,6 +4,7 @@
  * Displays list of notifications with actions and filters
  */
 
+import React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Notification } from "@shared/schema";
 import { Bell, X, Check, Trash2, Loader2, Calendar, Filter, Eye, EyeOff } from "lucide-react";

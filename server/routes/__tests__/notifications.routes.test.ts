@@ -39,8 +39,21 @@ vi.mock('../../middleware/auth-utils', () => ({
   },
 }));
 
+vi.mock('../../services/wallet.service', () => ({
+  getPrimaryWallet: vi.fn(),
+  updateWalletBalance: vi.fn(),
+}));
+
+vi.mock('../../services/transaction.service', () => ({
+  transactionService: {
+    createTransaction: vi.fn(),
+  },
+}));
+
 import { notificationRepository } from '../../repositories/notification.repository';
 import { notificationService } from '../../services/notification.service';
+import { getPrimaryWallet } from '../../services/wallet.service';
+import { transactionService } from '../../services/transaction.service';
 
 const app = express();
 app.use(express.json());
@@ -226,8 +239,36 @@ describe('Notifications Routes', () => {
         completedAt: new Date(),
       };
 
+      const mockWallet = {
+        id: 1,
+        userId: 1,
+        name: 'Primary Wallet',
+        currency: 'USD',
+        balance: '1000.00',
+        isPrimary: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const mockTransaction = {
+        id: 1,
+        userId: 1,
+        walletId: 1,
+        type: 'expense' as const,
+        amount: '100.00',
+        currency: 'USD',
+        description: 'Test',
+        category: null,
+        categoryId: null,
+        date: new Date('2026-01-30'),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
       // Mock getNotificationById first (called before markAsCompleted)
       vi.mocked(notificationRepository.getNotificationById).mockResolvedValue(notification);
+      vi.mocked(getPrimaryWallet).mockResolvedValue(mockWallet);
+      vi.mocked(transactionService.createTransaction).mockResolvedValue(mockTransaction);
       vi.mocked(notificationRepository.markAsCompleted).mockResolvedValue(notification);
 
       const response = await request(app)
@@ -235,12 +276,14 @@ describe('Notifications Routes', () => {
         .expect(200);
 
       expect(notificationRepository.getNotificationById).toHaveBeenCalledWith(1, 1);
+      expect(getPrimaryWallet).toHaveBeenCalledWith(1);
+      expect(transactionService.createTransaction).toHaveBeenCalled();
       expect(notificationRepository.markAsCompleted).toHaveBeenCalledWith(1, 1);
       expect(response.body).toEqual(notification);
     });
 
     it('should return 404 if notification not found', async () => {
-      vi.mocked(notificationRepository.markAsCompleted).mockResolvedValue(null);
+      vi.mocked(notificationRepository.getNotificationById).mockResolvedValue(null);
 
       await request(app)
         .patch('/api/notifications/999/complete')
