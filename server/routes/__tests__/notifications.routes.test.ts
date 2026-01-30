@@ -8,6 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import express from 'express';
 import notificationsRouter from '../notifications.routes';
+import { NotificationTransactionData } from '@shared/schema';
 
 // Mock dependencies
 vi.mock('../../repositories/notification.repository', () => ({
@@ -61,7 +62,13 @@ describe('Notifications Routes', () => {
           message: 'Test message',
           plannedTransactionId: 1,
           plannedIncomeId: null,
-          transactionData: {},
+          transactionData: {
+            amount: '100.00',
+            currency: 'USD',
+            description: 'Test',
+            type: 'expense',
+            date: '2026-01-30',
+          } as NotificationTransactionData,
           status: 'unread',
           createdAt: new Date(),
           readAt: null,
@@ -119,7 +126,13 @@ describe('Notifications Routes', () => {
         message: 'Test',
         plannedTransactionId: 1,
         plannedIncomeId: null,
-        transactionData: {},
+        transactionData: {
+          amount: '100.00',
+          currency: 'USD',
+          description: 'Test',
+          type: 'expense',
+          date: '2026-01-30',
+        } as NotificationTransactionData,
         status: 'read' as const,
         createdAt: new Date(),
         readAt: new Date(),
@@ -156,7 +169,13 @@ describe('Notifications Routes', () => {
         message: 'Test',
         plannedTransactionId: 1,
         plannedIncomeId: null,
-        transactionData: {},
+        transactionData: {
+          amount: '100.00',
+          currency: 'USD',
+          description: 'Test',
+          type: 'expense',
+          date: '2026-01-30',
+        } as NotificationTransactionData,
         status: 'dismissed' as const,
         createdAt: new Date(),
         readAt: null,
@@ -193,7 +212,13 @@ describe('Notifications Routes', () => {
         message: 'Test',
         plannedTransactionId: 1,
         plannedIncomeId: null,
-        transactionData: {},
+        transactionData: {
+          amount: '100.00',
+          currency: 'USD',
+          description: 'Test',
+          type: 'expense',
+          date: '2026-01-30',
+        } as NotificationTransactionData,
         status: 'completed' as const,
         createdAt: new Date(),
         readAt: null,
@@ -201,12 +226,15 @@ describe('Notifications Routes', () => {
         completedAt: new Date(),
       };
 
+      // Mock getNotificationById first (called before markAsCompleted)
+      vi.mocked(notificationRepository.getNotificationById).mockResolvedValue(notification);
       vi.mocked(notificationRepository.markAsCompleted).mockResolvedValue(notification);
 
       const response = await request(app)
         .patch('/api/notifications/1/complete')
         .expect(200);
 
+      expect(notificationRepository.getNotificationById).toHaveBeenCalledWith(1, 1);
       expect(notificationRepository.markAsCompleted).toHaveBeenCalledWith(1, 1);
       expect(response.body).toEqual(notification);
     });
@@ -251,7 +279,13 @@ describe('Notifications Routes', () => {
         message: 'Test',
         plannedTransactionId: 1,
         plannedIncomeId: null,
-        transactionData: {},
+        transactionData: {
+          amount: '100.00',
+          currency: 'USD',
+          description: 'Test',
+          type: 'expense',
+          date: '2026-01-30',
+        } as NotificationTransactionData,
         status: 'unread' as const,
         createdAt: new Date(),
         readAt: null,
