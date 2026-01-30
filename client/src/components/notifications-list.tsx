@@ -87,11 +87,19 @@ export function NotificationsList({ onClose, onNotificationClick, onOpenTransact
   // isLoading только при первой загрузке, не при обновлении
   const isLoading = isInitialLoading && allNotifications.length === 0;
 
+  // Helper to format date as YYYY-MM-DD in local timezone (avoiding UTC timezone issues)
+  const formatLocalDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Filter notifications based on selected filters
   const notifications = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = formatLocalDate(today);
     
     const startDateObj = new Date(startDate);
     startDateObj.setHours(0, 0, 0, 0);
@@ -110,7 +118,7 @@ export function NotificationsList({ onClose, onNotificationClick, onOpenTransact
 
       const transDate = new Date(transactionDate);
       transDate.setHours(0, 0, 0, 0);
-      const transDateStr = transDate.toISOString().split('T')[0];
+      const transDateStr = formatLocalDate(transDate);
 
       // Filter by read status (hide read/completed/dismissed if showRead is false)
       if (!showRead && (notification.status === "read" || notification.status === "completed" || notification.status === "dismissed")) {
