@@ -135,20 +135,6 @@ router.patch("/:id/complete", withAuth(async (req, res) => {
         category: transactionData.category,
       }
     });
-      logger.warn('Cannot complete notification: missing transactionData fields', {
-        userId,
-        notificationId,
-        hasTransactionData: !!transactionData,
-        hasAmount: !!transactionData?.amount,
-        hasDescription: !!transactionData?.description,
-        hasType: !!transactionData?.type,
-        hasDate: !!transactionData?.date,
-      });
-      return res.status(400).json({
-        error: "Cannot complete notification: missing transaction data",
-        details: "Transaction data is incomplete. Please use the transaction dialog to create this transaction."
-      });
-    }
 
     // Create transaction from transactionData (already validated above)
     try {
