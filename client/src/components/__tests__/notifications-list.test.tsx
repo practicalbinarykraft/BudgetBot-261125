@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, waitForElementToBeRemoved } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NotificationsList } from '../notifications-list';
 import { Notification, NotificationTransactionData } from '@shared/schema';
@@ -118,9 +118,15 @@ describe('NotificationsList', () => {
 
       renderWithQueryClient(<NotificationsList />);
 
-      // Wait for component to load
+      // Wait for component to load - wait for loading element to be removed
+      const loadingElement = screen.queryByLabelText('Loading notifications');
+      if (loadingElement) {
+        await waitForElementToBeRemoved(loadingElement);
+      }
+
+      // Wait for filter button to appear (component is loaded)
       await waitFor(() => {
-        expect(screen.queryByLabelText('Loading notifications')).not.toBeInTheDocument();
+        expect(screen.getByTitle('Фильтры')).toBeInTheDocument();
       });
 
       // Click filter button to show filters
@@ -142,9 +148,15 @@ describe('NotificationsList', () => {
 
       renderWithQueryClient(<NotificationsList />);
 
-      // Wait for component to load
+      // Wait for component to load - wait for loading element to be removed
+      const loadingElement = screen.queryByLabelText('Loading notifications');
+      if (loadingElement) {
+        await waitForElementToBeRemoved(loadingElement);
+      }
+
+      // Wait for filter button to appear (component is loaded)
       await waitFor(() => {
-        expect(screen.queryByLabelText('Loading notifications')).not.toBeInTheDocument();
+        expect(screen.getByTitle('Фильтры')).toBeInTheDocument();
       });
 
       // Click filter button to show filters
@@ -200,13 +212,19 @@ describe('NotificationsList', () => {
 
       renderWithQueryClient(<NotificationsList />);
 
-      // Wait for component to load
-      await waitFor(() => {
-        expect(screen.queryByLabelText('Loading notifications')).not.toBeInTheDocument();
-      });
+      // Wait for component to load - wait for loading element to be removed
+      const loadingElement = screen.queryByLabelText('Loading notifications');
+      if (loadingElement) {
+        await waitForElementToBeRemoved(loadingElement);
+      }
 
       await waitFor(() => {
         expect(screen.getByText('Notification 1')).toBeInTheDocument();
+      });
+
+      // Wait for filter button to appear
+      await waitFor(() => {
+        expect(screen.getByTitle('Фильтры')).toBeInTheDocument();
       });
 
       // Click filter button to show filters
@@ -265,13 +283,19 @@ describe('NotificationsList', () => {
 
       renderWithQueryClient(<NotificationsList />);
 
-      // Wait for component to load
-      await waitFor(() => {
-        expect(screen.queryByLabelText('Loading notifications')).not.toBeInTheDocument();
-      });
+      // Wait for component to load - wait for loading element to be removed
+      const loadingElement = screen.queryByLabelText('Loading notifications');
+      if (loadingElement) {
+        await waitForElementToBeRemoved(loadingElement);
+      }
 
       await waitFor(() => {
         expect(screen.getByText('Notification 1')).toBeInTheDocument();
+      });
+
+      // Wait for filter button to appear
+      await waitFor(() => {
+        expect(screen.getByTitle('Фильтры')).toBeInTheDocument();
       });
 
       // Click filter button to show filters
@@ -330,13 +354,19 @@ describe('NotificationsList', () => {
 
       renderWithQueryClient(<NotificationsList />);
 
-      // Wait for component to load
-      await waitFor(() => {
-        expect(screen.queryByLabelText('Loading notifications')).not.toBeInTheDocument();
-      });
+      // Wait for component to load - wait for loading element to be removed
+      const loadingElement = screen.queryByLabelText('Loading notifications');
+      if (loadingElement) {
+        await waitForElementToBeRemoved(loadingElement);
+      }
 
       await waitFor(() => {
         expect(screen.getByText('Notification 1')).toBeInTheDocument();
+      });
+
+      // Wait for filter button to appear
+      await waitFor(() => {
+        expect(screen.getByTitle('Фильтры')).toBeInTheDocument();
       });
 
       // Click filter button to show filters
@@ -397,8 +427,19 @@ describe('NotificationsList', () => {
 
       renderWithQueryClient(<NotificationsList />);
 
+      // Wait for component to load - wait for loading element to be removed
+      const loadingElement = screen.queryByLabelText('Loading notifications');
+      if (loadingElement) {
+        await waitForElementToBeRemoved(loadingElement);
+      }
+
       await waitFor(() => {
         expect(screen.getByText('Notification 1')).toBeInTheDocument();
+      });
+
+      // Wait for filter button to appear
+      await waitFor(() => {
+        expect(screen.getByTitle('Фильтры')).toBeInTheDocument();
       });
 
       // Click filter button to show filters
@@ -448,10 +489,11 @@ describe('NotificationsList', () => {
 
       renderWithQueryClient(<NotificationsList />);
 
-      // Wait for component to load
-      await waitFor(() => {
-        expect(screen.queryByLabelText('Loading notifications')).not.toBeInTheDocument();
-      });
+      // Wait for component to load - wait for loading element to be removed
+      const loadingElement = screen.queryByLabelText('Loading notifications');
+      if (loadingElement) {
+        await waitForElementToBeRemoved(loadingElement);
+      }
 
       await waitFor(() => {
         expect(screen.getByText('Notification 1')).toBeInTheDocument();
