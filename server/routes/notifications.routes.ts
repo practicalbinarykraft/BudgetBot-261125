@@ -5,6 +5,7 @@ import { notificationService } from "../services/notification.service";
 import { transactionService } from "../services/transaction.service";
 import { getPrimaryWallet, updateWalletBalance } from "../services/wallet.service";
 import { recurringRepository } from "../repositories/recurring.repository";
+import { notificationTransactionDataSchema } from "@shared/schema";
 import logger from "../lib/logger";
 
 const router = Router();
@@ -94,24 +95,46 @@ router.patch("/:id/complete", withAuth(async (req, res) => {
       hasTransactionData: !!notification.transactionData 
     });
 
-    // Extract transaction data from notification
-    const transactionData = notification.transactionData as any;
+    // Extract and validate transaction data from notification
+    if (!notification.transactionData) {
+      logger.warn('Cannot complete notification: missing transactionData', {
+        userId,
+        notificationId,
+      });
+      return res.status(400).json({
+        error: "Cannot complete notification: missing transaction data",
+        details: "Transaction data is incomplete. Please use the transaction dialog to create this transaction."
+      });
+    }
+
+    const transactionDataParseResult = notificationTransactionDataSchema.safeParse(notification.transactionData);
     
-    logger.info('Transaction data extracted', {
+    if (!transactionDataParseResult.success) {
+      logger.warn('Cannot complete notification: invalid transactionData', {
+        userId,
+        notificationId,
+        errors: transactionDataParseResult.error.errors,
+      });
+      return res.status(400).json({
+        error: "Cannot complete notification: invalid transaction data",
+        details: transactionDataParseResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+      });
+    }
+
+    const transactionData = transactionDataParseResult.data;
+    
+    logger.info('Transaction data extracted and validated', {
       userId,
       notificationId,
-      transactionData: transactionData ? {
+      transactionData: {
         amount: transactionData.amount,
         currency: transactionData.currency,
         description: transactionData.description,
         type: transactionData.type,
         date: transactionData.date,
         category: transactionData.category,
-      } : null
+      }
     });
-
-    // Validate transactionData - all required fields must be present
-    if (!transactionData || !transactionData.amount || !transactionData.description || !transactionData.type || !transactionData.date) {
       logger.warn('Cannot complete notification: missing transactionData fields', {
         userId,
         notificationId,

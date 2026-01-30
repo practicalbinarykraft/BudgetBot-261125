@@ -18,6 +18,25 @@ export const toolExecutionStatusEnum = pgEnum('tool_execution_status', [
   'cancelled'   // User cancelled
 ]);
 
+/**
+ * Zod schema for notification transaction data
+ * Used to validate and type transactionData field in notifications table
+ */
+export const notificationTransactionDataSchema = z.object({
+  amount: z.string(),
+  currency: z.string().default("USD"),
+  description: z.string(),
+  category: z.string().optional(),
+  categoryId: z.number().optional(),
+  type: z.enum(["income", "expense"]),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  recurringId: z.number().optional(),
+  frequency: z.string().optional(),
+  nextDate: z.string().optional(),
+});
+
+export type NotificationTransactionData = z.infer<typeof notificationTransactionDataSchema>;
+
 // Users table
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),

@@ -30,6 +30,7 @@ vi.mock('../../repositories/planned-income.repository', () => ({
 import { notificationRepository } from '../../repositories/notification.repository';
 import { plannedRepository } from '../../repositories/planned.repository';
 import { plannedIncomeRepository } from '../../repositories/planned-income.repository';
+import { NotificationTransactionData } from '@shared/schema';
 
 describe('NotificationService', () => {
   beforeEach(() => {
@@ -297,7 +298,13 @@ describe('NotificationService', () => {
         message: 'Test',
         plannedTransactionId: 1,
         plannedIncomeId: null,
-        transactionData: {},
+        transactionData: {
+          amount: '100.00',
+          currency: 'USD',
+          description: 'Test',
+          type: 'expense',
+          date: today,
+        } as NotificationTransactionData,
         status: 'completed' as const,
         createdAt: new Date(),
         readAt: null,
@@ -342,7 +349,13 @@ describe('NotificationService', () => {
         message: 'Test',
         plannedTransactionId: 1,
         plannedIncomeId: null,
-        transactionData: {},
+        transactionData: {
+          amount: '100.00',
+          currency: 'USD',
+          description: 'Test',
+          type: 'expense',
+          date: today,
+        } as NotificationTransactionData,
         status: 'dismissed' as const,
         createdAt: new Date(),
         readAt: null,

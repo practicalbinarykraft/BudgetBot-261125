@@ -18,7 +18,7 @@ vi.mock('../../db', () => ({
 }));
 
 import { db } from '../../db';
-import { notifications } from '@shared/schema';
+import { notifications, NotificationTransactionData } from '@shared/schema';
 
 describe('NotificationRepository', () => {
   beforeEach(() => {
@@ -37,7 +37,13 @@ describe('NotificationRepository', () => {
           message: 'Message 1',
           plannedTransactionId: 1,
           plannedIncomeId: null,
-          transactionData: {},
+          transactionData: {
+            amount: '100.00',
+            currency: 'USD',
+            description: 'Test',
+            type: 'expense',
+            date: '2024-01-01',
+          } as NotificationTransactionData,
           status: 'unread',
           createdAt: new Date('2024-01-02'),
           readAt: null,
@@ -52,7 +58,13 @@ describe('NotificationRepository', () => {
           message: 'Message 2',
           plannedTransactionId: null,
           plannedIncomeId: 1,
-          transactionData: {},
+          transactionData: {
+            amount: '100.00',
+            currency: 'USD',
+            description: 'Test',
+            type: 'expense',
+            date: '2024-01-01',
+          } as NotificationTransactionData,
           status: 'read',
           createdAt: new Date('2024-01-01'),
           readAt: new Date(),

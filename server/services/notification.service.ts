@@ -2,7 +2,7 @@ import { notificationRepository } from "../repositories/notification.repository"
 import { plannedRepository } from "../repositories/planned.repository";
 import { plannedIncomeRepository } from "../repositories/planned-income.repository";
 import { recurringRepository } from "../repositories/recurring.repository";
-import { InsertNotification } from "@shared/schema";
+import { InsertNotification, notificationTransactionDataSchema } from "@shared/schema";
 
 /**
  * Service for checking planned transactions, income, and recurring payments
@@ -50,14 +50,14 @@ export class NotificationService {
             title: "Запланированный расход",
             message: `Был запланированный расход "${planned.name}" на сумму ${planned.amount} ${planned.currency || "USD"}. Подтвердите транзакцию.`,
             plannedTransactionId: planned.id,
-            transactionData: {
+            transactionData: notificationTransactionDataSchema.parse({
               amount: planned.amount,
               currency: planned.currency || "USD",
               description: planned.name,
               category: planned.category,
               type: "expense",
               date: planned.targetDate,
-            },
+            }),
             status: "unread",
           };
 
@@ -91,14 +91,14 @@ export class NotificationService {
             title: "Запланированный доход",
             message: `Был запланированный доход "${income.description}" на сумму ${income.amount} ${income.currency || "USD"}. Подтвердите транзакцию.`,
             plannedIncomeId: income.id,
-            transactionData: {
+            transactionData: notificationTransactionDataSchema.parse({
               amount: income.amount,
               currency: income.currency || "USD",
               description: income.description,
               categoryId: income.categoryId,
               type: "income",
               date: income.expectedDate,
-            },
+            }),
             status: "unread",
           };
 
@@ -158,12 +158,8 @@ export class NotificationService {
       const existingNotifications = await notificationRepository.getNotificationsByUserId(userId);
       
       // Generate notifications for all future occurrences up to 6 months ahead
-      // Ensure nextDate is a Date object (it might be a string from DB)
-      const nextDateObj = typeof recurring.nextDate === 'string' 
-        ? new Date(recurring.nextDate)
-        : (recurring.nextDate as any) instanceof Date
-        ? (recurring.nextDate as Date)
-        : new Date(recurring.nextDate as string | Date);
+      // nextDate from drizzle is always a string in 'YYYY-MM-DD' format
+      const nextDateObj = new Date(recurring.nextDate);
       let currentDate = new Date(nextDateObj);
       currentDate.setHours(0, 0, 0, 0);
       const todayDate = new Date(todayStr);
@@ -185,9 +181,11 @@ export class NotificationService {
         // Check if notification already exists for this date
         const hasNotification = existingNotifications.some(
           n => {
-            const transactionData = n.transactionData as any;
-            return transactionData?.recurringId === recurring.id && 
-                   transactionData?.nextDate === occurrenceDateStr &&
+            if (!n.transactionData) return false;
+            const transactionData = notificationTransactionDataSchema.safeParse(n.transactionData);
+            if (!transactionData.success) return false;
+            return transactionData.data.recurringId === recurring.id && 
+                   transactionData.data.nextDate === occurrenceDateStr &&
                    n.status !== "completed" && 
                    n.status !== "dismissed";
           }
@@ -203,7 +201,7 @@ export class NotificationService {
             message: `Повторяющийся ${recurring.type === "expense" ? "расход" : "доход"} "${recurring.description}" на сумму ${recurring.amount} ${recurring.currency || "USD"}. Дата: ${occurrenceDateStr}.`,
             plannedTransactionId: null,
             plannedIncomeId: null,
-            transactionData: {
+            transactionData: notificationTransactionDataSchema.parse({
               amount: recurring.amount,
               currency: recurring.currency || "USD",
               description: recurring.description,
@@ -213,7 +211,7 @@ export class NotificationService {
               recurringId: recurring.id,
               frequency: recurring.frequency,
               nextDate: occurrenceDateStr,
-            },
+            }),
             status: "unread",
           };
 

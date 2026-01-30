@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NotificationsList } from '../notifications-list';
-import { Notification } from '@shared/schema';
+import { Notification, NotificationTransactionData } from '@shared/schema';
 
 // Mock fetch
 global.fetch = vi.fn();
@@ -155,7 +155,7 @@ describe('NotificationsList', () => {
       const nextWeek = new Date(today);
       nextWeek.setDate(nextWeek.getDate() + 7);
 
-      const baseTransactionData = createMockNotification().transactionData as Record<string, any>;
+      const baseTransactionData = createMockNotification().transactionData as NotificationTransactionData;
       const notifications = [
         createMockNotification({
           id: 1,
@@ -200,7 +200,7 @@ describe('NotificationsList', () => {
       yesterday.setDate(yesterday.getDate() - 1);
       const today = new Date();
 
-      const baseTransactionData = createMockNotification().transactionData as Record<string, any>;
+      const baseTransactionData = createMockNotification().transactionData as NotificationTransactionData;
       const notifications = [
         createMockNotification({
           id: 1,
@@ -302,7 +302,7 @@ describe('NotificationsList', () => {
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
 
-      const baseTransactionData = createMockNotification().transactionData as Record<string, any>;
+      const baseTransactionData = createMockNotification().transactionData as NotificationTransactionData;
       const notifications = [
         createMockNotification({
           id: 1,
