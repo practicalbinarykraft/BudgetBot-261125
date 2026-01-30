@@ -118,6 +118,10 @@ describe('NotificationsList', () => {
 
       renderWithQueryClient(<NotificationsList />);
 
+      // Click filter button to show filters
+      const filterButton = screen.getByTitle('Фильтры');
+      fireEvent.click(filterButton);
+
       await waitFor(() => {
         const dateInput = screen.getByTitle('Показать до даты');
         expect(dateInput).toBeInTheDocument();
@@ -132,6 +136,10 @@ describe('NotificationsList', () => {
       });
 
       renderWithQueryClient(<NotificationsList />);
+
+      // Click filter button to show filters
+      const filterButton = screen.getByTitle('Фильтры');
+      fireEvent.click(filterButton);
 
       await waitFor(() => {
         const filterSelect = screen.getByRole('combobox');
@@ -186,7 +194,16 @@ describe('NotificationsList', () => {
         expect(screen.getByText('Notification 1')).toBeInTheDocument();
       });
 
+      // Click filter button to show filters
+      const filterButton = screen.getByTitle('Фильтры');
+      fireEvent.click(filterButton);
+
       // Set end date to tomorrow
+      await waitFor(() => {
+        const dateInput = screen.getByTitle('Показать до даты');
+        expect(dateInput).toBeInTheDocument();
+      });
+      
       const dateInput = screen.getByTitle('Показать до даты');
       fireEvent.change(dateInput, {
         target: { value: tomorrow.toISOString().split('T')[0] },
@@ -237,7 +254,16 @@ describe('NotificationsList', () => {
         expect(screen.getByText('Notification 1')).toBeInTheDocument();
       });
 
+      // Click filter button to show filters
+      const filterButton = screen.getByTitle('Фильтры');
+      fireEvent.click(filterButton);
+
       // Select "missed" filter
+      await waitFor(() => {
+        const filterSelect = screen.getByRole('combobox');
+        expect(filterSelect).toBeInTheDocument();
+      });
+      
       const filterSelect = screen.getByRole('combobox');
       fireEvent.click(filterSelect);
 
@@ -288,7 +314,16 @@ describe('NotificationsList', () => {
         expect(screen.getByText('Notification 1')).toBeInTheDocument();
       });
 
+      // Click filter button to show filters
+      const filterButton = screen.getByTitle('Фильтры');
+      fireEvent.click(filterButton);
+
       // Select "today" filter
+      await waitFor(() => {
+        const filterSelect = screen.getByRole('combobox');
+        expect(filterSelect).toBeInTheDocument();
+      });
+      
       const filterSelect = screen.getByRole('combobox');
       fireEvent.click(filterSelect);
 
@@ -341,7 +376,16 @@ describe('NotificationsList', () => {
         expect(screen.getByText('Notification 1')).toBeInTheDocument();
       });
 
+      // Click filter button to show filters
+      const filterButton = screen.getByTitle('Фильтры');
+      fireEvent.click(filterButton);
+
       // Select "upcoming" filter
+      await waitFor(() => {
+        const filterSelect = screen.getByRole('combobox');
+        expect(filterSelect).toBeInTheDocument();
+      });
+      
       const filterSelect = screen.getByRole('combobox');
       fireEvent.click(filterSelect);
 
@@ -359,7 +403,7 @@ describe('NotificationsList', () => {
 
   describe('Actions', () => {
     it('should mark notification as read when clicked', async () => {
-      const notification = createMockNotification({ status: 'unread' });
+      const notification = createMockNotification({ id: 1, title: 'Notification 1', status: 'unread' });
 
       (global.fetch as any).mockImplementation((url: string) => {
         if (url.includes('/api/notifications') && !url.includes('/read')) {

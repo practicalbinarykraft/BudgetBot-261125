@@ -30,11 +30,11 @@ export class NotificationService {
     const plannedExpenses = await plannedRepository.getPlannedByUserId(userId);
     console.log(`[NotificationService] Found ${plannedExpenses.length} planned expenses for user ${userId}`);
     for (const planned of plannedExpenses) {
-      console.log(`[NotificationService] Checking planned ${planned.id}: status=${planned.status}, targetDate=${planned.targetDate}, todayStr=${todayStr}, maxFutureDateStr=${maxFutureDateStr}`);
-      // Create notifications for planned transactions with future dates (up to 6 months ahead)
+      console.log(`[NotificationService] Checking planned ${planned.id}: status=${planned.status}, targetDate=${planned.targetDate}, todayStr=${todayStr}`);
+      // Create notifications only for planned transactions that have reached their target date
+      // (targetDate <= todayStr) - not for future transactions
       if (planned.status === "planned" && 
-          planned.targetDate >= todayStr && 
-          planned.targetDate <= maxFutureDateStr) {
+          planned.targetDate <= todayStr) {
         console.log(`[NotificationService] Planned ${planned.id} matches criteria, checking for existing notifications...`);
         // Check if notification already exists (only count active notifications, not completed/dismissed)
         const hasActiveNotification = allNotifications.some(
@@ -73,17 +73,17 @@ export class NotificationService {
           console.log(`[NotificationService] Created notification for planned ${planned.id} with targetDate ${planned.targetDate}`);
         }
       } else {
-        console.log(`[NotificationService] Planned ${planned.id} skipped: status=${planned.status}, targetDate=${planned.targetDate} (not in range ${todayStr} - ${maxFutureDateStr})`);
+        console.log(`[NotificationService] Planned ${planned.id} skipped: status=${planned.status}, targetDate=${planned.targetDate} (future date or not planned)`);
       }
     }
 
     // Check planned income
     const plannedIncomes = await plannedIncomeRepository.getPlannedIncomeByUserId(userId, { status: "pending" });
     for (const income of plannedIncomes) {
-      // Create notifications for planned income with future dates (up to 6 months ahead)
+      // Create notifications only for planned income that has reached its expected date
+      // (expectedDate <= todayStr) - not for future transactions
       if (income.status === "pending" && 
-          income.expectedDate >= todayStr && 
-          income.expectedDate <= maxFutureDateStr) {
+          income.expectedDate <= todayStr) {
         // Check if notification already exists (only count active notifications, not completed/dismissed)
         const hasActiveNotification = allNotifications.some(
           n => n.plannedIncomeId === income.id && 
