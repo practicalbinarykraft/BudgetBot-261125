@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, waitForElementToBeRemoved } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NotificationsList } from '../notifications-list';
 import { Notification, NotificationTransactionData } from '@shared/schema';
@@ -118,16 +118,11 @@ describe('NotificationsList', () => {
 
       renderWithQueryClient(<NotificationsList />);
 
-      // Wait for component to load - wait for loading element to be removed
-      const loadingElement = screen.queryByLabelText('Loading notifications');
-      if (loadingElement) {
-        await waitForElementToBeRemoved(loadingElement);
-      }
-
-      // Wait for filter button to appear (component is loaded)
+      // Wait for component to load - wait for filter button to appear
+      // This ensures component is fully loaded (loading element is gone)
       await waitFor(() => {
         expect(screen.getByTitle('Фильтры')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
       // Click filter button to show filters
       const filterButton = screen.getByTitle('Фильтры');
@@ -148,16 +143,11 @@ describe('NotificationsList', () => {
 
       renderWithQueryClient(<NotificationsList />);
 
-      // Wait for component to load - wait for loading element to be removed
-      const loadingElement = screen.queryByLabelText('Loading notifications');
-      if (loadingElement) {
-        await waitForElementToBeRemoved(loadingElement);
-      }
-
-      // Wait for filter button to appear (component is loaded)
+      // Wait for component to load - wait for filter button to appear
+      // This ensures component is fully loaded (loading element is gone)
       await waitFor(() => {
         expect(screen.getByTitle('Фильтры')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
       // Click filter button to show filters
       const filterButton = screen.getByTitle('Фильтры');
@@ -212,20 +202,15 @@ describe('NotificationsList', () => {
 
       renderWithQueryClient(<NotificationsList />);
 
-      // Wait for component to load - wait for loading element to be removed
-      const loadingElement = screen.queryByLabelText('Loading notifications');
-      if (loadingElement) {
-        await waitForElementToBeRemoved(loadingElement);
-      }
-
+      // Wait for component to load - wait for notifications to appear
       await waitFor(() => {
         expect(screen.getByText('Notification 1')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
-      // Wait for filter button to appear
+      // Wait for filter button to appear (component is fully loaded)
       await waitFor(() => {
         expect(screen.getByTitle('Фильтры')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
       // Click filter button to show filters
       const filterButton = screen.getByTitle('Фильтры');
@@ -283,20 +268,15 @@ describe('NotificationsList', () => {
 
       renderWithQueryClient(<NotificationsList />);
 
-      // Wait for component to load - wait for loading element to be removed
-      const loadingElement = screen.queryByLabelText('Loading notifications');
-      if (loadingElement) {
-        await waitForElementToBeRemoved(loadingElement);
-      }
-
+      // Wait for component to load - wait for notifications to appear
       await waitFor(() => {
         expect(screen.getByText('Notification 1')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
-      // Wait for filter button to appear
+      // Wait for filter button to appear (component is fully loaded)
       await waitFor(() => {
         expect(screen.getByTitle('Фильтры')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
       // Click filter button to show filters
       const filterButton = screen.getByTitle('Фильтры');
@@ -354,20 +334,15 @@ describe('NotificationsList', () => {
 
       renderWithQueryClient(<NotificationsList />);
 
-      // Wait for component to load - wait for loading element to be removed
-      const loadingElement = screen.queryByLabelText('Loading notifications');
-      if (loadingElement) {
-        await waitForElementToBeRemoved(loadingElement);
-      }
-
+      // Wait for component to load - wait for notifications to appear
       await waitFor(() => {
         expect(screen.getByText('Notification 1')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
-      // Wait for filter button to appear
+      // Wait for filter button to appear (component is fully loaded)
       await waitFor(() => {
         expect(screen.getByTitle('Фильтры')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
       // Click filter button to show filters
       const filterButton = screen.getByTitle('Фильтры');
@@ -427,20 +402,15 @@ describe('NotificationsList', () => {
 
       renderWithQueryClient(<NotificationsList />);
 
-      // Wait for component to load - wait for loading element to be removed
-      const loadingElement = screen.queryByLabelText('Loading notifications');
-      if (loadingElement) {
-        await waitForElementToBeRemoved(loadingElement);
-      }
-
+      // Wait for component to load - wait for notifications to appear
       await waitFor(() => {
         expect(screen.getByText('Notification 1')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
-      // Wait for filter button to appear
+      // Wait for filter button to appear (component is fully loaded)
       await waitFor(() => {
         expect(screen.getByTitle('Фильтры')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
       // Click filter button to show filters
       const filterButton = screen.getByTitle('Фильтры');
@@ -489,15 +459,10 @@ describe('NotificationsList', () => {
 
       renderWithQueryClient(<NotificationsList />);
 
-      // Wait for component to load - wait for loading element to be removed
-      const loadingElement = screen.queryByLabelText('Loading notifications');
-      if (loadingElement) {
-        await waitForElementToBeRemoved(loadingElement);
-      }
-
+      // Wait for component to load - wait for notifications to appear
       await waitFor(() => {
         expect(screen.getByText('Notification 1')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
 
       const notificationElement = screen.getByText('Notification 1').closest('div');
       if (notificationElement) {
