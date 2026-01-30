@@ -33,8 +33,9 @@ export class NotificationService {
       console.log(`[NotificationService] Checking planned ${planned.id}: status=${planned.status}, targetDate=${planned.targetDate}, todayStr=${todayStr}`);
       // Create notifications only for planned transactions that have reached their target date
       // (targetDate <= todayStr) - not for future transactions
-      if (planned.status === "planned" && 
-          planned.targetDate <= todayStr) {
+      // Compare dates as strings in YYYY-MM-DD format (lexicographic comparison works correctly)
+      const isDueOrOverdue = planned.targetDate <= todayStr;
+      if (planned.status === "planned" && isDueOrOverdue) {
         console.log(`[NotificationService] Planned ${planned.id} matches criteria, checking for existing notifications...`);
         // Check if notification already exists (only count active notifications, not completed/dismissed)
         const hasActiveNotification = allNotifications.some(

@@ -118,12 +118,17 @@ describe('NotificationsList', () => {
 
       renderWithQueryClient(<NotificationsList />);
 
+      // Wait for component to load
+      await waitFor(() => {
+        expect(screen.queryByLabelText('Loading notifications')).not.toBeInTheDocument();
+      });
+
       // Click filter button to show filters
       const filterButton = screen.getByTitle('Фильтры');
       fireEvent.click(filterButton);
 
       await waitFor(() => {
-        const dateInput = screen.getByTitle('Показать до даты');
+        const dateInput = screen.getByTitle('Дата окончания');
         expect(dateInput).toBeInTheDocument();
         expect(dateInput).toHaveAttribute('type', 'date');
       });
@@ -136,6 +141,11 @@ describe('NotificationsList', () => {
       });
 
       renderWithQueryClient(<NotificationsList />);
+
+      // Wait for component to load
+      await waitFor(() => {
+        expect(screen.queryByLabelText('Loading notifications')).not.toBeInTheDocument();
+      });
 
       // Click filter button to show filters
       const filterButton = screen.getByTitle('Фильтры');
@@ -190,6 +200,11 @@ describe('NotificationsList', () => {
 
       renderWithQueryClient(<NotificationsList />);
 
+      // Wait for component to load
+      await waitFor(() => {
+        expect(screen.queryByLabelText('Loading notifications')).not.toBeInTheDocument();
+      });
+
       await waitFor(() => {
         expect(screen.getByText('Notification 1')).toBeInTheDocument();
       });
@@ -200,11 +215,11 @@ describe('NotificationsList', () => {
 
       // Set end date to tomorrow
       await waitFor(() => {
-        const dateInput = screen.getByTitle('Показать до даты');
+        const dateInput = screen.getByTitle('Дата окончания');
         expect(dateInput).toBeInTheDocument();
       });
       
-      const dateInput = screen.getByTitle('Показать до даты');
+      const dateInput = screen.getByTitle('Дата окончания');
       fireEvent.change(dateInput, {
         target: { value: tomorrow.toISOString().split('T')[0] },
       });
@@ -249,6 +264,11 @@ describe('NotificationsList', () => {
       });
 
       renderWithQueryClient(<NotificationsList />);
+
+      // Wait for component to load
+      await waitFor(() => {
+        expect(screen.queryByLabelText('Loading notifications')).not.toBeInTheDocument();
+      });
 
       await waitFor(() => {
         expect(screen.getByText('Notification 1')).toBeInTheDocument();
@@ -309,6 +329,11 @@ describe('NotificationsList', () => {
       });
 
       renderWithQueryClient(<NotificationsList />);
+
+      // Wait for component to load
+      await waitFor(() => {
+        expect(screen.queryByLabelText('Loading notifications')).not.toBeInTheDocument();
+      });
 
       await waitFor(() => {
         expect(screen.getByText('Notification 1')).toBeInTheDocument();
@@ -422,6 +447,11 @@ describe('NotificationsList', () => {
       });
 
       renderWithQueryClient(<NotificationsList />);
+
+      // Wait for component to load
+      await waitFor(() => {
+        expect(screen.queryByLabelText('Loading notifications')).not.toBeInTheDocument();
+      });
 
       await waitFor(() => {
         expect(screen.getByText('Notification 1')).toBeInTheDocument();
