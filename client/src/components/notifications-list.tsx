@@ -116,9 +116,18 @@ export function NotificationsList({ onClose, onNotificationClick, onOpenTransact
         return filterType === "all";
       }
 
-      const transDate = new Date(transactionDate);
-      transDate.setHours(0, 0, 0, 0);
-      const transDateStr = formatLocalDate(transDate);
+      // If transactionDate is already a string in YYYY-MM-DD format, use it directly
+      // Otherwise parse it and format it
+      let transDateStr: string;
+      if (typeof transactionDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(transactionDate)) {
+        // Already in YYYY-MM-DD format, use directly
+        transDateStr = transactionDate;
+      } else {
+        // Parse and format to local date
+        const transDate = new Date(transactionDate);
+        transDate.setHours(0, 0, 0, 0);
+        transDateStr = formatLocalDate(transDate);
+      }
 
       // Filter by read status (hide read/completed/dismissed if showRead is false)
       if (!showRead && (notification.status === "read" || notification.status === "completed" || notification.status === "dismissed")) {
