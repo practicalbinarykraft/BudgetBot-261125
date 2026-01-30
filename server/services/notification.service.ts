@@ -23,6 +23,9 @@ export class NotificationService {
     maxFutureDate.setMonth(maxFutureDate.getMonth() + 6);
     const maxFutureDateStr = maxFutureDate.toISOString().split('T')[0];
 
+    // Load all notifications once at the beginning to avoid multiple database calls
+    const allNotifications = await notificationRepository.getNotificationsByUserId(userId);
+
     // Check planned expenses
     const plannedExpenses = await plannedRepository.getPlannedByUserId(userId);
     console.log(`[NotificationService] Found ${plannedExpenses.length} planned expenses for user ${userId}`);
@@ -34,14 +37,13 @@ export class NotificationService {
           planned.targetDate <= maxFutureDateStr) {
         console.log(`[NotificationService] Planned ${planned.id} matches criteria, checking for existing notifications...`);
         // Check if notification already exists (only count active notifications, not completed/dismissed)
-        const existingNotifications = await notificationRepository.getNotificationsByUserId(userId);
-        const hasActiveNotification = existingNotifications.some(
+        const hasActiveNotification = allNotifications.some(
           n => n.plannedTransactionId === planned.id && 
                n.status !== "completed" && 
                n.status !== "dismissed"
         );
         // Also check if any notification exists for this planned transaction (even if completed/dismissed)
-        const hasAnyNotification = existingNotifications.some(
+        const hasAnyNotification = allNotifications.some(
           n => n.plannedTransactionId === planned.id
         );
 
@@ -82,15 +84,20 @@ export class NotificationService {
       if (income.status === "pending" && 
           income.expectedDate >= todayStr && 
           income.expectedDate <= maxFutureDateStr) {
-        // Check if notification already exists
-        const existingNotifications = await notificationRepository.getNotificationsByUserId(userId);
-        const hasNotification = existingNotifications.some(
+        // Check if notification already exists (only count active notifications, not completed/dismissed)
+        const hasActiveNotification = allNotifications.some(
           n => n.plannedIncomeId === income.id && 
                n.status !== "completed" && 
                n.status !== "dismissed"
         );
+        // Also check if any notification exists for this planned income (even if completed/dismissed)
+        const hasAnyNotification = allNotifications.some(
+          n => n.plannedIncomeId === income.id
+        );
 
-        if (!hasNotification) {
+        // Only create notification if there's no notification at all (active or completed/dismissed)
+        // If any notification exists, don't create a new one
+        if (!hasAnyNotification) {
           // Create notification
           const notificationData: InsertNotification = {
             type: "planned_income",
@@ -160,9 +167,6 @@ export class NotificationService {
         continue;
       }
       
-      // Get existing notifications for this recurring transaction
-      const existingNotifications = await notificationRepository.getNotificationsByUserId(userId);
-      
       // Generate notifications for all future occurrences up to 6 months ahead
       // nextDate from drizzle is always a string in 'YYYY-MM-DD' format
       const nextDateObj = new Date(recurring.nextDate);
@@ -185,7 +189,7 @@ export class NotificationService {
         const occurrenceDateStr = currentDate.toISOString().split('T')[0];
         
         // Check if notification already exists for this date
-        const hasNotification = existingNotifications.some(
+        const hasNotification = allNotifications.some(
           n => {
             if (!n.transactionData) return false;
             const transactionData = notificationTransactionDataSchema.safeParse(n.transactionData);

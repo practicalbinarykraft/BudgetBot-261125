@@ -293,7 +293,7 @@ export function NotificationsList({ onClose, onNotificationClick, onOpenTransact
 
   if (isLoading) {
     return (
-      <div className="p-4 flex items-center justify-center">
+      <div className="p-4 flex items-center justify-center" role="status" aria-label="Loading notifications">
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
