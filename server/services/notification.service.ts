@@ -33,17 +33,23 @@ export class NotificationService {
           planned.targetDate >= todayStr && 
           planned.targetDate <= maxFutureDateStr) {
         console.log(`[NotificationService] Planned ${planned.id} matches criteria, checking for existing notifications...`);
-        // Check if notification already exists
+        // Check if notification already exists (only count active notifications, not completed/dismissed)
         const existingNotifications = await notificationRepository.getNotificationsByUserId(userId);
-        const hasNotification = existingNotifications.some(
+        const hasActiveNotification = existingNotifications.some(
           n => n.plannedTransactionId === planned.id && 
                n.status !== "completed" && 
                n.status !== "dismissed"
         );
+        // Also check if any notification exists for this planned transaction (even if completed/dismissed)
+        const hasAnyNotification = existingNotifications.some(
+          n => n.plannedTransactionId === planned.id
+        );
 
-        console.log(`[NotificationService] Planned ${planned.id}: hasNotification=${hasNotification}`);
+        console.log(`[NotificationService] Planned ${planned.id}: hasActiveNotification=${hasActiveNotification}, hasAnyNotification=${hasAnyNotification}`);
 
-        if (!hasNotification) {
+        // Only create notification if there's no notification at all (active or completed/dismissed)
+        // If any notification exists, don't create a new one
+        if (!hasAnyNotification) {
           // Create notification
           const notificationData: InsertNotification = {
             type: "planned_expense",

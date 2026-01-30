@@ -27,9 +27,16 @@ vi.mock('../../repositories/planned-income.repository', () => ({
   },
 }));
 
+vi.mock('../../repositories/recurring.repository', () => ({
+  recurringRepository: {
+    getRecurringByUserId: vi.fn(),
+  },
+}));
+
 import { notificationRepository } from '../../repositories/notification.repository';
 import { plannedRepository } from '../../repositories/planned.repository';
 import { plannedIncomeRepository } from '../../repositories/planned-income.repository';
+import { recurringRepository } from '../../repositories/recurring.repository';
 import { NotificationTransactionData } from '@shared/schema';
 
 describe('NotificationService', () => {
@@ -39,6 +46,8 @@ describe('NotificationService', () => {
     vi.mocked(plannedIncomeRepository.getPlannedIncomeByUserId).mockResolvedValue([]);
     // Default mock: return empty array for notifications (will be overridden in specific tests)
     vi.mocked(notificationRepository.getNotificationsByUserId).mockResolvedValue([]);
+    // Default mock: return empty array for recurring transactions
+    vi.mocked(recurringRepository.getRecurringByUserId).mockResolvedValue({ recurring: [] });
   });
 
   describe('checkAndCreateNotifications', () => {
@@ -62,10 +71,14 @@ describe('NotificationService', () => {
 
       vi.mocked(plannedRepository.getPlannedByUserId).mockResolvedValue([plannedExpense]);
       vi.mocked(plannedIncomeRepository.getPlannedIncomeByUserId).mockResolvedValue([]);
-      // getNotificationsByUserId is called once for planned expense check, once for planned income check (empty)
+      // getNotificationsByUserId is called:
+      // 1. For planned expense check
+      // 2. For planned income check (empty)
+      // 3. For recurring transactions check (empty, but we need to mock it)
       vi.mocked(notificationRepository.getNotificationsByUserId)
         .mockResolvedValueOnce([]) // For planned expense check
-        .mockResolvedValueOnce([]); // For planned income check (empty array)
+        .mockResolvedValueOnce([]) // For planned income check (empty array)
+        .mockResolvedValue([]); // For recurring transactions check (default for all subsequent calls)
       vi.mocked(notificationRepository.createNotification).mockResolvedValue({
         id: 1,
         userId: 1,
@@ -145,11 +158,14 @@ describe('NotificationService', () => {
 
       vi.mocked(plannedRepository.getPlannedByUserId).mockResolvedValue([plannedExpense]);
       vi.mocked(plannedIncomeRepository.getPlannedIncomeByUserId).mockResolvedValue([]);
-      // getNotificationsByUserId is called once for planned expense check, once for planned income check (empty)
-      // We need to mock it to return the existing notification for the planned expense check
+      // getNotificationsByUserId is called:
+      // 1. For planned expense check (should return existing notification)
+      // 2. For planned income check (empty)
+      // 3. For recurring transactions check (empty, but we need to mock it)
       vi.mocked(notificationRepository.getNotificationsByUserId)
         .mockResolvedValueOnce([existingNotification]) // For planned expense check
-        .mockResolvedValueOnce([]); // For planned income check (empty array)
+        .mockResolvedValueOnce([]) // For planned income check (empty array)
+        .mockResolvedValue([]); // For recurring transactions check (default for all subsequent calls)
 
       await notificationService.checkAndCreateNotifications(userId);
 
@@ -180,9 +196,11 @@ describe('NotificationService', () => {
 
       vi.mocked(plannedRepository.getPlannedByUserId).mockResolvedValue([plannedExpense]);
       vi.mocked(plannedIncomeRepository.getPlannedIncomeByUserId).mockResolvedValue([]);
+      // getNotificationsByUserId is called for planned expense, planned income, and recurring transactions
       vi.mocked(notificationRepository.getNotificationsByUserId)
         .mockResolvedValueOnce([]) // For planned expense check
-        .mockResolvedValueOnce([]); // For planned income check
+        .mockResolvedValueOnce([]) // For planned income check
+        .mockResolvedValue([]); // For recurring transactions check (default for all subsequent calls)
 
       await notificationService.checkAndCreateNotifications(userId);
 
@@ -209,9 +227,11 @@ describe('NotificationService', () => {
 
       vi.mocked(plannedRepository.getPlannedByUserId).mockResolvedValue([plannedExpense]);
       vi.mocked(plannedIncomeRepository.getPlannedIncomeByUserId).mockResolvedValue([]);
+      // getNotificationsByUserId is called for planned expense, planned income, and recurring transactions
       vi.mocked(notificationRepository.getNotificationsByUserId)
         .mockResolvedValueOnce([]) // For planned expense check
-        .mockResolvedValueOnce([]); // For planned income check
+        .mockResolvedValueOnce([]) // For planned income check
+        .mockResolvedValue([]); // For recurring transactions check (default for all subsequent calls)
 
       await notificationService.checkAndCreateNotifications(userId);
 
@@ -243,10 +263,14 @@ describe('NotificationService', () => {
       // Mock planned expenses to return empty array
       vi.mocked(plannedRepository.getPlannedByUserId).mockResolvedValue([]);
       vi.mocked(plannedIncomeRepository.getPlannedIncomeByUserId).mockResolvedValue([plannedIncome]);
-      // getNotificationsByUserId is called twice - once for planned expenses check, once for planned income check
+      // getNotificationsByUserId is called:
+      // 1. For planned expenses check (empty)
+      // 2. For planned income check (empty)
+      // 3. For recurring transactions check (empty, but we need to mock it)
       vi.mocked(notificationRepository.getNotificationsByUserId)
         .mockResolvedValueOnce([]) // First call for planned expenses (empty)
-        .mockResolvedValueOnce([]); // Second call for planned income (empty)
+        .mockResolvedValueOnce([]) // Second call for planned income (empty)
+        .mockResolvedValue([]); // For recurring transactions check (default for all subsequent calls)
       vi.mocked(notificationRepository.createNotification).mockResolvedValue({
         id: 1,
         userId: 1,
@@ -312,7 +336,7 @@ describe('NotificationService', () => {
         transactionData: {
           amount: '100.00',
           currency: 'USD',
-          description: 'Test',
+          description: 'Test Expense',
           type: 'expense',
           date: today,
         } as NotificationTransactionData,
@@ -325,12 +349,18 @@ describe('NotificationService', () => {
 
       vi.mocked(plannedRepository.getPlannedByUserId).mockResolvedValue([plannedExpense]);
       vi.mocked(plannedIncomeRepository.getPlannedIncomeByUserId).mockResolvedValue([]);
+      // getNotificationsByUserId is called:
+      // 1. For planned expense check (should return completed notification)
+      // 2. For planned income check (empty)
+      // 3. For recurring transactions check (empty, but we need to mock it)
       vi.mocked(notificationRepository.getNotificationsByUserId)
-        .mockResolvedValueOnce([completedNotification]) // For planned expense check
-        .mockResolvedValueOnce([]); // For planned income check
+        .mockResolvedValueOnce([completedNotification]) // For planned expense check - completed notification exists
+        .mockResolvedValueOnce([]) // For planned income check
+        .mockResolvedValue([]); // For recurring transactions check (default for all subsequent calls)
 
       await notificationService.checkAndCreateNotifications(userId);
 
+      // Since hasAnyNotification=true (completed notification exists), a new notification should NOT be created
       expect(notificationRepository.createNotification).not.toHaveBeenCalled();
     });
 
@@ -363,7 +393,7 @@ describe('NotificationService', () => {
         transactionData: {
           amount: '100.00',
           currency: 'USD',
-          description: 'Test',
+          description: 'Test Expense',
           type: 'expense',
           date: today,
         } as NotificationTransactionData,
@@ -376,12 +406,18 @@ describe('NotificationService', () => {
 
       vi.mocked(plannedRepository.getPlannedByUserId).mockResolvedValue([plannedExpense]);
       vi.mocked(plannedIncomeRepository.getPlannedIncomeByUserId).mockResolvedValue([]);
+      // getNotificationsByUserId is called:
+      // 1. For planned expense check (should return dismissed notification)
+      // 2. For planned income check (empty)
+      // 3. For recurring transactions check (empty, but we need to mock it)
       vi.mocked(notificationRepository.getNotificationsByUserId)
-        .mockResolvedValueOnce([dismissedNotification]) // For planned expense check
-        .mockResolvedValueOnce([]); // For planned income check
+        .mockResolvedValueOnce([dismissedNotification]) // For planned expense check - dismissed notification exists
+        .mockResolvedValueOnce([]) // For planned income check
+        .mockResolvedValue([]); // For recurring transactions check (default for all subsequent calls)
 
       await notificationService.checkAndCreateNotifications(userId);
 
+      // Since hasAnyNotification=true (dismissed notification exists), a new notification should NOT be created
       expect(notificationRepository.createNotification).not.toHaveBeenCalled();
     });
 
@@ -420,11 +456,16 @@ describe('NotificationService', () => {
 
       vi.mocked(plannedRepository.getPlannedByUserId).mockResolvedValue(plannedExpenses);
       vi.mocked(plannedIncomeRepository.getPlannedIncomeByUserId).mockResolvedValue([]);
-      // getNotificationsByUserId is called for each planned expense check
+      // getNotificationsByUserId is called:
+      // 1. For first planned expense check
+      // 2. For second planned expense check
+      // 3. For planned income check (empty)
+      // 4. For recurring transactions check (empty, but we need to mock it)
       vi.mocked(notificationRepository.getNotificationsByUserId)
         .mockResolvedValueOnce([]) // For first expense
         .mockResolvedValueOnce([]) // For second expense
-        .mockResolvedValueOnce([]); // For planned income check
+        .mockResolvedValueOnce([]) // For planned income check
+        .mockResolvedValue([]); // For recurring transactions check (default for all subsequent calls)
       vi.mocked(notificationRepository.createNotification).mockResolvedValue({
         id: 1,
         userId: 1,
