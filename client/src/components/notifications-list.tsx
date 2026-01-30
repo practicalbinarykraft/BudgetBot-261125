@@ -127,7 +127,8 @@ export function NotificationsList({ onClose, onNotificationClick, onOpenTransact
       if (filterType === "missed") {
         // Пропущенные: дата транзакции в прошлом и статус не completed/dismissed
         // Не применяем фильтр по дате, так как "missed" сам определяет диапазон (все прошлое)
-        return transDate < today && 
+        // Используем строковое сравнение для надежности (избегаем проблем с часовыми поясами)
+        return transDateStr < todayStr && 
                notification.status !== "completed" && 
                notification.status !== "dismissed";
       }
@@ -141,7 +142,8 @@ export function NotificationsList({ onClose, onNotificationClick, onOpenTransact
       if (filterType === "upcoming") {
         // Предстоящие: дата транзакции в будущем
         // Не применяем фильтр по дате, так как "upcoming" сам определяет диапазон (все будущее)
-        return transDate > today;
+        // Используем строковое сравнение для надежности (избегаем проблем с часовыми поясами)
+        return transDateStr > todayStr;
       }
 
       if (filterType === "recurring") {
