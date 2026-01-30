@@ -238,14 +238,6 @@ describe('NotificationsList', () => {
     });
 
     it('should filter notifications by type - missed', async () => {
-      // Helper to format date as YYYY-MM-DD in local timezone (matching component logic)
-      const formatLocalDate = (date: Date): string => {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      };
-
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       yesterday.setHours(0, 0, 0, 0);
@@ -260,7 +252,7 @@ describe('NotificationsList', () => {
           status: 'unread',
           transactionData: {
             ...baseTransactionData,
-            date: formatLocalDate(yesterday),
+            date: yesterday.toISOString().split('T')[0],
           },
         }),
         createMockNotification({
@@ -269,7 +261,7 @@ describe('NotificationsList', () => {
           status: 'unread',
           transactionData: {
             ...baseTransactionData,
-            date: formatLocalDate(today),
+            date: today.toISOString().split('T')[0],
           },
         }),
       ];
@@ -384,14 +376,6 @@ describe('NotificationsList', () => {
     });
 
     it('should filter notifications by type - upcoming', async () => {
-      // Helper to format date as YYYY-MM-DD in local timezone (matching component logic)
-      const formatLocalDate = (date: Date): string => {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      };
-
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
@@ -408,7 +392,7 @@ describe('NotificationsList', () => {
           title: 'Notification 1',
           transactionData: {
             ...baseTransactionData,
-            date: formatLocalDate(yesterday),
+            date: yesterday.toISOString().split('T')[0],
           },
         }),
         createMockNotification({
@@ -416,7 +400,7 @@ describe('NotificationsList', () => {
           title: 'Notification 2',
           transactionData: {
             ...baseTransactionData,
-            date: formatLocalDate(tomorrow),
+            date: tomorrow.toISOString().split('T')[0],
           },
         }),
       ];
