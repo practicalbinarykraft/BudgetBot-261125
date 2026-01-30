@@ -6,6 +6,8 @@ export const webTagsTranslations: Translations = {
   "tags.create_tag": { en: "Create Tag", ru: "Создать тег" },
   "tags.create_first_tag": { en: "Create First Tag", ru: "Создать первый тег" },
   "tags.no_tags": { en: "No tags yet. Create your first tag to start organizing transactions.", ru: "Пока нет тегов. Создайте первый тег для организации транзакций." },
+  "tags.no_tags_available": { en: "No tags available", ru: "Нет доступных тегов" },
+  "tags.add_tag": { en: "Add Tag", ru: "Добавить тег" },
   "tags.deleted_successfully": { en: "Tag deleted successfully", ru: "Тег успешно удален" },
   "tags.delete_tag": { en: "Delete Tag", ru: "Удалить тег" },
   "tags.delete_confirm": { en: "Are you sure you want to delete", ru: "Вы уверены, что хотите удалить" },
@@ -31,6 +33,7 @@ export const webTagsTranslations: Translations = {
   "tags.type_person": { en: "Person (Other)", ru: "Человек (Другой)" },
   "tags.type_personal": { en: "Personal (Me)", ru: "Личное (Я)" },
   "tags.type_shared": { en: "Shared", ru: "Общее" },
+  "tags.type_project": { en: "Project", ru: "Проект" },
   "tags.cancel": { en: "Cancel", ru: "Отмена" },
   "tags.saving": { en: "Saving...", ru: "Сохранение..." },
   "tags.update": { en: "Update", ru: "Обновить" },
@@ -39,6 +42,7 @@ export const webTagsTranslations: Translations = {
   "tags.updated_successfully": { en: "Tag updated successfully", ru: "Тег успешно обновлен" },
   "tags.create_failed": { en: "Failed to create tag", ru: "Не удалось создать тег" },
   "tags.update_failed": { en: "Failed to update tag", ru: "Не удалось обновить тег" },
+  "tags.delete_failed": { en: "Failed to delete tag", ru: "Не удалось удалить тег" },
   "tags.name_required": { en: "Name is required", ru: "Требуется название" },
 
   // Icon names

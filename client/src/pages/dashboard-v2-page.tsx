@@ -19,22 +19,36 @@ import {
   Plus,
   Mic,
   MessageCircle,
-  Menu as MenuIcon
+  Menu as MenuIcon,
+  User,
+  Heart,
+  Home,
+  Users,
+  Baby,
+  UserPlus,
+  Briefcase,
+  Gift,
+  Dog,
+  Cat,
+  Pencil
 } from "lucide-react";
-import { Link } from "wouter";
+import type { LucideIcon } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import { useTranslation } from "@/i18n";
 import { getCurrencySymbol, convertFromUSD } from "@/lib/currency-utils";
-import { Transaction, Category, Budget } from "@shared/schema";
+import { Transaction, Category, Budget, Notification, PersonalTag } from "@shared/schema";
 import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
 import { AddTransactionDialog } from "@/components/transactions/add-transaction-dialog";
 import { EditTransactionDialog } from "@/components/transactions/edit-transaction-dialog";
 import { useChatSidebar } from "@/stores/chat-sidebar-store";
 import { VoiceRecorderAdaptive, ParsedVoiceResult } from "@/components/voice-recorder-adaptive";
 import { useTelegramSafeArea } from "@/hooks/use-telegram-safe-area";
+import { useTelegramPaddingTopStyle } from "@/hooks/use-telegram-safe-area";
 import { useTranslateCategory } from "@/lib/category-translations";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CategoryCreateDialog } from "@/components/categories/category-create-dialog";
+import { CreateTagDialog } from "@/components/tags/create-tag-dialog";
 import { calculateBudgetProgress, getBudgetPeriodDates } from "@/lib/budget-helpers";
 import { parseISO } from "date-fns";
 import { useTheme } from "@/hooks/use-theme";
@@ -42,9 +56,29 @@ import { parseTransactionText, isParseSuccessful } from "@/lib/parse-transaction
 import { apiRequest } from "@/lib/queryClient";
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { CategorySelectDialog, loadSelectedCategories } from "@/components/dashboard/category-select-dialog";
+import { CreditsWidget } from "@/components/credits-widget";
+import { NotificationsBell } from "@/components/notifications-bell";
+import { TagBadge } from "@/components/tags/tag-badge";
+
+// Icon map for tags (same as in TagBadge component)
+const ICON_MAP: Record<string, LucideIcon> = {
+  User,
+  Heart,
+  Home,
+  Users,
+  Baby,
+  UserPlus,
+  Briefcase,
+  Gift,
+  Dog,
+  Cat,
+};
+
+const DEFAULT_TAG_NAMES = ['Personal', 'Shared'];
 
 export default function DashboardV2Page() {
   const { t, language } = useTranslation();
+  const [, setLocation] = useLocation();
   // useTheme hook применяет глобальную темную тему
   const translateCategory = useTranslateCategory();
   const queryClient = useQueryClient();
@@ -54,6 +88,7 @@ export default function DashboardV2Page() {
   const [showVoiceInput, setShowVoiceInput] = useState(false);
   const [interimTranscription, setInterimTranscription] = useState(""); // Промежуточная транскрипция для показа в реальном времени
   const [isVoiceRecording, setIsVoiceRecording] = useState(false); // Состояние записи голоса
+  const [voiceError, setVoiceError] = useState<string | null>(null); // Ошибка голосового ввода
   const [voiceData, setVoiceData] = useState<{
     description?: string;
     amount?: string;
@@ -61,11 +96,24 @@ export default function DashboardV2Page() {
     category?: string;
     type?: 'income' | 'expense';
   }>({});
+  const [notificationData, setNotificationData] = useState<{
+    description?: string;
+    amount?: string;
+    currency?: string;
+    category?: string;
+    type?: 'income' | 'expense';
+    date?: string;
+    categoryId?: number;
+  }>({});
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showCategorySelect, setShowCategorySelect] = useState(false);
   const [transactionForCategory, setTransactionForCategory] = useState<Transaction | null>(null);
   const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [showCategorySelectDialog, setShowCategorySelectDialog] = useState(false);
+  const [showTagSelect, setShowTagSelect] = useState(false);
+  const [transactionForTag, setTransactionForTag] = useState<Transaction | null>(null);
+  const [showCreateTag, setShowCreateTag] = useState(false);
+  const [editingTag, setEditingTag] = useState<PersonalTag | null>(null);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>(() => {
     // Load from localStorage on mount (only in browser)
     if (typeof window !== 'undefined') {
@@ -78,8 +126,9 @@ export default function DashboardV2Page() {
     }
     return [];
   });
-  const { open: openAiChat } = useChatSidebar();
+  const { open: openAiChat, isOpen: isChatOpen } = useChatSidebar();
   const safeArea = useTelegramSafeArea();
+  const telegramPaddingStyle = useTelegramPaddingTopStyle();
 
   // Calculate date range for selected month
   const monthStart = startOfMonth(selectedMonth);
@@ -212,6 +261,11 @@ export default function DashboardV2Page() {
     queryKey: ['/api/categories'],
   });
 
+  // Fetch tags
+  const { data: tags = [] } = useQuery<PersonalTag[]>({
+    queryKey: ['/api/tags'],
+  });
+
   // Fetch budgets
   const { data: budgets = [] } = useQuery<Budget[]>({
     queryKey: ['/api/budgets'],
@@ -293,13 +347,31 @@ export default function DashboardV2Page() {
   // Handle transaction click
   const handleTransactionClick = (transaction: Transaction) => {
     const category = getCategoryForTransaction(transaction);
+    const personalTag = transaction.personalTagId ? tags.find(t => t.id === transaction.personalTagId) : null;
+    
     if (!category) {
       // No category - show category selection
       setTransactionForCategory(transaction);
       setShowCategorySelect(true);
+    } else if (!personalTag) {
+      // Has category but no tag - show tag selection
+      setTransactionForTag(transaction);
+      setShowTagSelect(true);
     } else {
-      // Has category - show edit dialog
+      // Has category and tag - show edit dialog
       setSelectedTransaction(transaction);
+    }
+  };
+  
+  // Handle transaction hover/right-click for tag selection (when category exists but tag doesn't)
+  const handleTransactionTagAction = (e: React.MouseEvent, transaction: Transaction) => {
+    e.stopPropagation(); // Prevent triggering handleTransactionClick
+    const category = getCategoryForTransaction(transaction);
+    const personalTag = transaction.personalTagId ? tags.find(t => t.id === transaction.personalTagId) : null;
+    
+    if (category && !personalTag) {
+      setTransactionForTag(transaction);
+      setShowTagSelect(true);
     }
   };
 
@@ -397,14 +469,52 @@ export default function DashboardV2Page() {
   return (
     <div className="min-h-screen bg-background pb-32" style={{ paddingBottom: `calc(6rem + ${safeAreaBottom}px)` }}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4">
-        <Link href="/app/wallets" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <Wallet className="h-5 w-5 text-muted-foreground" />
-          <span className="text-sm font-medium">
-            {formatCurrency(totalBalanceUsd)}
-          </span>
-        </Link>
-        <div className="flex items-center gap-3">
+      <div 
+        className="flex items-center justify-between p-3 sm:p-4 relative h-[72px] sm:h-[80px]"
+        style={telegramPaddingStyle}
+      >
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Placeholder for SidebarTrigger on desktop to match App.tsx header width */}
+          <div className="hidden sm:flex flex-shrink-0 w-7 h-7" />
+          <Link href="/app/wallets" className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0">
+            <Wallet className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+            <span className="text-sm font-medium whitespace-nowrap">
+              {formatCurrency(totalBalanceUsd)}
+            </span>
+          </Link>
+          <div className="flex-shrink-0">
+            <NotificationsBell
+            onNotificationClick={(notification: Notification) => {
+              console.log('[Dashboard-v2] onNotificationClick received', {
+                notificationId: notification.id,
+                transactionData: notification.transactionData,
+              });
+              // Extract transaction data from notification
+              const transactionData = notification.transactionData as any;
+              const newNotificationData = {
+                description: transactionData?.description || notification.message,
+                amount: transactionData?.amount?.toString(),
+                currency: transactionData?.currency,
+                category: transactionData?.category,
+                type: transactionData?.type,
+                date: transactionData?.date,
+                categoryId: transactionData?.categoryId,
+              };
+              console.log('[Dashboard-v2] Setting notificationData:', newNotificationData);
+              setNotificationData(newNotificationData);
+              console.log('[Dashboard-v2] Setting showAddDialog to true');
+              setShowAddDialog(true);
+            }}
+          />
+          </div>
+        </div>
+        {/* CreditsWidget - абсолютно по центру, чтобы не скакал при переключении страниц */}
+        <div className="absolute left-1/2 transform -translate-x-1/2 h-8 flex items-center justify-center pointer-events-none">
+          <div className="pointer-events-auto">
+            <CreditsWidget />
+          </div>
+        </div>
+        <div className="flex items-center gap-3 flex-shrink-0">
           <Link href="/app/dashboard">
             <button
               className="w-10 h-10 rounded-full flex items-center justify-center hover:opacity-70 transition-opacity"
@@ -424,10 +534,10 @@ export default function DashboardV2Page() {
       </div>
 
       {/* Month Navigation */}
-      <div className="flex items-center justify-center gap-4 py-4">
+      <div className="flex items-center justify-center gap-4 py-4 mb-8">
         <button 
           onClick={() => setSelectedMonth(subMonths(selectedMonth, 1))}
-          className="p-2 hover:bg-accent rounded-full transition-colors"
+          className="p-2 bg-muted/30 hover:bg-accent/60 rounded-full transition-all duration-200 hover:shadow-md"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
@@ -436,14 +546,14 @@ export default function DashboardV2Page() {
         </h2>
         <button 
           onClick={() => setSelectedMonth(addMonths(selectedMonth, 1))}
-          className="p-2 hover:bg-accent rounded-full transition-colors"
+          className="p-2 bg-muted/30 hover:bg-accent/60 rounded-full transition-all duration-200 hover:shadow-md"
         >
           <ChevronRight className="h-5 w-5" />
         </button>
       </div>
 
       {/* Large Balance */}
-      <div className="text-center py-6">
+      <div className="text-center mb-8">
         <div className="text-4xl font-bold">
           {formatCurrency(stats?.balance || 0)}
         </div>
@@ -451,16 +561,34 @@ export default function DashboardV2Page() {
 
       {/* Income/Expense Buttons */}
       <div className="flex gap-3 px-4 mb-6">
-        <button className="flex-1 flex items-center justify-center gap-2 bg-green-500/10 text-green-600 rounded-full py-2">
-          <ArrowDown className="h-4 w-4" />
-          <span className="font-medium">
-            {formatCurrency(stats?.totalExpense || 0)}
-          </span>
-        </button>
-        <button className="flex-1 flex items-center justify-center gap-2 bg-red-500/10 text-red-600 rounded-full py-2">
+        <button 
+          onClick={() => {
+            const params = new URLSearchParams();
+            params.append('type', 'income');
+            params.append('from', fromDate);
+            params.append('to', toDate);
+            setLocation(`/app/transactions?${params.toString()}`);
+          }}
+          className="flex-1 flex items-center justify-center gap-2 bg-green-500/20 dark:bg-green-500/10 text-green-700 dark:text-green-600 border border-green-500/30 dark:border-transparent rounded-full py-2 shadow-[0_0_20px_rgba(34,197,94,0.09),0_0_15px_rgba(34,197,94,0.075),inset_0_0_10px_rgba(34,197,94,0.03)] hover:shadow-[0_0_25px_rgba(34,197,94,0.15),inset_0_0_15px_rgba(34,197,94,0.045)] transition-shadow duration-300 cursor-pointer"
+        >
           <ArrowUp className="h-4 w-4" />
           <span className="font-medium">
             {formatCurrency(stats?.totalIncome || 0)}
+          </span>
+        </button>
+        <button 
+          onClick={() => {
+            const params = new URLSearchParams();
+            params.append('type', 'expense');
+            params.append('from', fromDate);
+            params.append('to', toDate);
+            setLocation(`/app/transactions?${params.toString()}`);
+          }}
+          className="flex-1 flex items-center justify-center gap-2 bg-red-500/20 dark:bg-red-500/10 text-red-700 dark:text-red-600 border border-red-500/30 dark:border-transparent rounded-full py-2 shadow-[0_0_20px_rgba(239,68,68,0.09),0_0_15px_rgba(239,68,68,0.075),inset_0_0_10px_rgba(239,68,68,0.03)] hover:shadow-[0_0_25px_rgba(239,68,68,0.15),inset_0_0_15px_rgba(239,68,68,0.045)] transition-shadow duration-300 cursor-pointer"
+        >
+          <ArrowDown className="h-4 w-4" />
+          <span className="font-medium">
+            {formatCurrency(stats?.totalExpense || 0)}
           </span>
         </button>
       </div>
@@ -514,7 +642,24 @@ export default function DashboardV2Page() {
               : cat.color || '#3b82f6';
             
             return (
-              <div key={cat.id} className="flex-shrink-0 text-center" style={{ minWidth: '80px' }}>
+              <div 
+                key={cat.id} 
+                className="flex-shrink-0 text-center cursor-pointer hover:opacity-80 transition-opacity" 
+                style={{ minWidth: '80px' }}
+                onClick={() => {
+                  // Перенаправляем на страницу транзакций с фильтром по категории
+                  setLocation(`/app/transactions?categoryId=${cat.id}`);
+                }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setLocation(`/app/transactions?categoryId=${cat.id}`);
+                  }
+                }}
+                aria-label={`${translateCategory(cat.name)} - ${formatCurrency(cat.amount)}`}
+              >
                 <div className="flex justify-center mb-2">
                   <CircularProgress
                     progress={progress}
@@ -588,6 +733,7 @@ export default function DashboardV2Page() {
               const category = getCategoryForTransaction(transaction);
               const budget = getBudgetForCategory(category?.id);
               const categoryName = category ? translateCategory(category.name) : (transaction.category || (language === 'ru' ? 'Без категории' : 'No category'));
+              const personalTag = transaction.personalTagId ? tags.find(t => t.id === transaction.personalTagId) : null;
               
               // Calculate spent amount for budget
               let spent = 0;
@@ -603,6 +749,14 @@ export default function DashboardV2Page() {
                 <div
                   key={transaction.id}
                   onClick={() => handleTransactionClick(transaction)}
+                  onContextMenu={(e) => {
+                    const category = getCategoryForTransaction(transaction);
+                    const personalTag = transaction.personalTagId ? tags.find(t => t.id === transaction.personalTagId) : null;
+                    if (category && !personalTag) {
+                      e.preventDefault();
+                      handleTransactionTagAction(e, transaction);
+                    }
+                  }}
                   className="flex items-center justify-between p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted/70 transition-colors"
                 >
                   <div className="flex-1">
@@ -613,8 +767,46 @@ export default function DashboardV2Page() {
                           locale: language === 'ru' ? ru : undefined 
                         })}
                       </div>
-                      {category && (
-                        <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* Tag first */}
+                        {personalTag ? (
+                          <span 
+                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium gap-1"
+                            style={{ 
+                              backgroundColor: `${personalTag.color || '#3b82f6'}20`,
+                              color: personalTag.color || '#3b82f6'
+                            }}
+                          >
+                            {(() => {
+                              const IconComponent = personalTag.icon && ICON_MAP[personalTag.icon] 
+                                ? ICON_MAP[personalTag.icon] 
+                                : User;
+                              const displayName = DEFAULT_TAG_NAMES.includes(personalTag.name)
+                                ? t(`tags.default_name.${personalTag.name}`)
+                                : personalTag.name;
+                              return (
+                                <>
+                                  <IconComponent className="h-3 w-3 flex-shrink-0" />
+                                  <span>{displayName}</span>
+                                </>
+                              );
+                            })()}
+                          </span>
+                        ) : (
+                          <button
+                            onClick={(e) => handleTransactionTagAction(e, transaction)}
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              handleTransactionTagAction(e, transaction);
+                            }}
+                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border border-blue-500/50 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 transition-colors cursor-pointer"
+                            title={t("transactions.add_tag_hint")}
+                          >
+                            {language === 'ru' ? 'Тег' : 'Tag'}+
+                          </button>
+                        )}
+                        {/* Category second */}
+                        {category ? (
                           <span 
                             className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
                             style={{ 
@@ -624,23 +816,30 @@ export default function DashboardV2Page() {
                           >
                             {categoryName}
                           </span>
-                          {budget && (
-                            <span className="text-xs font-medium">
-                              {formatCurrency(spent).replace(/\s/g, '')}/{formatCurrency(limitAmount).replace(/\s/g, '')}
-                              {remaining > 0 && (
-                                <span className="text-muted-foreground ml-1">
-                                  ({language === 'ru' ? 'осталось' : 'left'} {formatCurrency(remaining).replace(/\s/g, '')})
-                                </span>
-                              )}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      {!category && (
-                        <div className="text-blue-500 text-xs">
-                          {language === 'ru' ? 'Нажмите, чтобы выбрать категорию' : 'Tap to select category'}
-                        </div>
-                      )}
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setTransactionForCategory(transaction);
+                              setShowCategorySelect(true);
+                            }}
+                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border border-blue-500/50 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 transition-colors cursor-pointer"
+                          >
+                            {language === 'ru' ? 'Категория' : 'Category'}+
+                          </button>
+                        )}
+                        {/* Budget limit third */}
+                        {budget && category && (
+                          <span className="text-xs font-medium">
+                            {formatCurrency(spent).replace(/\s/g, '')}/{formatCurrency(limitAmount).replace(/\s/g, '')}
+                            {remaining > 0 && (
+                              <span className="text-muted-foreground ml-1">
+                                ({language === 'ru' ? 'осталось' : 'left'} {formatCurrency(remaining).replace(/\s/g, '')})
+                              </span>
+                            )}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className={`font-semibold ${isExpense ? 'text-red-600' : 'text-green-600'}`}>
@@ -654,38 +853,54 @@ export default function DashboardV2Page() {
       </div>
 
       {/* Bottom Action Buttons - Floating overlay, no background */}
-      <div className="fixed bottom-0 left-0 right-0 flex items-center justify-center gap-4 p-4 pointer-events-none z-50"
+      {/* Скрываем кнопки когда чат открыт */}
+      {!isChatOpen && (
+      <div className="fixed bottom-0 left-0 right-0 flex items-center justify-center pointer-events-none z-50"
         style={{ 
-          paddingBottom: `calc(1rem + ${safeAreaBottom}px)`,
+          paddingBottom: `${safeAreaBottom}px`,
         }}
       >
-        {/* Add Transaction Button */}
-        <button
-          onClick={() => setShowAddDialog(true)}
-          className="w-12 h-12 rounded-full bg-background border border-border shadow-lg flex items-center justify-center hover:bg-accent transition-colors pointer-events-auto"
-          aria-label={language === 'ru' ? 'Добавить транзакцию' : 'Add transaction'}
-        >
-          <Plus className="h-5 w-5" />
-        </button>
+        {/* Cross layout container */}
+        <div className="relative w-40 h-40 flex items-center justify-center">
+          {/* Home Button - Left */}
+          <Link href="/app/dashboard-v2">
+            <button
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-background border border-border shadow-lg flex items-center justify-center hover:bg-accent transition-colors pointer-events-auto"
+              aria-label={language === 'ru' ? 'Главная' : 'Home'}
+            >
+              <Home className="h-5 w-5" />
+            </button>
+          </Link>
 
-        {/* Microphone Button - Large, centered */}
-        <button
-          onClick={() => setShowVoiceInput(true)}
-          className="w-16 h-16 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-lg hover:bg-blue-600 transition-colors hover:scale-105 pointer-events-auto"
-          aria-label={language === 'ru' ? 'Голосовой ввод' : 'Voice input'}
-        >
-          <Mic className="h-6 w-6" />
-        </button>
+          {/* Microphone Button - Top, centered */}
+          <button
+            onClick={() => setShowVoiceInput(true)}
+            className="absolute top-2 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-lg hover:bg-blue-600 transition-colors hover:scale-105 pointer-events-auto"
+            aria-label={language === 'ru' ? 'Голосовой ввод' : 'Voice input'}
+          >
+            <Mic className="h-6 w-6" />
+          </button>
 
-        {/* AI Chat Button */}
-        <button
-          onClick={() => openAiChat()}
-          className="w-12 h-12 rounded-full bg-background border border-border shadow-lg flex items-center justify-center hover:bg-accent transition-colors pointer-events-auto"
-          aria-label={language === 'ru' ? 'ИИ чат' : 'AI chat'}
-        >
-          <MessageCircle className="h-5 w-5" />
-        </button>
+          {/* Add Transaction Button - Bottom, centered */}
+          <button
+            onClick={() => setShowAddDialog(true)}
+            className="absolute bottom-6 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-background border border-border shadow-lg flex items-center justify-center hover:bg-accent transition-colors pointer-events-auto"
+            aria-label={language === 'ru' ? 'Добавить транзакцию' : 'Add transaction'}
+          >
+            <Plus className="h-5 w-5" />
+          </button>
+
+          {/* AI Chat Button - Right */}
+          <button
+            onClick={() => openAiChat()}
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-background border border-border shadow-lg flex items-center justify-center hover:bg-accent transition-colors pointer-events-auto"
+            aria-label={language === 'ru' ? 'ИИ чат' : 'AI chat'}
+          >
+            <MessageCircle className="h-5 w-5" />
+          </button>
+        </div>
       </div>
+      )}
 
       {/* Mobile Menu Sheet */}
       <MobileMenuSheet
@@ -698,13 +913,18 @@ export default function DashboardV2Page() {
         open={showAddDialog}
         onOpenChange={(open) => {
           setShowAddDialog(open);
-          if (!open) setVoiceData({}); // Clear voice data when dialog closes
+          if (!open) {
+            setVoiceData({}); // Clear voice data when dialog closes
+            setNotificationData({}); // Clear notification data when dialog closes
+          }
         }}
-        defaultDescription={voiceData.description}
-        defaultAmount={voiceData.amount}
-        defaultCurrency={voiceData.currency}
-        defaultCategory={voiceData.category}
-        defaultType={voiceData.type}
+        defaultDescription={notificationData?.description || voiceData.description}
+        defaultAmount={notificationData?.amount || voiceData.amount}
+        defaultCurrency={notificationData?.currency || voiceData.currency}
+        defaultCategory={notificationData?.category || voiceData.category}
+        defaultType={notificationData?.type || voiceData.type}
+        defaultDate={notificationData?.date}
+        defaultCategoryId={notificationData?.categoryId}
       />
 
       {/* Voice Input Dialog/Overlay */}
@@ -726,30 +946,42 @@ export default function DashboardV2Page() {
                 onParsedResult={handleVoiceParsedResult}
                 onInterimResult={handleInterimResult}
                 onRecordingChange={setIsVoiceRecording}
+                onError={setVoiceError}
                 className="w-16 h-16"
               />
               
+              {/* Показываем ошибку, если есть */}
+              {voiceError && (
+                <div className="w-full px-4 py-3 bg-red-50 dark:bg-red-950 rounded-lg border border-red-200 dark:border-red-800">
+                  <p className="text-sm text-red-600 dark:text-red-400 text-center">
+                    {voiceError}
+                  </p>
+                </div>
+              )}
+              
               {/* Показываем транскрипцию в реальном времени (как у конкурентов!) */}
               {/* Показываем поле ВСЕГДА, когда модал открыт */}
-              <div className="w-full px-4 py-3 bg-muted rounded-lg border border-border min-h-[80px] flex flex-col justify-center">
-                {interimTranscription ? (
-                  <>
-                    <p className="text-xs text-muted-foreground mb-1">
-                      {language === 'ru' ? 'Распознавание...' : 'Transcribing...'}
+              {!voiceError && (
+                <div className="w-full px-4 py-3 bg-muted rounded-lg border border-border min-h-[80px] flex flex-col justify-center">
+                  {interimTranscription ? (
+                    <>
+                      <p className="text-xs text-muted-foreground mb-1">
+                        {language === 'ru' ? 'Распознавание...' : 'Transcribing...'}
+                      </p>
+                      <p className="text-base font-medium break-words text-foreground">
+                        {interimTranscription}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center">
+                      {isVoiceRecording 
+                        ? (language === 'ru' ? 'Говорите...' : 'Listening...')
+                        : (language === 'ru' ? 'Нажмите на микрофон для начала записи' : 'Tap the microphone to start recording')
+                      }
                     </p>
-                    <p className="text-base font-medium break-words text-foreground">
-                      {interimTranscription}
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center">
-                    {isVoiceRecording 
-                      ? (language === 'ru' ? 'Говорите...' : 'Listening...')
-                      : (language === 'ru' ? 'Нажмите на микрофон для начала записи' : 'Tap the microphone to start recording')
-                    }
-                  </p>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
             
             <button
@@ -757,6 +989,7 @@ export default function DashboardV2Page() {
                 setShowVoiceInput(false);
                 setInterimTranscription(""); // Очищаем при закрытии
                 setIsVoiceRecording(false); // Сбрасываем флаг записи
+                setVoiceError(null); // Очищаем ошибку при закрытии
               }}
               className="mt-4 w-full py-2 px-4 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
             >
@@ -887,6 +1120,141 @@ export default function DashboardV2Page() {
           queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
           setShowCreateCategory(false);
           setShowCategorySelect(true);
+        }}
+      />
+
+      {/* Tag Selection Dialog */}
+      <Dialog open={showTagSelect} onOpenChange={setShowTagSelect}>
+        <DialogContent className="flex flex-col max-w-md">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle>
+              {t("transactions.select_tag")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 flex flex-col">
+            {tags.length === 0 ? (
+              <div className="text-center text-muted-foreground py-4">
+                {t("tags.no_tags_available")}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                {tags.map((tag) => (
+                  <div key={tag.id} className="relative group">
+                    <Button
+                      variant="outline"
+                      className="flex flex-col items-center gap-2 h-auto py-4 w-full min-w-0 overflow-visible relative"
+                      onClick={async () => {
+                        if (!transactionForTag) return;
+                        
+                        // Update transaction with tag
+                        try {
+                          const res = await fetch(`/api/transactions/${transactionForTag.id}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              personalTagId: tag.id,
+                            }),
+                          });
+                          
+                          if (res.ok) {
+                            // Invalidate queries to refresh data
+                            queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
+                            setShowTagSelect(false);
+                            setTransactionForTag(null);
+                          }
+                        } catch (error) {
+                          // Ignore update errors
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-1 justify-center w-full min-w-0 relative z-0">
+                        {(() => {
+                          const IconComponent = tag.icon && ICON_MAP[tag.icon] 
+                            ? ICON_MAP[tag.icon] 
+                            : User;
+                          const displayName = DEFAULT_TAG_NAMES.includes(tag.name)
+                            ? t(`tags.default_name.${tag.name}`)
+                            : tag.name;
+                          return (
+                            <>
+                              <IconComponent className="h-4 w-4 flex-shrink-0" style={{ color: tag.color || '#3b82f6' }} />
+                              <span className="text-sm font-medium truncate" style={{ color: tag.color || '#3b82f6' }}>
+                                {displayName}
+                              </span>
+                            </>
+                          );
+                        })()}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-0.5 right-0.5 h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity bg-background/90 hover:bg-background z-20 p-0 m-0 min-w-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          setEditingTag(tag);
+                          setShowTagSelect(false);
+                          setShowCreateTag(true);
+                        }}
+                        title={language === 'ru' ? 'Редактировать тег' : 'Edit tag'}
+                      >
+                        <Pencil className="h-1.5 w-1.5" />
+                      </Button>
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="border-t pt-4 mt-4 flex-shrink-0">
+            <Button
+              variant="outline"
+              className="w-full flex items-center justify-center gap-2"
+              onClick={() => {
+                setShowTagSelect(false);
+                setShowCreateTag(true);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              {t("tags.add_tag")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Tag Create/Edit Dialog */}
+      <CreateTagDialog
+        open={showCreateTag}
+        editTag={editingTag}
+        onDelete={async (tagId: number) => {
+          try {
+            await apiRequest('DELETE', `/api/tags/${tagId}`);
+            queryClient.invalidateQueries({ queryKey: ['/api/tags'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
+            setShowCreateTag(false);
+            setEditingTag(null);
+            // Small delay to ensure tags are refreshed before reopening dialog
+            setTimeout(() => {
+              if (transactionForTag) {
+                setShowTagSelect(true);
+              }
+            }, 100);
+          } catch (error: any) {
+            // Error will be shown via toast in CreateTagDialog
+            console.error('Failed to delete tag:', error);
+          }
+        }}
+        onClose={() => {
+          setShowCreateTag(false);
+          setEditingTag(null);
+          // After creating/editing tag, refresh tags and reopen selection dialog
+          queryClient.invalidateQueries({ queryKey: ['/api/tags'] });
+          // Small delay to ensure tags are refreshed before reopening dialog
+          setTimeout(() => {
+            if (transactionForTag) {
+              setShowTagSelect(true);
+            }
+          }, 100);
         }}
       />
     </div>

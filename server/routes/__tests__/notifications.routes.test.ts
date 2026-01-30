@@ -1,0 +1,448 @@
+/**
+ * Notifications Routes Tests
+ * 
+ * Tests for notification API endpoints
+ */
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import request from 'supertest';
+import express from 'express';
+import notificationsRouter from '../notifications.routes';
+import { NotificationTransactionData } from '@shared/schema';
+
+// Mock dependencies
+vi.mock('../../repositories/notification.repository', () => ({
+  notificationRepository: {
+    getNotificationsByUserId: vi.fn(),
+    getUnreadCount: vi.fn(),
+    markAsRead: vi.fn(),
+    markAsDismissed: vi.fn(),
+    markAsCompleted: vi.fn(),
+    deleteNotification: vi.fn(),
+    getNotificationById: vi.fn(),
+  },
+}));
+
+vi.mock('../../services/notification.service', () => ({
+  notificationService: {
+    checkAndCreateNotifications: vi.fn(),
+  },
+}));
+
+vi.mock('../../middleware/auth-utils', () => ({
+  withAuth: (handler: any) => {
+    return async (req: any, res: any, next: any) => {
+      // Mock authenticated user
+      req.user = { id: '1' };
+      return handler(req, res, next);
+    };
+  },
+}));
+
+vi.mock('../../services/wallet.service', () => ({
+  getPrimaryWallet: vi.fn(),
+  updateWalletBalance: vi.fn(),
+}));
+
+vi.mock('../../services/transaction.service', () => ({
+  transactionService: {
+    createTransaction: vi.fn(),
+  },
+}));
+
+import { notificationRepository } from '../../repositories/notification.repository';
+import { notificationService } from '../../services/notification.service';
+import { getPrimaryWallet } from '../../services/wallet.service';
+import { transactionService } from '../../services/transaction.service';
+
+const app = express();
+app.use(express.json());
+app.use('/api/notifications', notificationsRouter);
+
+describe('Notifications Routes', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('GET /api/notifications', () => {
+    it('should return notifications for authenticated user', async () => {
+      const mockNotifications = [
+        {
+          id: 1,
+          userId: 1,
+          type: 'planned_expense',
+          title: 'Test Notification',
+          message: 'Test message',
+          plannedTransactionId: 1,
+          plannedIncomeId: null,
+          transactionData: {
+            amount: '100.00',
+            currency: 'USD',
+            description: 'Test',
+            type: 'expense',
+            date: '2026-01-30',
+          } as NotificationTransactionData,
+          status: 'unread',
+          createdAt: new Date(),
+          readAt: null,
+          dismissedAt: null,
+          completedAt: null,
+        },
+      ];
+
+      vi.mocked(notificationService.checkAndCreateNotifications).mockResolvedValue();
+      vi.mocked(notificationRepository.getNotificationsByUserId).mockResolvedValue(mockNotifications);
+
+      const response = await request(app)
+        .get('/api/notifications')
+        .expect(200);
+
+      expect(notificationService.checkAndCreateNotifications).toHaveBeenCalledWith(1);
+      expect(notificationRepository.getNotificationsByUserId).toHaveBeenCalledWith(1);
+      // Compare only serializable fields (Date objects are serialized to strings)
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0]).toMatchObject({
+        id: 1,
+        userId: 1,
+        type: 'planned_expense',
+        title: 'Test Notification',
+        message: 'Test message',
+        plannedTransactionId: 1,
+        plannedIncomeId: null,
+        transactionData: {
+          amount: '100.00',
+          currency: 'USD',
+          description: 'Test',
+          type: 'expense',
+          date: '2026-01-30',
+        },
+        status: 'unread',
+      });
+      expect(response.body[0].createdAt).toBeDefined();
+    });
+  });
+
+  describe('GET /api/notifications/unread-count', () => {
+    it('should return unread count', async () => {
+      vi.mocked(notificationService.checkAndCreateNotifications).mockResolvedValue();
+      vi.mocked(notificationRepository.getUnreadCount).mockResolvedValue(5);
+
+      const response = await request(app)
+        .get('/api/notifications/unread-count')
+        .expect(200);
+
+      expect(notificationService.checkAndCreateNotifications).toHaveBeenCalledWith(1);
+      expect(notificationRepository.getUnreadCount).toHaveBeenCalledWith(1);
+      expect(response.body).toEqual({ count: 5 });
+    });
+
+    it('should return 0 if no unread notifications', async () => {
+      vi.mocked(notificationService.checkAndCreateNotifications).mockResolvedValue();
+      vi.mocked(notificationRepository.getUnreadCount).mockResolvedValue(0);
+
+      const response = await request(app)
+        .get('/api/notifications/unread-count')
+        .expect(200);
+
+      expect(response.body).toEqual({ count: 0 });
+    });
+  });
+
+  describe('PATCH /api/notifications/:id/read', () => {
+    it('should mark notification as read', async () => {
+      const notification = {
+        id: 1,
+        userId: 1,
+        type: 'planned_expense' as const,
+        title: 'Test',
+        message: 'Test',
+        plannedTransactionId: 1,
+        plannedIncomeId: null,
+        transactionData: {
+          amount: '100.00',
+          currency: 'USD',
+          description: 'Test',
+          type: 'expense',
+          date: '2026-01-30',
+        } as NotificationTransactionData,
+        status: 'read' as const,
+        createdAt: new Date(),
+        readAt: new Date(),
+        dismissedAt: null,
+        completedAt: null,
+      };
+
+      vi.mocked(notificationRepository.markAsRead).mockResolvedValue(notification);
+
+      const response = await request(app)
+        .patch('/api/notifications/1/read')
+        .expect(200);
+
+      expect(notificationRepository.markAsRead).toHaveBeenCalledWith(1, 1);
+      // Compare only serializable fields
+      expect(response.body).toMatchObject({
+        id: 1,
+        userId: 1,
+        type: 'planned_expense',
+        title: 'Test',
+        message: 'Test',
+        plannedTransactionId: 1,
+        plannedIncomeId: null,
+        transactionData: {
+          amount: '100.00',
+          currency: 'USD',
+          description: 'Test',
+          type: 'expense',
+          date: '2026-01-30',
+        },
+        status: 'read',
+      });
+      expect(response.body.readAt).toBeDefined();
+    });
+
+    it('should return 404 if notification not found', async () => {
+      vi.mocked(notificationRepository.markAsRead).mockResolvedValue(null);
+
+      await request(app)
+        .patch('/api/notifications/999/read')
+        .expect(404);
+    });
+  });
+
+  describe('PATCH /api/notifications/:id/dismiss', () => {
+    it('should mark notification as dismissed', async () => {
+      const notification = {
+        id: 1,
+        userId: 1,
+        type: 'planned_expense' as const,
+        title: 'Test',
+        message: 'Test',
+        plannedTransactionId: 1,
+        plannedIncomeId: null,
+        transactionData: {
+          amount: '100.00',
+          currency: 'USD',
+          description: 'Test',
+          type: 'expense',
+          date: '2026-01-30',
+        } as NotificationTransactionData,
+        status: 'dismissed' as const,
+        createdAt: new Date(),
+        readAt: null,
+        dismissedAt: new Date(),
+        completedAt: null,
+      };
+
+      vi.mocked(notificationRepository.markAsDismissed).mockResolvedValue(notification);
+
+      const response = await request(app)
+        .patch('/api/notifications/1/dismiss')
+        .expect(200);
+
+      expect(notificationRepository.markAsDismissed).toHaveBeenCalledWith(1, 1);
+      // Compare only serializable fields
+      expect(response.body).toMatchObject({
+        id: 1,
+        userId: 1,
+        type: 'planned_expense',
+        title: 'Test',
+        message: 'Test',
+        plannedTransactionId: 1,
+        plannedIncomeId: null,
+        transactionData: {
+          amount: '100.00',
+          currency: 'USD',
+          description: 'Test',
+          type: 'expense',
+          date: '2026-01-30',
+        },
+        status: 'dismissed',
+      });
+      expect(response.body.dismissedAt).toBeDefined();
+    });
+
+    it('should return 404 if notification not found', async () => {
+      vi.mocked(notificationRepository.markAsDismissed).mockResolvedValue(null);
+
+      await request(app)
+        .patch('/api/notifications/999/dismiss')
+        .expect(404);
+    });
+  });
+
+  describe('PATCH /api/notifications/:id/complete', () => {
+    it('should mark notification as completed', async () => {
+      const notification = {
+        id: 1,
+        userId: 1,
+        type: 'planned_expense' as const,
+        title: 'Test',
+        message: 'Test',
+        plannedTransactionId: 1,
+        plannedIncomeId: null,
+        transactionData: {
+          amount: '100.00',
+          currency: 'USD',
+          description: 'Test',
+          type: 'expense',
+          date: '2026-01-30',
+        } as NotificationTransactionData,
+        status: 'completed' as const,
+        createdAt: new Date(),
+        readAt: null,
+        dismissedAt: null,
+        completedAt: new Date(),
+      };
+
+      const mockWallet = {
+        id: 1,
+        userId: 1,
+        name: 'Primary Wallet',
+        currency: 'USD',
+        balance: '1000.00',
+        isPrimary: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const mockTransaction = {
+        id: 1,
+        userId: 1,
+        walletId: 1,
+        type: 'expense' as const,
+        amount: '100.00',
+        currency: 'USD',
+        description: 'Test',
+        category: null,
+        categoryId: null,
+        date: new Date('2026-01-30'),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // Mock getNotificationById first (called before markAsCompleted)
+      vi.mocked(notificationRepository.getNotificationById).mockResolvedValue(notification);
+      vi.mocked(getPrimaryWallet).mockResolvedValue(mockWallet);
+      vi.mocked(transactionService.createTransaction).mockResolvedValue(mockTransaction);
+      vi.mocked(notificationRepository.markAsCompleted).mockResolvedValue(notification);
+
+      const response = await request(app)
+        .patch('/api/notifications/1/complete')
+        .expect(200);
+
+      expect(notificationRepository.getNotificationById).toHaveBeenCalledWith(1, 1);
+      expect(getPrimaryWallet).toHaveBeenCalledWith(1);
+      expect(transactionService.createTransaction).toHaveBeenCalled();
+      expect(notificationRepository.markAsCompleted).toHaveBeenCalledWith(1, 1);
+      // Compare only serializable fields
+      expect(response.body).toMatchObject({
+        id: 1,
+        userId: 1,
+        type: 'planned_expense',
+        title: 'Test',
+        message: 'Test',
+        plannedTransactionId: 1,
+        plannedIncomeId: null,
+        transactionData: {
+          amount: '100.00',
+          currency: 'USD',
+          description: 'Test',
+          type: 'expense',
+          date: '2026-01-30',
+        },
+        status: 'completed',
+      });
+      expect(response.body.completedAt).toBeDefined();
+    });
+
+    it('should return 404 if notification not found', async () => {
+      vi.mocked(notificationRepository.getNotificationById).mockResolvedValue(null);
+
+      await request(app)
+        .patch('/api/notifications/999/complete')
+        .expect(404);
+    });
+  });
+
+  describe('DELETE /api/notifications/:id', () => {
+    it('should delete notification', async () => {
+      vi.mocked(notificationRepository.deleteNotification).mockResolvedValue(true);
+
+      const response = await request(app)
+        .delete('/api/notifications/1')
+        .expect(200);
+
+      expect(notificationRepository.deleteNotification).toHaveBeenCalledWith(1, 1);
+      expect(response.body).toEqual({ success: true });
+    });
+
+    it('should return 404 if notification not found', async () => {
+      vi.mocked(notificationRepository.deleteNotification).mockResolvedValue(false);
+
+      await request(app)
+        .delete('/api/notifications/999')
+        .expect(404);
+    });
+  });
+
+  describe('GET /api/notifications/:id', () => {
+    it('should return notification by id', async () => {
+      const notification = {
+        id: 1,
+        userId: 1,
+        type: 'planned_expense' as const,
+        title: 'Test',
+        message: 'Test',
+        plannedTransactionId: 1,
+        plannedIncomeId: null,
+        transactionData: {
+          amount: '100.00',
+          currency: 'USD',
+          description: 'Test',
+          type: 'expense',
+          date: '2026-01-30',
+        } as NotificationTransactionData,
+        status: 'unread' as const,
+        createdAt: new Date(),
+        readAt: null,
+        dismissedAt: null,
+        completedAt: null,
+      };
+
+      vi.mocked(notificationRepository.getNotificationById).mockResolvedValue(notification);
+
+      const response = await request(app)
+        .get('/api/notifications/1')
+        .expect(200);
+
+      expect(notificationRepository.getNotificationById).toHaveBeenCalledWith(1, 1);
+      // Compare only serializable fields
+      expect(response.body).toMatchObject({
+        id: 1,
+        userId: 1,
+        type: 'planned_expense',
+        title: 'Test',
+        message: 'Test',
+        plannedTransactionId: 1,
+        plannedIncomeId: null,
+        transactionData: {
+          amount: '100.00',
+          currency: 'USD',
+          description: 'Test',
+          type: 'expense',
+          date: '2026-01-30',
+        },
+        status: 'unread',
+      });
+      expect(response.body.createdAt).toBeDefined();
+    });
+
+    it('should return 404 if notification not found', async () => {
+      vi.mocked(notificationRepository.getNotificationById).mockResolvedValue(null);
+
+      await request(app)
+        .get('/api/notifications/999')
+        .expect(404);
+    });
+  });
+});

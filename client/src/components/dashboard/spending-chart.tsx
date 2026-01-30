@@ -2,6 +2,7 @@ import { Transaction } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { useTranslateCategory } from "@/lib/category-translations";
 
 interface SpendingChartProps {
   transactions: Transaction[];
@@ -16,6 +17,7 @@ const COLORS = [
 ];
 
 export function SpendingChart({ transactions }: SpendingChartProps) {
+  const translateCategory = useTranslateCategory();
   const expenseTransactions = transactions.filter((t) => t.type === "expense");
 
   if (!expenseTransactions.length) {
@@ -73,7 +75,7 @@ export function SpendingChart({ transactions }: SpendingChartProps) {
               cx="50%"
               cy="50%"
               labelLine={false}
-              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              label={({ name, percent }) => `${translateCategory(name)} ${(percent * 100).toFixed(0)}%`}
               outerRadius={100}
               fill="#8884d8"
               dataKey="value"
@@ -92,7 +94,7 @@ export function SpendingChart({ transactions }: SpendingChartProps) {
                 className="h-3 w-3 rounded-full"
                 style={{ backgroundColor: COLORS[index % COLORS.length] }}
               />
-              <span className="font-medium">{item.name}:</span>
+              <span className="font-medium">{translateCategory(item.name)}:</span>
               <span className="font-mono">${item.value.toFixed(2)}</span>
             </div>
           ))}

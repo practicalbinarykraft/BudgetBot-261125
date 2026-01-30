@@ -10,6 +10,7 @@ import { Coins, Sparkles, Key, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLocation } from 'wouter';
+import { useTranslation } from '@/i18n';
 
 interface CreditsData {
   messagesRemaining: number;
@@ -21,6 +22,7 @@ interface CreditsData {
 
 export function CreditsWidget() {
   const [, setLocation] = useLocation();
+  const { t } = useTranslation();
 
   const { data, isLoading, error } = useQuery<CreditsData>({
     queryKey: ['/api/credits'],
@@ -44,8 +46,8 @@ export function CreditsWidget() {
   if (error) {
     console.error('❌ CreditsWidget ERROR:', error);
     return (
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-muted-foreground">Кредиты:</span>
+      <div className="flex items-center gap-2 w-[140px] justify-center">
+        <span className="text-sm font-medium text-muted-foreground">{t("credits.label")}</span>
         <div className="flex items-center gap-2 px-3 py-2">
           <Skeleton className="h-4 w-4 rounded-full" />
           <Skeleton className="h-4 w-20" />
@@ -56,8 +58,8 @@ export function CreditsWidget() {
 
   if (isLoading || !data) {
     return (
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-muted-foreground">Кредиты:</span>
+      <div className="flex items-center gap-2 w-[140px] justify-center">
+        <span className="text-sm font-medium text-muted-foreground">{t("credits.label")}</span>
         <div className="flex items-center gap-2 px-3 py-2">
           <Skeleton className="h-4 w-4 rounded-full" />
           <Skeleton className="h-4 w-20" />
@@ -69,16 +71,16 @@ export function CreditsWidget() {
   // BYOK mode - show unlimited badge
   if (data.billingMode === 'byok') {
     return (
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-muted-foreground">Кредиты:</span>
+      <div className="flex items-center gap-2 w-[140px] justify-center">
+        <span className="text-sm font-medium text-muted-foreground">{t("credits.label")}</span>
         <Button
           variant="ghost"
           size="sm"
-          className="flex items-center gap-2 text-sm font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+          className="flex items-center gap-2 text-sm font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 whitespace-nowrap"
           onClick={handleClick}
         >
-          <Key className="h-4 w-4" />
-          <span className="hidden sm:inline">BYOK Mode</span>
+          <Key className="h-4 w-4 flex-shrink-0" />
+          <span className="hidden sm:inline">{t("credits.mode_byok")}</span>
           <span className="sm:hidden">∞</span>
         </Button>
       </div>
@@ -90,12 +92,12 @@ export function CreditsWidget() {
   const isVeryLow = data.messagesRemaining === 0;
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm font-medium text-muted-foreground">Кредиты:</span>
+    <div className="flex items-center gap-2 w-[140px] justify-center">
+      <span className="text-sm font-medium text-muted-foreground">{t("credits.label")}</span>
       <Button
         variant="ghost"
         size="sm"
-        className={`flex items-center gap-2 text-sm font-medium ${
+        className={`flex items-center gap-2 text-sm font-medium whitespace-nowrap ${
           isVeryLow
             ? 'text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300'
             : isLow
@@ -104,15 +106,15 @@ export function CreditsWidget() {
         }`}
         onClick={handleClick}
       >
-        <Coins className="h-4 w-4" />
+        <Coins className="h-4 w-4 flex-shrink-0" />
         <span className="hidden sm:inline">
-          {data.messagesRemaining} {data.messagesRemaining === 1 ? 'credit' : 'credits'}
+          {data.messagesRemaining} {data.messagesRemaining === 1 ? t("credits.credit") : t("credits.credits")}
         </span>
         <span className="sm:hidden">{data.messagesRemaining}</span>
         {data.billingMode === 'free' && (
-          <span className="hidden md:inline text-xs text-muted-foreground">• Free</span>
+          <span className="hidden md:inline text-xs text-muted-foreground">• {t("credits.mode_free")}</span>
         )}
-        <ChevronDown className="h-3 w-3 opacity-50" />
+        <ChevronDown className="h-3 w-3 opacity-50 flex-shrink-0" />
       </Button>
     </div>
   );

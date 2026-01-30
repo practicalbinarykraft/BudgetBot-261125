@@ -30,6 +30,9 @@ interface AddTransactionDialogProps {
   defaultCurrency?: string;
   defaultCategory?: string;
   defaultType?: 'income' | 'expense';
+  defaultDate?: string; // For notifications - prefill date from planned transaction
+  defaultCategoryId?: number | null; // For notifications - prefill categoryId
+  notificationId?: number; // For notifications - ID of the notification being approved
 }
 
 interface TransactionResponse {
@@ -56,6 +59,9 @@ export function AddTransactionDialog({
   defaultCurrency,
   defaultCategory,
   defaultType,
+  defaultDate,
+  defaultCategoryId,
+  notificationId,
 }: AddTransactionDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -107,7 +113,7 @@ export function AddTransactionDialog({
     },
   });
 
-  // Prefill form when dialog opens with voice input data
+  // Prefill form when dialog opens with voice input data or notification data
   useEffect(() => {
     if (open) {
       if (defaultDescription) form.setValue("description", defaultDescription);
@@ -115,8 +121,22 @@ export function AddTransactionDialog({
       if (defaultCurrency) form.setValue("currency", defaultCurrency);
       if (defaultCategory) form.setValue("category", defaultCategory);
       if (defaultType) form.setValue("type", defaultType);
+      if (defaultDate) form.setValue("date", defaultDate);
+      // Note: defaultCategoryId is stored in component state and used in mutation
+    } else {
+      // Reset form when dialog closes
+      form.reset({
+        date: new Date().toISOString().split("T")[0],
+        type: "expense",
+        amount: "",
+        description: "",
+        category: "",
+        currency: "USD",
+        walletId: undefined,
+        personalTagId: defaultPersonalTagId ?? null,
+      });
     }
-  }, [open, defaultDescription, defaultAmount, defaultCurrency, defaultCategory, defaultType, form]);
+  }, [open, defaultDescription, defaultAmount, defaultCurrency, defaultCategory, defaultType, defaultDate, defaultPersonalTagId, form]);
 
   // Handler for Web Speech API (plain text) - used in regular browsers
   const handleVoiceResult = (text: string) => {
@@ -239,7 +259,7 @@ export function AddTransactionDialog({
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const payload = {
+      const payload: any = {
         type: data.type,
         amount: data.amount,
         amountUsd: data.amount,
@@ -251,15 +271,89 @@ export function AddTransactionDialog({
         walletId: data.walletId,
         source: 'manual',
       };
+      // Add categoryId if provided (from notifications)
+      if (defaultCategoryId) {
+        payload.categoryId = defaultCategoryId;
+      }
       const res = await apiRequest("POST", "/api/transactions", payload);
       return res.json() as Promise<TransactionResponse>;
     },
-    onSuccess: (transaction: TransactionResponse) => {
+    onSuccess: async (transaction: TransactionResponse) => {
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"], exact: false });
-      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["/api/tags"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["/api/sorting/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/unsorted"], exact: false });
+      
+      // If transaction was created from notification, update statuses and mark as completed
+      if (notificationId) {
+        try {
+          // Get notification to determine its type
+          const notificationRes = await fetch(`/api/notifications/${notificationId}`, {
+            credentials: "include",
+          });
+          
+          if (!notificationRes.ok) {
+            throw new Error("Failed to fetch notification");
+          }
+          
+          const notification = await notificationRes.json();
+          const transactionData = notification.transactionData as any;
+          
+          // Update status based on notification type
+          if (notification.type === 'planned_expense' && transactionData?.plannedTransactionId) {
+            // Update planned expense status
+            await fetch(`/api/planned/${transactionData.plannedTransactionId}/mark-purchased`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ transactionId: transaction.id }),
+            });
+          } else if (notification.type === 'planned_income' && transactionData?.plannedIncomeId) {
+            // Update planned income status
+            await fetch(`/api/planned-income/${transactionData.plannedIncomeId}/mark-received`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ transactionId: transaction.id }),
+            });
+          }
+          
+          // Update nextDate for recurring transactions
+          if ((notification.type === 'recurring_expense' || notification.type === 'recurring_income') 
+              && transactionData?.recurringId && transactionData?.frequency) {
+            // Use transaction date from created transaction (user may have changed it in dialog)
+            await fetch(`/api/recurring/${transactionData.recurringId}/update-next-date`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ 
+                transactionDate: transaction.date,
+                frequency: transactionData.frequency 
+              }),
+            });
+          }
+          
+          // Mark notification as completed
+          await fetch(`/api/notifications/${notificationId}/mark-completed`, {
+            method: "PATCH",
+            credentials: "include",
+          });
+          
+          queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/planned"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/planned-income"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/recurring"] });
+        } catch (error) {
+          console.error("Failed to update notification status:", error);
+          toast({
+            title: t("common.error_occurred"),
+            description: "Transaction created but failed to update notification status",
+            variant: "destructive",
+          });
+        }
+      }
       
       if (transaction.mlSuggested && transaction.category) {
         const confidence = Math.round(transaction.mlConfidence * 100);

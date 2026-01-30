@@ -9,12 +9,13 @@ import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from '@/i18n/context';
 import type { PersonalTag, InsertPersonalTag } from '@shared/schema';
-import { User, Heart, Home, Users, Baby, UserPlus, Briefcase, Gift, Dog, Cat } from 'lucide-react';
+import { User, Heart, Home, Users, Baby, UserPlus, Briefcase, Gift, Dog, Cat, Trash2 } from 'lucide-react';
 
 interface CreateTagDialogProps {
   open: boolean;
   onClose: () => void;
   editTag?: PersonalTag | null;
+  onDelete?: (tagId: number) => void;
 }
 
 const ICON_OPTIONS = [
@@ -31,7 +32,7 @@ const ICON_OPTIONS = [
 ];
 const COLOR_OPTIONS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f97316', '#10b981', '#06b6d4', '#6366f1', '#84cc16'];
 
-export function CreateTagDialog({ open, onClose, editTag }: CreateTagDialogProps) {
+export function CreateTagDialog({ open, onClose, editTag, onDelete }: CreateTagDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
@@ -39,7 +40,7 @@ export function CreateTagDialog({ open, onClose, editTag }: CreateTagDialogProps
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('User');
   const [color, setColor] = useState('#3b82f6');
-  const [type, setType] = useState<'personal' | 'shared' | 'person'>('person');
+  const [type, setType] = useState<'personal' | 'shared' | 'person' | 'project'>('person');
   
   // Sync form state when editTag changes
   useEffect(() => {
@@ -47,7 +48,7 @@ export function CreateTagDialog({ open, onClose, editTag }: CreateTagDialogProps
       setName(editTag.name);
       setIcon(editTag.icon || 'User');
       setColor(editTag.color || '#3b82f6');
-      setType(editTag.type as 'personal' | 'shared' | 'person' || 'person');
+      setType(editTag.type as 'personal' | 'shared' | 'person' | 'project' || 'person');
     } else {
       setName('');
       setIcon('User');
@@ -186,28 +187,57 @@ export function CreateTagDialog({ open, onClose, editTag }: CreateTagDialogProps
                   <SelectItem value="person">{t('tags.type_person')}</SelectItem>
                   <SelectItem value="personal">{t('tags.type_personal')}</SelectItem>
                   <SelectItem value="shared">{t('tags.type_shared')}</SelectItem>
+                  <SelectItem value="project">{t('tags.type_project')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={isPending}
-              data-testid="button-cancel-tag"
-            >
-              {t('tags.cancel')}
-            </Button>
-            <Button
-              type="submit"
-              disabled={isPending}
-              data-testid="button-save-tag"
-            >
-              {isPending ? t('tags.saving') : editTag ? t('tags.update') : t('tags.create')}
-            </Button>
+          <DialogFooter className={editTag ? "justify-between" : ""}>
+            {editTag && onDelete && (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={async () => {
+                  if (editTag && onDelete) {
+                    try {
+                      await onDelete(editTag.id);
+                      toast({ description: t('tags.deleted_successfully') });
+                      handleClose();
+                    } catch (error: any) {
+                      toast({
+                        description: error.message || t('tags.delete_failed') || 'Failed to delete tag',
+                        variant: 'destructive'
+                      });
+                    }
+                  }
+                }}
+                disabled={isPending}
+                data-testid="button-delete-tag"
+                className="mr-auto"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                {t('tags.delete_tag')}
+              </Button>
+            )}
+            <div className="flex gap-2 ml-auto">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClose}
+                disabled={isPending}
+                data-testid="button-cancel-tag"
+              >
+                {t('tags.cancel')}
+              </Button>
+              <Button
+                type="submit"
+                disabled={isPending}
+                data-testid="button-save-tag"
+              >
+                {isPending ? t('tags.saving') : editTag ? t('tags.update') : t('tags.create')}
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>

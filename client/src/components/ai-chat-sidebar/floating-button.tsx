@@ -14,8 +14,8 @@ export function FloatingChatButton() {
     markAsRead();
   };
 
-  // Скрываем кнопку на Dashboard V2 в мобильной версии
-  if (isMobile && location === '/app/dashboard-v2') {
+  // Скрываем кнопку на Dashboard V2 (всегда) и на всех мобильных устройствах
+  if (location === '/app/dashboard-v2' || isMobile) {
     return null;
   }
 

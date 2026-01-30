@@ -11,7 +11,6 @@ import { AdBlock } from '@/components/assets/ad-block';
 import { AIAdviceBlock } from '@/components/assets/ai-advice-block';
 import type { AssetWithCategory, NetWorthSummary } from '@/lib/types/assets';
 import { useTranslation } from '@/i18n';
-import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
@@ -212,24 +211,6 @@ export default function AssetsPage() {
       </div>
     </div>
 
-      {/* Mobile Navigation */}
-      {isMobile && (
-        <MobileBottomNav
-          onMenuClick={() => setShowMobileMenu(true)}
-          onAddClick={() => {
-            toast({
-              title: "Добавить транзакцию",
-              description: "Функция скоро будет доступна!",
-            });
-          }}
-          onAiChatClick={() => {
-            toast({
-              title: "AI Chat",
-              description: "Функция AI чата скоро будет доступна!",
-            });
-          }}
-        />
-      )}
 
       <MobileMenuSheet
         open={showMobileMenu}

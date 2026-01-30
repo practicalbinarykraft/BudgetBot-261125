@@ -129,6 +129,14 @@ export const webTransactionsTranslations: Translations = {
     en: 'Select tag',
     ru: 'Выберите тег',
   },
+  'transactions.add_tag': {
+    en: 'Add tag',
+    ru: 'Добавьте тег',
+  },
+  'transactions.add_tag_hint': {
+    en: 'Click to add tag',
+    ru: 'Нажмите, чтобы добавить тег',
+  },
   'transactions.clear_filters': {
     en: 'Clear Filters',
     ru: 'Очистить фильтры',

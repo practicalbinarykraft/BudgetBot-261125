@@ -16,6 +16,7 @@ interface VoiceRecorderProps {
   onResult: (text: string) => void;
   onInterimResult?: (text: string) => void; // Callback для промежуточных результатов (полный текст: накопленный + текущий промежуточный)
   onRecordingChange?: (isRecording: boolean) => void; // Callback для изменения состояния записи
+  onError?: (error: string) => void; // Callback для ошибок
   className?: string;
 }
 
@@ -76,34 +77,149 @@ interface SpeechRecognitionAlternative {
   confidence: number;
 }
 
-export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, className }: VoiceRecorderProps) {
+export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, onError, className }: VoiceRecorderProps) {
   const { language } = useTranslation();
   const [isRecording, setIsRecording] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
   const [interimText, setInterimText] = useState(""); // Текущий промежуточный текст
   const [errorMessage, setErrorMessage] = useState<string | null>(null); // Сообщение об ошибке
+  const [audioLevel, setAudioLevel] = useState(0); // Уровень звука для визуализации (0-100)
   const finalTextRef = useRef(""); // Накопленный финальный текст (накапливается по мере распознавания)
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const isManualStopRef = useRef(false); // Флаг ручной остановки (для различения от автоматического завершения)
   const hasErrorRef = useRef(false); // Флаг ошибки (предотвращает перезапуск после ошибки)
+  const streamRef = useRef<MediaStream | null>(null); // Аудиопоток для визуализации
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const isRecordingRef = useRef(false); // Ref для проверки состояния записи в анимации
   
   // Храним callback'и в ref, чтобы они не вызывали пересоздание recognition
   const onResultRef = useRef(onResult);
   const onInterimResultRef = useRef(onInterimResult);
   const onRecordingChangeRef = useRef(onRecordingChange);
+  const onErrorRef = useRef(onError);
   
   // Обновляем ref'ы при изменении callback'ов (без пересоздания recognition)
   useEffect(() => {
     onResultRef.current = onResult;
     onInterimResultRef.current = onInterimResult;
     onRecordingChangeRef.current = onRecordingChange;
+    onErrorRef.current = onError;
   });
+
+  // Функция для визуализации звука (волны как в Telegram)
+  const startAudioVisualization = async () => {
+    try {
+      // Получаем доступ к микрофону для визуализации (параллельно с Web Speech API)
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 16000,
+        }
+      });
+
+      streamRef.current = stream;
+
+      // Создаем AudioContext для визуализации звука
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const audioContext = new AudioContextClass();
+      const analyser = audioContext.createAnalyser();
+      const source = audioContext.createMediaStreamSource(stream);
+      
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.8;
+      source.connect(analyser);
+      
+      audioContextRef.current = audioContext;
+      analyserRef.current = analyser;
+      
+      // На iOS нужно явно возобновить AudioContext после user gesture
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
+      
+      // Запускаем анимацию для визуализации
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      
+      const updateVisualization = () => {
+        // Проверяем через ref, чтобы не зависеть от замыкания state
+        if (!analyserRef.current || !streamRef.current || !isRecordingRef.current) {
+          animationFrameRef.current = null;
+          setAudioLevel(0);
+          return;
+        }
+        
+        analyser.getByteFrequencyData(dataArray);
+        
+        // Вычисляем RMS (Root Mean Square) для более точного уровня звука
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+          sum += dataArray[i] * dataArray[i];
+        }
+        const rms = Math.sqrt(sum / dataArray.length);
+        const normalizedLevel = Math.min(100, (rms / 255) * 100);
+        
+        setAudioLevel(normalizedLevel);
+        
+        animationFrameRef.current = requestAnimationFrame(updateVisualization);
+      };
+      
+      updateVisualization();
+    } catch (error) {
+      console.warn('Failed to create audio visualization:', error);
+      // Продолжаем работу без визуализации
+    }
+  };
+
+  const stopAudioVisualization = () => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    setAudioLevel(0);
+    
+    // Закрываем AudioContext и останавливаем поток
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      audioContextRef.current.close().catch(console.error);
+      audioContextRef.current = null;
+    }
+    analyserRef.current = null;
+  };
+
+  // Cleanup при размонтировании
+  useEffect(() => {
+    return () => {
+      stopAudioVisualization();
+    };
+  }, []);
 
   useEffect(() => {
     // Check if browser supports Web Speech API
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     
-    if (SpeechRecognition) {
+    // Определяем браузер для специальной обработки
+    const isBrave = (navigator as any).brave && (navigator as any).brave.isBrave instanceof Function
+      ? (navigator as any).brave.isBrave()
+      : false;
+    
+    // Проверяем, что страница открыта через HTTPS или localhost
+    // Web Speech API требует безопасный контекст (Secure Context)
+    const isSecureContext = 
+      window.isSecureContext || 
+      window.location.protocol === 'https:' || 
+      window.location.hostname === 'localhost' || 
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === '[::1]' || // IPv6 localhost
+      window.location.hostname.endsWith('.localhost'); // Поддомены localhost
+    
+    if (SpeechRecognition && isSecureContext) {
       setIsSupported(true);
       const recognition = new SpeechRecognition();
       recognition.continuous = true; // Включаем непрерывное распознавание
@@ -160,13 +276,20 @@ export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, cl
             try {
               recognitionRef.current.start();
               setIsRecording(true);
+              isRecordingRef.current = true;
               onRecordingChangeRef.current?.(true);
+              // Запускаем визуализацию при перезапуске
+              if (!streamRef.current) {
+                startAudioVisualization();
+              }
             } catch (e: any) {
               // Если ошибка "already started" - игнорируем, значит уже работает
               if (e?.message?.includes('already started')) {
                 return;
               }
               setIsRecording(false);
+              isRecordingRef.current = false;
+              stopAudioVisualization();
               onRecordingChangeRef.current?.(false);
             }
           }
@@ -184,6 +307,8 @@ export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, cl
         if (event.error === 'not-allowed') {
           // Разрешение не предоставлено
           setIsRecording(false);
+          isRecordingRef.current = false;
+          stopAudioVisualization();
           onRecordingChangeRef.current?.(false);
           setInterimText("");
           finalTextRef.current = "";
@@ -196,11 +321,30 @@ export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, cl
         if (event.error === 'network') {
           // Сетевая ошибка - показываем сообщение пользователю
           // Причины: нет HTTPS, страница не через localhost, rate limiting, региональные ограничения
+          // Brave браузер может блокировать Web Speech API
           hasErrorRef.current = true; // Предотвращаем автоматический перезапуск
-          setErrorMessage(language === 'ru'
-            ? 'Ошибка подключения к сервису распознавания речи. Убедитесь, что страница открыта через localhost или HTTPS.'
-            : 'Speech recognition service connection error. Make sure the page is opened via localhost or HTTPS.');
+          
+          // Определяем браузер для специального сообщения
+          const isBrave = (navigator as any).brave && (navigator as any).brave.isBrave instanceof Function
+            ? (navigator as any).brave.isBrave()
+            : false;
+          
+          let errorMsg: string;
+          if (isBrave) {
+            errorMsg = language === 'ru'
+              ? 'Brave браузер блокирует Web Speech API. Пожалуйста, используйте Chrome, Edge или Firefox, либо включите Web Speech API в настройках Brave (brave://settings/privacy).'
+              : 'Brave browser blocks Web Speech API. Please use Chrome, Edge, or Firefox, or enable Web Speech API in Brave settings (brave://settings/privacy).';
+          } else {
+            errorMsg = language === 'ru'
+              ? 'Ошибка подключения к сервису распознавания речи. Убедитесь, что страница открыта через localhost или HTTPS. Если проблема сохраняется, попробуйте другой браузер (Chrome, Edge).'
+              : 'Speech recognition service connection error. Make sure the page is opened via localhost or HTTPS. If the problem persists, try another browser (Chrome, Edge).';
+          }
+          
+          setErrorMessage(errorMsg);
+          onErrorRef.current?.(errorMsg);
           setIsRecording(false);
+          isRecordingRef.current = false;
+          stopAudioVisualization();
           onRecordingChangeRef.current?.(false);
           return;
         }
@@ -212,12 +356,16 @@ export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, cl
           }
           // Иначе просто останавливаем
           setIsRecording(false);
+          isRecordingRef.current = false;
+          stopAudioVisualization();
           onRecordingChangeRef.current?.(false);
           return;
         }
         
         // Для других ошибок - останавливаем
         setIsRecording(false);
+        isRecordingRef.current = false;
+        stopAudioVisualization();
         onRecordingChangeRef.current?.(false);
         setInterimText("");
         finalTextRef.current = "";
@@ -228,6 +376,8 @@ export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, cl
         if (hasErrorRef.current) {
           hasErrorRef.current = false;
           setIsRecording(false);
+          isRecordingRef.current = false;
+          stopAudioVisualization();
           onRecordingChangeRef.current?.(false);
           return;
         }
@@ -236,6 +386,8 @@ export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, cl
         if (isManualStopRef.current) {
           isManualStopRef.current = false;
           setIsRecording(false);
+          isRecordingRef.current = false;
+          stopAudioVisualization();
           onRecordingChangeRef.current?.(false);
 
           const completeText = finalTextRef.current.trim();
@@ -256,13 +408,20 @@ export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, cl
               try {
                 recognitionRef.current.start();
                 setIsRecording(true);
+                isRecordingRef.current = true;
                 onRecordingChangeRef.current?.(true);
+                // Запускаем визуализацию при перезапуске, если еще не запущена
+                if (!streamRef.current) {
+                  startAudioVisualization();
+                }
               } catch (e: any) {
                 // Если ошибка "already started" - игнорируем, значит уже работает
                 if (e?.message?.includes('already started')) {
                   return;
                 }
                 setIsRecording(false);
+                isRecordingRef.current = false;
+                stopAudioVisualization();
                 onRecordingChangeRef.current?.(false);
               }
             }
@@ -273,6 +432,34 @@ export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, cl
       recognitionRef.current = recognition;
     } else {
       setIsSupported(false);
+      
+      // Определяем браузер для специального сообщения
+      const isBrave = (navigator as any).brave && (navigator as any).brave.isBrave instanceof Function
+        ? (navigator as any).brave.isBrave()
+        : false;
+      
+      if (isBrave && !isSecureContext) {
+        // Brave может блокировать даже на localhost
+        const errorMsg = language === 'ru'
+          ? 'Brave браузер может блокировать Web Speech API. Попробуйте: 1) Откройте brave://settings/privacy и включите Web Speech API, 2) Используйте Chrome или Edge для голосового ввода.'
+          : 'Brave browser may block Web Speech API. Try: 1) Open brave://settings/privacy and enable Web Speech API, 2) Use Chrome or Edge for voice input.';
+        setErrorMessage(errorMsg);
+        onErrorRef.current?.(errorMsg);
+      } else if (!SpeechRecognition) {
+        // API не поддерживается браузером
+        const errorMsg = language === 'ru'
+          ? 'Ваш браузер не поддерживает распознавание речи. Пожалуйста, используйте Chrome или Edge.'
+          : 'Your browser does not support speech recognition. Please use Chrome or Edge.';
+        setErrorMessage(errorMsg);
+        onErrorRef.current?.(errorMsg);
+      } else if (!isSecureContext) {
+        // Небезопасный контекст
+        const errorMsg = language === 'ru'
+          ? 'Распознавание речи работает только через HTTPS или localhost. Пожалуйста, откройте страницу через http://localhost:5000'
+          : 'Speech recognition works only via HTTPS or localhost. Please open the page via http://localhost:5000';
+        setErrorMessage(errorMsg);
+        onErrorRef.current?.(errorMsg);
+      }
     }
 
     return () => {
@@ -288,6 +475,10 @@ export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, cl
 
   const handleClick = () => {
     if (!isSupported) {
+      if (errorMessage) {
+        // Показываем сообщение об ошибке вместо alert
+        return;
+      }
       alert(language === 'ru'
         ? 'Ваш браузер не поддерживает распознавание речи. Пожалуйста, используйте Chrome или Edge.'
         : 'Your browser does not support speech recognition. Please use Chrome or Edge.');
@@ -306,8 +497,40 @@ export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, cl
         // Ignore errors when stopping
       }
       setIsRecording(false);
+      isRecordingRef.current = false;
+      stopAudioVisualization();
       onRecordingChangeRef.current?.(false); // Уведомляем родителя об остановке
     } else {
+      // Проверяем безопасный контекст перед запуском
+      const isSecureContext = 
+        window.isSecureContext || 
+        window.location.protocol === 'https:' || 
+        window.location.hostname === 'localhost' || 
+        window.location.hostname === '127.0.0.1' ||
+        window.location.hostname === '[::1]' || // IPv6 localhost
+        window.location.hostname.endsWith('.localhost'); // Поддомены localhost
+      
+      if (!isSecureContext) {
+        // Определяем браузер для специального сообщения
+        const isBrave = (navigator as any).brave && (navigator as any).brave.isBrave instanceof Function
+          ? (navigator as any).brave.isBrave()
+          : false;
+        
+        let errorMsg: string;
+        if (isBrave) {
+          errorMsg = language === 'ru'
+            ? 'Brave браузер может блокировать Web Speech API. Попробуйте: 1) Откройте brave://settings/privacy и включите Web Speech API, 2) Используйте Chrome или Edge, 3) Убедитесь, что страница открыта через http://localhost:5000'
+            : 'Brave browser may block Web Speech API. Try: 1) Open brave://settings/privacy and enable Web Speech API, 2) Use Chrome or Edge, 3) Make sure the page is opened via http://localhost:5000';
+        } else {
+          errorMsg = language === 'ru'
+            ? 'Распознавание речи работает только через HTTPS или localhost. Пожалуйста, откройте страницу через безопасное соединение (http://localhost:5000).'
+            : 'Speech recognition works only via HTTPS or localhost. Please open the page via secure connection (http://localhost:5000).';
+        }
+        setErrorMessage(errorMsg);
+        onErrorRef.current?.(errorMsg);
+        return;
+      }
+      
       // Начинаем новую запись - сбрасываем накопленный текст и флаги
       isManualStopRef.current = false;
       hasErrorRef.current = false;
@@ -319,15 +542,35 @@ export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, cl
       try {
         recognitionRef.current.start();
         setIsRecording(true);
+        isRecordingRef.current = true;
         onRecordingChangeRef.current?.(true);
-      } catch (e) {
+        // Запускаем визуализацию звука
+        startAudioVisualization();
+      } catch (e: any) {
         setIsRecording(false);
+        isRecordingRef.current = false;
+        stopAudioVisualization();
         onRecordingChangeRef.current?.(false);
+        // Показываем ошибку, если не удалось запустить
+        if (e?.message?.includes('not allowed') || e?.message?.includes('permission')) {
+          const errorMsg = language === 'ru'
+            ? 'Разрешение на использование микрофона не предоставлено. Пожалуйста, разрешите доступ в настройках браузера.'
+            : 'Microphone permission not granted. Please allow access in browser settings.';
+          setErrorMessage(errorMsg);
+          onErrorRef.current?.(errorMsg);
+        } else if (e?.message?.includes('network') || e?.message?.includes('service')) {
+          const errorMsg = language === 'ru'
+            ? 'Ошибка подключения к сервису распознавания речи. Убедитесь, что страница открыта через localhost или HTTPS.'
+            : 'Speech recognition service connection error. Make sure the page is opened via localhost or HTTPS.';
+          setErrorMessage(errorMsg);
+          onErrorRef.current?.(errorMsg);
+        }
       }
     }
   };
 
-  if (!isSupported) {
+  // Показываем компонент даже если не поддерживается, чтобы показать ошибку
+  if (!isSupported && !errorMessage) {
     return null;
   }
 
@@ -341,7 +584,7 @@ export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, cl
         className={cn(
           "w-16 h-16 rounded-full flex items-center justify-center transition-all",
           isRecording
-            ? "bg-red-500 text-white animate-pulse"
+            ? "bg-red-500 text-white"
             : "bg-blue-500 text-white hover:bg-blue-600",
           className
         )}
@@ -349,6 +592,36 @@ export function VoiceRecorder({ onResult, onInterimResult, onRecordingChange, cl
       >
         <Mic className="h-6 w-6" />
       </button>
+      
+      {/* Визуализация звука (волны как в Telegram) */}
+      {isRecording && (
+        <div className="flex items-center justify-center gap-1 h-8 w-40">
+          {Array.from({ length: 20 }).map((_, i) => {
+            // Вычисляем высоту каждой волны на основе уровня звука и позиции
+            const baseHeight = 4;
+            const maxHeight = 24;
+            const waveIndex = i;
+            const centerIndex = 10;
+            const distanceFromCenter = Math.abs(waveIndex - centerIndex);
+            
+            // Создаем волновой эффект: волны выше в центре, ниже по краям
+            const waveMultiplier = 1 - (distanceFromCenter / centerIndex) * 0.5;
+            const height = baseHeight + (audioLevel / 100) * maxHeight * waveMultiplier;
+            
+            return (
+              <div
+                key={i}
+                className="bg-blue-500 rounded-full transition-all duration-75"
+                style={{
+                  width: '3px',
+                  height: `${Math.max(baseHeight, height)}px`,
+                  opacity: 0.6 + (audioLevel / 100) * 0.4,
+                }}
+              />
+            );
+          })}
+        </div>
+      )}
       
       {/* Показываем полный текст в реальном времени (как в Google Translate!) */}
       {displayText && (

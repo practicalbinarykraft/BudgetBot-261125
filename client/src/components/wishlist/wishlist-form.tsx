@@ -8,11 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTranslation } from "@/i18n/context";
 
-const formSchema = insertWishlistSchema.extend({
-  amount: z.string().min(1, "Amount is required"),
-});
-
-export type WishlistFormData = z.infer<typeof formSchema>;
+export type WishlistFormData = z.infer<typeof insertWishlistSchema> & {
+  amount: string;
+};
 
 interface WishlistFormProps {
   userId: number;
@@ -23,6 +21,11 @@ interface WishlistFormProps {
 
 export function WishlistForm({ userId, onSubmit, onCancel, isPending }: WishlistFormProps) {
   const { t } = useTranslation();
+  
+  const formSchema = insertWishlistSchema.extend({
+    amount: z.string().min(1, t("wishlist.amount_required")),
+  });
+  
   const form = useForm<WishlistFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {

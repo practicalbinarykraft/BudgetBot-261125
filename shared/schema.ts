@@ -18,6 +18,25 @@ export const toolExecutionStatusEnum = pgEnum('tool_execution_status', [
   'cancelled'   // User cancelled
 ]);
 
+/**
+ * Zod schema for notification transaction data
+ * Used to validate and type transactionData field in notifications table
+ */
+export const notificationTransactionDataSchema = z.object({
+  amount: z.string(),
+  currency: z.string().default("USD"),
+  description: z.string(),
+  category: z.string().optional(),
+  categoryId: z.number().optional(),
+  type: z.enum(["income", "expense"]),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  recurringId: z.number().optional(),
+  frequency: z.string().optional(),
+  nextDate: z.string().optional(),
+});
+
+export type NotificationTransactionData = z.infer<typeof notificationTransactionDataSchema>;
+
 // Users table
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -138,7 +157,7 @@ export const plannedTransactions = pgTable("planned_transactions", {
   targetDate: date("target_date").notNull(),
   source: text("source").default("manual"), // 'manual' | 'wishlist'
   wishlistId: integer("wishlist_id").references(() => wishlist.id, { onDelete: "set null" }),
-  status: text("status").default("planned"), // 'planned' | 'purchased' | 'cancelled'
+  status: text("status").default("planned").notNull(), // 'planned' | 'purchased' | 'cancelled'
   showOnChart: boolean("show_on_chart").default(true).notNull(), // Show goal marker on forecast chart
   purchasedAt: timestamp("purchased_at"),
   transactionId: integer("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
@@ -164,7 +183,7 @@ export const plannedIncome = pgTable("planned_income", {
   expectedDate: date("expected_date").notNull(),
   
   // Status tracking
-  status: text("status").default("pending"), // 'pending' | 'received' | 'cancelled'
+  status: text("status").default("pending").notNull(), // 'pending' | 'received' | 'cancelled'
   
   // Link to actual transaction when received
   transactionId: integer("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
@@ -176,6 +195,33 @@ export const plannedIncome = pgTable("planned_income", {
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Notifications table (for planned transactions reminders)
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Notification type and data
+  type: text("type").notNull(), // 'planned_expense' | 'planned_income' | 'recurring_expense' | 'recurring_income'
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  
+  // Reference to planned transaction
+  plannedTransactionId: integer("planned_transaction_id").references(() => plannedTransactions.id, { onDelete: "cascade" }),
+  plannedIncomeId: integer("planned_income_id").references(() => plannedIncome.id, { onDelete: "cascade" }),
+  
+  // Transaction data for pre-filling form
+  transactionData: jsonb("transaction_data"), // { amount, currency, description, category, type, date }
+  
+  // Status
+  status: text("status").default("unread").notNull(), // 'unread' | 'read' | 'dismissed' | 'completed'
+  
+  // Dates
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  readAt: timestamp("read_at"),
+  dismissedAt: timestamp("dismissed_at"),
+  completedAt: timestamp("completed_at"),
 });
 
 // Settings table
@@ -612,6 +658,18 @@ export const insertPlannedIncomeSchema = createInsertSchema(plannedIncome, {
   transactionId: true,
 });
 
+export const insertNotificationSchema = createInsertSchema(notifications, {
+  type: z.enum(["planned_expense", "planned_income", "recurring_expense", "recurring_income"]),
+  status: z.enum(["unread", "read", "dismissed", "completed"]).optional(),
+}).omit({
+  id: true,
+  userId: true,  // Server-side only
+  createdAt: true,
+  readAt: true,
+  dismissedAt: true,
+  completedAt: true,
+});
+
 const VALID_TIMEZONES = [
   "UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
   "America/Phoenix", "America/Toronto", "America/Mexico_City", "America/Sao_Paulo",
@@ -671,7 +729,7 @@ export const insertTelegramVerificationCodeSchema = createInsertSchema(telegramV
 });
 
 export const insertPersonalTagSchema = createInsertSchema(personalTags, {
-  type: z.enum(["personal", "shared", "person"]).optional(),
+  type: z.enum(["personal", "shared", "person", "project"]).optional(),
   name: z.string().min(1, "Name is required"),
   icon: z.string().optional(),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format").optional(),
@@ -744,6 +802,10 @@ export type PlannedTransaction = typeof plannedTransactions.$inferSelect;
 
 export type InsertPlannedIncome = z.infer<typeof insertPlannedIncomeSchema>;
 export type PlannedIncome = typeof plannedIncome.$inferSelect;
+
+export const selectNotificationSchema = createSelectSchema(notifications);
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
 
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;

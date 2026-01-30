@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import * as Icons from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { useTranslateCategory } from '@/lib/category-translations';
 
 interface BreakdownItem {
   id?: number;
@@ -20,6 +21,8 @@ interface BreakdownCardProps {
 }
 
 export function BreakdownCard({ title, total, items, isLoading }: BreakdownCardProps) {
+  const translateCategory = useTranslateCategory();
+  
   if (isLoading) {
     return (
       <Card>
@@ -70,7 +73,7 @@ export function BreakdownCard({ title, total, items, isLoading }: BreakdownCardP
                     className="h-5 w-5" 
                     style={{ color: item.color || '#3b82f6' }}
                   />
-                  <span className="font-medium">{item.name}</span>
+                  <span className="font-medium">{translateCategory(item.name)}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="font-mono text-sm">${item.amount.toFixed(2)}</span>

@@ -2,6 +2,7 @@ import { Translations } from "./types";
 
 export const webPlannedTranslations: Translations = {
   "planned.title": { en: "Planned Purchases", ru: "Запланированные покупки" },
+  "planned.description": { en: "Plan and track your upcoming purchases", ru: "Планируйте и отслеживайте предстоящие покупки" },
   "planned.schedule": { en: "Schedule upcoming purchases", ru: "Планируйте предстоящие покупки" },
   "planned.add_planned": { en: "Add Planned", ru: "Добавить план" },
   "planned.no_items": { en: "No planned purchases yet", ru: "Пока нет запланированных покупок" },
@@ -32,7 +33,6 @@ export const webPlannedTranslations: Translations = {
   "planned.field_target_date": { en: "Target Date", ru: "Дата покупки" },
   "planned.field_category": { en: "Category (Optional)", ru: "Категория (опционально)" },
   "planned.field_category_placeholder": { en: "Select category", ru: "Выберите категорию" },
-  "planned.button_cancel": { en: "Cancel", ru: "Отмена" },
   "planned.button_add": { en: "Add Plan", ru: "Добавить план" },
   "planned.button_adding": { en: "Adding...", ru: "Добавление..." },
   
@@ -43,4 +43,19 @@ export const webPlannedTranslations: Translations = {
   
   // Chart display
   "planned.show_on_chart": { en: "Show on chart", ru: "Показывать на графике" },
+  
+  // Status labels
+  "planned.status.planned": { en: "Planned", ru: "Запланировано" },
+  "planned.status.purchased": { en: "Purchased", ru: "Куплено" },
+  "planned.status.cancelled": { en: "Cancelled", ru: "Отменено" },
+  
+  // Date labels
+  "planned.due_in_days": { en: "Due in {days} days", ru: "Через {days} дн." },
+  "planned.due_in_one_day": { en: "Due in 1 day", ru: "Через 1 день" },
+  "planned.overdue_label": { en: "Overdue", ru: "Просрочено" },
+  
+  // Action buttons
+  "planned.button_purchase": { en: "Purchase", ru: "Купить" },
+  "planned.button_cancel": { en: "Cancel", ru: "Отменить" },
+  "planned.button_remove": { en: "Remove", ru: "Удалить" },
 };
