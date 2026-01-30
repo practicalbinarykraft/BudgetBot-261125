@@ -138,7 +138,7 @@ export const plannedTransactions = pgTable("planned_transactions", {
   targetDate: date("target_date").notNull(),
   source: text("source").default("manual"), // 'manual' | 'wishlist'
   wishlistId: integer("wishlist_id").references(() => wishlist.id, { onDelete: "set null" }),
-  status: text("status").default("planned"), // 'planned' | 'purchased' | 'cancelled'
+  status: text("status").default("planned").notNull(), // 'planned' | 'purchased' | 'cancelled'
   showOnChart: boolean("show_on_chart").default(true).notNull(), // Show goal marker on forecast chart
   purchasedAt: timestamp("purchased_at"),
   transactionId: integer("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
@@ -164,7 +164,7 @@ export const plannedIncome = pgTable("planned_income", {
   expectedDate: date("expected_date").notNull(),
   
   // Status tracking
-  status: text("status").default("pending"), // 'pending' | 'received' | 'cancelled'
+  status: text("status").default("pending").notNull(), // 'pending' | 'received' | 'cancelled'
   
   // Link to actual transaction when received
   transactionId: integer("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
