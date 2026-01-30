@@ -112,19 +112,21 @@ export function NotificationsList({ onClose, onNotificationClick, onOpenTransact
       transDate.setHours(0, 0, 0, 0);
       const transDateStr = transDate.toISOString().split('T')[0];
 
-      // Filter by date range (from startDate to endDate)
-      if (transDate < startDateObj || transDate > endDateObj) return false;
-
       // Filter by read status (hide read/completed/dismissed if showRead is false)
       if (!showRead && (notification.status === "read" || notification.status === "completed" || notification.status === "dismissed")) {
         return false;
       }
 
       // Filter by type
-      if (filterType === "all") return true;
+      if (filterType === "all") {
+        // For "all" filter, apply date range filter
+        if (transDate < startDateObj || transDate > endDateObj) return false;
+        return true;
+      }
       
       if (filterType === "missed") {
         // Пропущенные: дата транзакции в прошлом и статус не completed/dismissed
+        // Не применяем фильтр по дате, так как "missed" сам определяет диапазон (все прошлое)
         return transDate < today && 
                notification.status !== "completed" && 
                notification.status !== "dismissed";
@@ -132,11 +134,13 @@ export function NotificationsList({ onClose, onNotificationClick, onOpenTransact
       
       if (filterType === "today") {
         // Сегодня: дата транзакции равна сегодня
+        // Не применяем фильтр по дате, так как "today" сам определяет диапазон (только сегодня)
         return transDateStr === todayStr;
       }
       
       if (filterType === "upcoming") {
         // Предстоящие: дата транзакции в будущем
+        // Не применяем фильтр по дате, так как "upcoming" сам определяет диапазон (все будущее)
         return transDate > today;
       }
 

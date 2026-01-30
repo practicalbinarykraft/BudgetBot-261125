@@ -162,10 +162,13 @@ describe('NotificationsList', () => {
       fireEvent.click(screen.getByRole('combobox'));
 
       await waitFor(() => {
-        expect(screen.getByText('Все')).toBeInTheDocument();
-        expect(screen.getByText('Пропущенные')).toBeInTheDocument();
-        expect(screen.getByText('Сегодня')).toBeInTheDocument();
-        expect(screen.getByText('Предстоящие')).toBeInTheDocument();
+        // Use getAllByText for "Все" since it appears in both trigger and option
+        const allOptions = screen.getAllByText('Все');
+        expect(allOptions.length).toBeGreaterThan(0);
+        // Check other options using getByRole('option') for specificity
+        expect(screen.getByRole('option', { name: 'Пропущенные' })).toBeInTheDocument();
+        expect(screen.getByRole('option', { name: 'Сегодня' })).toBeInTheDocument();
+        expect(screen.getByRole('option', { name: 'Предстоящие' })).toBeInTheDocument();
       });
     });
 
