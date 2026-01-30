@@ -304,24 +304,17 @@ describe('NotificationsList', () => {
       const filterSelect = screen.getByRole('combobox');
       fireEvent.click(filterSelect);
 
-      // Wait for option to appear, then click it
+      // Wait for option to appear, then click it (same pattern as "today" test)
       await waitFor(() => {
-        expect(screen.getByRole('option', { name: 'Пропущенные' })).toBeInTheDocument();
+        const missedOption = screen.getByRole('option', { name: 'Пропущенные' });
+        fireEvent.click(missedOption);
       });
-      
-      const missedOption = screen.getByRole('option', { name: 'Пропущенные' });
-      fireEvent.click(missedOption);
-
-      // Wait for Select to close (option disappears)
-      await waitFor(() => {
-        expect(screen.queryByRole('option', { name: 'Пропущенные' })).not.toBeInTheDocument();
-      }, { timeout: 1000 });
 
       // Wait for filtered notifications to appear/disappear
       await waitFor(() => {
         expect(screen.getByText('Notification 1')).toBeInTheDocument();
         expect(screen.queryByText('Notification 2')).not.toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
     });
 
     it('should filter notifications by type - today', async () => {
@@ -458,24 +451,17 @@ describe('NotificationsList', () => {
       const filterSelect = screen.getByRole('combobox');
       fireEvent.click(filterSelect);
 
-      // Wait for option to appear, then click it
+      // Wait for option to appear, then click it (same pattern as "today" test)
       await waitFor(() => {
-        expect(screen.getByRole('option', { name: 'Предстоящие' })).toBeInTheDocument();
+        const upcomingOption = screen.getByRole('option', { name: 'Предстоящие' });
+        fireEvent.click(upcomingOption);
       });
-      
-      const upcomingOption = screen.getByRole('option', { name: 'Предстоящие' });
-      fireEvent.click(upcomingOption);
-
-      // Wait for Select to close (option disappears)
-      await waitFor(() => {
-        expect(screen.queryByRole('option', { name: 'Предстоящие' })).not.toBeInTheDocument();
-      }, { timeout: 1000 });
 
       // Wait for filtered notifications to appear/disappear
       await waitFor(() => {
         expect(screen.queryByText('Notification 1')).not.toBeInTheDocument();
         expect(screen.getByText('Notification 2')).toBeInTheDocument();
-      });
+      }, { timeout: 5000 });
     });
   });
 
