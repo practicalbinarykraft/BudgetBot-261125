@@ -41,8 +41,10 @@ export function NotificationsList({ onClose, onNotificationClick, onOpenTransact
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [showRead, setShowRead] = useState<boolean>(false); // Показывать прочитанные уведомления
   const [startDate, setStartDate] = useState<string>(() => {
-    // По умолчанию: сегодня
-    return new Date().toISOString().split('T')[0];
+    // По умолчанию: месяц назад (чтобы показывать пропущенные уведомления)
+    const date = new Date();
+    date.setMonth(date.getMonth() - 1);
+    return date.toISOString().split('T')[0];
   });
   const [endDate, setEndDate] = useState<string>(() => {
     // По умолчанию: месяц вперед от сегодня
