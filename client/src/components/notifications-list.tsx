@@ -116,16 +116,17 @@ export function NotificationsList({ onClose, onNotificationClick, onOpenTransact
         return filterType === "all";
       }
 
-      // If transactionDate is already a string in YYYY-MM-DD format, use it directly
-      // Otherwise parse it and format it
+      // Parse transaction date to Date object (needed for "all" filter date range comparison)
+      const transDate = new Date(transactionDate);
+      transDate.setHours(0, 0, 0, 0);
+      
+      // Get date string for string-based comparison (used for "missed", "today", "upcoming" filters)
       let transDateStr: string;
       if (typeof transactionDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(transactionDate)) {
         // Already in YYYY-MM-DD format, use directly
         transDateStr = transactionDate;
       } else {
-        // Parse and format to local date
-        const transDate = new Date(transactionDate);
-        transDate.setHours(0, 0, 0, 0);
+        // Format parsed date to local date string
         transDateStr = formatLocalDate(transDate);
       }
 
@@ -136,7 +137,7 @@ export function NotificationsList({ onClose, onNotificationClick, onOpenTransact
 
       // Filter by type
       if (filterType === "all") {
-        // For "all" filter, apply date range filter
+        // For "all" filter, apply date range filter using Date objects
         if (transDate < startDateObj || transDate > endDateObj) return false;
         return true;
       }
