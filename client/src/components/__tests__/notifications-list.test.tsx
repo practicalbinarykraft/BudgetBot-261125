@@ -307,6 +307,7 @@ describe('NotificationsList', () => {
       const notifications = [
         createMockNotification({
           id: 1,
+          title: 'Notification 1',
           transactionData: {
             ...baseTransactionData,
             date: yesterday.toISOString().split('T')[0],
@@ -314,6 +315,7 @@ describe('NotificationsList', () => {
         }),
         createMockNotification({
           id: 2,
+          title: 'Notification 2',
           transactionData: {
             ...baseTransactionData,
             date: tomorrow.toISOString().split('T')[0],
@@ -388,7 +390,7 @@ describe('NotificationsList', () => {
     });
 
     it('should delete notification', async () => {
-      const notification = createMockNotification();
+      const notification = createMockNotification({ id: 1, title: 'Notification 1' });
 
       (global.fetch as any).mockImplementation((url: string) => {
         if (url.includes('/api/notifications') && !url.includes('/delete')) {
