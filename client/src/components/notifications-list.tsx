@@ -99,7 +99,8 @@ export function NotificationsList({ onClose, onNotificationClick, onOpenTransact
   const notifications = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayStr = formatLocalDate(today);
+    // Use toISOString() to match test data format (UTC, more predictable in CI)
+    const todayStr = today.toISOString().split('T')[0];
     
     const startDateObj = new Date(startDate);
     startDateObj.setHours(0, 0, 0, 0);
@@ -126,8 +127,8 @@ export function NotificationsList({ onClose, onNotificationClick, onOpenTransact
         // Already in YYYY-MM-DD format, use directly
         transDateStr = transactionDate;
       } else {
-        // Format parsed date to local date string
-        transDateStr = formatLocalDate(transDate);
+        // Format parsed date to UTC date string (matching test data format)
+        transDateStr = transDate.toISOString().split('T')[0];
       }
 
       // Filter by read status (hide read/completed/dismissed if showRead is false)
