@@ -160,14 +160,17 @@ describe('NotificationsList', () => {
       const notifications = [
         createMockNotification({
           id: 1,
+          title: 'Notification 1',
           transactionData: { ...baseTransactionData, date: today.toISOString().split('T')[0] },
         }),
         createMockNotification({
           id: 2,
+          title: 'Notification 2',
           transactionData: { ...baseTransactionData, date: tomorrow.toISOString().split('T')[0] },
         }),
         createMockNotification({
           id: 3,
+          title: 'Notification 3',
           transactionData: { ...baseTransactionData, date: nextWeek.toISOString().split('T')[0] },
         }),
       ];
@@ -205,6 +208,7 @@ describe('NotificationsList', () => {
       const notifications = [
         createMockNotification({
           id: 1,
+          title: 'Notification 1',
           status: 'unread',
           transactionData: {
             ...baseTransactionData,
@@ -213,6 +217,7 @@ describe('NotificationsList', () => {
         }),
         createMockNotification({
           id: 2,
+          title: 'Notification 2',
           status: 'unread',
           transactionData: {
             ...baseTransactionData,
@@ -256,6 +261,7 @@ describe('NotificationsList', () => {
       const notifications = [
         createMockNotification({
           id: 1,
+          title: 'Notification 1',
           transactionData: {
             ...baseTransactionData,
             date: today.toISOString().split('T')[0],
@@ -263,6 +269,7 @@ describe('NotificationsList', () => {
         }),
         createMockNotification({
           id: 2,
+          title: 'Notification 2',
           transactionData: {
             ...baseTransactionData,
             date: tomorrow.toISOString().split('T')[0],
