@@ -20,13 +20,14 @@ import { pendingReceipts } from '../pending-receipts';
 import { getApiKey } from '../../services/api-key-manager';
 import { chargeCredits } from '../../services/billing.service';
 import { BillingError } from '../../types/billing';
+import { TELEGRAM_BOT_TOKEN } from '../config';
 
 export async function handlePhotoMessage(bot: TelegramBot, msg: TelegramBot.Message) {
   const chatId = msg.chat.id;
   const telegramId = msg.from?.id.toString();
 
   // Логирование для отладки
-  const { logInfo, logWarning } = await import('../../lib/logger');
+  const { logInfo, logWarning, logError } = await import('../../lib/logger');
   logInfo('Photo message handler called', {
     chatId,
     telegramId: telegramId || 'missing',
@@ -87,14 +88,73 @@ export async function handlePhotoMessage(bot: TelegramBot, msg: TelegramBot.Mess
     await bot.sendMessage(chatId, t('receipt.processing', lang));
 
     const file = await bot.getFile(photo.file_id);
-    const fileUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
+    
+    if (!file.file_path) {
+      logError('Failed to get file path from Telegram', new Error('file.file_path is missing'), {
+        userId: user.id,
+        chatId,
+        fileId: photo.file_id
+      });
+      await bot.sendMessage(chatId, t('receipt.error', lang), { parse_mode: 'Markdown' });
+      return;
+    }
+
+    // Determine MIME type from file extension
+    const fileExtension = file.file_path.split('.').pop()?.toLowerCase() || 'jpg';
+    const mimeTypeMap: Record<string, string> = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'webp': 'image/webp',
+      'gif': 'image/gif'
+    };
+    const mimeType = mimeTypeMap[fileExtension] || 'image/jpeg';
+
+    const fileUrl = `https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${file.file_path}`;
+
+    logInfo('Downloading photo from Telegram', {
+      userId: user.id,
+      filePath: file.file_path,
+      mimeType,
+      fileSize: file.file_size
+    });
 
     const response = await fetch(fileUrl);
+    
+    if (!response.ok) {
+      logError('Failed to download photo from Telegram', new Error(`HTTP ${response.status}: ${response.statusText}`), {
+        userId: user.id,
+        chatId,
+        status: response.status,
+        statusText: response.statusText,
+        fileUrl
+      });
+      await bot.sendMessage(chatId, t('receipt.error', lang), { parse_mode: 'Markdown' });
+      return;
+    }
+
     const buffer = await response.arrayBuffer();
+    
+    if (!buffer || buffer.byteLength === 0) {
+      logError('Empty buffer received from Telegram', new Error('Buffer is empty'), {
+        userId: user.id,
+        chatId,
+        filePath: file.file_path
+      });
+      await bot.sendMessage(chatId, t('receipt.error', lang), { parse_mode: 'Markdown' });
+      return;
+    }
+
     const base64 = Buffer.from(buffer).toString('base64');
 
+    logInfo('Processing receipt image with OCR', {
+      userId: user.id,
+      imageSize: buffer.byteLength,
+      mimeType
+    });
+
     // Process receipt with Claude Vision (using smart-routed API key)
-    const parsed = await processReceiptImage(user.id, base64, ocrApiKey);
+    const parsed = await processReceiptImage(user.id, base64, ocrApiKey, mimeType);
 
     // 💳 Charge credits for OCR
     if (ocrBillingMode.shouldCharge) {
@@ -148,8 +208,18 @@ export async function handlePhotoMessage(bot: TelegramBot, msg: TelegramBot.Mess
     });
 
   } catch (error) {
-    console.error('Photo message handling error:', error);
-    const lang = await getUserLanguageByTelegramId(telegramId);
-    await bot.sendMessage(chatId, t('error.receipt', lang));
+    const { logError } = await import('../../lib/logger');
+    logError('Photo message handling error', error as Error, {
+      chatId,
+      telegramId: telegramId || 'missing',
+      userId: (error as any)?.userId
+    });
+    
+    const lang = await getUserLanguageByTelegramId(telegramId || '');
+    try {
+      await bot.sendMessage(chatId, t('error.receipt', lang));
+    } catch (sendError) {
+      logError('Failed to send error message to user', sendError as Error, { chatId });
+    }
   }
 }
