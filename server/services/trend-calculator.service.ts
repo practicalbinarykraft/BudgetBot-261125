@@ -500,9 +500,13 @@ async function generateAndProcessForecast(params: {
         point.capital = baseWalletsForForecast + walletsDelta + point.assetsNet;
       });
     } else {
+      // Нет исторических данных - начинаем прогноз с текущего состояния
       forecastData = makeCumulativeFromBase(forecastData, 0, 0);
 
-      forecastData.forEach((point: TrendDataPoint) => {
+      // Используем накопительный расчет капитала от текущего баланса
+      let runningCapital = currentWalletsBalance;
+
+      forecastData.forEach((point: TrendDataPoint, index: number) => {
         // Рассчитать стоимость активов напрямую для даты прогноза
         const pointDate = new Date(point.date);
 
@@ -523,7 +527,34 @@ async function generateAndProcessForecast(params: {
         }
 
         point.assetsNet = totalAssetsValue + totalLiabilitiesValue;
-        point.capital = currentWalletsBalance + point.income - point.expense + point.assetsNet;
+        
+        // Защита от нереалистичных значений (диагностика)
+        if (Math.abs(point.assetsNet) > 10000000) { // Больше 10 млн
+          console.warn('⚠️ Unrealistic assetsNet value detected:', {
+            date: point.date,
+            assetsNet: point.assetsNet,
+            totalAssetsValue,
+            totalLiabilitiesValue,
+            userId: params.userId
+          });
+        }
+        
+        // Накопительный расчет капитала:
+        // - Для первой точки: текущий баланс кошельков + доходы/расходы + активы
+        // - Для последующих точек: капитал предыдущей точки + изменение доходов/расходов + изменение активов
+        if (index === 0) {
+          // Первая точка: начинаем с текущего баланса кошельков
+          runningCapital = currentWalletsBalance + point.income - point.expense;
+        } else {
+          // Последующие точки: продолжаем от предыдущей точки
+          const prevPoint = forecastData[index - 1];
+          const incomeDelta = point.income - prevPoint.income;
+          const expenseDelta = point.expense - prevPoint.expense;
+          runningCapital = runningCapital + incomeDelta - expenseDelta;
+        }
+        
+        // Добавить стоимость активов к капиталу
+        point.capital = runningCapital + point.assetsNet;
       });
     }
 
