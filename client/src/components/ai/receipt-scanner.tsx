@@ -11,6 +11,31 @@ interface ReceiptScannerProps {
   onSuccess?: (result: any) => void;
 }
 
+/**
+ * Determine MIME type from file extension (fallback if file.type is empty)
+ * Works on mobile devices where file.type might be empty
+ */
+function getMimeTypeFromFile(file: File): string {
+  // First try file.type (works in most browsers)
+  if (file.type) {
+    return file.type;
+  }
+
+  // Fallback: determine from file extension
+  const fileName = file.name.toLowerCase();
+  const extension = fileName.split('.').pop() || 'jpg';
+  
+  const mimeTypeMap: Record<string, string> = {
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'png': 'image/png',
+    'webp': 'image/webp',
+    'gif': 'image/gif'
+  };
+
+  return mimeTypeMap[extension] || 'image/jpeg';
+}
+
 export function ReceiptScanner({ onSuccess }: ReceiptScannerProps) {
   const [uploadResult, setUploadResult] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -20,7 +45,7 @@ export function ReceiptScanner({ onSuccess }: ReceiptScannerProps) {
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
       const base64 = await fileToBase64(file);
-      const mimeType = file.type || 'image/jpeg';
+      const mimeType = getMimeTypeFromFile(file);
       
       const response = await fetch('/api/ai/receipt-with-items', {
         method: 'POST',
