@@ -18,6 +18,7 @@
       "bundleIdentifier": "com.budgetbot.app",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "BudgetBot needs access to your microphone for voice input to add transactions.",
+        "NSSpeechRecognitionUsageDescription": "BudgetBot uses speech recognition to convert your voice into transaction entries in real time.",
         "NSCameraUsageDescription": "BudgetBot needs camera access to scan receipts.",
         "NSPhotoLibraryUsageDescription": "BudgetBot needs photo library access to select receipt images."
       }
@@ -51,6 +52,14 @@
         "expo-av",
         {
           "microphonePermission": "Allow BudgetBot to access your microphone for voice input."
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "BudgetBot needs your microphone to recognize speech in real time.",
+          "speechRecognitionPermission": "BudgetBot uses on-device speech recognition to instantly convert your voice into transactions.",
+          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
         }
       ]
     ],

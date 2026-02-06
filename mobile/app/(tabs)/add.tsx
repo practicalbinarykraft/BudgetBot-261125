@@ -1,6 +1,6 @@
 /**
  * Add Transaction screen – create new income/expense.
- * Includes voice input support via expo-av.
+ * Includes real-time voice input with on-device speech recognition.
  */
 
 import React, { useState, useCallback } from 'react';
@@ -22,13 +22,28 @@ import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 
 import { useCreateTransaction, useCategories } from '@/hooks/useTransactions';
+import { useSettings } from '@/hooks/useWallets';
+import { VoiceRecorder } from '@/components/VoiceRecorder';
 import { COLORS, FONTS, SPACING } from '@/constants/config';
 import type { Category } from '@/types';
+import type { ParsedVoiceTransaction } from '@/lib/parseTransaction';
+
+/** Map settings language to BCP-47 speech locale */
+function getVoiceLocale(lang?: string): string {
+  switch (lang) {
+    case 'ru': return 'ru-RU';
+    case 'ko': return 'ko-KR';
+    case 'id': return 'id-ID';
+    case 'zh': return 'zh-CN';
+    default:   return 'en-US';
+  }
+}
 
 export default function AddTransactionScreen() {
   const router = useRouter();
   const createMutation = useCreateTransaction();
   const { data: categories } = useCategories();
+  const { data: settings } = useSettings();
 
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [amount, setAmount] = useState('');
@@ -37,7 +52,24 @@ export default function AddTransactionScreen() {
   const [showCategories, setShowCategories] = useState(false);
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
+  const voiceLocale = getVoiceLocale(settings?.language);
   const filteredCategories = categories?.filter((c) => c.type === type) ?? [];
+
+  /** Handle voice recognition result — auto-fill the form */
+  const handleVoiceResult = useCallback(
+    (parsed: ParsedVoiceTransaction & { rawText: string }) => {
+      if (parsed.type) {
+        setType(parsed.type);
+      }
+      if (parsed.amount) {
+        setAmount(parsed.amount);
+      }
+      if (parsed.description) {
+        setDescription(parsed.description);
+      }
+    },
+    [],
+  );
 
   const handleSubmit = useCallback(async () => {
     if (!amount.trim() || !description.trim()) {
@@ -79,6 +111,9 @@ export default function AddTransactionScreen() {
           <View style={styles.header}>
             <Text style={styles.title}>Add Transaction</Text>
           </View>
+
+          {/* Voice Input – real-time on-device speech recognition */}
+          <VoiceRecorder onResult={handleVoiceResult} locale={voiceLocale} />
 
           {/* Type Toggle */}
           <View style={styles.typeToggle}>
@@ -130,7 +165,6 @@ export default function AddTransactionScreen() {
               value={amount}
               onChangeText={setAmount}
               keyboardType="decimal-pad"
-              autoFocus
             />
           </View>
 
@@ -228,12 +262,6 @@ export default function AddTransactionScreen() {
               />
             </View>
           </View>
-
-          {/* Voice Input Button */}
-          <TouchableOpacity style={styles.voiceBtn}>
-            <Ionicons name="mic" size={24} color={COLORS.primary} />
-            <Text style={styles.voiceBtnText}>Voice Input</Text>
-          </TouchableOpacity>
 
           {/* Submit */}
           <TouchableOpacity
@@ -417,25 +445,6 @@ const styles = StyleSheet.create({
     padding: SPACING.sm,
   },
 
-  // Voice
-  voiceBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    paddingVertical: SPACING.md,
-    borderRadius: 12,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.primary + '40',
-    marginBottom: SPACING.xl,
-  },
-  voiceBtnText: {
-    fontSize: FONTS.sizes.md,
-    fontWeight: '500',
-    color: COLORS.primary,
-  },
-
   // Submit
   submitBtn: {
     backgroundColor: COLORS.primary,
@@ -443,6 +452,7 @@ const styles = StyleSheet.create({
     height: 56,
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: SPACING.md,
   },
   submitBtnDisabled: {
     opacity: 0.6,
