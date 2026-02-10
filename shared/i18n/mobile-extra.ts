@@ -25,6 +25,7 @@ export const mobileExtraTranslations: Translations = {
   "wallets.net_worth": { en: "Total Net Worth", ru: "Общий капитал" },
   "wishlist.add": { en: "Add to Wishlist", ru: "Добавить в список" },
   "wishlist.manage": { en: "Plan your purchases", ru: "Планируйте покупки" },
+  "receipts.scan": { en: "Scan Receipt", ru: "Сканировать чек" },
   "billing.your_balance": { en: "Your Balance", ru: "Ваш баланс" },
   "billing.total_granted": { en: "Total Granted", ru: "Всего выдано" },
   "billing.total_used": { en: "Total Used", ru: "Всего использовано" },

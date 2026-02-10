@@ -1,23 +1,20 @@
 import React from "react";
-import {
-  View,
-  ScrollView,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-} from "react-native";
+import { View, ScrollView, KeyboardAvoidingView, Platform, Pressable } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "../components/ThemedText";
 import { Input } from "../components/Input";
 import { Button } from "../components/Button";
-import { Spacing, BorderRadius } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
 import { useAddTransactionScreen } from "../hooks/useAddTransactionScreen";
 import { useTranslation } from "../i18n";
+import { styles } from "./AddTransactionScreen.styles";
 
 export default function AddTransactionScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const nav = useNavigation<NativeStackNavigationProp<any>>();
   const h = useAddTransactionScreen();
 
   return (
@@ -69,6 +66,24 @@ export default function AddTransactionScreen() {
           placeholder={t("transactions.placeholder_description")}
           containerStyle={styles.field}
         />
+
+        {/* Quick input: voice / receipt scan */}
+        <View style={styles.quickInputRow}>
+          <Pressable
+            onPress={() => nav.navigate("VoiceInput")}
+            style={[styles.quickBtn, { backgroundColor: theme.secondary, borderColor: theme.border }]}
+          >
+            <Feather name="mic" size={18} color={theme.primary} />
+            <ThemedText type="small" color={theme.textSecondary}>{t("voice_input.title")}</ThemedText>
+          </Pressable>
+          <Pressable
+            onPress={() => nav.navigate("ReceiptScanner")}
+            style={[styles.quickBtn, { backgroundColor: theme.secondary, borderColor: theme.border }]}
+          >
+            <Feather name="camera" size={18} color={theme.primary} />
+            <ThemedText type="small" color={theme.textSecondary}>{t("receipts.scan")}</ThemedText>
+          </Pressable>
+        </View>
 
         {/* Category picker */}
         <View style={styles.field}>
@@ -174,21 +189,3 @@ export default function AddTransactionScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  content: { padding: Spacing.lg, paddingBottom: Spacing["5xl"] },
-  toggleRow: { flexDirection: "row", gap: Spacing.md, marginBottom: Spacing.xl },
-  toggleBtn: {
-    flex: 1, height: 48, borderRadius: BorderRadius.sm,
-    borderWidth: 1.5, alignItems: "center", justifyContent: "center",
-  },
-  field: { marginBottom: Spacing.xl },
-  label: { marginBottom: Spacing.sm },
-  chipsRow: { gap: Spacing.sm },
-  chip: {
-    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.full, borderWidth: 1,
-  },
-  submitBtn: { marginTop: Spacing.lg },
-});
