@@ -46,12 +46,11 @@ export function useThemeProvider(): ThemeContextValue {
 
 export function useTheme(): ThemeContextValue {
   const ctx = useContext(ThemeContext);
-  if (!ctx) {
-    // Fallback for cases where context is not yet available
-    const systemScheme = useColorScheme();
-    const isDark = systemScheme === "dark";
-    const theme = isDark ? Colors.dark : Colors.light;
-    return { theme, isDark, mode: "system", setMode: () => {} };
-  }
-  return ctx;
+  const systemScheme = useColorScheme();
+
+  if (ctx) return ctx;
+
+  const isDark = systemScheme === "dark";
+  const theme = isDark ? Colors.dark : Colors.light;
+  return { theme, isDark, mode: "system", setMode: () => {} };
 }

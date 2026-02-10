@@ -21,7 +21,7 @@ export function WalletCalibrationCard({
   onBalanceChange,
 }: WalletCalibrationCardProps) {
   const { theme } = useTheme();
-  const symbol = currencySymbols[preview.wallet.currency || "USD"] || "$";
+  const symbol = currencySymbols[preview.wallet.currency || "USD"] || preview.wallet.currency || "$";
 
   return (
     <Card>

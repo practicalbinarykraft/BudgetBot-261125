@@ -59,7 +59,6 @@ export function useAddRecurringScreen() {
     createMutation.mutate({
       type,
       amount,
-      amountUsd: amount,
       description: description.trim(),
       category: category.trim() || null,
       frequency,

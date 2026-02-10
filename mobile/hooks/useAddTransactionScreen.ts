@@ -64,7 +64,6 @@ export function useAddTransactionScreen() {
     createMutation.mutate({
       type,
       amount,
-      amountUsd: amount,
       description: description.trim(),
       categoryId: selectedCategoryId,
       walletId: selectedWalletId,

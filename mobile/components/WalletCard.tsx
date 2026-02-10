@@ -33,7 +33,7 @@ export function WalletCard({ wallet }: WalletCardProps) {
   const icon = walletIcons[wallet.type] || "credit-card";
   const balance = parseFloat(wallet.balance).toFixed(2);
   const balanceUsd = parseFloat(wallet.balanceUsd || "0").toFixed(2);
-  const symbol = currencySymbols[wallet.currency] || "";
+  const symbol = currencySymbols[wallet.currency] || wallet.currency;
   const isUsd = wallet.currency === "USD";
 
   return (

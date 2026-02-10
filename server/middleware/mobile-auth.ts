@@ -3,7 +3,10 @@ import jwt from "jsonwebtoken";
 import { userRepository } from "../repositories/user.repository";
 import type { AppUser } from "../types/express";
 
-const JWT_SECRET = process.env.SESSION_SECRET || "fallback-secret";
+if (!process.env.SESSION_SECRET) {
+  throw new Error("SESSION_SECRET environment variable is required");
+}
+const JWT_SECRET = process.env.SESSION_SECRET;
 
 export interface JwtPayload {
   userId: number;

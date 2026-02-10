@@ -27,7 +27,10 @@ export interface CalibrationSummaryData {
 export const currencySymbols: Record<string, string> = {
   USD: "$",
   RUB: "\u20BD",
+  EUR: "\u20AC",
   IDR: "Rp",
+  KRW: "\u20A9",
+  CNY: "\u00A5",
 };
 
 export function useCalibrationScreen() {
@@ -93,12 +96,12 @@ export function useCalibrationScreen() {
     const totalDifferenceUSD = walletPreview
       .filter((w) => w.hasChanged)
       .reduce((sum, w) => {
+        const balance = parseFloat(w.wallet.balance);
         const usdDiff =
           w.wallet.currency === "USD"
             ? w.difference
-            : w.wallet.balanceUsd
-              ? (w.difference / parseFloat(w.wallet.balance)) *
-                parseFloat(w.wallet.balanceUsd)
+            : w.wallet.balanceUsd && balance !== 0
+              ? (w.difference / balance) * parseFloat(w.wallet.balanceUsd)
               : w.difference;
         return sum + usdDiff;
       }, 0);

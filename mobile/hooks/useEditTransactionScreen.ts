@@ -87,7 +87,6 @@ export function useEditTransactionScreen() {
     updateMutation.mutate({
       type,
       amount,
-      amountUsd: amount,
       description: description.trim(),
       category: selectedCategory || undefined,
       currency,

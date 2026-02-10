@@ -13,88 +13,73 @@ export function useWebSocket(userId: number | undefined) {
   useEffect(() => {
     if (!userId) return;
 
-    const wsUrl = API_URL.replace(/\/+$/, "");
+    let cancelled = false;
+    let pingInterval: ReturnType<typeof setInterval> | null = null;
 
-    const socket = io(wsUrl, {
-      path: "/socket.io",
-      auth: { userId },
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
-      transports: ["polling", "websocket"],
-      forceNew: false,
-      autoConnect: false,
+    storage.getToken().then((token) => {
+      if (cancelled || !token) return;
+
+      const wsUrl = API_URL.replace(/\/+$/, "");
+
+      const socket = io(wsUrl, {
+        path: "/socket.io",
+        auth: { token },
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionAttempts: 5,
+        transports: ["polling", "websocket"],
+        forceNew: false,
+        autoConnect: false,
+      });
+
+      socketRef.current = socket;
+
+      socket.on("connect", () => setConnected(true));
+      socket.on("disconnect", () => setConnected(false));
+      socket.on("connect_error", () => setConnected(false));
+
+      socket.on("budget:warning", (data: { categoryName: string; percentage: number }) => {
+        Alert.alert("Budget Warning", `${data.categoryName} is at ${data.percentage}% of budget`);
+      });
+
+      socket.on("budget:exceeded", (data: { categoryName: string; percentage: number }) => {
+        Alert.alert("Budget Exceeded", `${data.categoryName} has exceeded budget (${data.percentage}%)`);
+        queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      });
+
+      socket.on("transaction:created", () => {
+        queryClient.invalidateQueries({ queryKey: ["transactions"] });
+        queryClient.invalidateQueries({ queryKey: ["stats"] });
+        queryClient.invalidateQueries({ queryKey: ["wallets"] });
+      });
+
+      socket.on("exchange_rate:updated", () => {
+        queryClient.invalidateQueries({ queryKey: ["exchange-rates-history"] });
+      });
+
+      socket.on("wallet:balance_low", (data: { walletName: string; balance: string }) => {
+        Alert.alert("Low Balance", `${data.walletName} balance is low: $${data.balance}`);
+      });
+
+      socket.on("system:maintenance", (data: { message: string }) => {
+        Alert.alert("System Notice", data.message);
+      });
+
+      socket.connect();
+
+      pingInterval = setInterval(() => {
+        if (socket.connected) socket.emit("ping");
+      }, 30000);
     });
-
-    socketRef.current = socket;
-
-    socket.on("connect", () => {
-      setConnected(true);
-    });
-
-    socket.on("disconnect", () => {
-      setConnected(false);
-    });
-
-    socket.on("connect_error", () => {
-      setConnected(false);
-    });
-
-    // Budget alerts
-    socket.on("budget:warning", (data: { categoryName: string; percentage: number }) => {
-      Alert.alert(
-        "Budget Warning",
-        `${data.categoryName} is at ${data.percentage}% of budget`
-      );
-    });
-
-    socket.on("budget:exceeded", (data: { categoryName: string; percentage: number }) => {
-      Alert.alert(
-        "Budget Exceeded",
-        `${data.categoryName} has exceeded budget (${data.percentage}%)`
-      );
-      queryClient.invalidateQueries({ queryKey: ["budgets"] });
-    });
-
-    // Transaction events
-    socket.on("transaction:created", () => {
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["stats"] });
-      queryClient.invalidateQueries({ queryKey: ["wallets"] });
-    });
-
-    // Exchange rate updates
-    socket.on("exchange_rate:updated", () => {
-      queryClient.invalidateQueries({ queryKey: ["exchange-rates-history"] });
-    });
-
-    // Wallet alerts
-    socket.on("wallet:balance_low", (data: { walletName: string; balance: string }) => {
-      Alert.alert(
-        "Low Balance",
-        `${data.walletName} balance is low: $${data.balance}`
-      );
-    });
-
-    // System events
-    socket.on("system:maintenance", (data: { message: string }) => {
-      Alert.alert("System Notice", data.message);
-    });
-
-    socket.connect();
-
-    // Keep-alive ping every 30s
-    const pingInterval = setInterval(() => {
-      if (socket.connected) {
-        socket.emit("ping");
-      }
-    }, 30000);
 
     return () => {
-      clearInterval(pingInterval);
-      socket.removeAllListeners();
-      socket.disconnect();
-      socketRef.current = null;
+      cancelled = true;
+      if (pingInterval) clearInterval(pingInterval);
+      if (socketRef.current) {
+        socketRef.current.removeAllListeners();
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
       setConnected(false);
     };
   }, [userId]);
@@ -102,9 +87,7 @@ export function useWebSocket(userId: number | undefined) {
   const subscribe = useCallback(
     (event: string, handler: (...args: any[]) => void) => {
       socketRef.current?.on(event, handler);
-      return () => {
-        socketRef.current?.off(event, handler);
-      };
+      return () => { socketRef.current?.off(event, handler); };
     },
     []
   );
