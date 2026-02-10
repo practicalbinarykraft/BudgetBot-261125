@@ -1,0 +1,93 @@
+import React from "react";
+import { View, StyleSheet } from "react-native";
+import { ThemedText } from "../components/ThemedText";
+import { Spacing } from "../constants/theme";
+import { useTheme } from "../hooks/useTheme";
+import { useSwipeSortScreen } from "../hooks/useSwipeSortScreen";
+import { AllSortedView } from "../components/swipe-sort/AllSortedView";
+import { SwipeSortHeader } from "../components/swipe-sort/SwipeSortHeader";
+import { SwipeCard } from "../components/swipe-sort/SwipeCard";
+
+export default function SwipeSortScreen() {
+  const { theme } = useTheme();
+  const {
+    pan,
+    panResponder,
+    stats,
+    sessionPoints,
+    currentTx,
+    catLabel,
+    remainingCount,
+    progressPercent,
+    isLoading,
+    handleFinish,
+    navigation,
+  } = useSwipeSortScreen();
+
+  if (!currentTx && !isLoading) {
+    return <AllSortedView onGoBack={() => navigation.goBack()} />;
+  }
+
+  return (
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <SwipeSortHeader
+        sessionPoints={sessionPoints}
+        stats={stats}
+        remainingCount={remainingCount}
+        progressPercent={progressPercent}
+        onFinish={handleFinish}
+      />
+
+      <View style={styles.labelsContainer}>
+        <ThemedText type="small" color="#22c55e" style={styles.dirLabel}>
+          {"← Essential"}
+        </ThemedText>
+        <ThemedText type="small" color={theme.primary} style={styles.dirLabel}>
+          {"↑ Asset"}
+        </ThemedText>
+        <ThemedText type="small" color="#f59e0b" style={styles.dirLabel}>
+          {"Discretionary →"}
+        </ThemedText>
+      </View>
+
+      <View style={styles.deckContainer}>
+        {currentTx ? (
+          <SwipeCard
+            transaction={currentTx}
+            catLabel={catLabel}
+            pan={pan}
+            panResponder={panResponder}
+          />
+        ) : null}
+      </View>
+
+      <ThemedText
+        type="small"
+        color={theme.textTertiary}
+        style={styles.dirLabelBottom}
+      >
+        {"↓ Liability"}
+      </ThemedText>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, padding: Spacing.lg },
+  labelsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: Spacing.sm,
+  },
+  dirLabel: { fontWeight: "500" },
+  dirLabelBottom: {
+    textAlign: "center",
+    fontWeight: "500",
+    marginTop: Spacing.sm,
+  },
+  deckContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
