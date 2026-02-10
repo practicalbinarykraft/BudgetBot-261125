@@ -120,6 +120,33 @@ router.get("/:id/assets-count", withAuth(async (req, res) => {
   }
 }));
 
+// PATCH /api/categories/:id
+router.patch("/:id", withAuth(async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const userId = Number(req.user.id);
+    const category = await storage.getCategoryById(id);
+    if (!category || category.userId !== userId) {
+      return res.status(404).json({ error: "Category not found" });
+    }
+
+    const { name, icon, color } = req.body;
+    const updateData: Record<string, string> = {};
+    if (name !== undefined) updateData.name = name;
+    if (icon !== undefined) updateData.icon = icon;
+    if (color !== undefined) updateData.color = color;
+
+    const updated = await storage.updateCategory(id, updateData);
+
+    // Invalidate cache
+    await cache.del(`categories:user:${userId}`);
+
+    res.json(updated);
+  } catch (error: unknown) {
+    res.status(400).json({ error: getErrorMessage(error) });
+  }
+}));
+
 // DELETE /api/categories/:id
 router.delete("/:id", withAuth(async (req, res) => {
   try {

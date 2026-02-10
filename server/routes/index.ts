@@ -44,6 +44,7 @@ import advancedAnalyticsRouter from "./advanced-analytics.routes";
 import backupRouter from "./backup.routes";
 import twoFactorRouter from "./two-factor.routes";
 import creditsRouter from "./credits.routes";
+import mobileAuthRouter from "./mobile-auth.routes";
 
 export function registerRoutes(app: Express) {
   // API Documentation (Swagger UI)
@@ -91,4 +92,7 @@ export function registerRoutes(app: Express) {
 
   // Two-factor authentication
   app.use("/api/2fa", twoFactorRouter);
+
+  // Mobile JWT auth
+  app.use("/api/mobile/auth", mobileAuthRouter);
 }
