@@ -41,7 +41,7 @@ export default function DashboardScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.center, { backgroundColor: theme.background }]}>
+      <View style={[styles.center, { backgroundColor: theme.background, paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
   content: { paddingBottom: Spacing["5xl"] },
   headerRow: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md,
   },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: Spacing.sm },
   headerBalance: { fontWeight: "500" },
