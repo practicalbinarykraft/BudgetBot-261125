@@ -18,9 +18,11 @@ import { Spacing } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
 import { api } from "../lib/api-client";
 import type { Wallet, PaginatedResponse } from "../types";
+import { useTranslation } from "../i18n";
 
 export default function WalletsScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
 
   const { data, isLoading, isRefetching, refetch } = useQuery({
@@ -48,21 +50,21 @@ export default function WalletsScreen() {
       {/* Block 1: Page header — web: flex-col sm:flex-row justify-between */}
       <View style={styles.pageHeader}>
         <View>
-          <ThemedText type="h2">{"Wallets"}</ThemedText>
+          <ThemedText type="h2">{t("wallets.title")}</ThemedText>
           <ThemedText type="bodySm" color={theme.textSecondary}>
-            {"Manage your accounts"}
+            {t("wallets.manage")}
           </ThemedText>
         </View>
         <View style={styles.headerButtons}>
           <Button
-            title="Calibrate"
+            title={t("wallets.calibrate")}
             variant="outline"
             size="sm"
             onPress={() => navigation.navigate("Calibration")}
             icon={<Feather name="settings" size={14} color={theme.text} />}
           />
           <Button
-            title="Add Wallet"
+            title={t("wallets.add_wallet")}
             size="sm"
             onPress={() => navigation.navigate("AddWallet")}
             icon={
@@ -76,7 +78,7 @@ export default function WalletsScreen() {
       <Card style={styles.totalCard}>
         <CardHeader>
           <ThemedText type="bodySm" color={theme.textSecondary}>
-            {"Total Net Worth"}
+            {t("wallets.net_worth")}
           </ThemedText>
         </CardHeader>
         <CardContent>
@@ -108,10 +110,10 @@ export default function WalletsScreen() {
         <View style={styles.emptyContainer}>
           <Feather name="credit-card" size={48} color={theme.textTertiary} />
           <ThemedText type="body" color={theme.textSecondary} style={styles.emptyText}>
-            {"No wallets yet"}
+            {t("wallets.no_wallets")}
           </ThemedText>
           <ThemedText type="bodySm" color={theme.textTertiary}>
-            {"Add your first wallet to get started"}
+            {t("wallets.add_wallet")}
           </ThemedText>
         </View>
       }

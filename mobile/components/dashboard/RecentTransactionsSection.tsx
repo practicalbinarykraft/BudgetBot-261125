@@ -4,6 +4,7 @@ import { ThemedText } from "../ThemedText";
 import { TransactionItem } from "../TransactionItem";
 import { Spacing } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import type { Transaction, Category } from "../../types";
 
 interface RecentTransactionsSectionProps {
@@ -20,16 +21,17 @@ export function RecentTransactionsSection({
   onTransactionPress,
 }: RecentTransactionsSectionProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.recentSection}>
       <View style={styles.recentHeader}>
         <ThemedText type="h4" style={styles.recentTitle}>
-          {"Recent"}
+          {t("dashboard.recent_transactions")}
         </ThemedText>
         <Pressable onPress={onViewAll}>
           <ThemedText type="bodySm" color={theme.primary}>
-            {"All transactions >"}
+            {t("common.view_all")}
           </ThemedText>
         </Pressable>
       </View>

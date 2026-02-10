@@ -14,11 +14,13 @@ import { Input } from "../components/Input";
 import { Button } from "../components/Button";
 import { Spacing } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
 
 export default function AddPlannedExpenseScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation();
 
   const [name, setName] = useState("");
@@ -69,9 +71,9 @@ export default function AddPlannedExpenseScreen() {
         <Input label="Category (optional)" value={category} onChangeText={setCategory} placeholder="e.g. Rent" containerStyle={styles.field} />
 
         <View style={styles.footerRow}>
-          <Button title="Cancel" variant="outline" onPress={() => navigation.goBack()} style={styles.footerBtn} />
+          <Button title={t("common.cancel")} variant="outline" onPress={() => navigation.goBack()} style={styles.footerBtn} />
           <Button
-            title={createMutation.isPending ? "Adding..." : "Add Planned"}
+            title={createMutation.isPending ? t("common.loading") : t("common.add")}
             onPress={handleSubmit}
             loading={createMutation.isPending}
             disabled={createMutation.isPending}

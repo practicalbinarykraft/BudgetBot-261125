@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "../ThemedText";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import { styles } from "./profileStyles";
 
 interface NavItem {
@@ -84,6 +85,7 @@ const aiToolsItems: NavItem[] = [
 
 export default function NavigationGroups() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
 
   return (
@@ -95,7 +97,7 @@ export default function NavigationGroups() {
       <NavGroup title="AI Tools" items={aiToolsItems} />
 
       <ThemedText type="bodySm" color={theme.textSecondary} style={styles.navGroupTitle}>
-        {"Settings"}
+        {t("settings.title")}
       </ThemedText>
       <Pressable
         onPress={() => navigation.navigate("Billing")}

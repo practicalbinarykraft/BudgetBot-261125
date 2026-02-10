@@ -16,6 +16,7 @@ import { Button } from "../components/Button";
 import { Card, CardContent } from "../components/Card";
 import { Badge } from "../components/Badge";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
 import type { Recurring } from "../types";
@@ -31,6 +32,7 @@ const FREQUENCY_LABELS: Record<string, string> = {
 
 export default function RecurringScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
 
   const recurringQuery = useQuery({
@@ -130,13 +132,13 @@ export default function RecurringScreen() {
       ListHeaderComponent={
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <ThemedText type="h2">{"Recurring Transactions"}</ThemedText>
+            <ThemedText type="h2">{t("recurring.title")}</ThemedText>
             <ThemedText type="bodySm" color={theme.textSecondary}>
-              {"Manage your recurring payments"}
+              {t("recurring.manage")}
             </ThemedText>
           </View>
           <Button
-            title="Add Recurring"
+            title={t("recurring.add")}
             size="sm"
             onPress={() => navigation.navigate("AddRecurring")}
             icon={<Feather name="plus" size={14} color={theme.primaryForeground} />}
@@ -147,13 +149,13 @@ export default function RecurringScreen() {
         <View style={styles.empty}>
           <Feather name="repeat" size={48} color={theme.textTertiary} />
           <ThemedText type="body" color={theme.textSecondary} style={styles.emptyTitle}>
-            {"No recurring transactions"}
+            {t("recurring.no_recurring")}
           </ThemedText>
           <ThemedText type="bodySm" color={theme.textTertiary}>
-            {"Add recurring payments to track them automatically"}
+            {t("recurring.manage")}
           </ThemedText>
           <Button
-            title="Add Recurring"
+            title={t("recurring.add")}
             onPress={() => navigation.navigate("AddRecurring")}
             icon={<Feather name="plus" size={14} color={theme.primaryForeground} />}
             style={styles.emptyBtn}

@@ -10,12 +10,14 @@ import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "../components/ThemedText";
 import { Button } from "../components/Button";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { useNotificationsScreen } from "../hooks/useNotificationsScreen";
 import { styles } from "./styles/notificationsStyles";
 import type { Notification } from "../types";
 
 export default function NotificationsScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const {
     filterType, setFilterType, notificationsQuery, notifications,
     completeMutation, dismissMutation, deleteMutation,

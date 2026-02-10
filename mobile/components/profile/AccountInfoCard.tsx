@@ -3,6 +3,7 @@ import { View } from "react-native";
 import { ThemedText } from "../ThemedText";
 import { Card, CardHeader, CardContent } from "../Card";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import { styles } from "./profileStyles";
 import type { User } from "../../types";
 
@@ -12,18 +13,19 @@ interface AccountInfoCardProps {
 
 export default function AccountInfoCard({ user }: AccountInfoCardProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <Card>
       <CardHeader>
         <ThemedText type="h4" style={styles.cardTitle}>
-          {"Account Information"}
+          {t("settings.account_information")}
         </ThemedText>
       </CardHeader>
       <CardContent style={styles.accountContent}>
         <View style={styles.infoRow}>
           <ThemedText type="small" color={theme.textSecondary}>
-            {"Name"}
+            {t("common.name")}
           </ThemedText>
           <ThemedText type="bodySm" style={styles.infoValue}>
             {user?.name || "User"}
@@ -36,7 +38,7 @@ export default function AccountInfoCard({ user }: AccountInfoCardProps) {
           ]}
         >
           <ThemedText type="small" color={theme.textSecondary}>
-            {"Email"}
+            {t("settings.email")}
           </ThemedText>
           <ThemedText type="bodySm" style={styles.infoValue}>
             {user?.email || "-"}

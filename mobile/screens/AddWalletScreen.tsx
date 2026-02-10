@@ -16,13 +16,14 @@ import { useTheme } from "../hooks/useTheme";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
 import { styles } from "./styles/addWalletStyles";
+import { useTranslation } from "../i18n";
 
 type WalletType = "card" | "cash" | "crypto";
 
-const walletTypes: { key: WalletType; label: string }[] = [
-  { key: "card", label: "Card" },
-  { key: "cash", label: "Cash" },
-  { key: "crypto", label: "Crypto" },
+const walletTypeKeys: { key: WalletType; labelKey: string }[] = [
+  { key: "card", labelKey: "wallets.card" },
+  { key: "cash", labelKey: "wallets.cash" },
+  { key: "crypto", labelKey: "wallets.crypto" },
 ];
 
 const currencies = [
@@ -33,6 +34,7 @@ const currencies = [
 
 export default function AddWalletScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const [name, setName] = useState("");
   const [type, setType] = useState<WalletType>("card");
@@ -61,15 +63,15 @@ export default function AddWalletScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Input label="Name" value={name} onChangeText={setName} placeholder="e.g. My Bank Account" containerStyle={styles.field} />
+        <Input label={t("wallets.name")} value={name} onChangeText={setName} placeholder="e.g. My Bank Account" containerStyle={styles.field} />
         <View style={styles.field}>
-          <ThemedText type="small" color={theme.textSecondary} style={styles.label}>{"Type"}</ThemedText>
+          <ThemedText type="small" color={theme.textSecondary} style={styles.label}>{t("wallets.type")}</ThemedText>
           <View style={styles.toggleRow}>
-            {walletTypes.map((wt) => {
+            {walletTypeKeys.map((wt) => {
               const isActive = type === wt.key;
               return (
                 <Pressable key={wt.key} onPress={() => setType(wt.key)} style={[styles.toggleBtn, { backgroundColor: isActive ? theme.primary : theme.secondary, borderColor: isActive ? theme.primary : theme.border }]}>
-                  <ThemedText type="bodySm" color={isActive ? "#ffffff" : theme.text}>{wt.label}</ThemedText>
+                  <ThemedText type="bodySm" color={isActive ? "#ffffff" : theme.text}>{t(wt.labelKey)}</ThemedText>
                 </Pressable>
               );
             })}
@@ -77,7 +79,7 @@ export default function AddWalletScreen() {
         </View>
         <View style={styles.row}>
           <View style={styles.rowHalf}>
-            <Input label="Balance" value={balance} onChangeText={setBalance} placeholder="0.00" keyboardType="decimal-pad" />
+            <Input label={t("wallets.balance")} value={balance} onChangeText={setBalance} placeholder="0.00" keyboardType="decimal-pad" />
           </View>
           <View style={styles.rowHalf}>
             <ThemedText type="small" color={theme.textSecondary} style={styles.label}>{"Currency"}</ThemedText>
@@ -94,8 +96,8 @@ export default function AddWalletScreen() {
           </View>
         </View>
         <View style={styles.footerRow}>
-          <Button title="Cancel" variant="outline" onPress={() => navigation.goBack()} style={styles.footerBtn} />
-          <Button title={createMutation.isPending ? "Adding..." : "Add Wallet"} onPress={handleSubmit} loading={createMutation.isPending} disabled={createMutation.isPending} style={styles.footerBtn} />
+          <Button title={t("common.cancel")} variant="outline" onPress={() => navigation.goBack()} style={styles.footerBtn} />
+          <Button title={createMutation.isPending ? t("transactions.adding") : t("wallets.add_wallet")} onPress={handleSubmit} loading={createMutation.isPending} disabled={createMutation.isPending} style={styles.footerBtn} />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

@@ -5,6 +5,7 @@ import { ThemedText } from "../ThemedText";
 import { Spacing, BorderRadius } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
 import type { Category } from "../../types";
+import { useTranslation } from "../../i18n";
 
 interface CategoryChipsProps {
   allCategories: Category[];
@@ -20,6 +21,7 @@ export function CategoryChips({
   onCreateNew,
 }: CategoryChipsProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.field}>
@@ -28,7 +30,7 @@ export function CategoryChips({
         color={theme.textSecondary}
         style={styles.label}
       >
-        {"Category (optional)"}
+        {t("transactions.category_optional")}
       </ThemedText>
       <ScrollView
         horizontal
@@ -49,7 +51,7 @@ export function CategoryChips({
             },
           ]}
         >
-          <ThemedText type="small">{"None"}</ThemedText>
+          <ThemedText type="small">{t("transactions.select_category")}</ThemedText>
         </Pressable>
         {allCategories.map((cat) => {
           const isSelected = selectedCategory === cat.name;
@@ -92,7 +94,7 @@ export function CategoryChips({
         >
           <Feather name="plus" size={12} color={theme.primary} />
           <ThemedText type="small" color={theme.primary}>
-            {"Create new"}
+            {t("transactions.create_new_category")}
           </ThemedText>
         </Pressable>
       </ScrollView>

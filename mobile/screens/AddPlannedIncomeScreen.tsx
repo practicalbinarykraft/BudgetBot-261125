@@ -13,11 +13,13 @@ import { Input } from "../components/Input";
 import { Button } from "../components/Button";
 import { Spacing } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
 
 export default function AddPlannedIncomeScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation();
 
   const [description, setDescription] = useState("");
@@ -65,9 +67,9 @@ export default function AddPlannedIncomeScreen() {
         <Input label="Expected Date" value={expectedDate} onChangeText={setExpectedDate} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" containerStyle={styles.field} />
 
         <View style={styles.footerRow}>
-          <Button title="Cancel" variant="outline" onPress={() => navigation.goBack()} style={styles.footerBtn} />
+          <Button title={t("common.cancel")} variant="outline" onPress={() => navigation.goBack()} style={styles.footerBtn} />
           <Button
-            title={createMutation.isPending ? "Adding..." : "Add Income"}
+            title={createMutation.isPending ? t("common.loading") : t("common.add")}
             onPress={handleSubmit}
             loading={createMutation.isPending}
             disabled={createMutation.isPending}

@@ -12,6 +12,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Input } from "../components/Input";
 import { Button } from "../components/Button";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
 import { styles } from "./AddEditAssetScreen.styles";
@@ -24,6 +25,7 @@ type AddEditAssetRoute = RouteProp<
 
 export default function AddEditAssetScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const route = useRoute<AddEditAssetRoute>();
   const assetType = route.params?.type || "asset";
@@ -160,7 +162,7 @@ export default function AddEditAssetScreen() {
 
         <View style={styles.footerRow}>
           <Button
-            title="Cancel"
+            title={t("common.cancel")}
             variant="outline"
             onPress={() => navigation.goBack()}
             style={styles.footerBtn}
@@ -168,8 +170,8 @@ export default function AddEditAssetScreen() {
           <Button
             title={
               createMutation.isPending
-                ? "Adding..."
-                : `Add ${isAsset ? "Asset" : "Liability"}`
+                ? t("common.loading")
+                : t("common.add")
             }
             onPress={handleSubmit}
             loading={createMutation.isPending}

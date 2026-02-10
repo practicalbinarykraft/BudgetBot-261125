@@ -8,6 +8,7 @@ import {
 import { ThemedText } from "../components/ThemedText";
 import { Spacing } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { useAdvancedAnalytics } from "../hooks/useAdvancedAnalytics";
 import { HealthScoreCard } from "../components/advanced-analytics/HealthScoreCard";
 import { ForecastCard } from "../components/advanced-analytics/ForecastCard";
@@ -16,6 +17,7 @@ import { TrendsCard } from "../components/advanced-analytics/TrendsCard";
 
 export default function AdvancedAnalyticsScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { isLoading, health, forecast, recommendations, trends } =
     useAdvancedAnalytics();
 
@@ -24,7 +26,7 @@ export default function AdvancedAnalyticsScreen() {
       <View style={[styles.center, { backgroundColor: theme.background }]}>
         <ActivityIndicator size="large" color={theme.primary} />
         <ThemedText type="bodySm" color={theme.textSecondary}>
-          {"Loading analytics..."}
+          {t("common.loading")}
         </ThemedText>
       </View>
     );
@@ -39,7 +41,7 @@ export default function AdvancedAnalyticsScreen() {
       <View style={styles.headerRow}>
         <View>
           <ThemedText type="h3" style={styles.bold}>
-            {"Advanced Analytics"}
+            {t("analytics.advanced")}
           </ThemedText>
           <ThemedText type="small" color={theme.textSecondary}>
             {"AI-powered insights, forecasts, and recommendations"}

@@ -11,11 +11,13 @@ import { ThemedText } from "../components/ThemedText";
 import { Card, CardContent } from "../components/Card";
 import { Spacing } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { useVoiceInputScreen } from "../hooks/useVoiceInputScreen";
 import { VoiceResultCard } from "../components/voice-input/VoiceResultCard";
 
 export default function VoiceInputScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const h = useVoiceInputScreen();
 
   return (
@@ -27,7 +29,7 @@ export default function VoiceInputScreen() {
       <View style={styles.headerRow}>
         <View>
           <ThemedText type="h3" style={styles.bold}>
-            {"Voice Input"}
+            {t("voice_input.title")}
           </ThemedText>
           <ThemedText type="small" color={theme.textSecondary}>
             {"Record a voice message to create a transaction"}

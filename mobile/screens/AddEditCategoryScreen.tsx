@@ -17,9 +17,11 @@ import {
   EMOJI_OPTIONS,
   COLOR_OPTIONS,
 } from "../hooks/useAddEditCategoryScreen";
+import { useTranslation } from "../i18n";
 
 export default function AddEditCategoryScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const h = useAddEditCategoryScreen();
 
   return (
@@ -29,7 +31,7 @@ export default function AddEditCategoryScreen() {
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Input
-          label="Category Name"
+          label={t("categories.title")}
           value={h.name}
           onChangeText={h.setName}
           placeholder="e.g. Groceries"
@@ -40,23 +42,23 @@ export default function AddEditCategoryScreen() {
         {!h.isEditing ? (
           <View style={styles.field}>
             <ThemedText type="small" color={theme.textSecondary} style={styles.label}>
-              {"Type"}
+              {t("common.type")}
             </ThemedText>
             <View style={styles.toggleRow}>
-              {(["expense", "income"] as const).map((t) => (
+              {(["expense", "income"] as const).map((typ) => (
                 <Pressable
-                  key={t}
-                  onPress={() => h.setType(t)}
+                  key={typ}
+                  onPress={() => h.setType(typ)}
                   style={[
                     styles.toggleBtn,
                     {
-                      backgroundColor: h.type === t ? theme[t] : theme.secondary,
-                      borderColor: h.type === t ? theme[t] : theme.border,
+                      backgroundColor: h.type === typ ? theme[typ] : theme.secondary,
+                      borderColor: h.type === typ ? theme[typ] : theme.border,
                     },
                   ]}
                 >
-                  <ThemedText type="h4" color={h.type === t ? "#ffffff" : theme.textSecondary}>
-                    {t === "expense" ? "Expense" : "Income"}
+                  <ThemedText type="h4" color={h.type === typ ? "#ffffff" : theme.textSecondary}>
+                    {typ === "expense" ? t("categories.expense") : t("categories.income")}
                   </ThemedText>
                 </Pressable>
               ))}
@@ -122,7 +124,7 @@ export default function AddEditCategoryScreen() {
         </View>
 
         <Button
-          title={h.isEditing ? "Save Changes" : "Create Category"}
+          title={h.isEditing ? t("common.save") : t("categories.add_category")}
           onPress={h.handleSave}
           loading={h.isPending}
           disabled={h.isPending}

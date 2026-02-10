@@ -3,6 +3,7 @@ import { View, StyleSheet, Pressable } from "react-native";
 import { ThemedText } from "../ThemedText";
 import { Spacing, BorderRadius } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import type { HistoryDays } from "../../hooks/useFinancialTrendChart";
 import { HISTORY_OPTIONS } from "../../hooks/useFinancialTrendChart";
 
@@ -20,6 +21,7 @@ export function ChartControls({
   setShowForecast,
 }: ChartControlsProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.controlsRow}>
@@ -62,7 +64,7 @@ export function ChartControls({
           type="small"
           color={showForecast ? "#ffffff" : theme.text}
         >
-          {"Forecast"}
+          {t("dashboard.forecast")}
         </ThemedText>
       </Pressable>
     </View>

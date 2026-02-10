@@ -14,10 +14,12 @@ import { Badge } from "../components/Badge";
 import { useTheme } from "../hooks/useTheme";
 import { useCategoriesScreen } from "../hooks/useCategoriesScreen";
 import { styles } from "./styles/categoriesStyles";
+import { useTranslation } from "../i18n";
 import type { Category } from "../types";
 
 export default function CategoriesScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const {
     navigation, isLoading, isRefetching, refetch,
     incomeCategories, expenseCategories, handleDelete, handlePress,
@@ -44,7 +46,7 @@ export default function CategoriesScreen() {
               </View>
               <View>
                 <ThemedText type="bodySm" style={styles.categoryName}>{category.name}</ThemedText>
-                <Badge label={category.type === "income" ? "Income" : "Expense"} variant="secondary" />
+                <Badge label={category.type === "income" ? t("categories.income") : t("categories.expense")} variant="secondary" />
               </View>
             </View>
             <Pressable onPress={() => handleDelete(category)} hitSlop={8} style={styles.deleteBtn}>
@@ -64,36 +66,36 @@ export default function CategoriesScreen() {
     >
       <View style={styles.headerRow}>
         <View>
-          <ThemedText type="h3" style={styles.headerTitle}>{"Categories"}</ThemedText>
-          <ThemedText type="small" color={theme.textSecondary}>{"Organize your spending"}</ThemedText>
+          <ThemedText type="h3" style={styles.headerTitle}>{t("categories.title")}</ThemedText>
+          <ThemedText type="small" color={theme.textSecondary}>{t("categories.manage")}</ThemedText>
         </View>
         <Button
-          title="Add Category"
+          title={t("categories.add_category")}
           size="sm"
           onPress={() => navigation.navigate("AddEditCategory", {})}
           icon={<Feather name="plus" size={14} color={theme.primaryForeground} />}
         />
       </View>
       <View style={styles.section}>
-        <ThemedText type="h4" style={styles.sectionHeading}>{"Income Categories"}</ThemedText>
+        <ThemedText type="h4" style={styles.sectionHeading}>{t("categories.income")}</ThemedText>
         {incomeCategories.length > 0 ? (
           <View style={styles.categoryList}>{incomeCategories.map(renderCategoryCard)}</View>
         ) : (
           <Card>
             <CardContent style={styles.emptySection}>
-              <ThemedText type="body" color={theme.textSecondary}>{"No income categories"}</ThemedText>
+              <ThemedText type="body" color={theme.textSecondary}>{t("categories.no_categories")}</ThemedText>
             </CardContent>
           </Card>
         )}
       </View>
       <View style={styles.section}>
-        <ThemedText type="h4" style={styles.sectionHeading}>{"Expense Categories"}</ThemedText>
+        <ThemedText type="h4" style={styles.sectionHeading}>{t("categories.expense")}</ThemedText>
         {expenseCategories.length > 0 ? (
           <View style={styles.categoryList}>{expenseCategories.map(renderCategoryCard)}</View>
         ) : (
           <Card>
             <CardContent style={styles.emptySection}>
-              <ThemedText type="body" color={theme.textSecondary}>{"No expense categories"}</ThemedText>
+              <ThemedText type="body" color={theme.textSecondary}>{t("categories.no_categories")}</ThemedText>
             </CardContent>
           </Card>
         )}

@@ -10,6 +10,7 @@ import {
 } from "../components/Card";
 import { useTheme } from "../hooks/useTheme";
 import { useAuthScreen } from "../hooks/useAuthScreen";
+import { useTranslation } from "../i18n";
 import { AuthHeader } from "../components/auth/AuthHeader";
 import { AuthTabToggle } from "../components/auth/AuthTabToggle";
 import { LoginForm } from "../components/auth/LoginForm";
@@ -24,6 +25,7 @@ interface AuthScreenProps {
 export default function AuthScreen({ onLogin, onRegister }: AuthScreenProps) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { activeTab, setActiveTab, language, toggleLanguage, login, register } =
     useAuthScreen(onLogin, onRegister);
 
@@ -47,12 +49,12 @@ export default function AuthScreen({ onLogin, onRegister }: AuthScreenProps) {
           <Card style={styles.card}>
             <CardHeader>
               <CardTitle>
-                {activeTab === "login" ? "Welcome back" : "Create account"}
+                {activeTab === "login" ? t("auth.welcome_back") : t("auth.create_account")}
               </CardTitle>
               <CardDescription>
                 {activeTab === "login"
-                  ? "Sign in to your account"
-                  : "Start tracking your finances"}
+                  ? t("auth.login_description")
+                  : t("auth.register_description")}
               </CardDescription>
             </CardHeader>
 

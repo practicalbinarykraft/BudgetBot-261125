@@ -11,10 +11,12 @@ import { FinancialHealthCard } from "../components/ai-analysis/FinancialHealthCa
 import { PriceRecommendationsSection } from "../components/ai-analysis/PriceRecommendationsSection";
 import { Spacing } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { useAIAnalysisScreen } from "../hooks/useAIAnalysisScreen";
 
 export default function AIAnalysisScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const {
     analysis,
@@ -34,7 +36,7 @@ export default function AIAnalysisScreen() {
     >
       <View style={styles.headerRow}>
         <View>
-          <ThemedText type="h3" style={styles.bold}>{"AI Analysis"}</ThemedText>
+          <ThemedText type="h3" style={styles.bold}>{t("ai.analysis_title")}</ThemedText>
           <ThemedText type="small" color={theme.textSecondary}>{"AI-powered financial insights"}</ThemedText>
         </View>
       </View>

@@ -5,11 +5,13 @@ import { ThemedText } from "../components/ThemedText";
 import { Button } from "../components/Button";
 import { Card, CardHeader, CardContent } from "../components/Card";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { useReceiptScannerScreen } from "../hooks/useReceiptScannerScreen";
 import { styles } from "./styles/receiptScannerStyles";
 
 export default function ReceiptScannerScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { imageUri, result, scanMutation, pickImage } = useReceiptScannerScreen();
 
   return (

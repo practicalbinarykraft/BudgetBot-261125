@@ -6,12 +6,14 @@ import { Button } from "../components/Button";
 import { Card, CardHeader, CardContent } from "../components/Card";
 import { Badge } from "../components/Badge";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { useProductDetailScreen } from "../hooks/useProductDetailScreen";
 import { styles } from "./styles/productDetailStyles";
 import type { PriceHistoryEntry } from "../types";
 
 export default function ProductDetailScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { historyQuery, handleDelete, formatDate } = useProductDetailScreen();
 
   if (historyQuery.isLoading) {
@@ -44,7 +46,7 @@ export default function ProductDetailScreen() {
           <ThemedText type="h2">{product.name}</ThemedText>
           {product.category ? <Badge label={product.category} variant="outline" /> : null}
         </View>
-        <Button title="Delete" variant="destructive" size="sm" onPress={handleDelete} icon={<Feather name="trash-2" size={14} color="#ffffff" />} />
+        <Button title={t("common.delete")} variant="destructive" size="sm" onPress={handleDelete} icon={<Feather name="trash-2" size={14} color="#ffffff" />} />
       </View>
 
       <View style={styles.statsGrid}>

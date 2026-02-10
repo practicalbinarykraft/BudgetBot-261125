@@ -23,9 +23,11 @@ import { useTransactionsScreen } from "../hooks/useTransactionsScreen";
 import { FilterSheet } from "../components/transactions/FilterSheet";
 import { TransactionGroup } from "../components/transactions/TransactionGroup";
 import { ActiveFilterBadges } from "../components/transactions/ActiveFilterBadges";
+import { useTranslation } from "../i18n";
 
 export default function TransactionsScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const {
     filters,
@@ -71,10 +73,10 @@ export default function TransactionsScreen() {
         <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
             <ThemedText type="h3" style={styles.headerTitle}>
-              {"Transactions"}
+              {t("transactions.title")}
             </ThemedText>
             <ThemedText type="small" color={theme.textSecondary}>
-              {"Manage your transactions"}
+              {t("transactions.manage")}
             </ThemedText>
             {hasActiveFilters ? (
               <ActiveFilterBadges
@@ -89,8 +91,8 @@ export default function TransactionsScreen() {
             <Button
               title={
                 activeFilterCount > 0
-                  ? `Filter (${activeFilterCount})`
-                  : "Filter"
+                  ? `${t("common.filter")} (${activeFilterCount})`
+                  : t("common.filter")
               }
               variant="outline"
               size="sm"
@@ -98,7 +100,7 @@ export default function TransactionsScreen() {
               icon={<Feather name="filter" size={14} color={theme.text} />}
             />
             <Button
-              title="Add Transaction"
+              title={t("transactions.add_transaction")}
               size="sm"
               onPress={() => navigation.navigate("AddTransaction")}
               icon={
@@ -115,20 +117,20 @@ export default function TransactionsScreen() {
         {/* Block 2: TransactionList in Card */}
         <Card>
           <CardHeader>
-            <CardTitle>{"Recent Transactions"}</CardTitle>
+            <CardTitle>{t("transactions.title")}</CardTitle>
           </CardHeader>
           <CardContent>
             {transactions.length === 0 ? (
               <View style={styles.emptyTransactions}>
                 <ThemedText type="body" color={theme.textSecondary}>
-                  {"No transactions found"}
+                  {t("transactions.no_transactions")}
                 </ThemedText>
                 <ThemedText
                   type="small"
                   color={theme.textSecondary}
                   style={styles.emptyHint}
                 >
-                  {"Try adjusting your filters or add a new transaction"}
+                  {t("transactions.clear_filters")}
                 </ThemedText>
               </View>
             ) : (

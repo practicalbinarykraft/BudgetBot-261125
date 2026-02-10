@@ -4,6 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "../ThemedText";
 import { Spacing, BorderRadius } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import { formatCompact } from "../../hooks/useFinancialTrendChart";
 
 interface ForecastSummaryProps {
@@ -20,6 +21,7 @@ export function ForecastSummaryBox({
   showForecast,
 }: ForecastSummaryProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   if (!showForecast) return null;
 
@@ -34,7 +36,7 @@ export function ForecastSummaryBox({
       <View style={styles.forecastText}>
         <View style={styles.forecastValues}>
           <ThemedText type="small" style={styles.bold}>
-            {"12-month forecast:"}
+            {t("dashboard.forecast_12_months")}
           </ThemedText>
           <ThemedText type="bodySm" color={theme.primary} style={styles.bold} mono>
             {formatCompact(forecastSummary.projected)}
@@ -52,7 +54,7 @@ export function ForecastSummaryBox({
           </ThemedText>
         </View>
         <ThemedText type="small" color={theme.textSecondary}>
-          {"Capital: " +
+          {t("dashboard.capital") + ": " +
             formatCompact(forecastSummary.current) +
             " \u2192 " +
             formatCompact(forecastSummary.projected)}

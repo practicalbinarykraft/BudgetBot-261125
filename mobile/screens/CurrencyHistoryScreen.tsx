@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ThemedText } from "../components/ThemedText";
 import { Card, CardContent } from "../components/Card";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { api } from "../lib/api-client";
 import { styles } from "./styles/currencyHistoryStyles";
 
@@ -41,6 +42,7 @@ interface CurrencyCardData {
 
 export default function CurrencyHistoryScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   const { data, isLoading, isRefetching, refetch, error } = useQuery<RateHistory>({
     queryKey: ["exchange-rates-history", { days: 30 }],

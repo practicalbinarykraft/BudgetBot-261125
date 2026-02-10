@@ -11,6 +11,7 @@ import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "../components/ThemedText";
 import { Spacing, BorderRadius } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { useAIChat } from "../hooks/useAIChat";
 import { ChatMessageBubble } from "../components/ai-chat/ChatMessageBubble";
 import { ChatEmptyState } from "../components/ai-chat/ChatEmptyState";
@@ -20,6 +21,7 @@ import type { AiChatMessage } from "../types";
 
 export default function AIChatScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const {
     message,
     setMessage,

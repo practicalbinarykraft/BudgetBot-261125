@@ -10,12 +10,14 @@ import { ThemedText } from "../components/ThemedText";
 import { Badge } from "../components/Badge";
 import { Card, CardContent } from "../components/Card";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { api } from "../lib/api-client";
 import type { CreditsData, PricingData } from "../types";
 import { styles } from "./BillingScreen.styles";
 
 export default function BillingScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   const creditsQuery = useQuery({
     queryKey: ["credits"],
@@ -57,7 +59,7 @@ export default function BillingScreen() {
       <View style={styles.header}>
         <Feather name="zap" size={24} color={theme.primary} />
         <View style={styles.headerText}>
-          <ThemedText type="h2">{"Credits"}</ThemedText>
+          <ThemedText type="h2">{t("billing.title")}</ThemedText>
           <ThemedText type="bodySm" color={theme.textSecondary}>
             {isByok
               ? "∞ Unlimited"
@@ -196,4 +198,3 @@ export default function BillingScreen() {
     </ScrollView>
   );
 }
-

@@ -15,9 +15,11 @@ import { useTheme } from "../hooks/useTheme";
 import { useCalibrationScreen } from "../hooks/useCalibrationScreen";
 import { WalletCalibrationCard } from "../components/calibration/WalletCalibrationCard";
 import { CalibrationSummary } from "../components/calibration/CalibrationSummary";
+import { useTranslation } from "../i18n";
 
 export default function CalibrationScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const {
     navigation,
     walletsQuery,
@@ -51,21 +53,21 @@ export default function CalibrationScreen() {
           <View style={styles.headerTitleRow}>
             <Feather name="settings" size={20} color={theme.text} />
             <ThemedText type="h3" style={styles.headerTitle}>
-              {"Wallet Calibration"}
+              {t("wallets.calibrate")}
             </ThemedText>
           </View>
           <ThemedText type="bodySm" color={theme.textSecondary}>
-            {"Update wallet balances to match your real bank/wallet apps"}
+            {t("wallets.manage")}
           </ThemedText>
         </View>
 
         {wallets.length === 0 ? (
           <View style={styles.emptyState}>
             <ThemedText type="body" color={theme.textSecondary}>
-              {"No wallets found"}
+              {t("wallets.no_wallets")}
             </ThemedText>
             <Button
-              title="Add Wallet"
+              title={t("wallets.add_wallet")}
               onPress={() => navigation.navigate("AddWallet")}
               icon={
                 <Feather
@@ -102,7 +104,7 @@ export default function CalibrationScreen() {
         {wallets.length > 0 ? (
           <View style={styles.footerRow}>
             <Button
-              title="Cancel"
+              title={t("common.cancel")}
               variant="outline"
               onPress={() => navigation.goBack()}
               style={styles.footerBtn}
@@ -110,10 +112,10 @@ export default function CalibrationScreen() {
             <Button
               title={
                 isCalibrating
-                  ? "Calibrating..."
+                  ? `${t("wallets.calibrate")}...`
                   : summary.changedWallets > 0
-                    ? `Calibrate (${summary.changedWallets})`
-                    : "Calibrate"
+                    ? `${t("wallets.calibrate")} (${summary.changedWallets})`
+                    : t("wallets.calibrate")
               }
               onPress={handleCalibrateAll}
               loading={isCalibrating}

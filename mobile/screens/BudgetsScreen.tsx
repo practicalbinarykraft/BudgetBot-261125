@@ -10,9 +10,11 @@ import { BudgetProgressSection } from "../components/budgets/BudgetProgressSecti
 import { BudgetCardItem } from "../components/budgets/BudgetCardItem";
 import { BudgetEmptyState } from "../components/budgets/BudgetEmptyState";
 import { budgetsStyles as styles } from "../components/budgets/budgetsStyles";
+import { useTranslation } from "../i18n";
 
 export default function BudgetsScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const {
     limits,
     exceededBudgets,
@@ -43,14 +45,14 @@ export default function BudgetsScreen() {
       <View style={styles.headerRow}>
         <View>
           <ThemedText type="h3" style={styles.headerTitle}>
-            {"Budgets"}
+            {t("budgets.title")}
           </ThemedText>
           <ThemedText type="small" color={theme.textSecondary}>
-            {"Manage your spending limits"}
+            {t("budgets.manage")}
           </ThemedText>
         </View>
         <Button
-          title="Add Budget"
+          title={t("budgets.add_budget")}
           size="sm"
           onPress={navigateToAddBudget}
           icon={

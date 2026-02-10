@@ -3,10 +3,12 @@ import { View, StyleSheet } from "react-native";
 import { ThemedText } from "../ThemedText";
 import { Spacing } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import { CHART_COLORS } from "../../hooks/useFinancialTrendChart";
 
 export function ChartLegend() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.legend}>
@@ -15,7 +17,7 @@ export function ChartLegend() {
           style={[styles.legendDot, { backgroundColor: CHART_COLORS.income }]}
         />
         <ThemedText type="small" color={theme.textSecondary}>
-          {"Income"}
+          {t("dashboard.income")}
         </ThemedText>
       </View>
       <View style={styles.legendItem}>
@@ -23,7 +25,7 @@ export function ChartLegend() {
           style={[styles.legendDot, { backgroundColor: CHART_COLORS.expense }]}
         />
         <ThemedText type="small" color={theme.textSecondary}>
-          {"Expense"}
+          {t("dashboard.expenses")}
         </ThemedText>
       </View>
       <View style={styles.legendItem}>
@@ -31,7 +33,7 @@ export function ChartLegend() {
           style={[styles.legendDot, { backgroundColor: CHART_COLORS.capital }]}
         />
         <ThemedText type="small" color={theme.textSecondary}>
-          {"Capital"}
+          {t("dashboard.capital")}
         </ThemedText>
       </View>
     </View>

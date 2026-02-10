@@ -13,6 +13,7 @@ import { TypeBreakdownCard } from "../components/expenses-analytics/TypeBreakdow
 import { UnsortedTransactionsCard } from "../components/expenses-analytics/UnsortedTransactionsCard";
 import { Spacing, BorderRadius } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import {
   useExpensesAnalyticsScreen,
   periods,
@@ -21,6 +22,7 @@ import {
 
 export default function ExpensesAnalyticsScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const {
     period,
     setPeriod,
@@ -90,7 +92,7 @@ export default function ExpensesAnalyticsScreen() {
     >
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <ThemedText type="h2">{"Expense Analytics"}</ThemedText>
+          <ThemedText type="h2">{t("analytics.expenses")}</ThemedText>
           <ThemedText type="bodySm" color={theme.textSecondary}>
             {"Analyze your spending across categories, people, and types"}
           </ThemedText>

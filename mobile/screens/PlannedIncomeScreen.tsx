@@ -14,6 +14,7 @@ import { Button } from "../components/Button";
 import { Card, CardContent } from "../components/Card";
 import { Badge } from "../components/Badge";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { usePlannedIncomeScreen, type TabFilter } from "../hooks/usePlannedIncomeScreen";
 import { styles } from "./styles/plannedIncomeStyles";
 import type { PlannedIncome } from "../types";
@@ -26,6 +27,7 @@ const statusBadge = (status: string) => {
 
 export default function PlannedIncomeScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const {
     tab, setTab, incomeQuery, allItems, filtered,
@@ -88,10 +90,10 @@ export default function PlannedIncomeScreen() {
         <View>
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              <ThemedText type="h2">{"Planned Income"}</ThemedText>
-              <ThemedText type="bodySm" color={theme.textSecondary}>{"Track expected income"}</ThemedText>
+              <ThemedText type="h2">{t("planned_income.title")}</ThemedText>
+              <ThemedText type="bodySm" color={theme.textSecondary}>{t("planned_income.manage")}</ThemedText>
             </View>
-            <Button title="Add" size="sm" onPress={() => navigation.navigate("AddPlannedIncome")} icon={<Feather name="plus" size={14} color={theme.primaryForeground} />} />
+            <Button title={t("common.add")} size="sm" onPress={() => navigation.navigate("AddPlannedIncome")} icon={<Feather name="plus" size={14} color={theme.primaryForeground} />} />
           </View>
           <View style={styles.tabsRow}>
             {(["all", "pending", "received", "cancelled"] as TabFilter[]).map((t) => {

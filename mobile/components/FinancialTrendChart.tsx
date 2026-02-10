@@ -14,9 +14,11 @@ import {
 import { ChartControls } from "./financial-trend-chart/ChartControls";
 import { ForecastSummaryBox } from "./financial-trend-chart/ForecastSummary";
 import { ChartLegend } from "./financial-trend-chart/ChartLegend";
+import { useTranslation } from "../i18n";
 
 export default function FinancialTrendChart() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const {
     historyDays,
     setHistoryDays,
@@ -36,12 +38,12 @@ export default function FinancialTrendChart() {
       <CardHeader>
         <View style={styles.titleRow}>
           <ThemedText type="h4" style={styles.bold}>
-            {"Financial Forecast"}
+            {t("dashboard.financial_forecast")}
           </ThemedText>
           <Feather name="trending-up" size={18} color={theme.primary} />
         </View>
         <ThemedText type="small" color={theme.textSecondary}>
-          {"Income, expenses, and capital over time"}
+          {t("dashboard.financial_trend_subtitle")}
         </ThemedText>
       </CardHeader>
 
@@ -64,14 +66,14 @@ export default function FinancialTrendChart() {
           <View style={styles.loadingChart}>
             <Feather name="loader" size={24} color={theme.primary} />
             <ThemedText type="bodySm" color={theme.textSecondary}>
-              {"Loading chart data..."}
+              {t("dashboard.chart_loading")}
             </ThemedText>
           </View>
         ) : !hasData ? (
           <View style={styles.loadingChart}>
             <Feather name="bar-chart-2" size={24} color={theme.textTertiary} />
             <ThemedText type="bodySm" color={theme.textSecondary}>
-              {"No trend data available yet"}
+              {t("dashboard.chart_no_data")}
             </ThemedText>
           </View>
         ) : (

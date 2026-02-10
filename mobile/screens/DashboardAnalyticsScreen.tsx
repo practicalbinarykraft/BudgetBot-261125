@@ -17,6 +17,7 @@ import { BudgetAlerts } from "../components/dashboard-analytics/BudgetAlerts";
 import { RecentTransactions } from "../components/dashboard-analytics/RecentTransactions";
 import { Spacing } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { useDashboardAnalytics } from "../hooks/useDashboardAnalytics";
 import type { DateFilterValue } from "../utils/date-helpers";
 
@@ -29,6 +30,7 @@ const dateFilters: { value: DateFilterValue; label: string }[] = [
 
 export default function DashboardAnalyticsScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const {
     dateFilter,
@@ -66,7 +68,7 @@ export default function DashboardAnalyticsScreen() {
       <View style={styles.headerRow}>
         <View>
           <ThemedText type="h3" style={styles.headerTitle}>
-            {"Dashboard"}
+            {t("analytics.title")}
           </ThemedText>
           <ThemedText type="small" color={theme.textSecondary}>
             {"Overview of your finances"}

@@ -13,6 +13,7 @@ import { Input } from "../components/Input";
 import { Button } from "../components/Button";
 import { Spacing, BorderRadius } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import {
   useAddEditTagScreen,
   ICON_OPTIONS,
@@ -22,6 +23,7 @@ import {
 
 export default function AddEditTagScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const h = useAddEditTagScreen();
 
   return (
@@ -119,7 +121,7 @@ export default function AddEditTagScreen() {
 
         {h.editTag ? (
           <Button
-            title="Delete Tag"
+            title={t("common.delete")}
             variant="destructive"
             onPress={h.handleDelete}
             icon={<Feather name="trash-2" size={14} color={theme.destructiveForeground} />}
@@ -129,13 +131,13 @@ export default function AddEditTagScreen() {
 
         <View style={styles.footerRow}>
           <Button
-            title="Cancel"
+            title={t("common.cancel")}
             variant="outline"
             onPress={() => h.navigation.goBack()}
             style={styles.footerBtn}
           />
           <Button
-            title={h.isPending ? "Saving..." : h.editTag ? "Update" : "Create"}
+            title={h.isPending ? t("common.loading") : t("common.save")}
             onPress={h.handleSubmit}
             loading={h.isPending}
             disabled={h.isPending}

@@ -14,6 +14,7 @@ import { TagBadge } from "../components/TagBadge";
 import { TransactionItem } from "../components/TransactionItem";
 import { Spacing } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { useTagDetailScreen } from "../hooks/useTagDetailScreen";
 
 function StatCard({ title, value, color, theme }: {
@@ -31,6 +32,7 @@ function StatCard({ title, value, color, theme }: {
 
 export default function TagDetailScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const h = useTagDetailScreen();
 
   if (h.isLoading) {

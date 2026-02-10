@@ -13,12 +13,14 @@ import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "../components/ThemedText";
 import { Spacing } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { usePasswordRecovery } from "../hooks/usePasswordRecovery";
 import { StepIndicator } from "../components/password-recovery/StepIndicator";
 import { RecoveryStepForms } from "../components/password-recovery/RecoveryStepForms";
 
 export default function PasswordRecoveryScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const recovery = usePasswordRecovery();
@@ -38,13 +40,13 @@ export default function PasswordRecoveryScreen() {
             <View style={styles.titleRow}>
               <Feather name="credit-card" size={32} color={theme.primary} />
               <ThemedText type="h3" style={styles.title}>
-                {"Password Recovery"}
+                {t("password_recovery.title")}
               </ThemedText>
             </View>
             <ThemedText type="bodySm" color={theme.textSecondary}>
-              {recovery.step === "request" && "Enter your email or Telegram ID"}
-              {recovery.step === "verify" && "Enter the 6-digit code from Telegram"}
-              {recovery.step === "reset" && "Set your new password"}
+              {recovery.step === "request" && t("password_recovery.step1_description")}
+              {recovery.step === "verify" && t("password_recovery.step2_description")}
+              {recovery.step === "reset" && t("password_recovery.step3_description")}
             </ThemedText>
           </View>
 
@@ -54,7 +56,7 @@ export default function PasswordRecoveryScreen() {
             style={styles.backRow}
           >
             <Feather name="arrow-left" size={16} color={theme.text} />
-            <ThemedText type="bodySm">{"Back to Login"}</ThemedText>
+            <ThemedText type="bodySm">{t("password_recovery.back_to_login")}</ThemedText>
           </Pressable>
 
           {/* Step indicator */}

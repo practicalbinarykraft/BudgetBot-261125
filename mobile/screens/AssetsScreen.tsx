@@ -12,6 +12,7 @@ import { ThemedText } from "../components/ThemedText";
 import { Button } from "../components/Button";
 import { Spacing, BorderRadius } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { useAssetsScreen } from "../hooks/useAssetsScreen";
 import type { TabFilter } from "../hooks/useAssetsScreen";
 import { AssetCard } from "../components/assets/AssetCard";
@@ -20,6 +21,7 @@ import type { Asset } from "../types";
 
 export default function AssetsScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const {
     navigation,
     tab,
@@ -66,13 +68,13 @@ export default function AssetsScreen() {
         <View>
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              <ThemedText type="h2">{"Assets"}</ThemedText>
+              <ThemedText type="h2">{t("assets.title")}</ThemedText>
               <ThemedText type="bodySm" color={theme.textSecondary}>
-                {"Manage your assets and liabilities"}
+                {t("assets.manage")}
               </ThemedText>
             </View>
             <Button
-              title="Add"
+              title={t("common.add")}
               size="sm"
               onPress={() =>
                 navigation.navigate("AddEditAsset", { type: tab })

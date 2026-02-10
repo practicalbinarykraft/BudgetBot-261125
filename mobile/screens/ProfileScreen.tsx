@@ -4,6 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "../components/ThemedText";
 import { Button } from "../components/Button";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { useProfileData } from "../hooks/useProfileData";
 import TelegramIntegrationCard from "../components/settings/TelegramIntegrationCard";
 import TwoFactorCard from "../components/settings/TwoFactorCard";
@@ -21,6 +22,7 @@ interface ProfileScreenProps {
 
 export default function ProfileScreen({ user, onLogout }: ProfileScreenProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const profileData = useProfileData();
 
   const isMyselfTier = user?.tier === "myself";
@@ -35,10 +37,10 @@ export default function ProfileScreen({ user, onLogout }: ProfileScreenProps) {
         <View style={styles.headerRow}>
           <View>
             <ThemedText type="h3" style={styles.headerTitle}>
-              {"Settings"}
+              {t("settings.title")}
             </ThemedText>
             <ThemedText type="small" color={theme.textSecondary}>
-              {"Manage your preferences"}
+              {t("settings.manage_preferences")}
             </ThemedText>
           </View>
         </View>
@@ -60,7 +62,7 @@ export default function ProfileScreen({ user, onLogout }: ProfileScreenProps) {
 
         {/* Log Out */}
         <Button
-          title="Log Out"
+          title={t("common.logout")}
           onPress={onLogout}
           variant="destructive"
           icon={<Feather name="log-out" size={16} color="#faf8f8" />}

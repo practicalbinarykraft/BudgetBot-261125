@@ -12,6 +12,7 @@ import { Input } from "../components/Input";
 import { Button } from "../components/Button";
 import { Spacing, BorderRadius } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import {
   useAddRecurringScreen,
   FREQUENCY_OPTIONS,
@@ -20,6 +21,7 @@ import {
 
 export default function AddRecurringScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const h = useAddRecurringScreen();
 
   return (
@@ -158,13 +160,13 @@ export default function AddRecurringScreen() {
 
         <View style={styles.footerRow}>
           <Button
-            title="Cancel"
+            title={t("common.cancel")}
             variant="outline"
             onPress={() => h.navigation.goBack()}
             style={styles.footerBtn}
           />
           <Button
-            title={h.createMutation.isPending ? "Adding..." : "Add Recurring"}
+            title={h.createMutation.isPending ? t("common.loading") : t("recurring.add")}
             onPress={h.handleSubmit}
             loading={h.createMutation.isPending}
             disabled={h.createMutation.isPending}

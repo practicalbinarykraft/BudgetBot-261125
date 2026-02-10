@@ -15,6 +15,7 @@ import { Input } from "../components/Input";
 import { Button } from "../components/Button";
 import { Spacing, BorderRadius } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
 
@@ -26,6 +27,7 @@ const PRIORITY_OPTIONS: { key: string; label: string }[] = [
 
 export default function AddWishlistScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation();
 
   const [name, setName] = useState("");
@@ -133,13 +135,13 @@ export default function AddWishlistScreen() {
         {/* Footer — web: Cancel + Add */}
         <View style={styles.footerRow}>
           <Button
-            title="Cancel"
+            title={t("common.cancel")}
             variant="outline"
             onPress={() => navigation.goBack()}
             style={styles.footerBtn}
           />
           <Button
-            title={createMutation.isPending ? "Adding..." : "Add Item"}
+            title={createMutation.isPending ? t("common.loading") : t("wishlist.add")}
             onPress={handleSubmit}
             loading={createMutation.isPending}
             disabled={createMutation.isPending}

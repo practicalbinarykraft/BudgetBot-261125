@@ -2,6 +2,7 @@ import React from "react";
 import { View, Pressable } from "react-native";
 import { ThemedText } from "../ThemedText";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import { authStyles as styles } from "./authStyles";
 
 interface AuthTabToggleProps {
@@ -11,6 +12,7 @@ interface AuthTabToggleProps {
 
 export function AuthTabToggle({ activeTab, onTabChange }: AuthTabToggleProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={[styles.tabList, { backgroundColor: theme.muted }]}>
@@ -28,7 +30,7 @@ export function AuthTabToggle({ activeTab, onTabChange }: AuthTabToggleProps) {
           color={activeTab === "login" ? theme.text : theme.textSecondary}
           style={styles.tabText}
         >
-          {"Login"}
+          {t("auth.login")}
         </ThemedText>
       </Pressable>
       <Pressable
@@ -45,7 +47,7 @@ export function AuthTabToggle({ activeTab, onTabChange }: AuthTabToggleProps) {
           color={activeTab === "register" ? theme.text : theme.textSecondary}
           style={styles.tabText}
         >
-          {"Register"}
+          {t("auth.register")}
         </ThemedText>
       </Pressable>
     </View>

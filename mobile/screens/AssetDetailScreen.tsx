@@ -7,6 +7,7 @@ import { Card, CardHeader, CardContent } from "../components/Card";
 import { Badge } from "../components/Badge";
 import { Spacing } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { useAssetDetailScreen } from "../hooks/useAssetDetailScreen";
 import { AssetValueCard } from "../components/asset-detail/AssetValueCard";
 import { CashflowCard } from "../components/asset-detail/CashflowCard";
@@ -15,6 +16,7 @@ import { CalibrateModal } from "../components/asset-detail/CalibrateModal";
 
 export default function AssetDetailScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const {
     detailQuery,
     showCalibrate,
@@ -79,7 +81,7 @@ export default function AssetDetailScreen() {
             ) : null}
           </View>
           <Button
-            title="Delete"
+            title={t("common.delete")}
             variant="destructive"
             size="sm"
             onPress={handleDelete}

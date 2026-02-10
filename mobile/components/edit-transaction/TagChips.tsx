@@ -4,6 +4,7 @@ import { ThemedText } from "../ThemedText";
 import { Spacing, BorderRadius } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
 import type { PersonalTag } from "../../types";
+import { useTranslation } from "../../i18n";
 
 interface TagChipsProps {
   tags: PersonalTag[];
@@ -13,6 +14,7 @@ interface TagChipsProps {
 
 export function TagChips({ tags, personalTagId, onSelectTag }: TagChipsProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.field}>
@@ -21,7 +23,7 @@ export function TagChips({ tags, personalTagId, onSelectTag }: TagChipsProps) {
         color={theme.textSecondary}
         style={styles.label}
       >
-        {"Tag (optional)"}
+        {t("transactions.tag_optional")}
       </ThemedText>
       <ScrollView
         horizontal
@@ -42,7 +44,7 @@ export function TagChips({ tags, personalTagId, onSelectTag }: TagChipsProps) {
             },
           ]}
         >
-          <ThemedText type="small">{"No tag"}</ThemedText>
+          <ThemedText type="small">{t("transactions.tag_optional")}</ThemedText>
         </Pressable>
         {tags.map((tag) => {
           const isSelected = personalTagId === tag.id;

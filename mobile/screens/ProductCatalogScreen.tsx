@@ -14,12 +14,14 @@ import { Input } from "../components/Input";
 import { Card, CardContent } from "../components/Card";
 import { Badge } from "../components/Badge";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { api } from "../lib/api-client";
 import type { ProductCatalog } from "../types";
 import { styles } from "./ProductCatalogScreen.styles";
 
 export default function ProductCatalogScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -94,7 +96,7 @@ export default function ProductCatalogScreen() {
           <View style={styles.header}>
             <Feather name="package" size={24} color={theme.primary} />
             <View style={styles.headerText}>
-              <ThemedText type="h2">{"Product Catalog"}</ThemedText>
+              <ThemedText type="h2">{t("product_catalog.title")}</ThemedText>
               <ThemedText type="bodySm" color={theme.textSecondary}>
                 {"Products from your receipts with price history"}
               </ThemedText>

@@ -16,9 +16,11 @@ import { CurrencySelector } from "../components/edit-transaction/CurrencySelecto
 import { CategoryChips } from "../components/edit-transaction/CategoryChips";
 import { TagChips } from "../components/edit-transaction/TagChips";
 import { FinancialTypeSelector } from "../components/edit-transaction/FinancialTypeSelector";
+import { useTranslation } from "../i18n";
 
 export default function EditTransactionScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const {
     navigation,
     type,
@@ -62,10 +64,10 @@ export default function EditTransactionScreen() {
         />
 
         <Input
-          label="Description"
+          label={t("transactions.description")}
           value={description}
           onChangeText={setDescription}
-          placeholder="What was it for?"
+          placeholder={t("transactions.placeholder_description")}
           containerStyle={styles.field}
         />
 
@@ -92,7 +94,7 @@ export default function EditTransactionScreen() {
         />
 
         <Input
-          label="Date"
+          label={t("transactions.date")}
           value={date}
           onChangeText={setDate}
           placeholder="YYYY-MM-DD"
@@ -101,14 +103,14 @@ export default function EditTransactionScreen() {
 
         <View style={styles.footerRow}>
           <Button
-            title="Cancel"
+            title={t("common.cancel")}
             variant="outline"
             onPress={() => navigation.goBack()}
             style={styles.footerBtn}
           />
           <Button
             title={
-              updateMutation.isPending ? "Updating..." : "Update Transaction"
+              updateMutation.isPending ? t("transactions.adding") : t("transactions.update_transaction")
             }
             onPress={handleSubmit}
             loading={updateMutation.isPending}

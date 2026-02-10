@@ -12,6 +12,7 @@ import { ThemedText } from "../components/ThemedText";
 import { Button } from "../components/Button";
 import { Spacing, BorderRadius } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { useWishlistScreen } from "../hooks/useWishlistScreen";
 import type { SortOption } from "../hooks/useWishlistScreen";
 import { WishlistCard } from "../components/wishlist/WishlistCard";
@@ -19,6 +20,7 @@ import type { WishlistItem } from "../types";
 
 export default function WishlistScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const {
     navigation,
     sortBy,
@@ -65,13 +67,13 @@ export default function WishlistScreen() {
         <View>
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              <ThemedText type="h2">{"Wishlist"}</ThemedText>
+              <ThemedText type="h2">{t("wishlist.title")}</ThemedText>
               <ThemedText type="bodySm" color={theme.textSecondary}>
-                {"Plan your future purchases"}
+                {t("wishlist.manage")}
               </ThemedText>
             </View>
             <Button
-              title="Add Item"
+              title={t("wishlist.add")}
               size="sm"
               onPress={() => navigation.navigate("AddWishlist")}
               icon={<Feather name="plus" size={14} color={theme.primaryForeground} />}
@@ -109,13 +111,13 @@ export default function WishlistScreen() {
         <View style={styles.empty}>
           <Feather name="heart" size={48} color={theme.textTertiary} />
           <ThemedText type="body" color={theme.textSecondary} style={styles.emptyTitle}>
-            {"No wishlist items yet"}
+            {t("wishlist.no_items")}
           </ThemedText>
           <ThemedText type="bodySm" color={theme.textTertiary}>
-            {"Add items you'd like to purchase"}
+            {t("wishlist.manage")}
           </ThemedText>
           <Button
-            title="Add Item"
+            title={t("wishlist.add")}
             onPress={() => navigation.navigate("AddWishlist")}
             icon={<Feather name="plus" size={14} color={theme.primaryForeground} />}
             style={styles.emptyBtn}

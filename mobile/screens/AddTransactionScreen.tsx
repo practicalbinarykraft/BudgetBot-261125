@@ -13,9 +13,11 @@ import { Button } from "../components/Button";
 import { Spacing, BorderRadius } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
 import { useAddTransactionScreen } from "../hooks/useAddTransactionScreen";
+import { useTranslation } from "../i18n";
 
 export default function AddTransactionScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const h = useAddTransactionScreen();
 
   return (
@@ -29,30 +31,30 @@ export default function AddTransactionScreen() {
       >
         {/* Type toggle */}
         <View style={styles.toggleRow}>
-          {(["expense", "income"] as const).map((t) => (
+          {(["expense", "income"] as const).map((typ) => (
             <Pressable
-              key={t}
-              onPress={() => h.setType(t)}
+              key={typ}
+              onPress={() => h.setType(typ)}
               style={[
                 styles.toggleBtn,
                 {
-                  backgroundColor: h.type === t ? theme[t] : theme.secondary,
-                  borderColor: h.type === t ? theme[t] : theme.border,
+                  backgroundColor: h.type === typ ? theme[typ] : theme.secondary,
+                  borderColor: h.type === typ ? theme[typ] : theme.border,
                 },
               ]}
             >
               <ThemedText
                 type="h4"
-                color={h.type === t ? "#ffffff" : theme.textSecondary}
+                color={h.type === typ ? "#ffffff" : theme.textSecondary}
               >
-                {t === "expense" ? "Expense" : "Income"}
+                {typ === "expense" ? t("transactions.type.expense") : t("transactions.type.income")}
               </ThemedText>
             </Pressable>
           ))}
         </View>
 
         <Input
-          label="Amount (USD)"
+          label={t("transactions.amount")}
           value={h.amount}
           onChangeText={h.setAmount}
           placeholder="0.00"
@@ -61,17 +63,17 @@ export default function AddTransactionScreen() {
         />
 
         <Input
-          label="Description"
+          label={t("transactions.description")}
           value={h.description}
           onChangeText={h.setDescription}
-          placeholder="What was it for?"
+          placeholder={t("transactions.placeholder_description")}
           containerStyle={styles.field}
         />
 
         {/* Category picker */}
         <View style={styles.field}>
           <ThemedText type="small" color={theme.textSecondary} style={styles.label}>
-            {"Category"}
+            {t("transactions.category_optional")}
           </ThemedText>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
             {h.categories.map((cat) => {
@@ -98,7 +100,7 @@ export default function AddTransactionScreen() {
         {/* Wallet picker */}
         <View style={styles.field}>
           <ThemedText type="small" color={theme.textSecondary} style={styles.label}>
-            {"Wallet"}
+            {t("wallets.title")}
           </ThemedText>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
             {h.wallets.map((w) => {
@@ -125,7 +127,7 @@ export default function AddTransactionScreen() {
         {/* Tag picker */}
         <View style={styles.field}>
           <ThemedText type="small" color={theme.textSecondary} style={styles.label}>
-            {"Tag (optional)"}
+            {t("transactions.tag_optional")}
           </ThemedText>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
             <Pressable
@@ -138,7 +140,7 @@ export default function AddTransactionScreen() {
                 },
               ]}
             >
-              <ThemedText type="small">{"No tag"}</ThemedText>
+              <ThemedText type="small">{t("transactions.tag_optional")}</ThemedText>
             </Pressable>
             {h.tags.map((tag) => {
               const isSelected = h.personalTagId === tag.id;
@@ -162,7 +164,7 @@ export default function AddTransactionScreen() {
         </View>
 
         <Button
-          title="Add Transaction"
+          title={t("transactions.add_transaction")}
           onPress={h.handleSubmit}
           loading={h.createMutation.isPending}
           disabled={h.createMutation.isPending}

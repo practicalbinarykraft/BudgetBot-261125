@@ -6,6 +6,7 @@ import { Button } from "../Button";
 import { Input } from "../Input";
 import { Card, CardHeader, CardContent } from "../Card";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import { styles } from "./profileStyles";
 import AppearanceSelectors from "./AppearanceSelectors";
 import ApiKeysAndRatesSection from "./ApiKeysAndRatesSection";
@@ -23,6 +24,7 @@ export default function GeneralSettingsSection({
   isMyselfTier,
 }: GeneralSettingsSectionProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   const {
     currency, setCurrency,
@@ -41,7 +43,7 @@ export default function GeneralSettingsSection({
     <Card>
       <CardHeader>
         <ThemedText type="h4" style={styles.cardTitle}>
-          {"General Settings"}
+          {t("settings.general_settings")}
         </ThemedText>
       </CardHeader>
       <CardContent style={styles.generalContent}>
@@ -58,7 +60,7 @@ export default function GeneralSettingsSection({
 
             {/* Save (top) */}
             <Button
-              title={updateMutation.isPending ? "Saving..." : "Save Settings"}
+              title={updateMutation.isPending ? `${t("settings.save_settings")}...` : t("settings.save_settings")}
               onPress={handleSave}
               disabled={updateMutation.isPending}
               loading={updateMutation.isPending}
@@ -68,10 +70,10 @@ export default function GeneralSettingsSection({
             <View style={styles.switchRow}>
               <View style={styles.switchLabel}>
                 <ThemedText type="bodySm" style={styles.label}>
-                  {"Telegram Notifications"}
+                  {t("settings.telegram_notifications")}
                 </ThemedText>
                 <ThemedText type="small" color={theme.textSecondary}>
-                  {"Receive alerts via Telegram bot"}
+                  {t("settings.receive_alerts")}
                 </ThemedText>
               </View>
               <Switch
@@ -84,16 +86,16 @@ export default function GeneralSettingsSection({
             {/* Notification Settings */}
             <View style={[styles.separator, { backgroundColor: theme.border }]} />
             <ThemedText type="bodySm" style={styles.sectionTitle}>
-              {"Notification Settings"}
+              {t("settings.notification_settings")}
             </ThemedText>
             <ThemedText type="small" color={theme.textSecondary}>
-              {"Configure when and how you receive notifications"}
+              {t("settings.notification_settings.description")}
             </ThemedText>
 
             {/* Timezone */}
             <View style={styles.field}>
               <ThemedText type="small" color={theme.textSecondary} style={styles.label}>
-                {"Timezone"}
+                {t("settings.timezone")}
               </ThemedText>
               <Pressable
                 onPress={() => setShowTimezoneModal(true)}
@@ -114,7 +116,7 @@ export default function GeneralSettingsSection({
 
             {/* Notification Time */}
             <Input
-              label="Notification Time"
+              label={t("settings.notification_time")}
               value={notificationTime}
               onChangeText={setNotificationTime}
               placeholder="09:00"
@@ -134,7 +136,7 @@ export default function GeneralSettingsSection({
 
             {/* Save (bottom) */}
             <Button
-              title={updateMutation.isPending ? "Saving..." : "Save Settings"}
+              title={updateMutation.isPending ? `${t("settings.save_settings")}...` : t("settings.save_settings")}
               onPress={handleSave}
               disabled={updateMutation.isPending}
               loading={updateMutation.isPending}

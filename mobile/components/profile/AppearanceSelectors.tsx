@@ -3,7 +3,8 @@ import { View, Pressable } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "../ThemedText";
 import { useTheme } from "../../hooks/useTheme";
-import { currencies, languages } from "./profileConstants";
+import { useTranslation } from "../../i18n";
+import { currencies } from "./profileConstants";
 import { styles } from "./profileStyles";
 
 interface AppearanceSelectorsProps {
@@ -20,13 +21,19 @@ export default function AppearanceSelectors({
   setLanguage,
 }: AppearanceSelectorsProps) {
   const { theme, mode, setMode } = useTheme();
+  const { t } = useTranslation();
+
+  const languages = [
+    { key: "en", label: t("settings.language.english") },
+    { key: "ru", label: t("settings.language.russian") },
+  ];
 
   return (
     <>
       {/* Currency */}
       <View style={styles.field}>
         <ThemedText type="small" color={theme.textSecondary} style={styles.label}>
-          {"Currency"}
+          {t("settings.currency")}
         </ThemedText>
         <View style={styles.optionsGrid}>
           {currencies.map((c) => {
@@ -52,7 +59,7 @@ export default function AppearanceSelectors({
       {/* Language */}
       <View style={styles.field}>
         <ThemedText type="small" color={theme.textSecondary} style={styles.label}>
-          {"Language"}
+          {t("settings.language")}
         </ThemedText>
         <View style={styles.toggleRow}>
           {languages.map((l) => {
@@ -83,7 +90,7 @@ export default function AppearanceSelectors({
         <View style={styles.toggleRow}>
           {(["system", "light", "dark"] as const).map((m) => {
             const isActive = mode === m;
-            const labels = { system: "System", light: "Light", dark: "Dark" };
+            const labels = { system: "System", light: t("common.light_theme"), dark: t("common.dark_theme") };
             return (
               <Pressable
                 key={m}

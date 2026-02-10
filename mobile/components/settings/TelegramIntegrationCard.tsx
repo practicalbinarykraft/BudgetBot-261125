@@ -8,6 +8,7 @@ import { Button } from "../Button";
 import { Card, CardHeader, CardContent } from "../Card";
 import { Badge } from "../Badge";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import { api } from "../../lib/api-client";
 import { queryClient } from "../../lib/query-client";
 import type { TelegramStatus } from "../../types";
@@ -22,6 +23,7 @@ interface VerificationCode {
 
 export default function TelegramIntegrationCard() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const [verificationCode, setVerificationCode] =
     useState<VerificationCode | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);

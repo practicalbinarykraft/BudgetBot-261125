@@ -4,6 +4,7 @@ import { ThemedText } from "../ThemedText";
 import { Input } from "../Input";
 import { Button } from "../Button";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import { TelegramSection } from "./TelegramSection";
 import { authStyles as styles } from "./authStyles";
 import type { RegisterFormState } from "../../hooks/useAuthScreen";
@@ -14,6 +15,7 @@ interface RegisterFormProps {
 
 export function RegisterForm({ state }: RegisterFormProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.formContent}>
@@ -31,7 +33,7 @@ export function RegisterForm({ state }: RegisterFormProps) {
       ) : null}
 
       <Input
-        label="Name"
+        label={t("auth.name")}
         value={state.name}
         onChangeText={state.setName}
         error={state.errors.name}
@@ -41,7 +43,7 @@ export function RegisterForm({ state }: RegisterFormProps) {
       />
 
       <Input
-        label="Email"
+        label={t("auth.email")}
         value={state.email}
         onChangeText={state.setEmail}
         error={state.errors.email}
@@ -53,7 +55,7 @@ export function RegisterForm({ state }: RegisterFormProps) {
       />
 
       <Input
-        label="Password"
+        label={t("auth.password")}
         value={state.password}
         onChangeText={state.setPassword}
         error={state.errors.password}
@@ -63,7 +65,7 @@ export function RegisterForm({ state }: RegisterFormProps) {
       />
 
       <Button
-        title={state.loading ? "Create Account..." : "Create Account"}
+        title={state.loading ? `${t("auth.register_button")}...` : t("auth.register_button")}
         onPress={state.handleRegister}
         loading={state.loading}
         disabled={state.loading}

@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemedText } from "./ThemedText";
 import { useTheme } from "../hooks/useTheme";
 import { useAuth } from "../hooks/useAuth";
+import { useTranslation } from "../i18n";
 
 const PANEL_W = 300;
 const SCREEN_W = Dimensions.get("window").width;
@@ -23,45 +24,46 @@ type IconName = React.ComponentProps<typeof Feather>["name"];
 interface NavItem { label: string; icon: IconName; route?: string; tab?: string; children?: NavItem[] }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Главная", icon: "home", tab: "Dashboard" },
-  { label: "Панель управления", icon: "grid", route: "DashboardAnalytics" },
+  { label: "nav.home", icon: "home", tab: "Dashboard" },
+  { label: "nav.dashboard", icon: "grid", route: "DashboardAnalytics" },
   {
-    label: "Финансы",
+    label: "nav.transactions",
     icon: "credit-card",
     children: [
-      { label: "Транзакции", icon: "credit-card", route: "Transactions" },
-      { label: "Кошельки", icon: "credit-card", route: "Wallets" },
-      { label: "Повторяющиеся", icon: "repeat", route: "Recurring" },
+      { label: "nav.transactions", icon: "credit-card", route: "Transactions" },
+      { label: "nav.wallets", icon: "credit-card", route: "Wallets" },
+      { label: "nav.recurring", icon: "repeat", route: "Recurring" },
     ],
   },
   {
-    label: "Аналитика",
+    label: "nav.analytics",
     icon: "bar-chart-2",
     children: [
-      { label: "Бюджеты", icon: "trending-down", route: "Budgets" },
-      { label: "Анализ ИИ", icon: "cpu", route: "AIAnalysis" },
-      { label: "Категории", icon: "tag", route: "Categories" },
-      { label: "Теги", icon: "users", route: "Tags" },
-      { label: "Каталог товаров", icon: "package", route: "ProductCatalog" },
+      { label: "nav.budgets", icon: "trending-down", route: "Budgets" },
+      { label: "nav.ai_analysis", icon: "cpu", route: "AIAnalysis" },
+      { label: "nav.categories", icon: "tag", route: "Categories" },
+      { label: "nav.tags", icon: "users", route: "Tags" },
+      { label: "nav.product_catalog", icon: "package", route: "ProductCatalog" },
     ],
   },
   {
-    label: "Цели",
+    label: "nav.wishlist",
     icon: "target",
     children: [
-      { label: "Вишлист", icon: "heart", route: "Wishlist" },
-      { label: "Запланированные расходы", icon: "calendar", route: "PlannedExpenses" },
-      { label: "Запланированный доход", icon: "dollar-sign", route: "PlannedIncome" },
-      { label: "Активы", icon: "briefcase", route: "Assets" },
+      { label: "nav.wishlist", icon: "heart", route: "Wishlist" },
+      { label: "nav.planned_expenses", icon: "calendar", route: "PlannedExpenses" },
+      { label: "nav.planned_income", icon: "dollar-sign", route: "PlannedIncome" },
+      { label: "nav.assets", icon: "briefcase", route: "Assets" },
     ],
   },
-  { label: "Настройки", icon: "settings", tab: "Profile" },
-  { label: "Тарифы", icon: "zap", route: "Billing" },
+  { label: "nav.settings", icon: "settings", tab: "Profile" },
+  { label: "nav.billing", icon: "zap", route: "Billing" },
 ];
 
 export default function MobileMenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { theme, isDark, setMode } = useTheme();
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(SCREEN_W)).current;
@@ -105,7 +107,7 @@ export default function MobileMenuSheet({ visible, onClose }: { visible: boolean
           style={[styles.navItem, { paddingLeft: 16 + depth * 16 }]}
         >
           <Feather name={item.icon} size={18} color={theme.textSecondary} />
-          <ThemedText type="bodySm" style={styles.navLabel}>{item.label}</ThemedText>
+          <ThemedText type="bodySm" style={styles.navLabel}>{t(item.label)}</ThemedText>
           {hasChildren && (
             <Feather
               name="chevron-down"
@@ -137,7 +139,7 @@ export default function MobileMenuSheet({ visible, onClose }: { visible: boolean
         >
           {/* Header */}
           <View style={styles.header}>
-            <ThemedText type="h4">Главное меню</ThemedText>
+            <ThemedText type="h4">{t("nav.home")}</ThemedText>
             <Pressable onPress={onClose} style={styles.closeBtn}>
               <Feather name="x" size={22} color={theme.text} />
             </Pressable>
@@ -158,13 +160,13 @@ export default function MobileMenuSheet({ visible, onClose }: { visible: boolean
             <Pressable onPress={toggleTheme} style={styles.footerBtn}>
               <Feather name={isDark ? "sun" : "moon"} size={18} color={theme.text} />
               <ThemedText type="bodySm" style={styles.footerBtnText}>
-                {isDark ? "Светлая тема" : "Тёмная тема"}
+                {isDark ? t("common.light_theme") : t("common.dark_theme")}
               </ThemedText>
             </Pressable>
             <Pressable onPress={handleLogout} style={styles.footerBtn}>
               <Feather name="log-out" size={18} color={theme.destructive} />
               <ThemedText type="bodySm" color={theme.destructive} style={styles.footerBtnText}>
-                Выйти
+                {t("common.logout")}
               </ThemedText>
             </Pressable>
           </View>

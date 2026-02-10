@@ -4,6 +4,7 @@ import { ThemedText } from "../ThemedText";
 import { Input } from "../Input";
 import { Button } from "../Button";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import { TelegramSection } from "./TelegramSection";
 import { authStyles as styles } from "./authStyles";
 import type { LoginFormState } from "../../hooks/useAuthScreen";
@@ -14,6 +15,7 @@ interface LoginFormProps {
 
 export function LoginForm({ state }: LoginFormProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.formContent}>
@@ -31,7 +33,7 @@ export function LoginForm({ state }: LoginFormProps) {
       ) : null}
 
       <Input
-        label="Email"
+        label={t("auth.email")}
         value={state.email}
         onChangeText={state.setEmail}
         error={state.errors.email}
@@ -43,7 +45,7 @@ export function LoginForm({ state }: LoginFormProps) {
       />
 
       <Input
-        label="Password"
+        label={t("auth.password")}
         value={state.password}
         onChangeText={state.setPassword}
         error={state.errors.password}
@@ -53,7 +55,7 @@ export function LoginForm({ state }: LoginFormProps) {
       />
 
       <Button
-        title={state.loading ? "Sign In..." : "Sign In"}
+        title={state.loading ? `${t("auth.login_button")}...` : t("auth.login_button")}
         onPress={state.handleLogin}
         loading={state.loading}
         disabled={state.loading}
@@ -65,7 +67,7 @@ export function LoginForm({ state }: LoginFormProps) {
         style={styles.forgotPasswordRow}
       >
         <ThemedText type="bodySm" color={theme.primary}>
-          {"Forgot password?"}
+          {t("auth.forgot_password")}
         </ThemedText>
       </Pressable>
 

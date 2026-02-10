@@ -3,6 +3,7 @@ import { View, StyleSheet } from "react-native";
 import { ThemedText } from "../components/ThemedText";
 import { Spacing } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { useSwipeSortScreen } from "../hooks/useSwipeSortScreen";
 import { AllSortedView } from "../components/swipe-sort/AllSortedView";
 import { SwipeSortHeader } from "../components/swipe-sort/SwipeSortHeader";
@@ -10,6 +11,7 @@ import { SwipeCard } from "../components/swipe-sort/SwipeCard";
 
 export default function SwipeSortScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const {
     pan,
     panResponder,

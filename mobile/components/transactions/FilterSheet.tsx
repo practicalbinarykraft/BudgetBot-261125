@@ -9,6 +9,7 @@ import { useTheme } from "../../hooks/useTheme";
 import { FilterListItem } from "./FilterListItem";
 import type { TransactionFilters } from "../../hooks/useTransactionsScreen";
 import type { Category, PersonalTag } from "../../types";
+import { useTranslation } from "../../i18n";
 
 interface FilterSheetProps {
   visible: boolean;
@@ -31,6 +32,7 @@ export function FilterSheet({
   setDateFrom, setDateTo, clearAllFilters,
 }: FilterSheetProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -39,7 +41,7 @@ export function FilterSheet({
         <View style={[styles.modalSheet, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.modalHeader}>
-              <ThemedText type="h4">{"Filters"}</ThemedText>
+              <ThemedText type="h4">{t("transactions.filters")}</ThemedText>
               <Pressable onPress={onClose} hitSlop={12}>
                 <Feather name="x" size={20} color={theme.text} />
               </Pressable>
@@ -47,17 +49,17 @@ export function FilterSheet({
 
             <View style={styles.filterSection}>
               <ThemedText type="small" color={theme.textSecondary} style={styles.filterLabel}>
-                {"Type"}
+                {t("common.type")}
               </ThemedText>
               <View style={styles.filterOptions}>
                 <Button
-                  title="Income"
+                  title={t("transactions.type.income")}
                   variant={filters.types.includes("income") ? "default" : "outline"}
                   size="sm"
                   onPress={() => toggleTypeFilter("income")}
                 />
                 <Button
-                  title="Expense"
+                  title={t("transactions.type.expense")}
                   variant={filters.types.includes("expense") ? "default" : "outline"}
                   size="sm"
                   onPress={() => toggleTypeFilter("expense")}
@@ -67,7 +69,7 @@ export function FilterSheet({
 
             <View style={styles.filterSection}>
               <ThemedText type="small" color={theme.textSecondary} style={styles.filterLabel}>
-                {"Category"}
+                {t("transactions.category_optional")}
               </ThemedText>
               <View style={styles.filterList}>
                 {categories.map((cat) => (
@@ -84,7 +86,7 @@ export function FilterSheet({
 
             <View style={styles.filterSection}>
               <ThemedText type="small" color={theme.textSecondary} style={styles.filterLabel}>
-                {"Tag"}
+                {t("transactions.tag_optional")}
               </ThemedText>
               <View style={styles.filterList}>
                 {tags.map((tag) => (
@@ -102,7 +104,7 @@ export function FilterSheet({
 
             <View style={styles.filterSection}>
               <Input
-                label="Date From"
+                label={t("transactions.date")}
                 value={filters.from}
                 onChangeText={setDateFrom}
                 placeholder="YYYY-MM-DD"
@@ -112,7 +114,7 @@ export function FilterSheet({
 
             <View style={styles.filterSection}>
               <Input
-                label="Date To"
+                label={t("common.date")}
                 value={filters.to}
                 onChangeText={setDateTo}
                 placeholder="YYYY-MM-DD"
@@ -122,7 +124,7 @@ export function FilterSheet({
 
             {hasActiveFilters ? (
               <Button
-                title="Clear All"
+                title={t("transactions.clear_filters")}
                 variant="outline"
                 onPress={() => { clearAllFilters(); onClose(); }}
                 style={styles.clearAllFilterBtn}

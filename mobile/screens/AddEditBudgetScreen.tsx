@@ -12,9 +12,11 @@ import { Button } from "../components/Button";
 import { useTheme } from "../hooks/useTheme";
 import { useAddEditBudgetScreen } from "../hooks/useAddEditBudgetScreen";
 import { styles } from "./styles/addEditBudgetStyles";
+import { useTranslation } from "../i18n";
 
 export default function AddEditBudgetScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const {
     isEditing, categoryId, setCategoryId, limitAmount, setLimitAmount,
     period, setPeriod, expenseCategories, isPending, handleSave, periods,
@@ -31,7 +33,7 @@ export default function AddEditBudgetScreen() {
       >
         <View style={styles.field}>
           <ThemedText type="small" color={theme.textSecondary} style={styles.label}>
-            {"Category (expense only)"}
+            {t("budgets.category")}
           </ThemedText>
           <ScrollView
             horizontal
@@ -59,13 +61,13 @@ export default function AddEditBudgetScreen() {
           </ScrollView>
           {expenseCategories.length === 0 ? (
             <ThemedText type="small" color={theme.textTertiary}>
-              {"No expense categories found. Create one first."}
+              {t("categories.no_categories")}
             </ThemedText>
           ) : null}
         </View>
 
         <Input
-          label="Limit Amount (USD)"
+          label={t("budgets.limit")}
           value={limitAmount}
           onChangeText={setLimitAmount}
           placeholder="0.00"
@@ -75,7 +77,7 @@ export default function AddEditBudgetScreen() {
 
         <View style={styles.field}>
           <ThemedText type="small" color={theme.textSecondary} style={styles.label}>
-            {"Period"}
+            {t("budgets.period")}
           </ThemedText>
           <View style={styles.toggleRow}>
             {periods.map((p) => {
@@ -102,7 +104,7 @@ export default function AddEditBudgetScreen() {
         </View>
 
         <Button
-          title={isEditing ? "Save Changes" : "Create Budget"}
+          title={isEditing ? t("common.save") : t("budgets.add_budget")}
           onPress={handleSave}
           loading={isPending}
           disabled={isPending}

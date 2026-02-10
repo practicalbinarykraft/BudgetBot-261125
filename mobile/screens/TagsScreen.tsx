@@ -16,6 +16,7 @@ import { Button } from "../components/Button";
 import { Card, CardContent } from "../components/Card";
 import { TagBadge } from "../components/TagBadge";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
 import { styles } from "./styles/tagsStyles";
@@ -29,6 +30,7 @@ interface TagStats {
 
 export default function TagsScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
 
   const tagsQuery = useQuery({
@@ -124,19 +126,19 @@ export default function TagsScreen() {
         <View style={styles.headerSection}>
           <View style={styles.pageHeader}>
             <View>
-              <ThemedText type="h2">{"Tags"}</ThemedText>
-              <ThemedText type="bodySm" color={theme.textSecondary}>{"Manage your personal tags"}</ThemedText>
+              <ThemedText type="h2">{t("tags.title")}</ThemedText>
+              <ThemedText type="bodySm" color={theme.textSecondary}>{t("tags.manage")}</ThemedText>
             </View>
-            <Button title="Add Tag" size="sm" onPress={() => navigation.navigate("AddEditTag", { tag: undefined })} icon={<Feather name="plus" size={14} color={theme.primaryForeground} />} />
+            <Button title={t("tags.add_tag")} size="sm" onPress={() => navigation.navigate("AddEditTag", { tag: undefined })} icon={<Feather name="plus" size={14} color={theme.primaryForeground} />} />
           </View>
         </View>
       }
       ListEmptyComponent={
         <View style={styles.emptyContainer}>
           <Feather name="tag" size={48} color={theme.textTertiary} />
-          <ThemedText type="body" color={theme.textSecondary} style={styles.emptyText}>{"No tags yet"}</ThemedText>
-          <ThemedText type="bodySm" color={theme.textTertiary}>{"Create your first tag to organize transactions"}</ThemedText>
-          <Button title="Create Tag" onPress={() => navigation.navigate("AddEditTag", { tag: undefined })} icon={<Feather name="plus" size={14} color={theme.primaryForeground} />} style={styles.emptyBtn} />
+          <ThemedText type="body" color={theme.textSecondary} style={styles.emptyText}>{t("tags.no_tags")}</ThemedText>
+          <ThemedText type="bodySm" color={theme.textTertiary}>{t("tags.manage")}</ThemedText>
+          <Button title={t("tags.add_tag")} onPress={() => navigation.navigate("AddEditTag", { tag: undefined })} icon={<Feather name="plus" size={14} color={theme.primaryForeground} />} style={styles.emptyBtn} />
         </View>
       }
     />
