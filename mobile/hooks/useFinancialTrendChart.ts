@@ -53,7 +53,7 @@ export function useFinancialTrendChart() {
       return { incomeData: [], expenseData: [], capitalData: [], xLabels: [] };
     }
 
-    const maxPoints = 30;
+    const maxPoints = historyDays <= 30 ? 50 : historyDays <= 90 ? 60 : 70;
     const step = Math.max(1, Math.floor(trendData.length / maxPoints));
     const sampled: TrendDataPoint[] = [];
     for (let i = 0; i < trendData.length; i += step) {
@@ -67,7 +67,8 @@ export function useFinancialTrendChart() {
 
     const income = sampled.map((p, i) => ({
       value: p.income,
-      dataPointText: undefined as string | undefined,
+      date: formatChartDate(p.date),
+      isForecast: !!p.isForecast,
       label: i % labelInterval === 0 ? formatChartDate(p.date) : "",
       showDataPoint: false,
     }));

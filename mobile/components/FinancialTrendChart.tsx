@@ -82,13 +82,11 @@ export default function FinancialTrendChart() {
               data3={capitalData}
               width={screenWidth - 40}
               height={200}
-              spacing={Math.max(8, (screenWidth - 40) / incomeData.length)}
               color1={CHART_COLORS.income}
               color2={CHART_COLORS.expense}
               color3={CHART_COLORS.capital}
               thickness={2}
               hideDataPoints
-              curved
               areaChart
               startFillColor1={CHART_COLORS.income + "30"}
               endFillColor1={CHART_COLORS.income + "05"}
@@ -116,17 +114,17 @@ export default function FinancialTrendChart() {
               initialSpacing={10}
               endSpacing={10}
               adjustToWidth
-              disableScroll={false}
-              showScrollIndicator={false}
               pointerConfig={{
                 pointerStripHeight: 180,
                 pointerStripColor: theme.textTertiary,
                 pointerStripWidth: 1,
                 pointerColor: theme.primary,
                 radius: 4,
-                pointerLabelWidth: 140,
-                pointerLabelHeight: 70,
-                pointerLabelComponent: (items: Array<{ value: number }>) => {
+                pointerLabelWidth: 160,
+                pointerLabelHeight: 90,
+                pointerLabelComponent: (items: Array<{ value: number; date?: string; isForecast?: boolean }>) => {
+                  const date = items[0]?.date ?? "";
+                  const forecast = items[0]?.isForecast;
                   return (
                     <View
                       style={[
@@ -134,6 +132,9 @@ export default function FinancialTrendChart() {
                         { backgroundColor: theme.card, borderColor: theme.border },
                       ]}
                     >
+                      <ThemedText type="small" style={styles.tooltipDate}>
+                        {date + (forecast ? " (forecast)" : "")}
+                      </ThemedText>
                       <ThemedText type="small" color={CHART_COLORS.income}>
                         {"Inc: " + formatCompact(items[0]?.value ?? 0)}
                       </ThemedText>
@@ -179,5 +180,10 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     gap: 2,
+    minWidth: 140,
+  },
+  tooltipDate: {
+    fontWeight: "600",
+    marginBottom: 2,
   },
 });
