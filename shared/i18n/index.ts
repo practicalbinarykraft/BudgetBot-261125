@@ -35,6 +35,7 @@ import { webAssetsTranslations } from './web-assets';
 import { webCreditsTranslations } from './web-credits';
 import { passwordRecoveryTranslations } from './password-recovery';
 import { adminTranslations } from './admin';
+import { mobileExtraTranslations } from './mobile-extra';
 
 // Export types
 export type { Language, Translation, Translations } from './types';
@@ -72,6 +73,7 @@ const allTranslations: Translations = {
   ...webCreditsTranslations,
   ...passwordRecoveryTranslations,
   ...adminTranslations,
+  ...mobileExtraTranslations,
 };
 
 /**
