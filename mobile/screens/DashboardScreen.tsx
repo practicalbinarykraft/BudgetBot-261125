@@ -10,6 +10,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemedText } from "../components/ThemedText";
 import NotificationsBell from "../components/NotificationsBell";
 import CreditsWidget from "../components/CreditsWidget";
@@ -27,6 +28,7 @@ import {
 
 export default function DashboardScreen() {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const [menuVisible, setMenuVisible] = useState(false);
   const {
@@ -55,7 +57,7 @@ export default function DashboardScreen() {
         }
       >
         {/* Header */}
-        <View style={styles.headerRow}>
+        <View style={[styles.headerRow, { paddingTop: insets.top + 8 }]}>
           <Pressable
             onPress={() => navigation.navigate("Wallets")}
             style={styles.headerLeft}
