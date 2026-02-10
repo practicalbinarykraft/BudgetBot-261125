@@ -14,7 +14,7 @@ export const styles = StyleSheet.create({
   headerText: { flex: 1, gap: Spacing.xs },
 
   balanceContent: { alignItems: "center", gap: Spacing.md },
-  balanceAmount: { fontSize: 48, fontWeight: "700" },
+  balanceAmount: { fontSize: 48, fontWeight: "700", textAlign: "center", alignSelf: "stretch" },
   balanceStats: {
     flexDirection: "row",
     gap: Spacing["3xl"],

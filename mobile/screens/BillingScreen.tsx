@@ -40,48 +40,45 @@ export default function BillingScreen() {
   const credits = creditsQuery.data;
   const pricing = pricingQuery.data;
   const isByok = credits?.billingMode === "byok";
-  const isLowBalance =
-    !isByok && credits && credits.messagesRemaining < 5;
-
-  const modeLabel =
-    credits?.billingMode === "byok"
-      ? "BYOK"
-      : credits?.billingMode === "paid"
-        ? "Paid"
-        : "Free";
+  const isLowBalance = !isByok && credits && credits.messagesRemaining < 5;
+  const modeLabel = credits?.billingMode === "byok" ? "BYOK"
+    : credits?.billingMode === "paid" ? "Paid" : "Free";
 
   return (
     <ScrollView
       style={[styles.flex, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.content}
     >
-      {/* Header */}
       <View style={styles.header}>
         <Feather name="zap" size={24} color={theme.primary} />
         <View style={styles.headerText}>
           <ThemedText type="h2">{t("billing.title")}</ThemedText>
           <ThemedText type="bodySm" color={theme.textSecondary}>
-            {isByok
-              ? "∞ Unlimited"
-              : `${credits?.messagesRemaining ?? 0} credits remaining`}
+            {isByok ? `∞ ${t("billing.unlimited")}`
+              : t("billing.credits_remaining").replace("{count}", String(credits?.messagesRemaining ?? 0))}
           </ThemedText>
         </View>
       </View>
 
-      {/* Balance Card */}
       <Card>
         <CardContent style={styles.balanceContent}>
           <ThemedText type="bodySm" color={theme.textSecondary}>
-            {"Your Balance"}
+            {t("billing.your_balance")}
           </ThemedText>
-          <ThemedText type="h1" mono style={styles.balanceAmount}>
+          <ThemedText
+            type="h1"
+            mono
+            style={styles.balanceAmount}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
             {isByok ? "∞" : String(credits?.messagesRemaining ?? 0)}
           </ThemedText>
           {!isByok ? (
             <View style={styles.balanceStats}>
               <View style={styles.balanceStat}>
                 <ThemedText type="small" color={theme.textSecondary}>
-                  {"Total Granted"}
+                  {t("billing.total_granted")}
                 </ThemedText>
                 <ThemedText type="bodySm" style={styles.bold}>
                   {String(credits?.totalGranted ?? 0)}
@@ -89,7 +86,7 @@ export default function BillingScreen() {
               </View>
               <View style={styles.balanceStat}>
                 <ThemedText type="small" color={theme.textSecondary}>
-                  {"Total Used"}
+                  {t("billing.total_used")}
                 </ThemedText>
                 <ThemedText type="bodySm" style={styles.bold}>
                   {String(credits?.totalUsed ?? 0)}
@@ -107,18 +104,17 @@ export default function BillingScreen() {
             >
               <Feather name="alert-triangle" size={14} color="#f59e0b" />
               <ThemedText type="small" color="#f59e0b">
-                {"Low balance! Consider upgrading your plan."}
+                {t("billing.low_balance")}
               </ThemedText>
             </View>
           ) : null}
         </CardContent>
       </Card>
 
-      {/* Operation Pricing */}
       {pricing?.operations ? (
         <>
           <ThemedText type="h4" style={styles.sectionTitle}>
-            {"What Costs Credits"}
+            {t("billing.what_costs")}
           </ThemedText>
           <View style={styles.opsGrid}>
             {Object.entries(pricing.operations).map(([key, op]) => (
@@ -146,14 +142,13 @@ export default function BillingScreen() {
         </>
       ) : null}
 
-      {/* Pricing Tiers */}
       {pricing?.tiers ? (
         <>
           <ThemedText type="h4" style={styles.sectionTitle}>
-            {"Pricing Plans"}
+            {t("billing.pricing_plans")}
           </ThemedText>
           {pricing.tiers
-            .filter((t) => t.id !== "byok")
+            .filter((tier) => tier.id !== "byok")
             .map((tier) => (
               <Card key={tier.id} style={styles.tierCard}>
                 <CardContent style={styles.tierContent}>
@@ -162,18 +157,18 @@ export default function BillingScreen() {
                   </ThemedText>
                   <View style={styles.tierPriceRow}>
                     <ThemedText type="h2" mono>
-                      {tier.price === 0 ? "Free" : `$${tier.price}`}
+                      {tier.price === 0 ? t("billing.free") : `$${tier.price}`}
                     </ThemedText>
                     {tier.priceMonthly > 0 ? (
                       <ThemedText type="small" color={theme.textSecondary}>
-                        {" / month"}
+                        {` ${t("billing.per_month")}`}
                       </ThemedText>
                     ) : null}
                   </View>
                   {tier.credits ? (
                     <ThemedText type="bodySm" color={theme.textSecondary}>
                       {tier.credits}
-                      {" credits per month"}
+                      {` ${t("billing.credits_per_month")}`}
                     </ThemedText>
                   ) : null}
                   <View style={styles.featureList}>
