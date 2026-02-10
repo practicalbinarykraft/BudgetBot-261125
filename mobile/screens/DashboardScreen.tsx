@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   ScrollView,
@@ -13,6 +13,8 @@ import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "../components/ThemedText";
 import NotificationsBell from "../components/NotificationsBell";
 import CreditsWidget from "../components/CreditsWidget";
+import FloatingActionPanel from "../components/FloatingActionPanel";
+import MobileMenuSheet from "../components/MobileMenuSheet";
 import { CategoryScroll } from "../components/dashboard/CategoryScroll";
 import { RecentTransactionsSection } from "../components/dashboard/RecentTransactionsSection";
 import { Spacing, BorderRadius } from "../constants/theme";
@@ -26,6 +28,7 @@ import {
 export default function DashboardScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
+  const [menuVisible, setMenuVisible] = useState(false);
   const {
     selectedMonth, goToPrevMonth, goToNextMonth,
     totalBalanceUsd, totalIncome, totalExpense, balance,
@@ -43,94 +46,104 @@ export default function DashboardScreen() {
   }
 
   return (
-    <ScrollView
-      style={[styles.flex, { backgroundColor: theme.background }]}
-      contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
-      }
-    >
-      {/* Block 1: Header */}
-      <View style={styles.headerRow}>
-        <Pressable
-          onPress={() => navigation.navigate("Wallets")}
-          style={styles.headerLeft}
-        >
-          <Feather name="credit-card" size={20} color={theme.textSecondary} />
-          <ThemedText type="bodySm" style={styles.headerBalance}>
-            {formatAmount(totalBalanceUsd)}
-          </ThemedText>
-        </Pressable>
-        <View style={styles.headerRight}>
-          <CreditsWidget />
-          <NotificationsBell />
+    <View style={[styles.flex, { backgroundColor: theme.background }]}>
+      <ScrollView
+        style={styles.flex}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
+        }
+      >
+        {/* Header */}
+        <View style={styles.headerRow}>
           <Pressable
-            onPress={() => navigation.navigate("DashboardAnalytics")}
-            style={styles.headerIconButton}
+            onPress={() => navigation.navigate("Wallets")}
+            style={styles.headerLeft}
           >
-            <Feather name="bar-chart-2" size={20} color={theme.textSecondary} />
+            <Feather name="credit-card" size={20} color={theme.textSecondary} />
+            <ThemedText type="bodySm" style={styles.headerBalance}>
+              {formatAmount(totalBalanceUsd)}
+            </ThemedText>
+          </Pressable>
+          <View style={styles.headerRight}>
+            <CreditsWidget />
+            <NotificationsBell />
+            <Pressable
+              onPress={() => navigation.navigate("DashboardAnalytics")}
+              style={styles.headerIconButton}
+            >
+              <Feather name="bar-chart-2" size={20} color={theme.textSecondary} />
+            </Pressable>
+            <Pressable
+              onPress={() => setMenuVisible(true)}
+              style={styles.headerIconButton}
+            >
+              <Feather name="menu" size={20} color={theme.textSecondary} />
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Month Navigation */}
+        <View style={styles.monthNav}>
+          <Pressable onPress={goToPrevMonth} style={[styles.monthBtn, { backgroundColor: theme.muted }]}>
+            <Feather name="chevron-left" size={20} color={theme.text} />
+          </Pressable>
+          <ThemedText type="h4" style={styles.monthLabel}>
+            {formatMonthYear(selectedMonth)}
+          </ThemedText>
+          <Pressable onPress={goToNextMonth} style={[styles.monthBtn, { backgroundColor: theme.muted }]}>
+            <Feather name="chevron-right" size={20} color={theme.text} />
           </Pressable>
         </View>
-      </View>
 
-      {/* Block 2: Month Navigation */}
-      <View style={styles.monthNav}>
-        <Pressable onPress={goToPrevMonth} style={[styles.monthBtn, { backgroundColor: theme.muted }]}>
-          <Feather name="chevron-left" size={20} color={theme.text} />
-        </Pressable>
-        <ThemedText type="h4" style={styles.monthLabel}>
-          {formatMonthYear(selectedMonth)}
-        </ThemedText>
-        <Pressable onPress={goToNextMonth} style={[styles.monthBtn, { backgroundColor: theme.muted }]}>
-          <Feather name="chevron-right" size={20} color={theme.text} />
-        </Pressable>
-      </View>
-
-      {/* Block 3: Large Balance */}
-      <View style={styles.balanceContainer}>
-        <ThemedText type="mono4xl" style={styles.balanceText}>
-          {formatAmount(balance)}
-        </ThemedText>
-      </View>
-
-      {/* Block 4: Income/Expense Buttons */}
-      <View style={styles.incomeExpenseRow}>
-        <Pressable
-          onPress={() => navigation.navigate("Transactions")}
-          style={[styles.statButton, { backgroundColor: "#22c55e20", borderColor: "#22c55e30" }]}
-        >
-          <Feather name="arrow-up" size={16} color="#16a34a" />
-          <ThemedText type="bodySm" color="#16a34a" style={styles.statBtnText}>
-            {formatAmount(totalIncome)}
+        {/* Large Balance */}
+        <View style={styles.balanceContainer}>
+          <ThemedText type="mono4xl" style={styles.balanceText}>
+            {formatAmount(balance)}
           </ThemedText>
-        </Pressable>
-        <Pressable
-          onPress={() => navigation.navigate("Transactions")}
-          style={[styles.statButton, { backgroundColor: "#ef444420", borderColor: "#ef444430" }]}
-        >
-          <Feather name="arrow-down" size={16} color="#dc2626" />
-          <ThemedText type="bodySm" color="#dc2626" style={styles.statBtnText}>
-            {formatAmount(totalExpense)}
-          </ThemedText>
-        </Pressable>
-      </View>
+        </View>
 
-      {/* Block 5: Categories */}
-      <CategoryScroll
-        topCategories={topCategories}
-        budgetByCategoryId={budgetByCategoryId}
-      />
+        {/* Income/Expense Buttons */}
+        <View style={styles.incomeExpenseRow}>
+          <Pressable
+            onPress={() => navigation.navigate("Transactions")}
+            style={[styles.statButton, { backgroundColor: "#22c55e20", borderColor: "#22c55e30" }]}
+          >
+            <Feather name="arrow-up" size={16} color="#16a34a" />
+            <ThemedText type="bodySm" color="#16a34a" style={styles.statBtnText}>
+              {formatAmount(totalIncome)}
+            </ThemedText>
+          </Pressable>
+          <Pressable
+            onPress={() => navigation.navigate("Transactions")}
+            style={[styles.statButton, { backgroundColor: "#ef444420", borderColor: "#ef444430" }]}
+          >
+            <Feather name="arrow-down" size={16} color="#dc2626" />
+            <ThemedText type="bodySm" color="#dc2626" style={styles.statBtnText}>
+              {formatAmount(totalExpense)}
+            </ThemedText>
+          </Pressable>
+        </View>
 
-      {/* Block 6: Recent Transactions */}
-      <RecentTransactionsSection
-        recentTransactions={recentTransactions}
-        categoryMap={categoryMap}
-        onViewAll={() => navigation.navigate("Transactions")}
-        onTransactionPress={(t) =>
-          navigation.navigate("EditTransaction", { transaction: t })
-        }
-      />
-    </ScrollView>
+        {/* Categories */}
+        <CategoryScroll
+          topCategories={topCategories}
+          budgetByCategoryId={budgetByCategoryId}
+        />
+
+        {/* Recent Transactions */}
+        <RecentTransactionsSection
+          recentTransactions={recentTransactions}
+          categoryMap={categoryMap}
+          onViewAll={() => navigation.navigate("Transactions")}
+          onTransactionPress={(t) =>
+            navigation.navigate("EditTransaction", { transaction: t })
+          }
+        />
+      </ScrollView>
+      <FloatingActionPanel />
+      <MobileMenuSheet visible={menuVisible} onClose={() => setMenuVisible(false)} />
+    </View>
   );
 }
 
@@ -139,11 +152,8 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   content: { paddingBottom: Spacing["5xl"] },
   headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
   },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: Spacing.sm },
   headerBalance: { fontWeight: "500" },
