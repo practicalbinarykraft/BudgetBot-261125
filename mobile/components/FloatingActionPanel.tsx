@@ -7,7 +7,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../hooks/useTheme";
 
 type IconName = React.ComponentProps<typeof Feather>["name"];
-const TAB_BAR_HEIGHT = 60;
 
 function Btn({ name, size, color, bg, d, border, onPress }: {
   name: IconName; size: number; color: string; bg: string;
@@ -30,7 +29,7 @@ export default function FloatingActionPanel() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const nav = useNavigation<NativeStackNavigationProp<any>>();
-  const bottom = insets.bottom + TAB_BAR_HEIGHT + 12;
+  const bottom = insets.bottom + 8;
   const s = { bg: theme.card, border: theme.cardBorder, c: theme.text };
 
   return (
@@ -58,7 +57,7 @@ export default function FloatingActionPanel() {
 }
 
 const styles = StyleSheet.create({
-  root: { position: "absolute", left: 0, right: 0, alignItems: "center" },
+  root: { position: "absolute", left: 0, right: 0, alignItems: "center", zIndex: 50 },
   container: { width: 160, height: 160 },
   abs: { position: "absolute" },
   btn: {

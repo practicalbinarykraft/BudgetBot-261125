@@ -48,6 +48,8 @@ export default function MainTabNavigator({
         component={DashboardScreen}
         options={{
           title: "Home",
+          headerShown: false,
+          tabBarStyle: { display: "none" },
           tabBarIcon: ({ color, size }) => (
             <Feather name="home" size={size} color={color} />
           ),
