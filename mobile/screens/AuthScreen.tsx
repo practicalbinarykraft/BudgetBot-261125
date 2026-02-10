@@ -1,5 +1,6 @@
 import React from "react";
 import { View, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   Card,
   CardHeader,
@@ -22,6 +23,7 @@ interface AuthScreenProps {
 
 export default function AuthScreen({ onLogin, onRegister }: AuthScreenProps) {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { activeTab, setActiveTab, language, toggleLanguage, login, register } =
     useAuthScreen(onLogin, onRegister);
 
@@ -31,7 +33,7 @@ export default function AuthScreen({ onLogin, onRegister }: AuthScreenProps) {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 8 }]}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.container}>

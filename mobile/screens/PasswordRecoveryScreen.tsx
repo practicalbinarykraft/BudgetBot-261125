@@ -8,6 +8,7 @@ import {
   Pressable,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "../components/ThemedText";
 import { Spacing } from "../constants/theme";
@@ -18,6 +19,7 @@ import { RecoveryStepForms } from "../components/password-recovery/RecoveryStepF
 
 export default function PasswordRecoveryScreen() {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const recovery = usePasswordRecovery();
 
@@ -27,7 +29,7 @@ export default function PasswordRecoveryScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 8 }]}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.container}>
