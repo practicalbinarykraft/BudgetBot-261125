@@ -21,11 +21,11 @@ import { useTranslation } from "../i18n";
 import { useDashboardAnalytics } from "../hooks/useDashboardAnalytics";
 import type { DateFilterValue } from "../utils/date-helpers";
 
-const dateFilters: { value: DateFilterValue; label: string }[] = [
-  { value: "week", label: "Week" },
-  { value: "month", label: "Month" },
-  { value: "year", label: "Year" },
-  { value: "all", label: "All Time" },
+const dateFilterKeys: { value: DateFilterValue; labelKey: string }[] = [
+  { value: "week", labelKey: "dashboard.filter_week" },
+  { value: "month", labelKey: "dashboard.filter_month" },
+  { value: "year", labelKey: "dashboard.filter_year" },
+  { value: "all", labelKey: "dashboard.filter_all" },
 ];
 
 export default function DashboardAnalyticsScreen() {
@@ -71,19 +71,19 @@ export default function DashboardAnalyticsScreen() {
             {t("analytics.title")}
           </ThemedText>
           <ThemedText type="small" color={theme.textSecondary}>
-            {"Overview of your finances"}
+            {t("dashboard.subtitle")}
           </ThemedText>
         </View>
         <View style={styles.headerButtons}>
           <Button
-            title="Calibrate"
+            title={t("dashboard.calibrate")}
             variant="outline"
             size="sm"
             onPress={() => navigation.navigate("Calibration")}
             icon={<Feather name="settings" size={14} color={theme.text} />}
           />
           <Button
-            title="Add Transaction"
+            title={t("dashboard.add_transaction")}
             size="sm"
             onPress={() => navigation.navigate("AddTransaction")}
             icon={
@@ -95,10 +95,10 @@ export default function DashboardAnalyticsScreen() {
 
       {/* Block 2: DateFilter */}
       <View style={styles.dateFilterRow}>
-        {dateFilters.map((f) => (
+        {dateFilterKeys.map((f) => (
           <Button
             key={f.value}
-            title={f.label}
+            title={t(f.labelKey)}
             variant={dateFilter === f.value ? "default" : "outline"}
             size="sm"
             onPress={() => setDateFilter(f.value)}

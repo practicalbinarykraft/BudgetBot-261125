@@ -4,6 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "../ThemedText";
 import { Spacing, BorderRadius } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import type { LimitProgress } from "../../types";
 
 interface BudgetAlertsProps {
@@ -16,6 +17,7 @@ export function BudgetAlerts({
   warningBudgets,
 }: BudgetAlertsProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <>
@@ -36,13 +38,11 @@ export function BudgetAlerts({
               color={theme.destructive}
               style={styles.alertTitle}
             >
-              {"Budget Exceeded"}
+              {t("dashboard.budget_exceeded")}
             </ThemedText>
           </View>
           <ThemedText type="small" color={theme.destructive}>
-            {exceededBudgets.length === 1
-              ? "1 budget has exceeded its limit"
-              : `${exceededBudgets.length} budgets have exceeded their limits`}
+            {t("dashboard.budget_exceeded_count").replace("{count}", String(exceededBudgets.length))}
           </ThemedText>
           {exceededBudgets.map((b) => (
             <ThemedText key={b.budgetId} type="small" color={theme.destructive}>
@@ -72,13 +72,11 @@ export function BudgetAlerts({
               color={theme.warning}
               style={styles.alertTitle}
             >
-              {"Budget Warning"}
+              {t("dashboard.budget_warning")}
             </ThemedText>
           </View>
           <ThemedText type="small" color={theme.warning}>
-            {warningBudgets.length === 1
-              ? "1 budget is approaching its limit"
-              : `${warningBudgets.length} budgets are approaching their limits`}
+            {t("dashboard.budget_warning_count").replace("{count}", String(warningBudgets.length))}
           </ThemedText>
           {warningBudgets.map((b) => (
             <ThemedText key={b.budgetId} type="small" color={theme.warning}>

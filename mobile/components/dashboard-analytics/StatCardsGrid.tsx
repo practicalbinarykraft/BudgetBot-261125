@@ -5,6 +5,7 @@ import { ThemedText } from "../ThemedText";
 import { Card, CardHeader, CardContent } from "../Card";
 import { Spacing } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 
 interface StatCardsGridProps {
   totalIncome: number;
@@ -20,6 +21,7 @@ export function StatCardsGrid({
   onViewDetails,
 }: StatCardsGridProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.statGrid}>
@@ -38,7 +40,7 @@ export function StatCardsGrid({
               color={theme.textSecondary}
               style={styles.statLabel}
             >
-              {"Total Income"}
+              {t("dashboard.total_income")}
             </ThemedText>
             <Feather
               name="trending-up"
@@ -66,7 +68,7 @@ export function StatCardsGrid({
               color={theme.textSecondary}
               style={styles.statLabel}
             >
-              {"Total Expense"}
+              {t("dashboard.total_expense")}
             </ThemedText>
             <Feather
               name="trending-down"
@@ -80,7 +82,7 @@ export function StatCardsGrid({
             </ThemedText>
             <Pressable onPress={onViewDetails} style={styles.statAction}>
               <ThemedText type="bodySm" color={theme.primary}>
-                {"View Details"}
+                {t("dashboard.view_details")}
               </ThemedText>
               <Feather name="arrow-right" size={12} color={theme.primary} />
             </Pressable>
@@ -103,7 +105,7 @@ export function StatCardsGrid({
               color={theme.textSecondary}
               style={styles.statLabel}
             >
-              {"Total Capital"}
+              {t("dashboard.total_capital")}
             </ThemedText>
             <Feather
               name="credit-card"
@@ -120,7 +122,7 @@ export function StatCardsGrid({
               color={theme.textSecondary}
               style={styles.breakdown}
             >
-              {"Wallets: $" + totalBalance.toFixed(0)}
+              {t("dashboard.wallets_amount").replace("{amount}", "$" + totalBalance.toFixed(0))}
             </ThemedText>
           </CardContent>
         </Card>
@@ -138,7 +140,7 @@ export function StatCardsGrid({
               color={theme.textSecondary}
               style={styles.statLabel}
             >
-              {"Net Worth"}
+              {t("dashboard.net_worth")}
             </ThemedText>
             <Feather
               name="credit-card"
