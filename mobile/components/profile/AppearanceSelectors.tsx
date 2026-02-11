@@ -90,7 +90,7 @@ export default function AppearanceSelectors({
         <ThemedText type="small" color={theme.textSecondary} style={styles.label}>
           {t("common.theme")}
         </ThemedText>
-        <View style={styles.toggleRow}>
+        <View style={styles.optionsGrid}>
           {(["system", "light", "dark"] as const).map((m) => {
             const isActive = mode === m;
             const labels = { system: t("common.system_theme"), light: t("common.light_theme"), dark: t("common.dark_theme") };

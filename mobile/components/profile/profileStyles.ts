@@ -29,10 +29,12 @@ export const styles = StyleSheet.create({
   },
   toggleRow: {
     flexDirection: "row",
-    gap: Spacing.md,
+    flexWrap: "wrap",
+    gap: Spacing.sm,
   },
   toggleBtn: {
     flex: 1,
+    minWidth: 120,
     height: 44,
     borderRadius: BorderRadius.sm,
     borderWidth: 1.5,
@@ -40,8 +42,8 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
   },
   themeBtn: {
-    flex: 1,
-    height: 44,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.sm,
     borderWidth: 1.5,
     flexDirection: "row",

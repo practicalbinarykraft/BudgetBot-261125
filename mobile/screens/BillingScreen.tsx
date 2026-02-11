@@ -42,7 +42,7 @@ export default function BillingScreen() {
   const isByok = credits?.billingMode === "byok";
   const isLowBalance = !isByok && credits && credits.messagesRemaining < 5;
   const modeLabel = credits?.billingMode === "byok" ? "BYOK"
-    : credits?.billingMode === "paid" ? "Paid" : "Free";
+    : credits?.billingMode === "paid" ? t("billing.mode_paid") : t("billing.mode_free");
 
   return (
     <ScrollView
@@ -132,7 +132,9 @@ export default function BillingScreen() {
                     {op.example}
                   </ThemedText>
                   <Badge
-                    label={`${op.credits} credit${op.credits !== 1 ? "s" : ""}`}
+                    label={op.credits === 1
+                      ? t("billing.credit", { n: op.credits })
+                      : t("billing.credits", { n: op.credits })}
                     variant="secondary"
                   />
                 </CardContent>

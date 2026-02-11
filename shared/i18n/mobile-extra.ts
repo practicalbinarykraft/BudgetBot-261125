@@ -258,6 +258,12 @@ export const mobileExtraTranslations: Translations = {
   // Navigation
   "common.back": { en: "Back", ru: "Назад" },
 
+  // Billing
+  "billing.mode_paid": { en: "Paid", ru: "Оплачено" },
+  "billing.mode_free": { en: "Free", ru: "Бесплатно" },
+  "billing.credit": { en: "{n} credit", ru: "{n} кредит" },
+  "billing.credits": { en: "{n} credits", ru: "{n} кредитов" },
+
   // Edit Transaction
   "transactions.type": { en: "Type", ru: "Тип" },
   "transactions.financial_type": { en: "Financial Type", ru: "Финансовый тип" },
