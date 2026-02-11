@@ -6,6 +6,7 @@ import type {
   Wallet,
   Category,
   Budget,
+  PersonalTag,
   PaginatedResponse,
 } from "../types";
 
@@ -98,6 +99,11 @@ export function useDashboardScreen() {
     queryFn: () => api.get<PaginatedResponse<Budget>>("/api/budgets"),
   });
 
+  const tagsQuery = useQuery({
+    queryKey: ["tags"],
+    queryFn: () => api.get<PersonalTag[]>("/api/tags"),
+  });
+
   const wallets = walletsQuery.data?.data ?? (Array.isArray(walletsQuery.data) ? walletsQuery.data as Wallet[] : []);
   const totalBalanceUsd = wallets.reduce(
     (sum, w) => sum + parseFloat(w.balanceUsd || w.balance || "0"), 0
@@ -125,6 +131,13 @@ export function useDashboardScreen() {
     return map;
   }, [budgets]);
 
+  const tags = tagsQuery.data ?? [];
+  const tagMap = useMemo(() => {
+    const map: Record<number, PersonalTag> = {};
+    tags.forEach((t) => { map[t.id] = t; });
+    return map;
+  }, [tags]);
+
   const isLoading = walletsQuery.isLoading || statsQuery.isLoading || transactionsQuery.isLoading;
   const isRefreshing = walletsQuery.isRefetching || statsQuery.isRefetching || transactionsQuery.isRefetching || categoryBreakdownQuery.isRefetching;
 
@@ -135,7 +148,8 @@ export function useDashboardScreen() {
     transactionsQuery.refetch();
     categoriesQuery.refetch();
     budgetsQuery.refetch();
-  }, [walletsQuery, statsQuery, categoryBreakdownQuery, transactionsQuery, categoriesQuery, budgetsQuery]);
+    tagsQuery.refetch();
+  }, [walletsQuery, statsQuery, categoryBreakdownQuery, transactionsQuery, categoriesQuery, budgetsQuery, tagsQuery]);
 
   const goToPrevMonth = () => setSelectedMonth((m) => addMonths(m, -1));
   const goToNextMonth = () => setSelectedMonth((m) => addMonths(m, 1));
@@ -144,7 +158,7 @@ export function useDashboardScreen() {
     selectedMonth, goToPrevMonth, goToNextMonth,
     totalBalanceUsd, totalIncome, totalExpense, balance,
     topCategories, budgetByCategoryId,
-    recentTransactions, categoryMap,
+    recentTransactions, categoryMap, tagMap,
     isLoading, isRefreshing, handleRefresh,
   };
 }

@@ -44,7 +44,7 @@ export function TransactionGroup({
           <TransactionItem
             key={t.id}
             transaction={t}
-            categoryLabel={cat?.name}
+            category={cat}
             tag={txTag}
             onPress={() => onTransactionPress(t)}
           />

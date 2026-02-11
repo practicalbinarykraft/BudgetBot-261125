@@ -1,23 +1,21 @@
 import React from "react";
 import { View, Pressable, StyleSheet } from "react-native";
-import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "./ThemedText";
-import { Badge } from "./Badge";
 import { TagBadge } from "./TagBadge";
 import { Spacing, BorderRadius } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
 import { useTranslation } from "../i18n";
 import { getDateLocale } from "../lib/date-locale";
-import type { Transaction, PersonalTag } from "../types";
+import type { Transaction, Category, PersonalTag } from "../types";
 
 interface TransactionItemProps {
   transaction: Transaction;
   onPress?: () => void;
-  categoryLabel?: string;
+  category?: Category;
   tag?: Pick<PersonalTag, "icon" | "name" | "color"> | null;
 }
 
-export function TransactionItem({ transaction, onPress, categoryLabel, tag }: TransactionItemProps) {
+export function TransactionItem({ transaction, onPress, category, tag }: TransactionItemProps) {
   const { theme } = useTheme();
   const { language } = useTranslation();
   const isIncome = transaction.type === "income";
@@ -25,8 +23,9 @@ export function TransactionItem({ transaction, onPress, categoryLabel, tag }: Tr
   const sign = isIncome ? "+" : "-";
 
   const formattedDate = new Date(transaction.date).toLocaleDateString(getDateLocale(language), {
-    month: "short",
     day: "numeric",
+    month: "short",
+    year: "numeric",
   });
 
   const amount = parseFloat(transaction.amountUsd).toFixed(2);
@@ -48,13 +47,17 @@ export function TransactionItem({ transaction, onPress, categoryLabel, tag }: Tr
             {formattedDate}
           </ThemedText>
           {tag ? <TagBadge tag={tag} /> : null}
-          {categoryLabel ? (
-            <Badge label={categoryLabel} variant="secondary" />
+          {category ? (
+            <View style={[styles.catBadge, { backgroundColor: (category.color || "#6b7280") + "20" }]}>
+              <ThemedText type="small" color={category.color || "#6b7280"} style={styles.catText}>
+                {category.name}
+              </ThemedText>
+            </View>
           ) : null}
         </View>
       </View>
       <View style={styles.right}>
-        <ThemedText type="bodySm" mono color={amountColor} style={{ fontWeight: "600" }}>
+        <ThemedText type="bodySm" mono color={amountColor} style={styles.amount}>
           {sign}${amount}
         </ThemedText>
         {transaction.currency !== "USD" ? (
@@ -90,8 +93,19 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     flexWrap: "wrap",
   },
+  amount: {
+    fontWeight: "600",
+  },
   right: {
     alignItems: "flex-end",
     gap: 2,
+  },
+  catBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.full,
+  },
+  catText: {
+    fontWeight: "500",
   },
 });

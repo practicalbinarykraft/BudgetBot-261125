@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { Input } from "../components/Input";
 import { Button } from "../components/Button";
 import { Spacing } from "../constants/theme";
@@ -42,7 +43,9 @@ export default function EditTransactionScreen() {
     allCategories,
     tags,
     updateMutation,
+    deleteMutation,
     handleSubmit,
+    handleDelete,
   } = useEditTransactionScreen();
 
   return (
@@ -101,6 +104,16 @@ export default function EditTransactionScreen() {
           containerStyle={styles.field}
         />
 
+        <Button
+          title={t("common.delete")}
+          variant="destructive"
+          onPress={handleDelete}
+          loading={deleteMutation.isPending}
+          disabled={deleteMutation.isPending}
+          icon={<Feather name="trash-2" size={14} color={theme.destructiveForeground} />}
+          style={styles.deleteBtn}
+        />
+
         <View style={styles.footerRow}>
           <Button
             title={t("common.cancel")}
@@ -136,6 +149,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: Spacing.md,
     marginTop: Spacing.lg,
+  },
+  deleteBtn: {
+    marginTop: Spacing.xl,
+    borderColor: "#dc262640",
   },
   footerBtn: {
     flex: 1,

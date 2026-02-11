@@ -49,11 +49,12 @@ declare module 'http' {
   }
 }
 app.use(express.json({
+  limit: '50mb',
   verify: (req, _res, buf) => {
     req.rawBody = buf;
   }
 }));
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ limit: '50mb', extended: false }));
 
 // Rate limiting - protect API from abuse
 app.use('/api', apiLimiter);

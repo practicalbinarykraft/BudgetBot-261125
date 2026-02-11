@@ -38,7 +38,7 @@ export default function DashboardScreen() {
     selectedMonth, goToPrevMonth, goToNextMonth,
     totalBalanceUsd, totalIncome, totalExpense, balance,
     topCategories, budgetByCategoryId,
-    recentTransactions, categoryMap,
+    recentTransactions, categoryMap, tagMap,
     isLoading, isRefreshing, handleRefresh,
   } = useDashboardScreen();
 
@@ -140,6 +140,7 @@ export default function DashboardScreen() {
         <RecentTransactionsSection
           recentTransactions={recentTransactions}
           categoryMap={categoryMap}
+          tagMap={tagMap}
           onViewAll={() => navigation.navigate("Transactions")}
           onTransactionPress={(t) =>
             navigation.navigate("EditTransaction", { transaction: t })

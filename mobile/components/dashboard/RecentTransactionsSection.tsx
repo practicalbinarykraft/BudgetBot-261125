@@ -5,11 +5,12 @@ import { TransactionItem } from "../TransactionItem";
 import { Spacing } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
 import { useTranslation } from "../../i18n";
-import type { Transaction, Category } from "../../types";
+import type { Transaction, Category, PersonalTag } from "../../types";
 
 interface RecentTransactionsSectionProps {
   recentTransactions: Transaction[];
   categoryMap: Record<number, Category>;
+  tagMap: Record<number, PersonalTag>;
   onViewAll: () => void;
   onTransactionPress: (t: Transaction) => void;
 }
@@ -17,6 +18,7 @@ interface RecentTransactionsSectionProps {
 export function RecentTransactionsSection({
   recentTransactions,
   categoryMap,
+  tagMap,
   onViewAll,
   onTransactionPress,
 }: RecentTransactionsSectionProps) {
@@ -48,11 +50,15 @@ export function RecentTransactionsSection({
             const cat = t.categoryId
               ? categoryMap[t.categoryId]
               : undefined;
+            const txTag = t.personalTagId
+              ? tagMap[t.personalTagId]
+              : undefined;
             return (
               <TransactionItem
                 key={t.id}
                 transaction={t}
-                categoryLabel={cat?.name}
+                category={cat}
+                tag={txTag}
                 onPress={() => onTransactionPress(t)}
               />
             );

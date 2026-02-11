@@ -12,6 +12,7 @@ interface ForecastSummaryProps {
     current: number;
     projected: number;
     percentChange: number;
+    forecastMonths?: number;
   };
   showForecast: boolean;
 }
@@ -36,7 +37,7 @@ export function ForecastSummaryBox({
       <View style={styles.forecastText}>
         <View style={styles.forecastValues}>
           <ThemedText type="small" style={styles.bold}>
-            {t("dashboard.forecast_12_months")}
+            {t("dashboard.forecast_n_months").replace("{n}", String(forecastSummary.forecastMonths ?? 12))}
           </ThemedText>
           <ThemedText type="bodySm" color={theme.primary} style={styles.bold} mono>
             {formatCompact(forecastSummary.projected)}

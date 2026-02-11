@@ -39,6 +39,7 @@ export default function DashboardAnalyticsScreen() {
     totalIncome,
     totalExpense,
     categoryMap,
+    tagMap,
     recentTransactions,
     groupedTransactions,
     exceededBudgets,
@@ -128,6 +129,7 @@ export default function DashboardAnalyticsScreen() {
         recentTransactions={recentTransactions}
         groupedTransactions={groupedTransactions}
         categoryMap={categoryMap}
+        tagMap={tagMap}
         onTransactionPress={(t) =>
           navigation.navigate("EditTransaction", { transaction: t })
         }

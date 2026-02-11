@@ -11,6 +11,7 @@ import type {
   Transaction,
   Wallet,
   Category,
+  PersonalTag,
   LimitProgress,
   PaginatedResponse,
 } from "../types";
@@ -57,6 +58,11 @@ export function useDashboardAnalytics() {
     queryFn: () => api.get<LimitProgress[]>("/api/limits"),
   });
 
+  const tagsQuery = useQuery({
+    queryKey: ["tags"],
+    queryFn: () => api.get<PersonalTag[]>("/api/tags"),
+  });
+
   const wallets = walletsQuery.data?.data || [];
   const transactions = transactionsQuery.data?.data || [];
   const categories = categoriesQuery.data?.data || [];
@@ -78,6 +84,13 @@ export function useDashboardAnalytics() {
     });
     return map;
   }, [categories]);
+
+  const tags = tagsQuery.data ?? [];
+  const tagMap = useMemo(() => {
+    const map: Record<number, PersonalTag> = {};
+    tags.forEach((t) => { map[t.id] = t; });
+    return map;
+  }, [tags]);
 
   const recentTransactions = transactions.slice(0, 5);
 
@@ -109,7 +122,8 @@ export function useDashboardAnalytics() {
     categoriesQuery.refetch();
     statsQuery.refetch();
     limitsQuery.refetch();
-  }, [walletsQuery, transactionsQuery, categoriesQuery, statsQuery, limitsQuery]);
+    tagsQuery.refetch();
+  }, [walletsQuery, transactionsQuery, categoriesQuery, statsQuery, limitsQuery, tagsQuery]);
 
   return {
     dateFilter,
@@ -118,6 +132,7 @@ export function useDashboardAnalytics() {
     totalIncome,
     totalExpense,
     categoryMap,
+    tagMap,
     recentTransactions,
     groupedTransactions,
     exceededBudgets,

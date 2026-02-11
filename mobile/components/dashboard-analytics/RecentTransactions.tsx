@@ -8,12 +8,13 @@ import { useTheme } from "../../hooks/useTheme";
 import { useTranslation } from "../../i18n";
 import { getDateLocale } from "../../lib/date-locale";
 import { getDateHeader } from "../../utils/date-helpers";
-import type { Transaction, Category } from "../../types";
+import type { Transaction, Category, PersonalTag } from "../../types";
 
 interface RecentTransactionsProps {
   recentTransactions: Transaction[];
   groupedTransactions: Map<string, Transaction[]>;
   categoryMap: Record<number, Category>;
+  tagMap: Record<number, PersonalTag>;
   onTransactionPress: (transaction: Transaction) => void;
 }
 
@@ -21,6 +22,7 @@ export function RecentTransactions({
   recentTransactions,
   groupedTransactions,
   categoryMap,
+  tagMap,
   onTransactionPress,
 }: RecentTransactionsProps) {
   const { theme } = useTheme();
@@ -62,11 +64,15 @@ export function RecentTransactions({
                     const cat = t.categoryId
                       ? categoryMap[t.categoryId]
                       : undefined;
+                    const txTag = t.personalTagId
+                      ? tagMap[t.personalTagId]
+                      : undefined;
                     return (
                       <TransactionItem
                         key={t.id}
                         transaction={t}
-                        categoryLabel={cat?.name}
+                        category={cat}
+                        tag={txTag}
                         onPress={() => onTransactionPress(t)}
                       />
                     );

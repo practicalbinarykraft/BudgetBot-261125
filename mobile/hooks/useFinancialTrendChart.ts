@@ -68,12 +68,13 @@ export function useFinancialTrendChart() {
     }
 
     const labelInterval = Math.max(1, Math.floor(sampled.length / 5));
+    const lastIdx = sampled.length - 1;
 
     const income = sampled.map((p, i) => ({
       value: p.income,
       date: formatChartDate(p.date, locale),
       isForecast: !!p.isForecast,
-      label: i % labelInterval === 0 ? formatChartDate(p.date, locale) : "",
+      label: i % labelInterval === 0 || i === lastIdx ? formatChartDate(p.date, locale) : "",
       showDataPoint: false,
     }));
 
@@ -105,10 +106,12 @@ export function useFinancialTrendChart() {
 
     const current = historical[historical.length - 1].capital;
     const projected = forecast[forecast.length - 1].capital;
-    const percentChange =
+    const rawPercent =
       current !== 0 ? ((projected - current) / Math.abs(current)) * 100 : 0;
+    const percentChange = Math.max(-999, Math.min(999, rawPercent));
+    const forecastMonths = Math.round(forecastDays / 30);
 
-    return { current, projected, percentChange };
+    return { current, projected, percentChange, forecastMonths };
   }, [trendData]);
 
   const isLoading = trendQuery.isLoading;
