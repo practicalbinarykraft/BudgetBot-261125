@@ -255,6 +255,9 @@ export const mobileExtraTranslations: Translations = {
   "settings.disabling": { en: "Disabling...", ru: "Отключение..." },
   "settings.disable": { en: "Disable", ru: "Отключить" },
 
+  // Navigation
+  "common.back": { en: "Back", ru: "Назад" },
+
   // Edit Transaction
   "transactions.type": { en: "Type", ru: "Тип" },
   "transactions.financial_type": { en: "Financial Type", ru: "Финансовый тип" },

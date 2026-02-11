@@ -82,10 +82,13 @@ export default function RootStackNavigator() {
   return (
     <WebSocketProvider userId={user?.id}>
       <OnboardingDialog userId={user?.id} />
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenOptions={{
+        headerShown: false,
+        headerBackTitle: t("common.back"),
+      }}>
         {isAuthenticated ? (
           <>
-            <Stack.Screen name="Main">
+            <Stack.Screen name="Main" options={{ headerBackTitle: t("common.back") }}>
               {() => <MainTabNavigator user={user} onLogout={logout} />}
             </Stack.Screen>
             {getTransactionScreens(Stack, headerStyle, headerTintColor, t)}
