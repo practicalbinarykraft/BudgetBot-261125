@@ -8,25 +8,15 @@ import { useTheme } from "../../hooks/useTheme";
 import { useTranslation } from "../../i18n";
 import { styles } from "./profileStyles";
 
-interface NavItem {
-  screen: string;
-  icon: React.ComponentProps<typeof Feather>["name"];
-  label: string;
-}
-
-interface NavGroupProps {
-  title: string;
-  items: NavItem[];
-}
-
-function NavGroup({ title, items }: NavGroupProps) {
+function NavGroup({ titleKey, items }: { titleKey: string; items: NavItemDef[] }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
 
   return (
     <>
       <ThemedText type="bodySm" color={theme.textSecondary} style={styles.navGroupTitle}>
-        {title}
+        {t(titleKey)}
       </ThemedText>
       {items.map((item) => (
         <Pressable
@@ -42,7 +32,7 @@ function NavGroup({ title, items }: NavGroupProps) {
         >
           <Feather name={item.icon} size={18} color={theme.text} />
           <ThemedText type="body" style={styles.navRowText}>
-            {item.label}
+            {t(item.labelKey)}
           </ThemedText>
           <Feather name="chevron-right" size={18} color={theme.textTertiary} />
         </Pressable>
@@ -51,36 +41,38 @@ function NavGroup({ title, items }: NavGroupProps) {
   );
 }
 
-const dashboardItems: NavItem[] = [
-  { screen: "DashboardAnalytics", icon: "bar-chart-2", label: "Dashboard Analytics" },
-  { screen: "Wallets", icon: "credit-card", label: "Wallets" },
+interface NavItemDef { screen: string; icon: React.ComponentProps<typeof Feather>["name"]; labelKey: string }
+
+const dashboardItems: NavItemDef[] = [
+  { screen: "DashboardAnalytics", icon: "bar-chart-2", labelKey: "nav.dashboard" },
+  { screen: "Wallets", icon: "credit-card", labelKey: "nav.wallets" },
 ];
 
-const financesItems: NavItem[] = [
-  { screen: "Recurring", icon: "repeat", label: "Recurring Transactions" },
-  { screen: "CurrencyHistory", icon: "dollar-sign", label: "Currency History" },
+const financesItems: NavItemDef[] = [
+  { screen: "Recurring", icon: "repeat", labelKey: "nav.recurring" },
+  { screen: "CurrencyHistory", icon: "dollar-sign", labelKey: "nav.currency_history" },
 ];
 
-const analyticsItems: NavItem[] = [
-  { screen: "AIAnalysis", icon: "cpu", label: "AI Analysis" },
-  { screen: "AdvancedAnalytics", icon: "activity", label: "Advanced Analytics" },
-  { screen: "ExpensesAnalytics", icon: "pie-chart", label: "Expense Analytics" },
-  { screen: "Tags", icon: "tag", label: "Manage Tags" },
-  { screen: "ProductCatalog", icon: "package", label: "Product Catalog" },
-  { screen: "SwipeSort", icon: "shuffle", label: "Swipe Sort" },
+const analyticsItems: NavItemDef[] = [
+  { screen: "AIAnalysis", icon: "cpu", labelKey: "nav.ai_analysis" },
+  { screen: "AdvancedAnalytics", icon: "activity", labelKey: "nav.advanced_analytics" },
+  { screen: "ExpensesAnalytics", icon: "pie-chart", labelKey: "nav.expense_analytics" },
+  { screen: "Tags", icon: "tag", labelKey: "nav.tags" },
+  { screen: "ProductCatalog", icon: "package", labelKey: "nav.product_catalog" },
+  { screen: "SwipeSort", icon: "shuffle", labelKey: "nav.swipe_sort" },
 ];
 
-const goalsItems: NavItem[] = [
-  { screen: "Wishlist", icon: "heart", label: "Wishlist" },
-  { screen: "PlannedExpenses", icon: "calendar", label: "Planned Expenses" },
-  { screen: "PlannedIncome", icon: "dollar-sign", label: "Planned Income" },
-  { screen: "Assets", icon: "briefcase", label: "Assets" },
+const goalsItems: NavItemDef[] = [
+  { screen: "Wishlist", icon: "heart", labelKey: "nav.wishlist" },
+  { screen: "PlannedExpenses", icon: "calendar", labelKey: "nav.planned_expenses" },
+  { screen: "PlannedIncome", icon: "dollar-sign", labelKey: "nav.planned_income" },
+  { screen: "Assets", icon: "briefcase", labelKey: "nav.assets" },
 ];
 
-const aiToolsItems: NavItem[] = [
-  { screen: "AIChat", icon: "message-circle", label: "AI Chat" },
-  { screen: "ReceiptScanner", icon: "camera", label: "Receipt Scanner" },
-  { screen: "VoiceInput", icon: "mic", label: "Voice Input" },
+const aiToolsItems: NavItemDef[] = [
+  { screen: "AIChat", icon: "message-circle", labelKey: "nav.ai_chat" },
+  { screen: "ReceiptScanner", icon: "camera", labelKey: "nav.receipt_scanner" },
+  { screen: "VoiceInput", icon: "mic", labelKey: "nav.voice_input" },
 ];
 
 export default function NavigationGroups() {
@@ -88,33 +80,18 @@ export default function NavigationGroups() {
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
 
+  const billingItems: NavItemDef[] = [
+    { screen: "Billing", icon: "zap", labelKey: "nav.credits_billing" },
+  ];
+
   return (
     <>
-      <NavGroup title="Dashboard" items={dashboardItems} />
-      <NavGroup title="Finances" items={financesItems} />
-      <NavGroup title="Analytics" items={analyticsItems} />
-      <NavGroup title="Goals" items={goalsItems} />
-      <NavGroup title="AI Tools" items={aiToolsItems} />
-
-      <ThemedText type="bodySm" color={theme.textSecondary} style={styles.navGroupTitle}>
-        {t("settings.title")}
-      </ThemedText>
-      <Pressable
-        onPress={() => navigation.navigate("Billing")}
-        style={({ pressed }) => [
-          styles.navRow,
-          {
-            backgroundColor: pressed ? theme.muted : theme.card,
-            borderColor: theme.cardBorder,
-          },
-        ]}
-      >
-        <Feather name="zap" size={18} color={theme.text} />
-        <ThemedText type="body" style={styles.navRowText}>
-          {"Credits & Billing"}
-        </ThemedText>
-        <Feather name="chevron-right" size={18} color={theme.textTertiary} />
-      </Pressable>
+      <NavGroup titleKey="nav.dashboard" items={dashboardItems} />
+      <NavGroup titleKey="nav.money" items={financesItems} />
+      <NavGroup titleKey="nav.analytics" items={analyticsItems} />
+      <NavGroup titleKey="nav.goals" items={goalsItems} />
+      <NavGroup titleKey="nav.group_ai_tools" items={aiToolsItems} />
+      <NavGroup titleKey="nav.settings" items={billingItems} />
     </>
   );
 }

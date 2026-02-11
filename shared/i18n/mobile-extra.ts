@@ -84,6 +84,7 @@ export const mobileExtraTranslations: Translations = {
   "nav.ai_chat": { en: "AI Chat", ru: "AI Чат" },
   "nav.receipt_scanner": { en: "Receipt Scanner", ru: "Сканер чеков" },
   "nav.voice_input": { en: "Voice Input", ru: "Голосовой ввод" },
+  "nav.group_ai_tools": { en: "AI Tools", ru: "AI Инструменты" },
   "dashboard.subtitle": { en: "Overview of your finances", ru: "Обзор ваших финансов" },
   "dashboard.calibrate": { en: "Calibrate", ru: "Калибровать" },
   "dashboard.add_transaction": { en: "Add Transaction", ru: "Добавить транзакцию" },
