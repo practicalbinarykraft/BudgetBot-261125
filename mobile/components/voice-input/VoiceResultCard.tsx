@@ -7,6 +7,7 @@ import { Card, CardHeader, CardContent } from "../Card";
 import { Badge } from "../Badge";
 import { Spacing } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import type { VoiceParsedResult } from "../../types";
 
 interface VoiceResultCardProps {
@@ -16,6 +17,7 @@ interface VoiceResultCardProps {
 
 export function VoiceResultCard({ result, onCreateTransaction }: VoiceResultCardProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <>
@@ -23,7 +25,7 @@ export function VoiceResultCard({ result, onCreateTransaction }: VoiceResultCard
       <Card>
         <CardHeader>
           <ThemedText type="h4" style={styles.bold}>
-            {"Transcription"}
+            {t("voice_input.transcription")}
           </ThemedText>
         </CardHeader>
         <CardContent>
@@ -38,7 +40,7 @@ export function VoiceResultCard({ result, onCreateTransaction }: VoiceResultCard
         <CardHeader>
           <View style={styles.parsedHeader}>
             <ThemedText type="h4" style={styles.bold}>
-              {"Parsed Transaction"}
+              {t("voice_input.parsed_transaction")}
             </ThemedText>
             <Badge
               label={result.parsed.confidence}
@@ -55,7 +57,7 @@ export function VoiceResultCard({ result, onCreateTransaction }: VoiceResultCard
         <CardContent style={styles.parsedContent}>
           <View style={styles.parsedRow}>
             <ThemedText type="small" color={theme.textSecondary}>
-              {"Type"}
+              {t("common.type")}
             </ThemedText>
             <Badge
               label={result.parsed.type}
@@ -66,7 +68,7 @@ export function VoiceResultCard({ result, onCreateTransaction }: VoiceResultCard
           </View>
           <View style={styles.parsedRow}>
             <ThemedText type="small" color={theme.textSecondary}>
-              {"Amount"}
+              {t("common.amount")}
             </ThemedText>
             <ThemedText type="body" mono style={styles.bold}>
               {result.parsed.amount}
@@ -76,7 +78,7 @@ export function VoiceResultCard({ result, onCreateTransaction }: VoiceResultCard
           </View>
           <View style={styles.parsedRow}>
             <ThemedText type="small" color={theme.textSecondary}>
-              {"Description"}
+              {t("common.description")}
             </ThemedText>
             <ThemedText type="bodySm">
               {result.parsed.description}
@@ -85,7 +87,7 @@ export function VoiceResultCard({ result, onCreateTransaction }: VoiceResultCard
           {result.parsed.category ? (
             <View style={styles.parsedRow}>
               <ThemedText type="small" color={theme.textSecondary}>
-                {"Category"}
+                {t("common.category")}
               </ThemedText>
               <ThemedText type="bodySm">
                 {result.parsed.category}
@@ -97,7 +99,7 @@ export function VoiceResultCard({ result, onCreateTransaction }: VoiceResultCard
 
       {/* Create Transaction Button */}
       <Button
-        title="Create Transaction"
+        title={t("voice_input.create_transaction")}
         onPress={onCreateTransaction}
         icon={<Feather name="plus" size={16} color="#ffffff" />}
       />

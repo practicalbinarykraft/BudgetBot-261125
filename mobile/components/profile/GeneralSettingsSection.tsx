@@ -108,7 +108,7 @@ export default function GeneralSettingsSection({
                   type="bodySm"
                   color={selectedTz ? theme.text : theme.textTertiary}
                 >
-                  {selectedTz ? `${selectedTz.label} (${selectedTz.key})` : "Select timezone"}
+                  {selectedTz ? `${selectedTz.label} (${selectedTz.key})` : t("settings.select_timezone")}
                 </ThemedText>
                 <Feather name="chevron-down" size={16} color={theme.textSecondary} />
               </Pressable>
@@ -120,7 +120,7 @@ export default function GeneralSettingsSection({
               value={notificationTime}
               onChangeText={setNotificationTime}
               placeholder="09:00"
-              description="24-hour format (HH:MM)"
+              description={t("settings.notification_time.description")}
             />
 
             <ApiKeysAndRatesSection

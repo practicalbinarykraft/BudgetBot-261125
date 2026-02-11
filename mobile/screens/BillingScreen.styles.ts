@@ -14,21 +14,20 @@ export const styles = StyleSheet.create({
   headerText: { flex: 1, gap: Spacing.xs },
 
   balanceContent: { alignItems: "center", gap: Spacing.md },
-  balanceAmount: { fontSize: 48, fontWeight: "700", textAlign: "center", alignSelf: "stretch" },
-  balanceStats: {
-    flexDirection: "row",
-    gap: Spacing["3xl"],
+  balanceAmount: {
+    fontSize: 48, fontWeight: "700", textAlign: "center",
+    alignSelf: "stretch", flexShrink: 1,
   },
-  balanceStat: { alignItems: "center", gap: 2 },
+  balanceStats: {
+    flexDirection: "row", gap: Spacing.xl,
+    flexWrap: "wrap", justifyContent: "center",
+  },
+  balanceStat: { alignItems: "center", gap: 2, minWidth: 80 },
   bold: { fontWeight: "600" },
   lowBalanceAlert: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.sm,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    alignSelf: "stretch",
+    flexDirection: "row", alignItems: "center", gap: Spacing.sm,
+    padding: Spacing.md, borderRadius: BorderRadius.md,
+    borderWidth: 1, alignSelf: "stretch",
   },
 
   sectionTitle: { fontWeight: "600", marginTop: Spacing.xl, marginBottom: Spacing.md },
@@ -39,8 +38,11 @@ export const styles = StyleSheet.create({
 
   tierCard: { marginBottom: Spacing.md },
   tierContent: { gap: Spacing.sm },
-  tierPriceRow: { flexDirection: "row", alignItems: "baseline" },
+  tierPriceRow: {
+    flexDirection: "row", alignItems: "baseline",
+    flexWrap: "wrap", gap: Spacing.xs,
+  },
   featureList: { gap: Spacing.sm, marginTop: Spacing.sm },
   featureRow: { flexDirection: "row", alignItems: "center", gap: Spacing.sm },
-  featureText: { flex: 1 },
+  featureText: { flex: 1, flexShrink: 1 },
 });

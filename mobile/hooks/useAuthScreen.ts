@@ -1,9 +1,7 @@
 import React, { useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-
-const LANG_KEY = "budgetbot_language";
+import { useTranslation } from "../i18n";
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export interface LoginFormState {
@@ -37,18 +35,10 @@ export function useAuthScreen(
 ) {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
-  const [language, setLanguage] = useState<"en" | "ru">("en");
+  const { language, setLanguage } = useTranslation();
 
-  React.useEffect(() => {
-    AsyncStorage.getItem(LANG_KEY).then((val) => {
-      if (val === "ru" || val === "en") setLanguage(val);
-    });
-  }, []);
-
-  const toggleLanguage = async () => {
-    const next = language === "en" ? "ru" : "en";
-    setLanguage(next);
-    await AsyncStorage.setItem(LANG_KEY, next);
+  const toggleLanguage = () => {
+    setLanguage(language === "en" ? "ru" : "en");
   };
 
   const [loginEmail, setLoginEmail] = useState("");

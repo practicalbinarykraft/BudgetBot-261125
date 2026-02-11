@@ -1,17 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Alert } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
 import type { Category, Wallet, PersonalTag, PaginatedResponse } from "../types";
 
+interface Prefill {
+  amount?: string;
+  description?: string;
+  type?: "expense" | "income";
+}
+
 export function useAddTransactionScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
+  const prefill = (route.params as { prefill?: Prefill } | undefined)?.prefill;
 
-  const [type, setType] = useState<"expense" | "income">("expense");
-  const [amount, setAmount] = useState("");
-  const [description, setDescription] = useState("");
+  const [type, setType] = useState<"expense" | "income">(prefill?.type || "expense");
+  const [amount, setAmount] = useState(prefill?.amount || "");
+  const [description, setDescription] = useState(prefill?.description || "");
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [selectedWalletId, setSelectedWalletId] = useState<number | null>(null);
   const [personalTagId, setPersonalTagId] = useState<number | null>(null);

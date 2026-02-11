@@ -21,7 +21,7 @@ export default function AppearanceSelectors({
   setLanguage,
 }: AppearanceSelectorsProps) {
   const { theme, mode, setMode } = useTheme();
-  const { t } = useTranslation();
+  const { t, setLanguage: setI18nLanguage } = useTranslation();
 
   const languages = [
     { key: "en", label: t("settings.language.english") },
@@ -67,7 +67,10 @@ export default function AppearanceSelectors({
             return (
               <Pressable
                 key={l.key}
-                onPress={() => setLanguage(l.key)}
+                onPress={() => {
+                  setLanguage(l.key);
+                  setI18nLanguage(l.key as "en" | "ru");
+                }}
                 style={[styles.toggleBtn, {
                   backgroundColor: isActive ? theme.primary : theme.secondary,
                   borderColor: isActive ? theme.primary : theme.border,
@@ -85,12 +88,12 @@ export default function AppearanceSelectors({
       {/* Theme toggle */}
       <View style={styles.field}>
         <ThemedText type="small" color={theme.textSecondary} style={styles.label}>
-          {"Theme"}
+          {t("common.theme")}
         </ThemedText>
         <View style={styles.toggleRow}>
           {(["system", "light", "dark"] as const).map((m) => {
             const isActive = mode === m;
-            const labels = { system: "System", light: t("common.light_theme"), dark: t("common.dark_theme") };
+            const labels = { system: t("common.system_theme"), light: t("common.light_theme"), dark: t("common.dark_theme") };
             return (
               <Pressable
                 key={m}

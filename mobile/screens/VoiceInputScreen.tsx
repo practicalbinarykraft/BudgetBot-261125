@@ -32,7 +32,7 @@ export default function VoiceInputScreen() {
             {t("voice_input.title")}
           </ThemedText>
           <ThemedText type="small" color={theme.textSecondary}>
-            {"Record a voice message to create a transaction"}
+            {t("voice_input.description")}
           </ThemedText>
         </View>
       </View>
@@ -59,13 +59,13 @@ export default function VoiceInputScreen() {
         </Animated.View>
         <ThemedText type="bodySm" color={theme.textSecondary}>
           {h.isRecording
-            ? "Recording... Tap to stop"
+            ? t("voice_input.recording")
             : h.isParsing
-              ? "Processing..."
-              : "Tap to start recording"}
+              ? t("common.loading")
+              : t("voice_input.tap_to_record")}
         </ThemedText>
         <ThemedText type="small" color={theme.textTertiary}>
-          {'Say something like "Coffee 5 dollars" or "Salary 3000"'}
+          {t("voice_input.hint")}
         </ThemedText>
       </View>
 
@@ -75,7 +75,7 @@ export default function VoiceInputScreen() {
           <CardContent style={styles.parsingContent}>
             <Feather name="loader" size={24} color={theme.primary} />
             <ThemedText type="bodySm" color={theme.textSecondary}>
-              {"Transcribing and parsing..."}
+              {t("voice_input.transcribing")}
             </ThemedText>
           </CardContent>
         </Card>
@@ -86,7 +86,13 @@ export default function VoiceInputScreen() {
         <VoiceResultCard
           result={h.result}
           onCreateTransaction={() => {
-            h.navigation.navigate("AddTransaction" as never);
+            h.navigation.navigate("AddTransaction" as never, {
+              prefill: {
+                amount: String(h.result!.parsed.amount),
+                description: h.result!.parsed.description,
+                type: h.result!.parsed.type,
+              },
+            } as never);
           }}
         />
       ) : null}

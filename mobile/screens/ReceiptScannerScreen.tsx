@@ -6,12 +6,14 @@ import { Button } from "../components/Button";
 import { Card, CardHeader, CardContent } from "../components/Card";
 import { useTheme } from "../hooks/useTheme";
 import { useTranslation } from "../i18n";
+import { useNavigation } from "@react-navigation/native";
 import { useReceiptScannerScreen } from "../hooks/useReceiptScannerScreen";
 import { styles } from "./styles/receiptScannerStyles";
 
 export default function ReceiptScannerScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const navigation = useNavigation();
   const { imageUri, result, scanMutation, pickImage } = useReceiptScannerScreen();
 
   return (
@@ -22,24 +24,24 @@ export default function ReceiptScannerScreen() {
       <View style={styles.headerRow}>
         <View>
           <ThemedText type="h3" style={styles.bold}>
-            {"Receipt Scanner"}
+            {t("receipts.title")}
           </ThemedText>
           <ThemedText type="small" color={theme.textSecondary}>
-            {"Upload a receipt to extract items and prices"}
+            {t("receipts.description")}
           </ThemedText>
         </View>
       </View>
 
       <View style={styles.buttonRow}>
         <Button
-          title="Take Photo"
+          title={t("receipts.take_photo")}
           onPress={() => pickImage(true)}
           disabled={scanMutation.isPending}
           icon={<Feather name="camera" size={16} color="#ffffff" />}
           style={styles.halfBtn}
         />
         <Button
-          title="Pick from Library"
+          title={t("receipts.pick_from_library")}
           variant="outline"
           onPress={() => pickImage(false)}
           disabled={scanMutation.isPending}
@@ -65,7 +67,7 @@ export default function ReceiptScannerScreen() {
           <CardContent style={styles.loadingContent}>
             <Feather name="loader" size={24} color={theme.primary} />
             <ThemedText type="bodySm" color={theme.textSecondary}>
-              {"Scanning receipt..."}
+              {t("receipts.scanning")}
             </ThemedText>
           </CardContent>
         </Card>
@@ -82,13 +84,12 @@ export default function ReceiptScannerScreen() {
             <Feather name="check-circle" size={16} color="#166534" />
             <View style={styles.successText}>
               <ThemedText type="bodySm" color="#166534" style={styles.bold}>
-                {"Receipt scanned successfully"}
+                {t("receipts.scan_success")}
               </ThemedText>
               <ThemedText type="small" color="#15803d">
-                {"Found "}
-                {result.itemsCount || 0}
-                {" items from "}
-                {result.receipt?.merchant || "receipt"}
+                {t("receipts.found_items")
+                  .replace("{count}", String(result.itemsCount || 0))
+                  .replace("{merchant}", result.receipt?.merchant || t("receipts.receipt"))}
               </ThemedText>
             </View>
           </View>
@@ -97,7 +98,7 @@ export default function ReceiptScannerScreen() {
             <Card>
               <CardHeader>
                 <ThemedText type="h4" style={styles.bold}>
-                  {"Extracted Items"}
+                  {t("receipts.extracted_items")}
                 </ThemedText>
               </CardHeader>
               <CardContent style={styles.itemsList}>
@@ -108,10 +109,10 @@ export default function ReceiptScannerScreen() {
                   >
                     <View style={styles.itemLeft}>
                       <ThemedText type="bodySm" style={styles.bold}>
-                        {item.name || "Unknown item"}
+                        {item.name || t("receipts.unknown_item")}
                       </ThemedText>
                       <ThemedText type="small" color={theme.textSecondary}>
-                        {"Qty: "}
+                        {t("receipts.qty") + " "}
                         {item.quantity || 1}
                       </ThemedText>
                     </View>
@@ -138,7 +139,7 @@ export default function ReceiptScannerScreen() {
                     ]}
                   >
                     <ThemedText type="bodySm" style={styles.bold}>
-                      {"Total"}
+                      {t("receipts.total")}
                     </ThemedText>
                     <ThemedText type="bodySm" mono style={styles.bold}>
                       {result.receipt.total}
@@ -148,6 +149,20 @@ export default function ReceiptScannerScreen() {
               </CardContent>
             </Card>
           ) : null}
+
+          <Button
+            title={t("voice_input.create_transaction")}
+            onPress={() => {
+              navigation.navigate("AddTransaction" as never, {
+                prefill: {
+                  amount: String(result.receipt?.total || ""),
+                  description: result.receipt?.merchant || "",
+                  type: "expense" as const,
+                },
+              } as never);
+            }}
+            icon={<Feather name="plus" size={16} color="#ffffff" />}
+          />
         </>
       ) : null}
 
@@ -155,7 +170,7 @@ export default function ReceiptScannerScreen() {
         <View style={styles.emptyState}>
           <Feather name="camera" size={48} color={theme.textTertiary} />
           <ThemedText type="bodySm" color={theme.textSecondary}>
-            {"Take a photo or select a receipt image to get started"}
+            {t("receipts.empty_state")}
           </ThemedText>
         </View>
       ) : null}
