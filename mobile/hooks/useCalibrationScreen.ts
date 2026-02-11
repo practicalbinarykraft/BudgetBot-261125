@@ -102,7 +102,7 @@ export function useCalibrationScreen() {
             ? w.difference
             : w.wallet.balanceUsd && balance !== 0
               ? (w.difference / balance) * parseFloat(w.wallet.balanceUsd)
-              : w.difference;
+              : 0;
         return sum + usdDiff;
       }, 0);
 

@@ -27,12 +27,12 @@ describe("calibration USD conversion", () => {
             ? w.difference
             : w.wallet.balanceUsd && balance !== 0
               ? (w.difference / balance) * parseFloat(w.wallet.balanceUsd)
-              : w.difference;
+              : 0;
         return sum + usdDiff;
       }, 0);
 
     expect(Number.isFinite(totalDifferenceUSD)).toBe(true);
-    expect(totalDifferenceUSD).toBe(500);
+    expect(totalDifferenceUSD).toBe(0);
   });
 
   it("correctly converts when balance is non-zero", () => {
@@ -57,7 +57,7 @@ describe("calibration USD conversion", () => {
             ? w.difference
             : w.wallet.balanceUsd && balance !== 0
               ? (w.difference / balance) * parseFloat(w.wallet.balanceUsd)
-              : w.difference;
+              : 0;
         return sum + usdDiff;
       }, 0);
 
