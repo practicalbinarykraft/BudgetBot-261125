@@ -4,6 +4,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
+import { useTranslation } from "../i18n";
+import { getDateLocale } from "../lib/date-locale";
 import type { PersonalTag, Transaction, PaginatedResponse } from "../types";
 
 type RouteParams = {
@@ -16,10 +18,10 @@ interface TagStats {
   totalIncome: number;
 }
 
-export function groupByDate(transactions: Transaction[]) {
+export function groupByDate(transactions: Transaction[], locale: string = "en-US") {
   const map: Record<string, Transaction[]> = {};
   for (const tx of transactions) {
-    const d = new Date(tx.date).toLocaleDateString("en-US", {
+    const d = new Date(tx.date).toLocaleDateString(locale, {
       weekday: "short",
       month: "short",
       day: "numeric",
@@ -31,6 +33,7 @@ export function groupByDate(transactions: Transaction[]) {
 }
 
 export function useTagDetailScreen() {
+  const { language } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const route = useRoute<RouteProp<RouteParams, "TagDetail">>();
   const tagId = route.params.tagId;
@@ -78,7 +81,7 @@ export function useTagDetailScreen() {
   const currentTag = tags.find((t) => t.id === tagId);
   const stats = statsQuery.data || { transactionCount: 0, totalSpent: 0, totalIncome: 0 };
   const transactions = transactionsQuery.data || [];
-  const sections = groupByDate(transactions);
+  const sections = groupByDate(transactions, getDateLocale(language));
 
   const typeSubtitle =
     currentTag?.type === "personal"

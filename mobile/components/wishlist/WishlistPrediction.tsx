@@ -5,6 +5,8 @@ import { ThemedText } from "../ThemedText";
 import { Badge } from "../Badge";
 import { Spacing, BorderRadius } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
+import { getDateLocale } from "../../lib/date-locale";
 import type { GoalPrediction } from "../../types";
 
 interface WishlistPredictionProps {
@@ -14,6 +16,7 @@ interface WishlistPredictionProps {
 
 export function WishlistPrediction({ prediction, itemAmount }: WishlistPredictionProps) {
   const { theme } = useTheme();
+  const { language } = useTranslation();
 
   return (
     <View
@@ -51,7 +54,7 @@ export function WishlistPrediction({ prediction, itemAmount }: WishlistPredictio
           </View>
           <ThemedText type="small" color={theme.textSecondary}>
             {"~" + prediction.monthsToAfford + " month(s) \u2014 by " +
-              new Date(prediction.affordableDate).toLocaleDateString("en-US", {
+              new Date(prediction.affordableDate).toLocaleDateString(getDateLocale(language), {
                 month: "short", day: "numeric", year: "numeric",
               })}
           </ThemedText>

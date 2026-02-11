@@ -3,11 +3,14 @@ import { Alert } from "react-native";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
+import { useTranslation } from "../i18n";
+import { getDateLocale } from "../lib/date-locale";
 import type { Notification } from "../types";
 
 export type FilterType = "all" | "missed" | "today" | "upcoming";
 
 export function useNotificationsScreen() {
+  const { language } = useTranslation();
   const [filterType, setFilterType] = useState<FilterType>("all");
 
   const notificationsQuery = useQuery({
@@ -77,7 +80,7 @@ export function useNotificationsScreen() {
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
-    return d.toLocaleDateString("en-US", {
+    return d.toLocaleDateString(getDateLocale(language), {
       day: "numeric",
       month: "short",
       hour: "2-digit",

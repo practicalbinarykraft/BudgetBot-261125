@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
+import { useTranslation } from "../i18n";
+import { getDateLocale } from "../lib/date-locale";
 import type { BreakdownItem } from "../components/BreakdownCard";
 
 export type Period = "week" | "month" | "year";
@@ -43,6 +45,7 @@ export const tabs: { key: TabKey; label: string }[] = [
 ];
 
 export function useExpensesAnalyticsScreen() {
+  const { language } = useTranslation();
   const [period, setPeriod] = useState<Period>("month");
   const [activeTab, setActiveTab] = useState<TabKey>("category");
 
@@ -89,7 +92,7 @@ export function useExpensesAnalyticsScreen() {
   });
 
   const formatDate = (dateStr: string) =>
-    new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
+    new Date(dateStr + "T00:00:00").toLocaleDateString(getDateLocale(language), {
       month: "short",
       day: "numeric",
     });

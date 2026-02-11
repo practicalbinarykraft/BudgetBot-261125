@@ -20,6 +20,8 @@ import { CategoryScroll } from "../components/dashboard/CategoryScroll";
 import { RecentTransactionsSection } from "../components/dashboard/RecentTransactionsSection";
 import { Spacing, BorderRadius } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
+import { getDateLocale } from "../lib/date-locale";
 import {
   useDashboardScreen,
   formatMonthYear,
@@ -28,6 +30,7 @@ import {
 
 export default function DashboardScreen() {
   const { theme } = useTheme();
+  const { language } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const [menuVisible, setMenuVisible] = useState(false);
@@ -91,7 +94,7 @@ export default function DashboardScreen() {
             <Feather name="chevron-left" size={20} color={theme.text} />
           </Pressable>
           <ThemedText type="h4" style={styles.monthLabel}>
-            {formatMonthYear(selectedMonth)}
+            {formatMonthYear(selectedMonth, getDateLocale(language))}
           </ThemedText>
           <Pressable onPress={goToNextMonth} style={[styles.monthBtn, { backgroundColor: theme.muted }]}>
             <Feather name="chevron-right" size={20} color={theme.text} />

@@ -102,4 +102,5 @@ export const mobileExtraTranslations: Translations = {
   "dashboard.budget_exceeded_count": { en: "{count} budget(s) exceeded limit", ru: "{count} бюджет(ов) превысили лимит" },
   "dashboard.budget_warning": { en: "Budget Warning", ru: "Предупреждение о бюджете" },
   "dashboard.budget_warning_count": { en: "{count} budget(s) approaching limit", ru: "{count} бюджет(ов) приближаются к лимиту" },
+  "common.yesterday": { en: "Yesterday", ru: "Вчера" },
 };

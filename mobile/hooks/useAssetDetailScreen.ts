@@ -5,6 +5,8 @@ import type { RouteProp } from "@react-navigation/native";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
+import { useTranslation } from "../i18n";
+import { getDateLocale } from "../lib/date-locale";
 import type { Asset, AssetValuation } from "../types";
 
 type AssetDetailRoute = RouteProp<
@@ -23,6 +25,7 @@ export interface AssetDetailData {
 }
 
 export function useAssetDetailScreen() {
+  const { language } = useTranslation();
   const navigation = useNavigation();
   const route = useRoute<AssetDetailRoute>();
   const { assetId } = route.params;
@@ -84,7 +87,7 @@ export function useAssetDetailScreen() {
   };
 
   const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString("en-US", {
+    new Date(dateStr).toLocaleDateString(getDateLocale(language), {
       month: "short",
       day: "numeric",
       year: "numeric",

@@ -6,6 +6,8 @@ import { Card, CardContent } from "../Card";
 import { Badge } from "../Badge";
 import { Spacing } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
+import { getDateLocale } from "../../lib/date-locale";
 import type { Transaction } from "../../types";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -20,6 +22,7 @@ interface SwipeCardProps {
 
 export function SwipeCard({ transaction, catLabel, pan, panResponder }: SwipeCardProps) {
   const { theme } = useTheme();
+  const { language } = useTranslation();
 
   const rotate = pan.x.interpolate({
     inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
@@ -109,7 +112,7 @@ export function SwipeCard({ transaction, catLabel, pan, panResponder }: SwipeCar
             ) : null}
           </View>
           <ThemedText type="small" color={theme.textTertiary}>
-            {new Date(transaction.date).toLocaleDateString("en-US", {
+            {new Date(transaction.date).toLocaleDateString(getDateLocale(language), {
               day: "numeric",
               month: "short",
               year: "numeric",

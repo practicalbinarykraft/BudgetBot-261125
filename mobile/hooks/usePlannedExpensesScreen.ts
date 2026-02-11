@@ -3,11 +3,14 @@ import { Alert } from "react-native";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
+import { useTranslation } from "../i18n";
+import { getDateLocale } from "../lib/date-locale";
 import type { PlannedTransaction } from "../types";
 
 export type TabFilter = "all" | "planned" | "completed";
 
 export function usePlannedExpensesScreen() {
+  const { language } = useTranslation();
   const [tab, setTab] = useState<TabFilter>("all");
 
   const plannedQuery = useQuery({
@@ -63,7 +66,7 @@ export function usePlannedExpensesScreen() {
   };
 
   const formatDate = (dateStr: string) =>
-    new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
+    new Date(dateStr + "T00:00:00").toLocaleDateString(getDateLocale(language), {
       month: "short", day: "numeric", year: "numeric",
     });
 

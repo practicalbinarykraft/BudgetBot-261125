@@ -17,6 +17,7 @@ import { Card, CardContent } from "../components/Card";
 import { Badge } from "../components/Badge";
 import { useTheme } from "../hooks/useTheme";
 import { useTranslation } from "../i18n";
+import { getDateLocale } from "../lib/date-locale";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
 import type { Recurring } from "../types";
@@ -32,7 +33,7 @@ const FREQUENCY_LABELS: Record<string, string> = {
 
 export default function RecurringScreen() {
   const { theme } = useTheme();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
 
   const recurringQuery = useQuery({
@@ -69,7 +70,7 @@ export default function RecurringScreen() {
 
   const formatNextDate = (dateStr: string) => {
     const d = new Date(dateStr + "T00:00:00");
-    return d.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
+    return d.toLocaleDateString(getDateLocale(language), { day: "numeric", month: "short", year: "numeric" });
   };
 
   const renderItem = ({ item }: { item: Recurring }) => {

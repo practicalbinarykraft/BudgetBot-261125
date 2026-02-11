@@ -153,13 +153,13 @@ export default function ReceiptScannerScreen() {
           <Button
             title={t("voice_input.create_transaction")}
             onPress={() => {
-              navigation.navigate("AddTransaction" as never, {
+              (navigation as any).navigate("AddTransaction", {
                 prefill: {
                   amount: String(result.receipt?.total || ""),
                   description: result.receipt?.merchant || "",
                   type: "expense" as const,
                 },
-              } as never);
+              });
             }}
             icon={<Feather name="plus" size={16} color="#ffffff" />}
           />

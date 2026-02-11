@@ -62,11 +62,15 @@ function isYesterdayDate(date: Date): boolean {
   );
 }
 
-export function getDateHeader(dateStr: string): string {
+export function getDateHeader(
+  dateStr: string,
+  locale: string = "en-US",
+  labels?: { today: string; yesterday: string },
+): string {
   const date = new Date(dateStr + "T00:00:00");
-  if (isTodayDate(date)) return "Today";
-  if (isYesterdayDate(date)) return "Yesterday";
-  return date.toLocaleDateString("en-US", { day: "numeric", month: "long" });
+  if (isTodayDate(date)) return labels?.today ?? "Today";
+  if (isYesterdayDate(date)) return labels?.yesterday ?? "Yesterday";
+  return date.toLocaleDateString(locale, { day: "numeric", month: "long" });
 }
 
 export function groupTransactionsByDate(

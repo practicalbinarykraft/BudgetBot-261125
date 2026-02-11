@@ -6,6 +6,8 @@ import { Badge } from "./Badge";
 import { TagBadge } from "./TagBadge";
 import { Spacing, BorderRadius } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
+import { getDateLocale } from "../lib/date-locale";
 import type { Transaction, PersonalTag } from "../types";
 
 interface TransactionItemProps {
@@ -17,11 +19,12 @@ interface TransactionItemProps {
 
 export function TransactionItem({ transaction, onPress, categoryLabel, tag }: TransactionItemProps) {
   const { theme } = useTheme();
+  const { language } = useTranslation();
   const isIncome = transaction.type === "income";
   const amountColor = isIncome ? theme.income : theme.expense;
   const sign = isIncome ? "+" : "-";
 
-  const formattedDate = new Date(transaction.date).toLocaleDateString("en-US", {
+  const formattedDate = new Date(transaction.date).toLocaleDateString(getDateLocale(language), {
     month: "short",
     day: "numeric",
   });

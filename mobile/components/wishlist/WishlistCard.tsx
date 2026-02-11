@@ -7,6 +7,8 @@ import { Card, CardContent } from "../Card";
 import { Badge } from "../Badge";
 import { Spacing, BorderRadius } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
+import { getDateLocale } from "../../lib/date-locale";
 import { WishlistPrediction } from "./WishlistPrediction";
 import type { WishlistItem } from "../../types";
 
@@ -24,6 +26,7 @@ interface WishlistCardProps {
 
 export function WishlistCard({ item, onTogglePurchased, onDelete }: WishlistCardProps) {
   const { theme } = useTheme();
+  const { language } = useTranslation();
   const priorityColor = PRIORITY_COLORS[item.priority] || PRIORITY_COLORS.medium;
 
   return (
@@ -59,7 +62,7 @@ export function WishlistCard({ item, onTogglePurchased, onDelete }: WishlistCard
           <Badge label={item.priority.charAt(0).toUpperCase() + item.priority.slice(1)} variant="secondary" />
           {item.targetDate ? (
             <ThemedText type="small" color={theme.textSecondary}>
-              {"Target: " + new Date(item.targetDate + "T00:00:00").toLocaleDateString("en-US", {
+              {"Target: " + new Date(item.targetDate + "T00:00:00").toLocaleDateString(getDateLocale(language), {
                 month: "short", day: "numeric", year: "numeric",
               })}
             </ThemedText>

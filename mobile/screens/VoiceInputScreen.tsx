@@ -86,7 +86,7 @@ export default function VoiceInputScreen() {
         <VoiceResultCard
           result={h.result}
           onCreateTransaction={() => {
-            h.navigation.navigate("AddTransaction" as never, {
+            (h.navigation as any).navigate("AddTransaction", {
               prefill: {
                 amount: String(h.result!.parsed.amount),
                 description: h.result!.parsed.description,

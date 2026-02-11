@@ -4,6 +4,8 @@ import { ThemedText } from "../ThemedText";
 import { TransactionItem } from "../TransactionItem";
 import { Spacing } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
+import { getDateLocale } from "../../lib/date-locale";
 import { getDateHeader } from "../../hooks/useTransactionsScreen";
 import type { Transaction, Category, PersonalTag } from "../../types";
 
@@ -23,6 +25,8 @@ export function TransactionGroup({
   onTransactionPress,
 }: TransactionGroupProps) {
   const { theme } = useTheme();
+  const { language, t } = useTranslation();
+  const dateLabels = { today: t("common.today"), yesterday: t("common.yesterday") };
 
   return (
     <View style={styles.dateGroup}>
@@ -31,7 +35,7 @@ export function TransactionGroup({
         color={theme.textSecondary}
         style={styles.dateHeader}
       >
-        {getDateHeader(dateKey)}
+        {getDateHeader(dateKey, getDateLocale(language), dateLabels)}
       </ThemedText>
       {transactions.map((t) => {
         const cat = t.categoryId ? categoryMap[t.categoryId] : undefined;

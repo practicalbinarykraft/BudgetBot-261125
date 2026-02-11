@@ -3,6 +3,8 @@ import { Dimensions } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { Spacing } from "../constants/theme";
 import { api } from "../lib/api-client";
+import { useTranslation } from "../i18n";
+import { getDateLocale } from "../lib/date-locale";
 import type { TrendResponse, TrendDataPoint } from "../types";
 
 export const CHART_COLORS = {
@@ -19,9 +21,9 @@ export function formatCompact(value: number): string {
   return `$${value.toFixed(0)}`;
 }
 
-function formatChartDate(dateStr: string): string {
+function formatChartDate(dateStr: string, locale: string = "en-US"): string {
   const d = new Date(dateStr + "T00:00:00");
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return d.toLocaleDateString(locale, { month: "short", day: "numeric" });
 }
 
 export const HISTORY_OPTIONS: { value: HistoryDays; label: string }[] = [
@@ -32,6 +34,8 @@ export const HISTORY_OPTIONS: { value: HistoryDays; label: string }[] = [
 ];
 
 export function useFinancialTrendChart() {
+  const { language } = useTranslation();
+  const locale = getDateLocale(language);
   const [historyDays, setHistoryDays] = useState<HistoryDays>(30);
   const [showForecast, setShowForecast] = useState(true);
   const screenWidth = Dimensions.get("window").width - Spacing.lg * 2 - Spacing.lg * 2;
@@ -67,9 +71,9 @@ export function useFinancialTrendChart() {
 
     const income = sampled.map((p, i) => ({
       value: p.income,
-      date: formatChartDate(p.date),
+      date: formatChartDate(p.date, locale),
       isForecast: !!p.isForecast,
-      label: i % labelInterval === 0 ? formatChartDate(p.date) : "",
+      label: i % labelInterval === 0 ? formatChartDate(p.date, locale) : "",
       showDataPoint: false,
     }));
 
@@ -83,7 +87,7 @@ export function useFinancialTrendChart() {
       showDataPoint: false,
     }));
 
-    const labels = sampled.map((p) => formatChartDate(p.date));
+    const labels = sampled.map((p) => formatChartDate(p.date, locale));
 
     return {
       incomeData: income,
@@ -91,7 +95,7 @@ export function useFinancialTrendChart() {
       capitalData: capital,
       xLabels: labels,
     };
-  }, [trendData]);
+  }, [trendData, locale]);
 
   const forecastSummary = useMemo(() => {
     if (trendData.length === 0) return null;

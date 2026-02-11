@@ -5,6 +5,8 @@ import { TransactionItem } from "../TransactionItem";
 import { Card, CardHeader, CardTitle, CardContent } from "../Card";
 import { Spacing } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
+import { getDateLocale } from "../../lib/date-locale";
 import { getDateHeader } from "../../utils/date-helpers";
 import type { Transaction, Category } from "../../types";
 
@@ -22,6 +24,8 @@ export function RecentTransactions({
   onTransactionPress,
 }: RecentTransactionsProps) {
   const { theme } = useTheme();
+  const { language, t } = useTranslation();
+  const dateLabels = { today: t("common.today"), yesterday: t("common.yesterday") };
 
   return (
     <Card>
@@ -52,7 +56,7 @@ export function RecentTransactions({
                     color={theme.textSecondary}
                     style={styles.dateHeader}
                   >
-                    {getDateHeader(dateKey)}
+                    {getDateHeader(dateKey, getDateLocale(language), dateLabels)}
                   </ThemedText>
                   {dateTxns.map((t) => {
                     const cat = t.categoryId

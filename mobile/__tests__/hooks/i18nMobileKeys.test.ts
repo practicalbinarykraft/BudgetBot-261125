@@ -38,6 +38,7 @@ const mobileKeys = [
   "billing.free",
   "common.theme",
   "common.system_theme",
+  "common.yesterday",
   "voice_input.description",
   "voice_input.recording",
   "voice_input.tap_to_record",

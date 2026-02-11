@@ -28,8 +28,8 @@ function addMonths(date: Date, n: number): Date {
   return new Date(date.getFullYear(), date.getMonth() + n, 1);
 }
 
-export function formatMonthYear(date: Date): string {
-  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+export function formatMonthYear(date: Date, locale: string): string {
+  return date.toLocaleDateString(locale, { month: "long", year: "numeric" });
 }
 
 export function formatAmount(usdAmount: number): string {

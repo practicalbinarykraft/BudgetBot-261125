@@ -4,6 +4,8 @@ import type { RouteProp } from "@react-navigation/native";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
+import { useTranslation } from "../i18n";
+import { getDateLocale } from "../lib/date-locale";
 import type { PriceHistoryData } from "../types";
 
 type ProductDetailRoute = RouteProp<
@@ -12,6 +14,7 @@ type ProductDetailRoute = RouteProp<
 >;
 
 export function useProductDetailScreen() {
+  const { language } = useTranslation();
   const navigation = useNavigation();
   const route = useRoute<ProductDetailRoute>();
   const { productId } = route.params;
@@ -45,7 +48,7 @@ export function useProductDetailScreen() {
   };
 
   const formatDate = (dateStr: string) =>
-    new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
+    new Date(dateStr + "T00:00:00").toLocaleDateString(getDateLocale(language), {
       month: "short",
       day: "numeric",
       year: "numeric",
