@@ -12,11 +12,11 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15
+        image: postgres:16
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
-          POSTGRES_DB: test
+          POSTGRES_DB: budgetbot_test
         ports:
           - 5432:5432
         options: >-
@@ -37,21 +37,29 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install mobile dependencies
+        run: cd mobile && npm ci
+
       - name: Type check
         run: npm run check
 
       - name: Setup database
         run: npm run db:push
         env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/test
+          DATABASE_URL: postgres://test:test@localhost:5432/budgetbot_test
 
-      - name: Run tests
+      - name: Run server & web tests
         run: npm run test:run
         env:
           NODE_ENV: test
-          DATABASE_URL: postgresql://test:test@localhost:5432/test
+          DATABASE_URL: postgres://test:test@localhost:5432/budgetbot_test
           SESSION_SECRET: test-session-secret-must-be-32-chars
           ENCRYPTION_KEY: U4rnuZd9jFqJb5yokp5e1DrI8QCmSZx8HpDX4lLZUqI=
+
+      - name: Run mobile tests
+        run: cd mobile && npm test -- --forceExit
+        env:
+          NODE_ENV: test
 
       - name: Build
         run: npm run build

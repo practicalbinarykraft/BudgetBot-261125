@@ -31,36 +31,49 @@ function detectCurrencyFromMerchant(merchantName: string): string {
 /**
  * POST /api/ai/receipt-with-items
  * Parse receipt and extract individual items with prices
- * 
+ * Supports single image or multiple images (for long receipts)
+ *
  * Body:
- * - imageBase64: Base64-encoded image (without data:image prefix)
+ * - imageBase64: string (single image) OR images: string[] (multiple images)
  * - mimeType: Image MIME type (image/jpeg, image/png, image/webp)
  * - transactionId: Optional - link items to existing transaction
- * 
- * Response:
- * - receipt: Parsed receipt data (total, merchant, date, items)
- * - itemsCount: Number of items extracted
  */
 router.post("/receipt-with-items", withAuth(async (req, res) => {
   try {
-    const { imageBase64, mimeType, transactionId } = req.body;
+    const { imageBase64, images, mimeType, transactionId } = req.body;
     const userId = Number(req.user.id);
-    
-    if (!imageBase64) {
-      return res.status(400).json({ 
-        error: "imageBase64 is required" 
-      });
-    }
-    
-    const settings = await storage.getSettingsByUserId(userId);
-    const anthropicApiKey = settings?.anthropicApiKey;
-    
-    if (!anthropicApiKey) {
+
+    // Поддержка и одного фото (imageBase64) и нескольких (images[])
+    const imageArray: string[] = images && Array.isArray(images) && images.length > 0
+      ? images
+      : imageBase64 ? [imageBase64] : [];
+
+    if (imageArray.length === 0) {
       return res.status(400).json({
-        error: "Anthropic API key not configured. Please add it in Settings."
+        error: "imageBase64 or images[] is required"
       });
     }
-    
+
+    // 🎯 Smart API key selection: BYOK or system key with credits
+    const { getApiKey } = await import('../../services/api-key-manager');
+    const { chargeCredits } = await import('../../services/billing.service');
+    const { BillingError } = await import('../../types/billing');
+
+    let apiKeyInfo;
+    try {
+      apiKeyInfo = await getApiKey(userId, 'ocr');
+    } catch (error: any) {
+      if (error instanceof BillingError && error.code === 'INSUFFICIENT_CREDITS') {
+        return res.status(402).json({
+          error: "You have insufficient credits to use this feature. Add credits or switch to another tier.",
+          creditsExhausted: true
+        });
+      }
+      throw error;
+    }
+
+    const settings = await storage.getSettingsByUserId(userId);
+
     // Получить курсы валют из настроек
     const exchangeRates: Record<string, number> = {
       'USD': 1,
@@ -68,12 +81,12 @@ router.post("/receipt-with-items", withAuth(async (req, res) => {
       'IDR': parseFloat(settings?.exchangeRateIDR || '16000'),
       'EUR': parseFloat(settings?.exchangeRateEUR || '0.95'),
     };
-    
+
     // Определить валюту (из настроек или USD по умолчанию)
     const currency = settings?.currency || 'USD';
-    
+
     const validMimeType = mimeType || 'image/jpeg';
-    const parsed = await parseReceiptWithItems(imageBase64, anthropicApiKey, validMimeType);
+    const parsed = await parseReceiptWithItems(imageArray, apiKeyInfo.key, validMimeType);
     
     // Получить валюту транзакции (если привязан)
     let transactionCurrency: string | null = null;
@@ -136,15 +149,26 @@ router.post("/receipt-with-items", withAuth(async (req, res) => {
         storeName: parsed.merchant || 'Unknown Store',
         purchaseDate: parsed.date,
         exchangeRates,
-        anthropicApiKey
+        anthropicApiKey: apiKeyInfo.key
       });
-      
+
       console.log('✅ Product catalog updated from receipt');
     } catch (error) {
       console.error('❌ Failed to update product catalog:', error);
       // Не прерываем обработку чека, просто логируем
     }
-    
+
+    // 💳 Charge credits if using system key
+    if (apiKeyInfo.shouldCharge) {
+      await chargeCredits(
+        userId,
+        'ocr',
+        apiKeyInfo.provider,
+        { input: 1500, output: 500 },
+        apiKeyInfo.billingMode === 'free'
+      );
+    }
+
     res.json({
       success: true,
       receipt: parsed,
