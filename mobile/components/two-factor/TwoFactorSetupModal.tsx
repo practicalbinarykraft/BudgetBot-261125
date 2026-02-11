@@ -7,6 +7,7 @@ import { Button } from "../Button";
 import { Input } from "../Input";
 import { Spacing, BorderRadius } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import type { TwoFactorSetup } from "../../types";
 
 interface TwoFactorSetupModalProps {
@@ -23,6 +24,7 @@ export function TwoFactorSetupModal({
   visible, onClose, setupData, code, onCodeChange, onEnable, isPending,
 }: TwoFactorSetupModalProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <Modal
@@ -33,14 +35,14 @@ export function TwoFactorSetupModal({
     >
       <View style={[styles.modal, { backgroundColor: theme.background }]}>
         <View style={styles.modalHeader}>
-          <ThemedText type="h3">{"Set Up 2FA"}</ThemedText>
+          <ThemedText type="h3">{t("settings.setup_2fa")}</ThemedText>
           <Pressable onPress={onClose}>
             <Feather name="x" size={24} color={theme.text} />
           </Pressable>
         </View>
 
         <ThemedText type="bodySm" color={theme.textSecondary} style={styles.modalDesc}>
-          {"Scan the QR code with your authenticator app"}
+          {t("settings.scan_qr")}
         </ThemedText>
 
         {setupData?.qrCode ? (
@@ -56,12 +58,12 @@ export function TwoFactorSetupModal({
         {setupData?.secret ? (
           <View style={styles.secretSection}>
             <ThemedText type="small" color={theme.textSecondary}>
-              {"Or enter this code manually:"}
+              {t("settings.enter_code_manually")}
             </ThemedText>
             <Pressable
               onPress={() =>
                 Clipboard.setStringAsync(setupData.secret).then(() =>
-                  Alert.alert("Copied", "Secret key copied to clipboard")
+                  Alert.alert(t("settings.copied"), t("settings.secret_copied"))
                 )
               }
               style={[
@@ -78,7 +80,7 @@ export function TwoFactorSetupModal({
         ) : null}
 
         <Input
-          label="Verification Code"
+          label={t("settings.verification_code")}
           value={code}
           onChangeText={onCodeChange}
           placeholder="000000"
@@ -89,13 +91,13 @@ export function TwoFactorSetupModal({
 
         <View style={styles.modalFooter}>
           <Button
-            title="Cancel"
+            title={t("common.cancel")}
             variant="outline"
             onPress={onClose}
             style={styles.footerBtn}
           />
           <Button
-            title={isPending ? "Verifying..." : "Verify & Enable"}
+            title={isPending ? t("settings.verifying") : t("settings.verify_enable")}
             onPress={onEnable}
             disabled={code.length !== 6 || isPending}
             loading={isPending}

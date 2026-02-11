@@ -6,12 +6,14 @@ import { Button } from "../Button";
 import { Card, CardHeader, CardContent } from "../Card";
 import { Spacing } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import { useTwoFactor } from "../../hooks/useTwoFactor";
 import { TwoFactorSetupModal } from "../two-factor/TwoFactorSetupModal";
 import { TwoFactorDisableModal } from "../two-factor/TwoFactorDisableModal";
 
 export default function TwoFactorCard() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const h = useTwoFactor();
 
   return (
@@ -26,10 +28,10 @@ export default function TwoFactorCard() {
             />
             <View style={styles.headerText}>
               <ThemedText type="h4" style={styles.cardTitle}>
-                {"Two-Factor Authentication"}
+                {t("settings.2fa_title")}
               </ThemedText>
               <ThemedText type="small" color={theme.textSecondary}>
-                {"Enhance your account security with 2FA"}
+                {t("settings.2fa_subtitle")}
               </ThemedText>
             </View>
           </View>
@@ -40,11 +42,11 @@ export default function TwoFactorCard() {
             color={h.enabled ? "#10b981" : theme.textSecondary}
             style={styles.statusText}
           >
-            {h.enabled ? "2FA is currently enabled" : "2FA is not enabled"}
+            {h.enabled ? t("settings.2fa_enabled") : t("settings.2fa_disabled")}
           </ThemedText>
           {h.enabled ? (
             <Button
-              title="Disable 2FA"
+              title={t("settings.disable_2fa")}
               variant="destructive"
               onPress={() => {
                 h.handleCodeChange("");
@@ -53,7 +55,7 @@ export default function TwoFactorCard() {
             />
           ) : (
             <Button
-              title={h.setupMutation.isPending ? "Setting up..." : "Enable 2FA"}
+              title={h.setupMutation.isPending ? t("settings.setting_up") : t("settings.enable_2fa")}
               onPress={() => h.setupMutation.mutate()}
               disabled={h.setupMutation.isPending}
               loading={h.setupMutation.isPending}

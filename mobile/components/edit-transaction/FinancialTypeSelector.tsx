@@ -3,18 +3,27 @@ import { View, Pressable, StyleSheet } from "react-native";
 import { ThemedText } from "../ThemedText";
 import { Spacing, BorderRadius } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
-import { financialTypes, type FinancialType } from "../../hooks/useEditTransactionScreen";
+import { useTranslation } from "../../i18n";
+import type { FinancialType } from "../../hooks/useEditTransactionScreen";
 
 interface FinancialTypeSelectorProps {
   financialType: FinancialType;
   onFinancialTypeChange: (type: FinancialType) => void;
 }
 
+const FINANCIAL_TYPE_KEYS: { key: FinancialType; labelKey: string }[] = [
+  { key: "essential", labelKey: "transactions.ft_essential" },
+  { key: "discretionary", labelKey: "transactions.ft_discretionary" },
+  { key: "asset", labelKey: "transactions.ft_asset" },
+  { key: "liability", labelKey: "transactions.ft_liability" },
+];
+
 export function FinancialTypeSelector({
   financialType,
   onFinancialTypeChange,
 }: FinancialTypeSelectorProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.field}>
@@ -23,10 +32,10 @@ export function FinancialTypeSelector({
         color={theme.textSecondary}
         style={styles.label}
       >
-        {"Financial Type"}
+        {t("transactions.financial_type")}
       </ThemedText>
       <View style={styles.financialTypeRow}>
-        {financialTypes.map((ft) => {
+        {FINANCIAL_TYPE_KEYS.map((ft) => {
           const isActive = financialType === ft.key;
           return (
             <Pressable
@@ -46,7 +55,7 @@ export function FinancialTypeSelector({
                 type="small"
                 color={isActive ? "#ffffff" : theme.text}
               >
-                {ft.label}
+                {t(ft.labelKey)}
               </ThemedText>
             </Pressable>
           );

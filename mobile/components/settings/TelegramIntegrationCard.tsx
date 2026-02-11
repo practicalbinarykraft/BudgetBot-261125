@@ -40,16 +40,16 @@ export default function TelegramIntegrationCard() {
     onSuccess: (data) => {
       setVerificationCode(data);
     },
-    onError: (error: Error) => Alert.alert("Error", error.message),
+    onError: (error: Error) => Alert.alert(t("common.error"), error.message),
   });
 
   const disconnectMutation = useMutation({
     mutationFn: () => api.post("/api/telegram/disconnect", {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["telegram-status"] });
-      Alert.alert("Success", "Telegram disconnected");
+      Alert.alert(t("common.success"), t("settings.telegram_disconnected"));
     },
-    onError: (error: Error) => Alert.alert("Error", error.message),
+    onError: (error: Error) => Alert.alert(t("common.error"), error.message),
   });
 
   // Countdown timer
@@ -84,10 +84,10 @@ export default function TelegramIntegrationCard() {
   };
 
   const handleDisconnect = () => {
-    Alert.alert("Disconnect Telegram", "Are you sure?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t("settings.disconnect_confirm_title"), t("settings.disconnect_confirm_message"), [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Disconnect",
+        text: t("settings.disconnect_telegram"),
         style: "destructive",
         onPress: () => disconnectMutation.mutate(),
       },
@@ -107,10 +107,10 @@ export default function TelegramIntegrationCard() {
     <Card>
       <CardHeader>
         <ThemedText type="h4" style={styles.cardTitle}>
-          {"Telegram Integration"}
+          {t("settings.telegram_title")}
         </ThemedText>
         <ThemedText type="small" color={theme.textSecondary}>
-          {"Connect your Telegram account for notifications"}
+          {t("settings.telegram_subtitle")}
         </ThemedText>
       </CardHeader>
       <CardContent style={styles.content}>
@@ -118,10 +118,10 @@ export default function TelegramIntegrationCard() {
         <View style={styles.statusRow}>
           <Feather name="message-circle" size={18} color={theme.text} />
           <ThemedText type="bodySm" style={styles.statusLabel}>
-            {"Connection Status"}
+            {t("settings.connection_status")}
           </ThemedText>
           <Badge
-            label={connected ? "Connected" : "Not Connected"}
+            label={connected ? t("settings.connected") : t("settings.not_connected")}
             variant={connected ? "default" : "secondary"}
           />
         </View>
@@ -130,15 +130,14 @@ export default function TelegramIntegrationCard() {
           <>
             {username ? (
               <ThemedText type="bodySm" color={theme.textSecondary}>
-                {"Connected as @"}
-                {username}
+                {t("settings.connected_as", { username })}
               </ThemedText>
             ) : null}
             <Button
               title={
                 disconnectMutation.isPending
-                  ? "Disconnecting..."
-                  : "Disconnect Telegram"
+                  ? t("settings.disconnecting")
+                  : t("settings.disconnect_telegram")
               }
               variant="destructive"
               onPress={handleDisconnect}
@@ -161,11 +160,11 @@ export default function TelegramIntegrationCard() {
         ) : (
           <>
             <ThemedText type="small" color={theme.textSecondary}>
-              {"Generate a verification code to connect your Telegram"}
+              {t("settings.generate_code_hint")}
             </ThemedText>
             <Button
               title={
-                generateMutation.isPending ? "Generating..." : "Generate Code"
+                generateMutation.isPending ? t("settings.generating") : t("settings.generate_code")
               }
               onPress={() => generateMutation.mutate()}
               disabled={generateMutation.isPending}

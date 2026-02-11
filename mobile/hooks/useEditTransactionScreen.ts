@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Alert } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
+import { useTranslation } from "../i18n";
 import type { Transaction, Category, PersonalTag, PaginatedResponse } from "../types";
 
 export type FinancialType = "essential" | "discretionary" | "asset" | "liability";
@@ -29,6 +30,7 @@ export const currencies = [
 export function useEditTransactionScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const route = useRoute<RouteProp<RouteParams, "EditTransaction">>();
+  const { t } = useTranslation();
   const tx = route.params.transaction;
 
   const [type, setType] = useState<"income" | "expense">(tx.type);
@@ -70,17 +72,46 @@ export function useEditTransactionScreen() {
       navigation.goBack();
     },
     onError: (error: Error) => {
-      Alert.alert("Error", error.message);
+      Alert.alert(t("common.error"), error.message);
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => api.delete(`/api/transactions/${tx.id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics-trend"] });
+      queryClient.invalidateQueries({ queryKey: ["wallets"] });
+      navigation.goBack();
+    },
+    onError: (error: Error) => {
+      Alert.alert(t("common.error"), error.message);
+    },
+  });
+
+  const handleDelete = useCallback(() => {
+    Alert.alert(
+      t("common.delete"),
+      `${t("transactions.delete_confirm")} "${tx.description}"?`,
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("common.delete"),
+          style: "destructive",
+          onPress: () => deleteMutation.mutate(),
+        },
+      ],
+    );
+  }, [deleteMutation, tx.description, t]);
+
   const handleSubmit = () => {
     if (!amount || parseFloat(amount) <= 0) {
-      Alert.alert("Error", "Please enter a valid amount");
+      Alert.alert(t("common.error"), t("transactions.error_invalid_amount"));
       return;
     }
     if (!description.trim()) {
-      Alert.alert("Error", "Please enter a description");
+      Alert.alert(t("common.error"), t("transactions.error_enter_description"));
       return;
     }
 
@@ -117,6 +148,8 @@ export function useEditTransactionScreen() {
     allCategories,
     tags,
     updateMutation,
+    deleteMutation,
     handleSubmit,
+    handleDelete,
   };
 }

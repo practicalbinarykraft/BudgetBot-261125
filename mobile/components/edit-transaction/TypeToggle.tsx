@@ -3,6 +3,7 @@ import { View, Pressable, StyleSheet } from "react-native";
 import { ThemedText } from "../ThemedText";
 import { Spacing, BorderRadius } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 
 interface TypeToggleProps {
   type: "income" | "expense";
@@ -11,6 +12,7 @@ interface TypeToggleProps {
 
 export function TypeToggle({ type, onTypeChange }: TypeToggleProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.field}>
@@ -19,7 +21,7 @@ export function TypeToggle({ type, onTypeChange }: TypeToggleProps) {
         color={theme.textSecondary}
         style={styles.label}
       >
-        {"Type"}
+        {t("transactions.type")}
       </ThemedText>
       <View style={styles.toggleRow}>
         <Pressable
@@ -38,7 +40,7 @@ export function TypeToggle({ type, onTypeChange }: TypeToggleProps) {
             type="bodySm"
             color={type === "expense" ? "#ffffff" : theme.textSecondary}
           >
-            {"Expense"}
+            {t("common.expense")}
           </ThemedText>
         </Pressable>
         <Pressable
@@ -57,7 +59,7 @@ export function TypeToggle({ type, onTypeChange }: TypeToggleProps) {
             type="bodySm"
             color={type === "income" ? "#ffffff" : theme.textSecondary}
           >
-            {"Income"}
+            {t("common.income")}
           </ThemedText>
         </Pressable>
       </View>

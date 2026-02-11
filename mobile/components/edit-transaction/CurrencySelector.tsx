@@ -4,6 +4,7 @@ import { ThemedText } from "../ThemedText";
 import { Input } from "../Input";
 import { Spacing, BorderRadius } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import { currencies } from "../../hooks/useEditTransactionScreen";
 
 interface CurrencySelectorProps {
@@ -20,12 +21,13 @@ export function CurrencySelector({
   onCurrencyChange,
 }: CurrencySelectorProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.row}>
       <View style={styles.rowHalf}>
         <Input
-          label="Amount"
+          label={t("transactions.amount")}
           value={amount}
           onChangeText={onAmountChange}
           placeholder="0.00"
@@ -38,7 +40,7 @@ export function CurrencySelector({
           color={theme.textSecondary}
           style={styles.label}
         >
-          {"Currency"}
+          {t("common.currency")}
         </ThemedText>
         <View style={styles.currencyRow}>
           {currencies.map((c) => {

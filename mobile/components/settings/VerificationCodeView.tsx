@@ -4,6 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "../ThemedText";
 import { Button } from "../Button";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import { styles } from "./TelegramIntegrationCard.styles";
 
 interface VerificationCodeViewProps {
@@ -24,6 +25,7 @@ export function VerificationCodeView({
   formatTime,
 }: VerificationCodeViewProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <>
@@ -32,7 +34,7 @@ export function VerificationCodeView({
         color={theme.textSecondary}
         style={styles.label}
       >
-        {"Verification Code"}
+        {t("settings.verification_code")}
       </ThemedText>
       <Pressable onPress={onCopy} style={styles.codeRow}>
         <ThemedText type="h2" mono style={styles.codeText}>
@@ -45,25 +47,24 @@ export function VerificationCodeView({
         />
       </Pressable>
       <ThemedText type="small" color={theme.textSecondary}>
-        {"Expires in "}
+        {t("settings.expires_in")}
         {formatTime(timeLeft)}
       </ThemedText>
 
       <View style={styles.steps}>
         <ThemedText type="small" color={theme.textSecondary}>
-          {"1. Open Telegram and find @BudgetBuddyAIBot"}
+          {t("settings.telegram_step1")}
         </ThemedText>
         <ThemedText type="small" color={theme.textSecondary}>
-          {"2. Send /verify "}
-          {code}
+          {t("settings.telegram_step2", { code })}
         </ThemedText>
         <ThemedText type="small" color={theme.textSecondary}>
-          {"3. Return here to confirm connection"}
+          {t("settings.telegram_step3")}
         </ThemedText>
       </View>
 
       <Button
-        title="Cancel"
+        title={t("common.cancel")}
         variant="outline"
         onPress={onCancel}
       />

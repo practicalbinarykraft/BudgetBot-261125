@@ -4,6 +4,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
+import { useTranslation } from "../i18n";
 import type { Category, Wallet, PersonalTag, PaginatedResponse } from "../types";
 
 interface Prefill {
@@ -15,6 +16,7 @@ interface Prefill {
 export function useAddTransactionScreen() {
   const navigation = useNavigation();
   const route = useRoute();
+  const { t } = useTranslation();
   const prefill = (route.params as { prefill?: Prefill } | undefined)?.prefill;
 
   const [type, setType] = useState<"expense" | "income">(prefill?.type || "expense");
@@ -53,17 +55,17 @@ export function useAddTransactionScreen() {
       navigation.goBack();
     },
     onError: (error: Error) => {
-      Alert.alert("Error", error.message);
+      Alert.alert(t("common.error"), error.message);
     },
   });
 
   const handleSubmit = () => {
     if (!amount || parseFloat(amount) <= 0) {
-      Alert.alert("Error", "Please enter a valid amount");
+      Alert.alert(t("common.error"), t("transactions.error_invalid_amount"));
       return;
     }
     if (!description.trim()) {
-      Alert.alert("Error", "Please enter a description");
+      Alert.alert(t("common.error"), t("transactions.error_enter_description"));
       return;
     }
 

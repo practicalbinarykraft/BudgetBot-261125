@@ -4,6 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "../ThemedText";
 import { Input } from "../Input";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import { exchangeRateFields } from "./profileConstants";
 import type { ExchangeRateKey } from "./profileConstants";
 import { styles } from "./profileStyles";
@@ -30,13 +31,14 @@ export default function ApiKeysAndRatesSection({
   exchangeRatesUpdatedAt,
 }: ApiKeysAndRatesSectionProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <>
       {/* API Keys */}
       <View style={[styles.separator, { backgroundColor: theme.border }]} />
       <ThemedText type="bodySm" style={styles.sectionTitle}>
-        {"API Keys"}
+        {t("settings.api_keys")}
       </ThemedText>
       {!isMyselfTier ? (
         <View
@@ -47,30 +49,30 @@ export default function ApiKeysAndRatesSection({
         >
           <Feather name="info" size={14} color={theme.textSecondary} />
           <ThemedText type="small" color={theme.textSecondary} style={styles.tierAlertText}>
-            {"API keys require the 'myself' tier. Upgrade in Billing."}
+            {t("settings.api_keys_tier_required")}
           </ThemedText>
         </View>
       ) : (
         <>
           <Input
-            label="Anthropic API Key"
+            label={t("settings.anthropic_api_key")}
             value={anthropicApiKey}
             onChangeText={setAnthropicApiKey}
             placeholder="sk-ant-..."
             secureTextEntry
             autoCapitalize="none"
             autoCorrect={false}
-            description="Your Anthropic API key for AI features"
+            description={t("settings.anthropic_api_key_desc")}
           />
           <Input
-            label="OpenAI API Key"
+            label={t("settings.openai_api_key")}
             value={openaiApiKey}
             onChangeText={setOpenaiApiKey}
             placeholder="sk-..."
             secureTextEntry
             autoCapitalize="none"
             autoCorrect={false}
-            description="Your OpenAI API key for AI features"
+            description={t("settings.openai_api_key_desc")}
           />
         </>
       )}
@@ -78,10 +80,10 @@ export default function ApiKeysAndRatesSection({
       {/* Exchange Rates */}
       <View style={[styles.separator, { backgroundColor: theme.border }]} />
       <ThemedText type="bodySm" style={styles.sectionTitle}>
-        {"Exchange Rates"}
+        {t("settings.exchange_rates")}
       </ThemedText>
       <ThemedText type="small" color={theme.textSecondary}>
-        {"Customize your exchange rates (1 USD = X)"}
+        {t("settings.exchange_rates_desc")}
       </ThemedText>
       {exchangeRateFields.map((f) => (
         <Input
@@ -95,7 +97,7 @@ export default function ApiKeysAndRatesSection({
       ))}
       {exchangeRatesUpdatedAt ? (
         <ThemedText type="small" color={theme.textTertiary}>
-          {"Last updated: "}
+          {t("settings.last_updated")}
           {new Date(exchangeRatesUpdatedAt).toLocaleString()}
         </ThemedText>
       ) : null}

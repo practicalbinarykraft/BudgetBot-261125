@@ -90,13 +90,13 @@ export default function FinancialTrendChart() {
               thickness={2}
               hideDataPoints
               areaChart
-              startFillColor1={CHART_COLORS.income + "30"}
+              startFillColor1={CHART_COLORS.income + "20"}
               endFillColor1={CHART_COLORS.income + "05"}
-              startFillColor2={CHART_COLORS.expense + "30"}
-              endFillColor2={CHART_COLORS.expense + "05"}
-              startFillColor3={CHART_COLORS.capital + "30"}
+              startFillColor2={CHART_COLORS.expense + "10"}
+              endFillColor2={CHART_COLORS.expense + "00"}
+              startFillColor3={CHART_COLORS.capital + "25"}
               endFillColor3={CHART_COLORS.capital + "05"}
-              startOpacity={0.3}
+              startOpacity={0.2}
               endOpacity={0.05}
               yAxisTextStyle={{
                 color: theme.textSecondary,
@@ -105,8 +105,7 @@ export default function FinancialTrendChart() {
               xAxisLabelTextStyle={{
                 color: theme.textSecondary,
                 fontSize: 8,
-                rotation: 45,
-                width: 50,
+                width: 70,
               }}
               yAxisColor={theme.border}
               xAxisColor={theme.border}
@@ -135,16 +134,16 @@ export default function FinancialTrendChart() {
                       ]}
                     >
                       <ThemedText type="small" style={styles.tooltipDate}>
-                        {date + (forecast ? " (forecast)" : "")}
+                        {date + (forecast ? ` (${t("chart.forecast_label")})` : "")}
                       </ThemedText>
                       <ThemedText type="small" color={CHART_COLORS.income}>
-                        {"Inc: " + formatCompact(items[0]?.value ?? 0)}
+                        {t("chart.income_short") + ": " + formatCompact(items[0]?.value ?? 0)}
                       </ThemedText>
                       <ThemedText type="small" color={CHART_COLORS.expense}>
-                        {"Exp: " + formatCompact(items[1]?.value ?? 0)}
+                        {t("chart.expense_short") + ": " + formatCompact(items[1]?.value ?? 0)}
                       </ThemedText>
                       <ThemedText type="small" color={CHART_COLORS.capital}>
-                        {"Cap: " + formatCompact(items[2]?.value ?? 0)}
+                        {t("chart.capital_short") + ": " + formatCompact(items[2]?.value ?? 0)}
                       </ThemedText>
                     </View>
                   );

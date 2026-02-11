@@ -6,6 +6,7 @@ import { Button } from "../Button";
 import { Input } from "../Input";
 import { Spacing } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 
 interface TwoFactorDisableModalProps {
   visible: boolean;
@@ -20,6 +21,7 @@ export function TwoFactorDisableModal({
   visible, onClose, code, onCodeChange, onDisable, isPending,
 }: TwoFactorDisableModalProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <Modal
@@ -30,18 +32,18 @@ export function TwoFactorDisableModal({
     >
       <View style={[styles.modal, { backgroundColor: theme.background }]}>
         <View style={styles.modalHeader}>
-          <ThemedText type="h3">{"Disable 2FA"}</ThemedText>
+          <ThemedText type="h3">{t("settings.disable_2fa_title")}</ThemedText>
           <Pressable onPress={onClose}>
             <Feather name="x" size={24} color={theme.text} />
           </Pressable>
         </View>
 
         <ThemedText type="bodySm" color={theme.textSecondary} style={styles.modalDesc}>
-          {"Enter your verification code to disable 2FA"}
+          {t("settings.disable_2fa_hint")}
         </ThemedText>
 
         <Input
-          label="Verification Code"
+          label={t("settings.verification_code")}
           value={code}
           onChangeText={onCodeChange}
           placeholder="000000"
@@ -52,13 +54,13 @@ export function TwoFactorDisableModal({
 
         <View style={styles.modalFooter}>
           <Button
-            title="Cancel"
+            title={t("common.cancel")}
             variant="outline"
             onPress={onClose}
             style={styles.footerBtn}
           />
           <Button
-            title={isPending ? "Disabling..." : "Disable"}
+            title={isPending ? t("settings.disabling") : t("settings.disable")}
             variant="destructive"
             onPress={onDisable}
             disabled={code.length !== 6 || isPending}
