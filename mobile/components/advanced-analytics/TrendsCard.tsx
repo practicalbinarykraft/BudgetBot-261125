@@ -5,6 +5,7 @@ import { ThemedText } from "../ThemedText";
 import { Card, CardHeader, CardContent } from "../Card";
 import { Spacing, BorderRadius } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import type { SpendingTrends } from "../../types";
 
 const CATEGORY_COLORS = [
@@ -21,6 +22,7 @@ interface TrendsCardProps {
 
 export function TrendsCard({ trends }: TrendsCardProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <Card>
@@ -28,17 +30,17 @@ export function TrendsCard({ trends }: TrendsCardProps) {
         <View style={styles.cardTitleRow}>
           <Feather name="bar-chart-2" size={18} color={theme.text} />
           <ThemedText type="h4" style={styles.bold}>
-            {"Spending Trends"}
+            {t("analytics.spending_trends")}
           </ThemedText>
         </View>
         <ThemedText type="small" color={theme.textSecondary}>
-          {"6-month spending analysis and category breakdown"}
+          {t("analytics.spending_trends_subtitle")}
         </ThemedText>
       </CardHeader>
       <CardContent style={styles.trendsContent}>
         {/* Monthly Trend */}
         <ThemedText type="bodySm" style={styles.bold}>
-          {"Monthly Spending Trend"}
+          {t("analytics.monthly_spending_trend")}
         </ThemedText>
         {trends.monthlyTrend.map((m, i) => (
           <View
@@ -53,7 +55,7 @@ export function TrendsCard({ trends }: TrendsCardProps) {
               </ThemedText>
               <ThemedText type="small" color={theme.textTertiary}>
                 {m.transactions}
-                {" txns"}
+                {" " + t("common.txns")}
               </ThemedText>
             </View>
           </View>
@@ -65,7 +67,7 @@ export function TrendsCard({ trends }: TrendsCardProps) {
             style={[styles.insightBox, { backgroundColor: theme.muted }]}
           >
             <ThemedText type="small" color={theme.textSecondary}>
-              {"Average"}
+              {t("common.average")}
             </ThemedText>
             <ThemedText type="bodySm" mono style={styles.bold}>
               {"$"}
@@ -76,7 +78,7 @@ export function TrendsCard({ trends }: TrendsCardProps) {
             style={[styles.insightBox, { backgroundColor: theme.muted }]}
           >
             <ThemedText type="small" color={theme.textSecondary}>
-              {"Volatility"}
+              {t("analytics.volatility")}
             </ThemedText>
             <ThemedText type="bodySm" mono style={styles.bold}>
               {trends.insights.volatility}
@@ -87,7 +89,7 @@ export function TrendsCard({ trends }: TrendsCardProps) {
             style={[styles.insightBox, { backgroundColor: theme.muted }]}
           >
             <ThemedText type="small" color={theme.textSecondary}>
-              {"Highest"}
+              {t("common.highest")}
             </ThemedText>
             <ThemedText type="bodySm" mono style={styles.bold}>
               {"$"}
@@ -98,7 +100,7 @@ export function TrendsCard({ trends }: TrendsCardProps) {
             style={[styles.insightBox, { backgroundColor: theme.muted }]}
           >
             <ThemedText type="small" color={theme.textSecondary}>
-              {"Lowest"}
+              {t("common.lowest")}
             </ThemedText>
             <ThemedText type="bodySm" mono style={styles.bold}>
               {"$"}
@@ -111,7 +113,7 @@ export function TrendsCard({ trends }: TrendsCardProps) {
         {trends.categoryBreakdown.length > 0 ? (
           <>
             <ThemedText type="bodySm" style={styles.bold}>
-              {"Top Categories (6 months)"}
+              {t("analytics.top_categories")}
             </ThemedText>
             {trends.categoryBreakdown.slice(0, 5).map((cat, idx) => (
               <View key={idx} style={styles.catRow}>

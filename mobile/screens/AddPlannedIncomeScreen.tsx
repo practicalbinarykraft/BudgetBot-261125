@@ -35,17 +35,17 @@ export default function AddPlannedIncomeScreen() {
       navigation.goBack();
     },
     onError: (error: Error) => {
-      Alert.alert("Error", error.message);
+      Alert.alert(t("common.error"), error.message);
     },
   });
 
   const handleSubmit = () => {
     if (!description.trim()) {
-      Alert.alert("Error", "Please enter a description");
+      Alert.alert(t("common.error"), t("planned_income.error_enter_description"));
       return;
     }
     if (!amount || parseFloat(amount) <= 0) {
-      Alert.alert("Error", "Please enter a valid amount");
+      Alert.alert(t("common.error"), t("planned_income.error_enter_amount"));
       return;
     }
     createMutation.mutate({
@@ -62,9 +62,9 @@ export default function AddPlannedIncomeScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Input label="Description" value={description} onChangeText={setDescription} placeholder="e.g. Salary, Freelance" containerStyle={styles.field} />
-        <Input label="Amount" value={amount} onChangeText={setAmount} placeholder="0.00" keyboardType="decimal-pad" containerStyle={styles.field} />
-        <Input label="Expected Date" value={expectedDate} onChangeText={setExpectedDate} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" containerStyle={styles.field} />
+        <Input label={t("common.description")} value={description} onChangeText={setDescription} placeholder={t("planned_income.description_placeholder")} containerStyle={styles.field} />
+        <Input label={t("common.amount")} value={amount} onChangeText={setAmount} placeholder="0.00" keyboardType="decimal-pad" containerStyle={styles.field} />
+        <Input label={t("planned_income.expected_date")} value={expectedDate} onChangeText={setExpectedDate} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" containerStyle={styles.field} />
 
         <View style={styles.footerRow}>
           <Button title={t("common.cancel")} variant="outline" onPress={() => navigation.goBack()} style={styles.footerBtn} />

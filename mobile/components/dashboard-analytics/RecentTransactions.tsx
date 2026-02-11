@@ -30,20 +30,20 @@ export function RecentTransactions({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{"Recent Transactions"}</CardTitle>
+        <CardTitle>{t("dashboard.recent_transactions")}</CardTitle>
       </CardHeader>
       <CardContent>
         {recentTransactions.length === 0 ? (
           <View style={styles.emptyTransactions}>
             <ThemedText type="body" color={theme.textSecondary}>
-              {"No transactions yet"}
+              {t("dashboard.no_transactions")}
             </ThemedText>
             <ThemedText
               type="small"
               color={theme.textSecondary}
               style={styles.emptyHint}
             >
-              {"Add your first transaction to get started"}
+              {t("dashboard.add_first_transaction")}
             </ThemedText>
           </View>
         ) : (

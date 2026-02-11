@@ -4,6 +4,7 @@ import { ThemedText } from "../ThemedText";
 import { Card, CardHeader, CardContent } from "../Card";
 import { Spacing } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 
 interface CashflowCardProps {
   monthlyIncome: number;
@@ -12,19 +13,20 @@ interface CashflowCardProps {
 
 export function CashflowCard({ monthlyIncome, monthlyExpense }: CashflowCardProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <Card>
       <CardHeader>
         <ThemedText type="h4" style={styles.bold}>
-          {"Monthly Cashflow"}
+          {t("assets.monthly_cashflow")}
         </ThemedText>
       </CardHeader>
       <CardContent style={styles.cashflowContent}>
         {monthlyIncome > 0 ? (
           <View style={styles.cashflowRow}>
             <ThemedText type="bodySm" color={theme.textSecondary}>
-              {"Income"}
+              {t("common.income")}
             </ThemedText>
             <ThemedText type="bodySm" mono color="#10b981">
               {"+$"}
@@ -35,7 +37,7 @@ export function CashflowCard({ monthlyIncome, monthlyExpense }: CashflowCardProp
         {monthlyExpense > 0 ? (
           <View style={styles.cashflowRow}>
             <ThemedText type="bodySm" color={theme.textSecondary}>
-              {"Expense"}
+              {t("common.expense")}
             </ThemedText>
             <ThemedText type="bodySm" mono color={theme.destructive}>
               {"-$"}
@@ -50,7 +52,7 @@ export function CashflowCard({ monthlyIncome, monthlyExpense }: CashflowCardProp
           ]}
         >
           <ThemedText type="bodySm" style={styles.bold}>
-            {"Net"}
+            {t("common.net")}
           </ThemedText>
           <ThemedText type="bodySm" mono style={styles.bold}>
             {"$"}

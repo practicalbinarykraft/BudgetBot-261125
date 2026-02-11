@@ -26,7 +26,7 @@ interface WishlistCardProps {
 
 export function WishlistCard({ item, onTogglePurchased, onDelete }: WishlistCardProps) {
   const { theme } = useTheme();
-  const { language } = useTranslation();
+  const { language, t } = useTranslation();
   const priorityColor = PRIORITY_COLORS[item.priority] || PRIORITY_COLORS.medium;
 
   return (
@@ -62,7 +62,7 @@ export function WishlistCard({ item, onTogglePurchased, onDelete }: WishlistCard
           <Badge label={item.priority.charAt(0).toUpperCase() + item.priority.slice(1)} variant="secondary" />
           {item.targetDate ? (
             <ThemedText type="small" color={theme.textSecondary}>
-              {"Target: " + new Date(item.targetDate + "T00:00:00").toLocaleDateString(getDateLocale(language), {
+              {t("wishlist.target_label") + ": " + new Date(item.targetDate + "T00:00:00").toLocaleDateString(getDateLocale(language), {
                 month: "short", day: "numeric", year: "numeric",
               })}
             </ThemedText>
@@ -75,7 +75,7 @@ export function WishlistCard({ item, onTogglePurchased, onDelete }: WishlistCard
 
         <View style={styles.actionsRow}>
           <Button
-            title="Remove"
+            title={t("wishlist.remove")}
             variant="outline"
             size="sm"
             onPress={() => onDelete(item)}

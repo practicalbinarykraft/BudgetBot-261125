@@ -42,13 +42,13 @@ export default function SwipeSortScreen() {
 
       <View style={styles.labelsContainer}>
         <ThemedText type="small" color="#22c55e" style={styles.dirLabel}>
-          {"← Essential"}
+          {"← " + t("analytics.type.essential")}
         </ThemedText>
         <ThemedText type="small" color={theme.primary} style={styles.dirLabel}>
-          {"↑ Asset"}
+          {"↑ " + t("common.asset")}
         </ThemedText>
         <ThemedText type="small" color="#f59e0b" style={styles.dirLabel}>
-          {"Discretionary →"}
+          {t("analytics.type.discretionary") + " →"}
         </ThemedText>
       </View>
 
@@ -68,7 +68,7 @@ export default function SwipeSortScreen() {
         color={theme.textTertiary}
         style={styles.dirLabelBottom}
       >
-        {"↓ Liability"}
+        {"↓ " + t("common.liability")}
       </ThemedText>
     </View>
   );

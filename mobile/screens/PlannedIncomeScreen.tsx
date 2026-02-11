@@ -19,15 +19,15 @@ import { usePlannedIncomeScreen, type TabFilter } from "../hooks/usePlannedIncom
 import { styles } from "./styles/plannedIncomeStyles";
 import type { PlannedIncome } from "../types";
 
-const statusBadge = (status: string) => {
-  if (status === "received") return <Badge label="Received" variant="default" />;
-  if (status === "cancelled") return <Badge label="Cancelled" variant="outline" />;
-  return <Badge label="Pending" variant="secondary" />;
-};
-
 export default function PlannedIncomeScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
+
+  const statusBadge = (status: string) => {
+    if (status === "received") return <Badge label={t("planned_income.status_received")} variant="default" />;
+    if (status === "cancelled") return <Badge label={t("planned.status.cancelled")} variant="outline" />;
+    return <Badge label={t("planned_income.status_pending")} variant="secondary" />;
+  };
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const {
     tab, setTab, incomeQuery, allItems, filtered,
@@ -65,8 +65,8 @@ export default function PlannedIncomeScreen() {
         </View>
         {item.status === "pending" ? (
           <View style={styles.actionsRow}>
-            <Button title="Receive" size="sm" onPress={() => receiveMutation.mutate(item.id)} style={styles.actionBtn} />
-            <Button title="Cancel" variant="outline" size="sm" onPress={() => cancelMutation.mutate(item.id)} style={styles.actionBtn} />
+            <Button title={t("planned_income.receive")} size="sm" onPress={() => receiveMutation.mutate(item.id)} style={styles.actionBtn} />
+            <Button title={t("common.cancel")} variant="outline" size="sm" onPress={() => cancelMutation.mutate(item.id)} style={styles.actionBtn} />
             <Pressable onPress={() => handleDelete(item)} style={[styles.deleteBtn, { backgroundColor: theme.destructive + "15" }]}>
               <Feather name="trash-2" size={14} color={theme.destructive} />
             </Pressable>
@@ -96,13 +96,13 @@ export default function PlannedIncomeScreen() {
             <Button title={t("common.add")} size="sm" onPress={() => navigation.navigate("AddPlannedIncome")} icon={<Feather name="plus" size={14} color={theme.primaryForeground} />} />
           </View>
           <View style={styles.tabsRow}>
-            {(["all", "pending", "received", "cancelled"] as TabFilter[]).map((t) => {
-              const isActive = tab === t;
-              const count = t === "all" ? allItems.length : allItems.filter((i) => i.status === t).length;
+            {(["all", "pending", "received", "cancelled"] as TabFilter[]).map((f) => {
+              const isActive = tab === f;
+              const count = f === "all" ? allItems.length : allItems.filter((i) => i.status === f).length;
               return (
-                <Pressable key={t} onPress={() => setTab(t)} style={[styles.tabBtn, { backgroundColor: isActive ? theme.primary : theme.secondary, borderColor: isActive ? theme.primary : theme.border }]}>
+                <Pressable key={f} onPress={() => setTab(f)} style={[styles.tabBtn, { backgroundColor: isActive ? theme.primary : theme.secondary, borderColor: isActive ? theme.primary : theme.border }]}>
                   <ThemedText type="small" color={isActive ? "#ffffff" : theme.text}>
-                    {t.charAt(0).toUpperCase() + t.slice(1)} ({count})
+                    {f.charAt(0).toUpperCase() + f.slice(1)} ({count})
                   </ThemedText>
                 </Pressable>
               );
@@ -113,8 +113,8 @@ export default function PlannedIncomeScreen() {
       ListEmptyComponent={
         <View style={styles.empty}>
           <Feather name="dollar-sign" size={48} color={theme.textTertiary} />
-          <ThemedText type="body" color={theme.textSecondary} style={styles.emptyTitle}>{"No planned income"}</ThemedText>
-          <ThemedText type="bodySm" color={theme.textTertiary}>{"Add expected income to track it"}</ThemedText>
+          <ThemedText type="body" color={theme.textSecondary} style={styles.emptyTitle}>{t("planned_income.no_planned_income")}</ThemedText>
+          <ThemedText type="bodySm" color={theme.textTertiary}>{t("planned_income.add_expected_income")}</ThemedText>
         </View>
       }
     />

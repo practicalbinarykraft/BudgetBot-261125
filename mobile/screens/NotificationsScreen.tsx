@@ -102,11 +102,11 @@ export default function NotificationsScreen() {
           <View style={styles.empty}>
             <Feather name="bell" size={48} color={theme.textTertiary} />
             <ThemedText type="bodySm" color={theme.textSecondary}>
-              {"No notifications"}
+              {t("notifications.no_notifications")}
             </ThemedText>
             {filterType !== "all" ? (
               <ThemedText type="small" color={theme.textTertiary}>
-                {"Try changing filters"}
+                {t("notifications.try_changing_filters")}
               </ThemedText>
             ) : null}
           </View>

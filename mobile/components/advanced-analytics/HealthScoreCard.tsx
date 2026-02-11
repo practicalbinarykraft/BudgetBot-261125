@@ -6,6 +6,7 @@ import { Card, CardHeader, CardContent } from "../Card";
 import { Badge } from "../Badge";
 import { Spacing } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import type { AdvancedHealthScore } from "../../types";
 
 const RATING_COLORS: Record<string, string> = {
@@ -21,6 +22,7 @@ interface HealthScoreCardProps {
 
 export function HealthScoreCard({ health }: HealthScoreCardProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <Card>
@@ -28,11 +30,11 @@ export function HealthScoreCard({ health }: HealthScoreCardProps) {
         <View style={styles.cardTitleRow}>
           <Feather name="target" size={18} color={theme.text} />
           <ThemedText type="h4" style={styles.bold}>
-            {"Financial Health Score"}
+            {t("analytics.financial_health_score")}
           </ThemedText>
         </View>
         <ThemedText type="small" color={theme.textSecondary}>
-          {"Overall assessment of your financial wellness this month"}
+          {t("analytics.health_score_subtitle")}
         </ThemedText>
       </CardHeader>
       <CardContent style={styles.healthContent}>
@@ -47,7 +49,7 @@ export function HealthScoreCard({ health }: HealthScoreCardProps) {
             {health.score}
           </ThemedText>
           <ThemedText type="small" color={theme.textSecondary}>
-            {"out of 100"}
+            {t("analytics.out_of_100")}
           </ThemedText>
           <Badge
             label={health.rating.toUpperCase()}
@@ -58,24 +60,24 @@ export function HealthScoreCard({ health }: HealthScoreCardProps) {
         {/* Breakdown */}
         <View style={styles.metricsSection}>
           <ThemedText type="bodySm" style={styles.bold}>
-            {"Breakdown"}
+            {t("common.breakdown")}
           </ThemedText>
           <View style={styles.metricRow}>
-            <ThemedText type="small">{"Budget Adherence (40%)"}</ThemedText>
+            <ThemedText type="small">{t("analytics.budget_adherence")}</ThemedText>
             <ThemedText type="small" mono>
               {health.breakdown.budgetAdherence}
               {"%"}
             </ThemedText>
           </View>
           <View style={styles.metricRow}>
-            <ThemedText type="small">{"Savings Rate (30%)"}</ThemedText>
+            <ThemedText type="small">{t("analytics.savings_rate")}</ThemedText>
             <ThemedText type="small" mono>
               {health.breakdown.savingsRate.toFixed(1)}
               {"%"}
             </ThemedText>
           </View>
           <View style={styles.metricRow}>
-            <ThemedText type="small">{"Spending Ratio (30%)"}</ThemedText>
+            <ThemedText type="small">{t("analytics.spending_ratio")}</ThemedText>
             <ThemedText type="small" mono>
               {health.breakdown.spendingRatio}
               {"%"}
@@ -86,24 +88,24 @@ export function HealthScoreCard({ health }: HealthScoreCardProps) {
         {/* Monthly Metrics */}
         <View style={styles.metricsSection}>
           <ThemedText type="bodySm" style={styles.bold}>
-            {"Monthly Metrics"}
+            {t("analytics.monthly_metrics")}
           </ThemedText>
           <View style={styles.metricRow}>
-            <ThemedText type="small">{"Monthly Income"}</ThemedText>
+            <ThemedText type="small">{t("analytics.monthly_income")}</ThemedText>
             <ThemedText type="small" mono color="#10b981">
               {"$"}
               {health.metrics.monthlyIncome.toFixed(2)}
             </ThemedText>
           </View>
           <View style={styles.metricRow}>
-            <ThemedText type="small">{"Monthly Expense"}</ThemedText>
+            <ThemedText type="small">{t("analytics.monthly_expense")}</ThemedText>
             <ThemedText type="small" mono color="#ef4444">
               {"$"}
               {health.metrics.monthlyExpense.toFixed(2)}
             </ThemedText>
           </View>
           <View style={styles.metricRow}>
-            <ThemedText type="small">{"Monthly Savings"}</ThemedText>
+            <ThemedText type="small">{t("analytics.monthly_savings")}</ThemedText>
             <ThemedText
               type="small"
               mono

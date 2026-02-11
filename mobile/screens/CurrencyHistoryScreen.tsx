@@ -62,7 +62,7 @@ export default function CurrencyHistoryScreen() {
         code, latestRate, oldestRate, change, changePercent,
         isUp: change > 0, isDown: change < 0, isFlat: Math.abs(changePercent) < 0.1,
         lastUpdated: new Date(history[0]?.createdAt).toLocaleDateString(),
-        source: history[0]?.source === "api" ? "Live API" : "Fallback",
+        source: history[0]?.source === "api" ? t("currency.live_api") : t("currency.fallback"),
       };
     })
     .filter(Boolean) as CurrencyCardData[];
@@ -78,7 +78,7 @@ export default function CurrencyHistoryScreen() {
   if (error) {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <ThemedText type="body" color={theme.destructive}>{"Failed to load currency history"}</ThemedText>
+        <ThemedText type="body" color={theme.destructive}>{t("currency.load_failed")}</ThemedText>
       </View>
     );
   }
@@ -91,7 +91,7 @@ export default function CurrencyHistoryScreen() {
           {item.isFlat ? (
             <View style={styles.trendRow}>
               <Feather name="minus" size={14} color={theme.textTertiary} />
-              <ThemedText type="small" color={theme.textTertiary}>{"Stable"}</ThemedText>
+              <ThemedText type="small" color={theme.textTertiary}>{t("currency.stable")}</ThemedText>
             </View>
           ) : (
             <View style={styles.trendRow}>
@@ -103,24 +103,24 @@ export default function CurrencyHistoryScreen() {
           )}
         </View>
         <View style={styles.rateSection}>
-          <ThemedText type="small" color={theme.textSecondary}>{"Current Rate"}</ThemedText>
+          <ThemedText type="small" color={theme.textSecondary}>{t("currency.current_rate")}</ThemedText>
           <ThemedText type="h2" mono style={styles.rateValue}>{item.latestRate.toFixed(4)}</ThemedText>
         </View>
         <View style={styles.statsRow}>
           <View style={styles.statHalf}>
-            <ThemedText type="small" color={theme.textSecondary}>{"30d ago"}</ThemedText>
+            <ThemedText type="small" color={theme.textSecondary}>{t("currency.thirty_days_ago")}</ThemedText>
             <ThemedText type="bodySm" style={styles.statValue}>{item.oldestRate.toFixed(4)}</ThemedText>
           </View>
           <View style={styles.statHalf}>
-            <ThemedText type="small" color={theme.textSecondary}>{"Change"}</ThemedText>
+            <ThemedText type="small" color={theme.textSecondary}>{t("common.change")}</ThemedText>
             <ThemedText type="bodySm" color={item.isUp ? "#16a34a" : item.isDown ? theme.destructive : theme.textTertiary} style={styles.statValue}>
               {item.change >= 0 ? "+" : ""}{item.change.toFixed(4)}
             </ThemedText>
           </View>
         </View>
         <View style={[styles.footer, { borderTopColor: theme.border }]}>
-          <ThemedText type="small" color={theme.textTertiary}>{"Last updated: " + item.lastUpdated}</ThemedText>
-          <ThemedText type="small" color={theme.textTertiary}>{"Source: " + item.source}</ThemedText>
+          <ThemedText type="small" color={theme.textTertiary}>{t("currency.last_updated") + item.lastUpdated}</ThemedText>
+          <ThemedText type="small" color={theme.textTertiary}>{t("currency.source") + item.source}</ThemedText>
         </View>
       </CardContent>
     </Card>
@@ -136,14 +136,14 @@ export default function CurrencyHistoryScreen() {
       refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
       ListHeaderComponent={
         <View style={styles.header}>
-          <ThemedText type="h2">{"Currency Exchange Rates History"}</ThemedText>
-          <ThemedText type="bodySm" color={theme.textSecondary}>{"Historical rates for the last 30 days (1 USD = X currency)"}</ThemedText>
+          <ThemedText type="h2">{t("currency.title_history")}</ThemedText>
+          <ThemedText type="bodySm" color={theme.textSecondary}>{t("currency.subtitle_history")}</ThemedText>
         </View>
       }
       ListEmptyComponent={
         <Card>
           <CardContent style={styles.empty}>
-            <ThemedText type="body" color={theme.textSecondary}>{"No historical data available yet. Data will be collected daily."}</ThemedText>
+            <ThemedText type="body" color={theme.textSecondary}>{t("currency.no_data")}</ThemedText>
           </CardContent>
         </Card>
       }

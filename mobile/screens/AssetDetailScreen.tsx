@@ -45,7 +45,7 @@ export default function AssetDetailScreen() {
       <View style={[styles.center, { backgroundColor: theme.background }]}>
         <Feather name="alert-circle" size={48} color={theme.textTertiary} />
         <ThemedText type="body" color={theme.textSecondary}>
-          {"Asset not found"}
+          {t("assets.not_found")}
         </ThemedText>
       </View>
     );
@@ -68,7 +68,7 @@ export default function AssetDetailScreen() {
           <View style={styles.headerInfo}>
             <ThemedText type="h2">{asset.name}</ThemedText>
             <Badge
-              label={isAsset ? "Asset" : "Liability"}
+              label={isAsset ? t("common.asset") : t("common.liability")}
               variant={isAsset ? "default" : "destructive"}
             />
             {asset.location ? (
@@ -106,7 +106,7 @@ export default function AssetDetailScreen() {
           <Card>
             <CardHeader>
               <ThemedText type="h4" style={styles.bold}>
-                {"Notes"}
+                {t("common.notes")}
               </ThemedText>
             </CardHeader>
             <CardContent>

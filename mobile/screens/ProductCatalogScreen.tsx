@@ -98,7 +98,7 @@ export default function ProductCatalogScreen() {
             <View style={styles.headerText}>
               <ThemedText type="h2">{t("product_catalog.title")}</ThemedText>
               <ThemedText type="bodySm" color={theme.textSecondary}>
-                {"Products from your receipts with price history"}
+                {t("product_catalog.subtitle")}
               </ThemedText>
             </View>
           </View>
@@ -107,7 +107,7 @@ export default function ProductCatalogScreen() {
           <Input
             value={search}
             onChangeText={setSearch}
-            placeholder="Search products..."
+            placeholder={t("product_catalog.search_placeholder")}
             containerStyle={styles.searchInput}
           />
 
@@ -133,7 +133,7 @@ export default function ProductCatalogScreen() {
                 type="small"
                 color={selectedCategory === "all" ? "#ffffff" : theme.text}
               >
-                {"All"}
+                {t("common.all")}
               </ThemedText>
             </Pressable>
             {categories.map((cat) => {
@@ -169,8 +169,7 @@ export default function ProductCatalogScreen() {
             color={theme.textSecondary}
             style={styles.statsText}
           >
-            {products.length}
-            {" products"}
+            {t("product_catalog.products_count").replace("{count}", String(products.length))}
           </ThemedText>
         </View>
       }
@@ -182,10 +181,10 @@ export default function ProductCatalogScreen() {
             color={theme.textSecondary}
             style={styles.emptyTitle}
           >
-            {"No products yet"}
+            {t("product_catalog.no_products")}
           </ThemedText>
           <ThemedText type="bodySm" color={theme.textTertiary}>
-            {"Products will appear here from your receipt scans"}
+            {t("product_catalog.no_products_hint")}
           </ThemedText>
         </View>
       }

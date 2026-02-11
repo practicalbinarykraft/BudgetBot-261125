@@ -5,6 +5,7 @@ import { ThemedText } from "../ThemedText";
 import { Card, CardContent } from "../Card";
 import { Spacing } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import type { AssetSummary } from "../../types";
 
 interface AssetsSummaryCardProps {
@@ -13,6 +14,7 @@ interface AssetsSummaryCardProps {
 
 export function AssetsSummaryCard({ summary }: AssetsSummaryCardProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <Card
@@ -23,7 +25,7 @@ export function AssetsSummaryCard({ summary }: AssetsSummaryCardProps) {
     >
       <CardContent style={styles.summaryContent}>
         <ThemedText type="small" color={theme.textSecondary}>
-          {"Net Worth"}
+          {t("assets.net_worth")}
         </ThemedText>
         <ThemedText type="h2" mono>
           {"$"}
@@ -61,7 +63,7 @@ export function AssetsSummaryCard({ summary }: AssetsSummaryCardProps) {
         <View style={styles.summaryStats}>
           <View style={styles.summaryStat}>
             <ThemedText type="small" color={theme.textSecondary}>
-              {"Assets"}
+              {t("assets.assets")}
             </ThemedText>
             <ThemedText type="bodySm" mono color="#10b981">
               {"$"}
@@ -70,7 +72,7 @@ export function AssetsSummaryCard({ summary }: AssetsSummaryCardProps) {
           </View>
           <View style={styles.summaryStat}>
             <ThemedText type="small" color={theme.textSecondary}>
-              {"Liabilities"}
+              {t("assets.liabilities")}
             </ThemedText>
             <ThemedText type="bodySm" mono color={theme.destructive}>
               {"$"}
@@ -79,12 +81,12 @@ export function AssetsSummaryCard({ summary }: AssetsSummaryCardProps) {
           </View>
           <View style={styles.summaryStat}>
             <ThemedText type="small" color={theme.textSecondary}>
-              {"Cashflow"}
+              {t("assets.cashflow")}
             </ThemedText>
             <ThemedText type="bodySm" mono>
               {"$"}
               {summary.monthlyCashflow.toFixed(2)}
-              {"/mo"}
+              {t("common.per_month")}
             </ThemedText>
           </View>
         </View>

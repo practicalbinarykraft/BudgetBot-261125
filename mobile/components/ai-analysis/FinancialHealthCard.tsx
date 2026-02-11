@@ -6,6 +6,7 @@ import { ThemedText } from "../ThemedText";
 import { Card, CardHeader, CardContent } from "../Card";
 import { Spacing } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import type { FinancialHealthScore } from "../../types";
 
 interface FinancialHealthCardProps {
@@ -18,6 +19,7 @@ export function FinancialHealthCard({
   getScoreColor,
 }: FinancialHealthCardProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const healthScore = healthQuery.data;
 
   return (
@@ -26,7 +28,7 @@ export function FinancialHealthCard({
         <View style={styles.cardTitleRow}>
           <Feather name="trending-up" size={18} color="#10b981" />
           <ThemedText type="h4" style={styles.bold}>
-            {"Financial Health"}
+            {t("ai_analysis.financial_health")}
           </ThemedText>
         </View>
       </CardHeader>
@@ -41,7 +43,7 @@ export function FinancialHealthCard({
               color={getScoreColor(healthScore.score)}
             >
               {healthScore.score}
-              {"/100"}
+              {" " + t("analytics.out_of_100")}
             </ThemedText>
             <ThemedText
               type="bodySm"
@@ -53,7 +55,7 @@ export function FinancialHealthCard({
           </View>
         ) : (
           <ThemedText type="bodySm" color={theme.textSecondary}>
-            {"No health data available"}
+            {t("ai_analysis.no_health_data")}
           </ThemedText>
         )}
       </CardContent>

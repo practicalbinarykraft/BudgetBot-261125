@@ -65,13 +65,13 @@ export default function TagsScreen() {
       queryClient.invalidateQueries({ queryKey: ["tags"] });
       queryClient.invalidateQueries({ queryKey: ["tags-stats"] });
     },
-    onError: (error: Error) => Alert.alert("Error", error.message),
+    onError: (error: Error) => Alert.alert(t("common.error"), error.message),
   });
 
   const handleDelete = (tag: PersonalTag) => {
-    Alert.alert("Delete Tag", `Are you sure you want to delete "${tag.name}"?`, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate(tag.id) },
+    Alert.alert(t("tags.delete_tag"), `Are you sure you want to delete "${tag.name}"?`, [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("common.delete"), style: "destructive", onPress: () => deleteMutation.mutate(tag.id) },
     ]);
   };
 
@@ -106,7 +106,7 @@ export default function TagsScreen() {
           ) : (
             <View style={[styles.defaultBadge, { backgroundColor: theme.muted }]}>
               <Feather name="lock" size={10} color={theme.textSecondary} />
-              <ThemedText type="small" color={theme.textSecondary}>{"Default"}</ThemedText>
+              <ThemedText type="small" color={theme.textSecondary}>{t("tags.default")}</ThemedText>
             </View>
           )}
         </CardContent>

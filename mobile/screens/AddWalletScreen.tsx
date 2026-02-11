@@ -48,12 +48,12 @@ export default function AddWalletScreen() {
       queryClient.invalidateQueries({ queryKey: ["wallets"] });
       navigation.goBack();
     },
-    onError: (error: Error) => Alert.alert("Error", error.message),
+    onError: (error: Error) => Alert.alert(t("common.error"), error.message),
   });
 
   const handleSubmit = () => {
-    if (!name.trim()) { Alert.alert("Error", "Please enter a wallet name"); return; }
-    if (!balance || parseFloat(balance) < 0) { Alert.alert("Error", "Please enter a valid balance"); return; }
+    if (!name.trim()) { Alert.alert(t("common.error"), t("wallets.error_enter_name")); return; }
+    if (!balance || parseFloat(balance) < 0) { Alert.alert(t("common.error"), t("wallets.error_enter_balance")); return; }
     createMutation.mutate({ name: name.trim(), type, balance, currency });
   };
 
@@ -63,7 +63,7 @@ export default function AddWalletScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Input label={t("wallets.name")} value={name} onChangeText={setName} placeholder="e.g. My Bank Account" containerStyle={styles.field} />
+        <Input label={t("wallets.name")} value={name} onChangeText={setName} placeholder={t("wallets.name_placeholder")} containerStyle={styles.field} />
         <View style={styles.field}>
           <ThemedText type="small" color={theme.textSecondary} style={styles.label}>{t("wallets.type")}</ThemedText>
           <View style={styles.toggleRow}>
@@ -82,7 +82,7 @@ export default function AddWalletScreen() {
             <Input label={t("wallets.balance")} value={balance} onChangeText={setBalance} placeholder="0.00" keyboardType="decimal-pad" />
           </View>
           <View style={styles.rowHalf}>
-            <ThemedText type="small" color={theme.textSecondary} style={styles.label}>{"Currency"}</ThemedText>
+            <ThemedText type="small" color={theme.textSecondary} style={styles.label}>{t("common.currency")}</ThemedText>
             <View style={styles.currencyRow}>
               {currencies.map((c) => {
                 const isActive = currency === c.key;

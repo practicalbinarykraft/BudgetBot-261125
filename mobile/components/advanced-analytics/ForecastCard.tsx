@@ -6,6 +6,7 @@ import { Card, CardHeader, CardContent } from "../Card";
 import { Badge } from "../Badge";
 import { Spacing } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import type { SpendingForecast } from "../../types";
 
 interface ForecastCardProps {
@@ -14,6 +15,7 @@ interface ForecastCardProps {
 
 export function ForecastCard({ forecast }: ForecastCardProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <Card>
@@ -37,18 +39,18 @@ export function ForecastCard({ forecast }: ForecastCardProps) {
             }
           />
           <ThemedText type="h4" style={styles.bold}>
-            {"Spending Forecast"}
+            {t("analytics.spending_forecast")}
           </ThemedText>
         </View>
         <ThemedText type="small" color={theme.textSecondary}>
-          {"Predicted spending for next month based on your patterns"}
+          {t("analytics.spending_forecast_subtitle")}
         </ThemedText>
       </CardHeader>
       <CardContent style={styles.forecastContent}>
         <View style={styles.forecastStats}>
           <View style={styles.forecastStat}>
             <ThemedText type="small" color={theme.textSecondary}>
-              {"Next Month Forecast"}
+              {t("analytics.next_month_forecast")}
             </ThemedText>
             <ThemedText type="h2" mono style={styles.bold}>
               {"$"}
@@ -57,7 +59,7 @@ export function ForecastCard({ forecast }: ForecastCardProps) {
           </View>
           <View style={styles.forecastStat}>
             <ThemedText type="small" color={theme.textSecondary}>
-              {"3-Month Average"}
+              {t("analytics.three_month_average")}
             </ThemedText>
             <ThemedText type="h3" mono style={styles.bold}>
               {"$"}
@@ -68,13 +70,13 @@ export function ForecastCard({ forecast }: ForecastCardProps) {
         <View style={styles.forecastBadges}>
           <View style={styles.forecastBadgeCol}>
             <ThemedText type="small" color={theme.textSecondary}>
-              {"Trend"}
+              {t("analytics.trend")}
             </ThemedText>
             <Badge label={forecast.trend} variant="outline" />
           </View>
           <View style={styles.forecastBadgeCol}>
             <ThemedText type="small" color={theme.textSecondary}>
-              {"Confidence"}
+              {t("analytics.confidence")}
             </ThemedText>
             <Badge label={forecast.confidence} variant="outline" />
           </View>
@@ -84,7 +86,7 @@ export function ForecastCard({ forecast }: ForecastCardProps) {
         {forecast.monthlyData.length > 0 ? (
           <View style={styles.monthlyDataSection}>
             <ThemedText type="bodySm" style={styles.bold}>
-              {"Monthly History"}
+              {t("analytics.monthly_history")}
             </ThemedText>
             {forecast.monthlyData.map((m, i) => (
               <View

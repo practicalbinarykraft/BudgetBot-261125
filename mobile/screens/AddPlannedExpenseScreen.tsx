@@ -37,17 +37,17 @@ export default function AddPlannedExpenseScreen() {
       navigation.goBack();
     },
     onError: (error: Error) => {
-      Alert.alert("Error", error.message);
+      Alert.alert(t("common.error"), error.message);
     },
   });
 
   const handleSubmit = () => {
     if (!name.trim()) {
-      Alert.alert("Error", "Please enter a name");
+      Alert.alert(t("common.error"), t("planned.error_enter_name"));
       return;
     }
     if (!amount || parseFloat(amount) <= 0) {
-      Alert.alert("Error", "Please enter a valid amount");
+      Alert.alert(t("common.error"), t("planned.error_enter_amount"));
       return;
     }
     createMutation.mutate({
@@ -65,10 +65,10 @@ export default function AddPlannedExpenseScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Input label="Name" value={name} onChangeText={setName} placeholder="e.g. Rent, Insurance" containerStyle={styles.field} />
-        <Input label="Amount" value={amount} onChangeText={setAmount} placeholder="0.00" keyboardType="decimal-pad" containerStyle={styles.field} />
-        <Input label="Target Date" value={targetDate} onChangeText={setTargetDate} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" containerStyle={styles.field} />
-        <Input label="Category (optional)" value={category} onChangeText={setCategory} placeholder="e.g. Rent" containerStyle={styles.field} />
+        <Input label={t("planned.field_name")} value={name} onChangeText={setName} placeholder={t("planned.name_placeholder")} containerStyle={styles.field} />
+        <Input label={t("planned.field_amount")} value={amount} onChangeText={setAmount} placeholder="0.00" keyboardType="decimal-pad" containerStyle={styles.field} />
+        <Input label={t("planned.field_target_date")} value={targetDate} onChangeText={setTargetDate} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" containerStyle={styles.field} />
+        <Input label={t("planned.field_category")} value={category} onChangeText={setCategory} placeholder={t("planned.category_placeholder")} containerStyle={styles.field} />
 
         <View style={styles.footerRow}>
           <Button title={t("common.cancel")} variant="outline" onPress={() => navigation.goBack()} style={styles.footerBtn} />

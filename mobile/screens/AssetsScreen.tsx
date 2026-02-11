@@ -92,13 +92,13 @@ export default function AssetsScreen() {
           {summary ? <AssetsSummaryCard summary={summary} /> : null}
 
           <View style={styles.tabsRow}>
-            {(["asset", "liability"] as TabFilter[]).map((t) => {
-              const isActive = tab === t;
-              const count = allAssets.filter((a) => a.type === t).length;
+            {(["asset", "liability"] as TabFilter[]).map((f) => {
+              const isActive = tab === f;
+              const count = allAssets.filter((a) => a.type === f).length;
               return (
                 <Pressable
-                  key={t}
-                  onPress={() => setTab(t)}
+                  key={f}
+                  onPress={() => setTab(f)}
                   style={[
                     styles.tabBtn,
                     {
@@ -113,7 +113,7 @@ export default function AssetsScreen() {
                     type="bodySm"
                     color={isActive ? "#ffffff" : theme.text}
                   >
-                    {t === "asset" ? "Assets" : "Liabilities"}
+                    {f === "asset" ? t("assets.tab_assets") : t("assets.tab_liabilities")}
                     {" ("}
                     {count}
                     {")"}
@@ -136,7 +136,7 @@ export default function AssetsScreen() {
             color={theme.textSecondary}
             style={styles.emptyTitle}
           >
-            {tab === "asset" ? "No assets yet" : "No liabilities yet"}
+            {tab === "asset" ? t("assets.no_assets") : t("assets.no_liabilities")}
           </ThemedText>
           <ThemedText type="bodySm" color={theme.textTertiary}>
             {`Add your first ${tab} to track it`}

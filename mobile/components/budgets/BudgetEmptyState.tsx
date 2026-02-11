@@ -4,6 +4,7 @@ import { ThemedText } from "../ThemedText";
 import { Card, CardContent } from "../Card";
 import { Button } from "../Button";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import { budgetsStyles as styles } from "./budgetsStyles";
 
 interface BudgetEmptyStateProps {
@@ -12,23 +13,24 @@ interface BudgetEmptyStateProps {
 
 export function BudgetEmptyState({ onAddBudget }: BudgetEmptyStateProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <Card>
       <CardContent style={styles.emptyState}>
         <Feather name="trending-down" size={48} color={theme.textTertiary} />
         <ThemedText type="h4" style={styles.emptyTitle}>
-          {"No budgets yet"}
+          {t("budgets.no_budgets")}
         </ThemedText>
         <ThemedText
           type="body"
           color={theme.textSecondary}
           style={styles.emptyDescription}
         >
-          {"Set spending limits for your categories"}
+          {t("budgets.manage")}
         </ThemedText>
         <Button
-          title="Add Budget"
+          title={t("budgets.add_budget")}
           onPress={onAddBudget}
           icon={
             <Feather name="plus" size={14} color={theme.primaryForeground} />

@@ -16,7 +16,7 @@ interface WishlistPredictionProps {
 
 export function WishlistPrediction({ prediction, itemAmount }: WishlistPredictionProps) {
   const { theme } = useTheme();
-  const { language } = useTranslation();
+  const { language, t } = useTranslation();
 
   return (
     <View
@@ -40,20 +40,20 @@ export function WishlistPrediction({ prediction, itemAmount }: WishlistPredictio
         <>
           <View style={styles.predRow}>
             <Feather name="trending-up" size={14} color="#16a34a" />
-            <Badge label="Can afford now" variant="outline" />
+            <Badge label={t("wishlist.prediction.can_afford_now")} variant="outline" />
           </View>
           <ThemedText type="small" color={theme.textSecondary}>
-            {"Free capital: $" + prediction.freeCapital.toFixed(2)}
+            {t("wishlist.prediction.free_capital") + ": $" + prediction.freeCapital.toFixed(2)}
           </ThemedText>
         </>
       ) : prediction.monthsToAfford != null && prediction.affordableDate ? (
         <>
           <View style={styles.predRow}>
             <Feather name="calendar" size={14} color={theme.primary} />
-            <Badge label="Affordable soon" variant="outline" />
+            <Badge label={t("wishlist.prediction.affordable_soon")} variant="outline" />
           </View>
           <ThemedText type="small" color={theme.textSecondary}>
-            {"~" + prediction.monthsToAfford + " month(s) \u2014 by " +
+            {"~" + prediction.monthsToAfford + " " + t(prediction.monthsToAfford === 1 ? "wishlist.prediction.month" : "wishlist.prediction.months") + " \u2014 " + t("wishlist.prediction.by") + " " +
               new Date(prediction.affordableDate).toLocaleDateString(getDateLocale(language), {
                 month: "short", day: "numeric", year: "numeric",
               })}
@@ -63,10 +63,10 @@ export function WishlistPrediction({ prediction, itemAmount }: WishlistPredictio
         <>
           <View style={styles.predRow}>
             <Feather name="trending-down" size={14} color={theme.destructive} />
-            <Badge label="Not affordable" variant="destructive" />
+            <Badge label={t("wishlist.prediction.not_affordable")} variant="destructive" />
           </View>
           <ThemedText type="small" color={theme.textSecondary}>
-            {"Shortage: $" + (parseFloat(itemAmount) - prediction.freeCapital).toFixed(2)}
+            {t("wishlist.prediction.shortage") + ": $" + (parseFloat(itemAmount) - prediction.freeCapital).toFixed(2)}
           </ThemedText>
         </>
       )}

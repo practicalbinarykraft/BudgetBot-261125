@@ -5,6 +5,7 @@ import { ThemedText } from "../ThemedText";
 import { Button } from "../Button";
 import { Spacing } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 
 interface AllSortedViewProps {
   onGoBack: () => void;
@@ -12,18 +13,19 @@ interface AllSortedViewProps {
 
 export function AllSortedView({ onGoBack }: AllSortedViewProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.inner}>
         <Feather name="award" size={64} color="#22c55e" />
         <ThemedText type="h3" style={styles.bold}>
-          {"All Sorted!"}
+          {t("swipe_sort.all_sorted")}
         </ThemedText>
         <ThemedText type="bodySm" color={theme.textSecondary}>
-          {"No unsorted transactions remaining. Great job!"}
+          {t("swipe_sort.all_sorted_message")}
         </ThemedText>
-        <Button title="Back to Transactions" onPress={onGoBack} />
+        <Button title={t("swipe_sort.back_to_transactions")} onPress={onGoBack} />
       </View>
     </View>
   );

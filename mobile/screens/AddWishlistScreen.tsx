@@ -19,10 +19,10 @@ import { useTranslation } from "../i18n";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
 
-const PRIORITY_OPTIONS: { key: string; label: string }[] = [
-  { key: "low", label: "Low" },
-  { key: "medium", label: "Medium" },
-  { key: "high", label: "High" },
+const PRIORITY_OPTIONS: { key: string; labelKey: string }[] = [
+  { key: "low", labelKey: "wishlist.priority_low" },
+  { key: "medium", labelKey: "wishlist.priority_medium" },
+  { key: "high", labelKey: "wishlist.priority_high" },
 ];
 
 export default function AddWishlistScreen() {
@@ -42,17 +42,17 @@ export default function AddWishlistScreen() {
       navigation.goBack();
     },
     onError: (error: Error) => {
-      Alert.alert("Error", error.message);
+      Alert.alert(t("common.error"), error.message);
     },
   });
 
   const handleSubmit = () => {
     if (!name.trim()) {
-      Alert.alert("Error", "Please enter a name");
+      Alert.alert(t("common.error"), t("wishlist.error_enter_name"));
       return;
     }
     if (!amount || parseFloat(amount) <= 0) {
-      Alert.alert("Error", "Please enter a valid amount");
+      Alert.alert(t("common.error"), t("wishlist.error_enter_amount"));
       return;
     }
 
@@ -76,16 +76,16 @@ export default function AddWishlistScreen() {
       >
         {/* Name — web: FormField name */}
         <Input
-          label="Item Name"
+          label={t("wishlist.item_name")}
           value={name}
           onChangeText={setName}
-          placeholder="e.g. New laptop, Vacation"
+          placeholder={t("wishlist.item_name_placeholder")}
           containerStyle={styles.field}
         />
 
         {/* Amount — web: FormField amount */}
         <Input
-          label="Amount"
+          label={t("common.amount")}
           value={amount}
           onChangeText={setAmount}
           placeholder="0.00"
@@ -96,7 +96,7 @@ export default function AddWishlistScreen() {
         {/* Priority — web: Select low/medium/high */}
         <View style={styles.field}>
           <ThemedText type="small" color={theme.textSecondary} style={styles.label}>
-            {"Priority"}
+            {t("wishlist.priority")}
           </ThemedText>
           <View style={styles.priorityRow}>
             {PRIORITY_OPTIONS.map((p) => {
@@ -114,7 +114,7 @@ export default function AddWishlistScreen() {
                   ]}
                 >
                   <ThemedText type="bodySm" color={isActive ? "#ffffff" : theme.text}>
-                    {p.label}
+                    {t(p.labelKey)}
                   </ThemedText>
                 </Pressable>
               );
@@ -124,7 +124,7 @@ export default function AddWishlistScreen() {
 
         {/* Target Date — web: FormField targetDate */}
         <Input
-          label="Target Date (optional)"
+          label={t("wishlist.target_date_optional")}
           value={targetDate}
           onChangeText={setTargetDate}
           placeholder="YYYY-MM-DD"

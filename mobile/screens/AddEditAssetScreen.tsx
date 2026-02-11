@@ -48,16 +48,16 @@ export default function AddEditAssetScreen() {
       queryClient.invalidateQueries({ queryKey: ["assets-summary"] });
       navigation.goBack();
     },
-    onError: (error: Error) => Alert.alert("Error", error.message),
+    onError: (error: Error) => Alert.alert(t("common.error"), error.message),
   });
 
   const handleSubmit = () => {
     if (!name.trim()) {
-      Alert.alert("Error", "Please enter a name");
+      Alert.alert(t("common.error"), t("assets.error_enter_name"));
       return;
     }
     if (!currentValue || parseFloat(currentValue) <= 0) {
-      Alert.alert("Error", "Please enter a valid current value");
+      Alert.alert(t("common.error"), t("assets.error_enter_value"));
       return;
     }
     createMutation.mutate({
@@ -86,15 +86,15 @@ export default function AddEditAssetScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <Input
-          label="Name"
+          label={t("assets.form_name")}
           value={name}
           onChangeText={setName}
-          placeholder={isAsset ? "e.g. Car, Apartment" : "e.g. Mortgage, Loan"}
+          placeholder={isAsset ? t("assets.form_name_placeholder") : t("assets.form_name_placeholder_liability")}
           containerStyle={styles.field}
         />
 
         <Input
-          label="Current Value"
+          label={t("assets.form_current_value")}
           value={currentValue}
           onChangeText={setCurrentValue}
           placeholder="0.00"
@@ -105,7 +105,7 @@ export default function AddEditAssetScreen() {
         <CurrencySelector currency={currency} onSelect={setCurrency} />
 
         <Input
-          label="Purchase Price (optional)"
+          label={t("assets.form_purchase_price")}
           value={purchasePrice}
           onChangeText={setPurchasePrice}
           placeholder="0.00"
@@ -114,7 +114,7 @@ export default function AddEditAssetScreen() {
         />
 
         <Input
-          label="Purchase Date (optional)"
+          label={t("assets.form_purchase_date")}
           value={purchaseDate}
           onChangeText={setPurchaseDate}
           placeholder="YYYY-MM-DD"
@@ -123,38 +123,38 @@ export default function AddEditAssetScreen() {
         />
 
         <Input
-          label="Monthly Income (optional)"
+          label={t("assets.form_monthly_income")}
           value={monthlyIncome}
           onChangeText={setMonthlyIncome}
           placeholder="0.00"
           keyboardType="decimal-pad"
-          description="e.g. Rental income"
+          description={t("assets.form_income_hint")}
           containerStyle={styles.field}
         />
 
         <Input
-          label="Monthly Expense (optional)"
+          label={t("assets.form_monthly_expense")}
           value={monthlyExpense}
           onChangeText={setMonthlyExpense}
           placeholder="0.00"
           keyboardType="decimal-pad"
-          description="e.g. Maintenance, insurance"
+          description={t("assets.form_expense_hint")}
           containerStyle={styles.field}
         />
 
         <Input
-          label="Location (optional)"
+          label={t("assets.form_location")}
           value={location}
           onChangeText={setLocation}
-          placeholder="e.g. New York"
+          placeholder={t("assets.form_location_placeholder")}
           containerStyle={styles.field}
         />
 
         <Input
-          label="Notes (optional)"
+          label={t("assets.form_notes")}
           value={notes}
           onChangeText={setNotes}
-          placeholder="Additional information..."
+          placeholder={t("assets.form_notes_placeholder")}
           multiline
           numberOfLines={3}
           containerStyle={styles.field}

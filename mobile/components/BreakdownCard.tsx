@@ -4,6 +4,7 @@ import { ThemedText } from "./ThemedText";
 import { Card, CardHeader, CardContent } from "./Card";
 import { Spacing, BorderRadius } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 
 export interface BreakdownItem {
   id?: number;
@@ -22,6 +23,7 @@ interface BreakdownCardProps {
 
 export function BreakdownCard({ title, total, items }: BreakdownCardProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <Card>
@@ -39,7 +41,7 @@ export function BreakdownCard({ title, total, items }: BreakdownCardProps) {
       <CardContent style={styles.content}>
         {items.length === 0 ? (
           <ThemedText type="bodySm" color={theme.textSecondary}>
-            {"No data for this period"}
+            {t("analytics.no_data_period")}
           </ThemedText>
         ) : (
           items.map((item, idx) => {

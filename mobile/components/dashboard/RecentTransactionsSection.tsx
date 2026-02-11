@@ -39,7 +39,7 @@ export function RecentTransactionsSection({
       {recentTransactions.length === 0 ? (
         <View style={styles.emptyTransactions}>
           <ThemedText type="body" color={theme.textSecondary}>
-            {"No transactions yet"}
+            {t("dashboard.no_transactions")}
           </ThemedText>
         </View>
       ) : (

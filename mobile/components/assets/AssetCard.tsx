@@ -6,6 +6,7 @@ import { Card, CardContent } from "../Card";
 import { Badge } from "../Badge";
 import { Spacing, BorderRadius } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import type { Asset } from "../../types";
 
 interface AssetCardProps {
@@ -16,6 +17,7 @@ interface AssetCardProps {
 
 export function AssetCard({ item, onPress, onDelete }: AssetCardProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const isAsset = item.type === "asset";
   const value = parseFloat(item.currentValue);
   const purchasePrice = item.purchasePrice
@@ -36,7 +38,7 @@ export function AssetCard({ item, onPress, onDelete }: AssetCardProps) {
                 {item.name}
               </ThemedText>
               <Badge
-                label={isAsset ? "Asset" : "Liability"}
+                label={isAsset ? t("common.asset") : t("common.liability")}
                 variant={isAsset ? "default" : "destructive"}
               />
             </View>

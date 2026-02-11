@@ -22,7 +22,7 @@ interface SwipeCardProps {
 
 export function SwipeCard({ transaction, catLabel, pan, panResponder }: SwipeCardProps) {
   const { theme } = useTheme();
-  const { language } = useTranslation();
+  const { language, t } = useTranslation();
 
   const rotate = pan.x.interpolate({
     inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
@@ -65,33 +65,33 @@ export function SwipeCard({ transaction, catLabel, pan, panResponder }: SwipeCar
             style={[styles.dirOverlay, styles.dirLeft, { opacity: leftOpacity }]}
           >
             <ThemedText type="h4" color="#22c55e" style={styles.bold}>
-              {"Essential"}
+              {t("analytics.type.essential")}
             </ThemedText>
           </Animated.View>
           <Animated.View
             style={[styles.dirOverlay, styles.dirRight, { opacity: rightOpacity }]}
           >
             <ThemedText type="h4" color="#f59e0b" style={styles.bold}>
-              {"Discretionary"}
+              {t("analytics.type.discretionary")}
             </ThemedText>
           </Animated.View>
           <Animated.View
             style={[styles.dirOverlay, styles.dirUp, { opacity: upOpacity }]}
           >
             <ThemedText type="h4" color={theme.primary} style={styles.bold}>
-              {"Asset"}
+              {t("common.asset")}
             </ThemedText>
           </Animated.View>
           <Animated.View
             style={[styles.dirOverlay, styles.dirDown, { opacity: downOpacity }]}
           >
             <ThemedText type="h4" color="#dc2626" style={styles.bold}>
-              {"Liability"}
+              {t("common.liability")}
             </ThemedText>
           </Animated.View>
 
           <ThemedText type="h4" style={styles.txDescription} numberOfLines={2}>
-            {transaction.description || "No description"}
+            {transaction.description || t("common.no_description")}
           </ThemedText>
           <ThemedText
             type="monoLg"

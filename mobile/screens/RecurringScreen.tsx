@@ -23,12 +23,12 @@ import { queryClient } from "../lib/query-client";
 import type { Recurring } from "../types";
 import { styles } from "./RecurringScreen.styles";
 
-const FREQUENCY_LABELS: Record<string, string> = {
-  daily: "Daily",
-  weekly: "Weekly",
-  monthly: "Monthly",
-  quarterly: "Quarterly",
-  yearly: "Yearly",
+const FREQUENCY_KEYS: Record<string, string> = {
+  daily: "recurring.frequency_daily",
+  weekly: "recurring.frequency_weekly",
+  monthly: "recurring.frequency_monthly",
+  quarterly: "recurring.frequency_quarterly",
+  yearly: "recurring.frequency_yearly",
 };
 
 export default function RecurringScreen() {
@@ -49,14 +49,14 @@ export default function RecurringScreen() {
       queryClient.invalidateQueries({ queryKey: ["recurring"] });
     },
     onError: (error: Error) => {
-      Alert.alert("Error", error.message);
+      Alert.alert(t("common.error"), error.message);
     },
   });
 
   const handleDelete = (item: Recurring) => {
-    Alert.alert("Delete", `Delete "${item.description}"?`, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate(item.id) },
+    Alert.alert(t("common.delete"), `Delete "${item.description}"?`, [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("common.delete"), style: "destructive", onPress: () => deleteMutation.mutate(item.id) },
     ]);
   };
 
@@ -85,12 +85,12 @@ export default function RecurringScreen() {
               {item.description}
             </ThemedText>
             <View style={styles.metaRow}>
-              <Badge label={FREQUENCY_LABELS[item.frequency] || item.frequency} variant="secondary" />
+              <Badge label={t(FREQUENCY_KEYS[item.frequency] || item.frequency)} variant="secondary" />
               {item.category ? (
                 <Badge label={item.category} variant="outline" />
               ) : null}
               <ThemedText type="small" color={theme.textSecondary}>
-                {"Next: " + formatNextDate(item.nextDate)}
+                {t("recurring.next") + " " + formatNextDate(item.nextDate)}
               </ThemedText>
             </View>
           </View>

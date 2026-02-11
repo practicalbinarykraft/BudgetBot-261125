@@ -19,15 +19,15 @@ import { usePlannedExpensesScreen, type TabFilter } from "../hooks/usePlannedExp
 import { styles } from "./styles/plannedExpensesStyles";
 import type { PlannedTransaction } from "../types";
 
-const statusBadge = (status: string) => {
-  if (status === "purchased") return <Badge label="Completed" variant="default" />;
-  if (status === "cancelled") return <Badge label="Cancelled" variant="outline" />;
-  return <Badge label="Planned" variant="secondary" />;
-};
-
 export default function PlannedExpensesScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
+
+  const statusBadge = (status: string) => {
+    if (status === "purchased") return <Badge label={t("planned.status.purchased")} variant="default" />;
+    if (status === "cancelled") return <Badge label={t("planned.status.cancelled")} variant="outline" />;
+    return <Badge label={t("planned.status.planned")} variant="secondary" />;
+  };
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const {
     tab, setTab, plannedQuery, allItems, filtered,
@@ -63,8 +63,8 @@ export default function PlannedExpensesScreen() {
         </View>
         {item.status === "planned" ? (
           <View style={styles.actionsRow}>
-            <Button title="Complete" size="sm" onPress={() => purchaseMutation.mutate(item.id)} style={styles.actionBtn} />
-            <Button title="Cancel" variant="outline" size="sm" onPress={() => cancelMutation.mutate(item.id)} style={styles.actionBtn} />
+            <Button title={t("planned.complete")} size="sm" onPress={() => purchaseMutation.mutate(item.id)} style={styles.actionBtn} />
+            <Button title={t("common.cancel")} variant="outline" size="sm" onPress={() => cancelMutation.mutate(item.id)} style={styles.actionBtn} />
             <Pressable onPress={() => handleDelete(item)} style={[styles.deleteBtn, { backgroundColor: theme.destructive + "15" }]}>
               <Feather name="trash-2" size={14} color={theme.destructive} />
             </Pressable>
@@ -94,13 +94,13 @@ export default function PlannedExpensesScreen() {
             <Button title={t("common.add")} size="sm" onPress={() => navigation.navigate("AddPlannedExpense")} icon={<Feather name="plus" size={14} color={theme.primaryForeground} />} />
           </View>
           <View style={styles.tabsRow}>
-            {(["all", "planned", "completed"] as TabFilter[]).map((t) => {
-              const isActive = tab === t;
-              const count = t === "all" ? allItems.length : t === "planned" ? allItems.filter((i) => i.status === "planned").length : allItems.filter((i) => i.status !== "planned").length;
+            {(["all", "planned", "completed"] as TabFilter[]).map((f) => {
+              const isActive = tab === f;
+              const count = f === "all" ? allItems.length : f === "planned" ? allItems.filter((i) => i.status === "planned").length : allItems.filter((i) => i.status !== "planned").length;
               return (
-                <Pressable key={t} onPress={() => setTab(t)} style={[styles.tabBtn, { backgroundColor: isActive ? theme.primary : theme.secondary, borderColor: isActive ? theme.primary : theme.border }]}>
+                <Pressable key={f} onPress={() => setTab(f)} style={[styles.tabBtn, { backgroundColor: isActive ? theme.primary : theme.secondary, borderColor: isActive ? theme.primary : theme.border }]}>
                   <ThemedText type="small" color={isActive ? "#ffffff" : theme.text}>
-                    {t.charAt(0).toUpperCase() + t.slice(1)} ({count})
+                    {f.charAt(0).toUpperCase() + f.slice(1)} ({count})
                   </ThemedText>
                 </Pressable>
               );
@@ -111,8 +111,8 @@ export default function PlannedExpensesScreen() {
       ListEmptyComponent={
         <View style={styles.empty}>
           <Feather name="calendar" size={48} color={theme.textTertiary} />
-          <ThemedText type="body" color={theme.textSecondary} style={styles.emptyTitle}>{"No planned expenses"}</ThemedText>
-          <ThemedText type="bodySm" color={theme.textTertiary}>{"Add your first planned expense"}</ThemedText>
+          <ThemedText type="body" color={theme.textSecondary} style={styles.emptyTitle}>{t("planned.no_items")}</ThemedText>
+          <ThemedText type="bodySm" color={theme.textTertiary}>{t("planned.add_first")}</ThemedText>
         </View>
       }
     />

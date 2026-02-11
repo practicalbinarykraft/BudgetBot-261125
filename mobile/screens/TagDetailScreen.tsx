@@ -46,11 +46,11 @@ export default function TagDetailScreen() {
   if (!h.currentTag) {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <ThemedText type="h3">Tag Not Found</ThemedText>
+        <ThemedText type="h3">{t("tags.not_found")}</ThemedText>
         <ThemedText type="bodySm" color={theme.textSecondary}>
-          {"The requested tag does not exist"}
+          {t("tags.not_exist")}
         </ThemedText>
-        <Button title="Go Back" variant="outline" onPress={() => h.navigation.goBack()} style={styles.goBackBtn} />
+        <Button title={t("common.go_back")} variant="outline" onPress={() => h.navigation.goBack()} style={styles.goBackBtn} />
       </View>
     );
   }
@@ -80,18 +80,18 @@ export default function TagDetailScreen() {
               <ThemedText type="bodySm" color={theme.textSecondary}>{h.typeSubtitle}</ThemedText>
             </View>
             <Button
-              title="Add Transaction"
+              title={t("nav.add_transaction")}
               size="sm"
               onPress={() => h.navigation.navigate("AddTransaction")}
               icon={<Feather name="plus" size={14} color={theme.primaryForeground} />}
             />
           </View>
           <View style={styles.statsRow}>
-            <StatCard title="Total Transactions" value={String(h.stats.transactionCount)} color={theme.text} theme={theme} />
-            <StatCard title="Total Spent" value={`$${h.stats.totalSpent.toFixed(2)}`} color={theme.destructive} theme={theme} />
-            <StatCard title="Total Income" value={`$${h.stats.totalIncome.toFixed(2)}`} color="#16a34a" theme={theme} />
+            <StatCard title={t("tags.total_transactions")} value={String(h.stats.transactionCount)} color={theme.text} theme={theme} />
+            <StatCard title={t("tags.total_spent")} value={`$${h.stats.totalSpent.toFixed(2)}`} color={theme.destructive} theme={theme} />
+            <StatCard title={t("tags.total_income")} value={`$${h.stats.totalIncome.toFixed(2)}`} color="#16a34a" theme={theme} />
           </View>
-          <ThemedText type="h3" style={styles.sectionTitle}>{"Transactions"}</ThemedText>
+          <ThemedText type="h3" style={styles.sectionTitle}>{t("nav.transactions")}</ThemedText>
         </View>
       }
       renderSectionHeader={({ section: { title } }) => (
@@ -108,8 +108,8 @@ export default function TagDetailScreen() {
           <ActivityIndicator size="small" color={theme.primary} style={styles.loader} />
         ) : (
           <View style={styles.empty}>
-            <ThemedText type="body" color={theme.textSecondary}>{"No transactions found for this tag"}</ThemedText>
-            <ThemedText type="small" color={theme.textTertiary}>{"Start by adding a new transaction above"}</ThemedText>
+            <ThemedText type="body" color={theme.textSecondary}>{t("tags.no_transactions")}</ThemedText>
+            <ThemedText type="small" color={theme.textTertiary}>{t("tags.add_transaction_hint")}</ThemedText>
           </View>
         )
       }

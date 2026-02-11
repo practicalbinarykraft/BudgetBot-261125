@@ -5,6 +5,7 @@ import { ThemedText } from "../ThemedText";
 import { Card, CardContent } from "../Card";
 import { Spacing, BorderRadius } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import type { TypeItem } from "../../hooks/useExpensesAnalyticsScreen";
 
 const TYPE_COLORS: Record<string, string> = {
@@ -28,13 +29,14 @@ interface TypeBreakdownCardProps {
 
 export function TypeBreakdownCard({ total, items }: TypeBreakdownCardProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <Card>
       <CardContent style={styles.typeContent}>
         <View style={styles.typeHeader}>
           <ThemedText type="h4" style={styles.sectionTitle}>
-            {"Spending by Type"}
+            {t("analytics.spending_by_type")}
           </ThemedText>
           <ThemedText type="h4" mono style={styles.sectionTitle}>
             {"$"}
@@ -43,7 +45,7 @@ export function TypeBreakdownCard({ total, items }: TypeBreakdownCardProps) {
         </View>
         {items.length === 0 ? (
           <ThemedText type="bodySm" color={theme.textSecondary}>
-            {"No data for this period"}
+            {t("analytics.no_data_period")}
           </ThemedText>
         ) : (
           items.map((item) => {
