@@ -10,9 +10,27 @@
 
 import { Server as HTTPServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
+import jwt from 'jsonwebtoken';
 import logger from './logger';
 
 let io: SocketIOServer | null = null;
+
+function extractUserId(socket: Socket): number | null {
+  // Try JWT token first (mobile app sends auth: { token })
+  const token = socket.handshake.auth.token;
+  if (token && process.env.SESSION_SECRET) {
+    try {
+      const payload = jwt.verify(token, process.env.SESSION_SECRET) as { userId: number };
+      return payload.userId;
+    } catch {
+      // Invalid token — fall through
+    }
+  }
+
+  // Fallback: legacy userId (web client via session)
+  const userId = socket.handshake.auth.userId;
+  return userId ? Number(userId) : null;
+}
 
 /**
  * Initialize WebSocket server
@@ -27,31 +45,23 @@ export function initializeWebSocket(server: HTTPServer) {
   });
 
   io.on('connection', (socket: Socket) => {
-    logger.info('WebSocket client connected', {
-      socketId: socket.id,
-      userId: socket.handshake.auth.userId,
-    });
+    const userId = extractUserId(socket);
 
-    // Join user-specific room
-    const userId = socket.handshake.auth.userId;
-    if (userId) {
-      socket.join(`user:${userId}`);
-      logger.info('User joined room', {
-        socketId: socket.id,
-        userId,
-        room: `user:${userId}`,
-      });
+    if (!userId) {
+      logger.warn('WebSocket connection rejected: no valid auth', { socketId: socket.id });
+      socket.disconnect(true);
+      return;
     }
 
-    // Handle disconnect
+    logger.info('WebSocket client connected', { socketId: socket.id, userId });
+
+    socket.join(`user:${userId}`);
+    socket.data.userId = userId;
+
     socket.on('disconnect', () => {
-      logger.info('WebSocket client disconnected', {
-        socketId: socket.id,
-        userId: socket.handshake.auth.userId,
-      });
+      logger.info('WebSocket client disconnected', { socketId: socket.id, userId });
     });
 
-    // Handle ping/pong for connection health
     socket.on('ping', () => {
       socket.emit('pong');
     });
