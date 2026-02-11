@@ -7,6 +7,7 @@ import OnboardingDialog from "../components/OnboardingDialog";
 import WebSocketProvider from "../components/WebSocketProvider";
 import { useAuth } from "../hooks/useAuth";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import { getTransactionScreens } from "./TransactionScreens";
 import { getFeatureScreens } from "./FeatureScreens";
 import { getAnalyticsScreens } from "./AnalyticsScreens";
@@ -63,6 +64,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootStackNavigator() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { user, isLoading, isAuthenticated, login, register, logout } =
     useAuth();
 
@@ -86,9 +88,9 @@ export default function RootStackNavigator() {
             <Stack.Screen name="Main">
               {() => <MainTabNavigator user={user} onLogout={logout} />}
             </Stack.Screen>
-            {getTransactionScreens(Stack, headerStyle, headerTintColor)}
-            {getFeatureScreens(Stack, headerStyle, headerTintColor)}
-            {getAnalyticsScreens(Stack, headerStyle, headerTintColor)}
+            {getTransactionScreens(Stack, headerStyle, headerTintColor, t)}
+            {getFeatureScreens(Stack, headerStyle, headerTintColor, t)}
+            {getAnalyticsScreens(Stack, headerStyle, headerTintColor, t)}
           </>
         ) : (
           <Stack.Screen name="Auth">

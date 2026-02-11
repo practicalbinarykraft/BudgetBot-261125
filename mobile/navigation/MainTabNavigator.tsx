@@ -7,6 +7,7 @@ import BudgetsScreen from "../screens/BudgetsScreen";
 import CategoriesScreen from "../screens/CategoriesScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import type { User } from "../types";
 
 export type MainTabParamList = {
@@ -29,6 +30,7 @@ export default function MainTabNavigator({
   onLogout,
 }: MainTabNavigatorProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <Tab.Navigator
@@ -47,7 +49,7 @@ export default function MainTabNavigator({
         name="Dashboard"
         component={DashboardScreen}
         options={{
-          title: "Home",
+          title: t("nav.home"),
           headerShown: false,
           tabBarStyle: { display: "none" },
           tabBarIcon: ({ color, size }) => (
@@ -59,6 +61,7 @@ export default function MainTabNavigator({
         name="Transactions"
         component={TransactionsScreen}
         options={{
+          title: t("nav.transactions"),
           tabBarIcon: ({ color, size }) => (
             <Feather name="list" size={size} color={color} />
           ),
@@ -68,6 +71,7 @@ export default function MainTabNavigator({
         name="Budgets"
         component={BudgetsScreen}
         options={{
+          title: t("nav.budgets"),
           tabBarIcon: ({ color, size }) => (
             <Feather name="target" size={size} color={color} />
           ),
@@ -77,6 +81,7 @@ export default function MainTabNavigator({
         name="Categories"
         component={CategoriesScreen}
         options={{
+          title: t("nav.categories"),
           tabBarIcon: ({ color, size }) => (
             <Feather name="grid" size={size} color={color} />
           ),
@@ -85,6 +90,7 @@ export default function MainTabNavigator({
       <Tab.Screen
         name="Profile"
         options={{
+          title: t("nav.settings"),
           tabBarIcon: ({ color, size }) => (
             <Feather name="user" size={size} color={color} />
           ),

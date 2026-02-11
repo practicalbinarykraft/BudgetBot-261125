@@ -23,36 +23,37 @@ import SwipeSortScreen from "../screens/SwipeSortScreen";
 interface ScreenConfig {
   name: string;
   component: React.ComponentType<any>;
-  title: string;
+  titleKey: string;
   presentation?: "modal";
 }
 
 const screens: ScreenConfig[] = [
-  { name: "Tags", component: TagsScreen, title: "Tags" },
-  { name: "TagDetail", component: TagDetailScreen, title: "Tag Detail" },
-  { name: "AddEditTag", component: AddEditTagScreen, title: "Tag", presentation: "modal" },
-  { name: "Recurring", component: RecurringScreen, title: "Recurring" },
-  { name: "AddRecurring", component: AddRecurringScreen, title: "Add Recurring", presentation: "modal" },
-  { name: "Wishlist", component: WishlistScreen, title: "Wishlist" },
-  { name: "AddWishlist", component: AddWishlistScreen, title: "Add Wishlist Item", presentation: "modal" },
-  { name: "PlannedExpenses", component: PlannedExpensesScreen, title: "Planned Expenses" },
-  { name: "AddPlannedExpense", component: AddPlannedExpenseScreen, title: "Add Planned Expense", presentation: "modal" },
-  { name: "PlannedIncome", component: PlannedIncomeScreen, title: "Planned Income" },
-  { name: "AddPlannedIncome", component: AddPlannedIncomeScreen, title: "Add Planned Income", presentation: "modal" },
-  { name: "ProductCatalog", component: ProductCatalogScreen, title: "Product Catalog" },
-  { name: "ProductDetail", component: ProductDetailScreen, title: "Product Detail" },
-  { name: "Billing", component: BillingScreen, title: "Credits & Billing" },
-  { name: "Assets", component: AssetsScreen, title: "Assets" },
-  { name: "AssetDetail", component: AssetDetailScreen, title: "Asset Detail" },
-  { name: "AddEditAsset", component: AddEditAssetScreen, title: "Add Asset", presentation: "modal" },
-  { name: "Notifications", component: NotificationsScreen, title: "Notifications" },
-  { name: "SwipeSort", component: SwipeSortScreen, title: "Swipe Sort" },
+  { name: "Tags", component: TagsScreen, titleKey: "nav.tags" },
+  { name: "TagDetail", component: TagDetailScreen, titleKey: "nav.tag_detail" },
+  { name: "AddEditTag", component: AddEditTagScreen, titleKey: "nav.tag", presentation: "modal" },
+  { name: "Recurring", component: RecurringScreen, titleKey: "nav.recurring" },
+  { name: "AddRecurring", component: AddRecurringScreen, titleKey: "nav.add_recurring", presentation: "modal" },
+  { name: "Wishlist", component: WishlistScreen, titleKey: "nav.wishlist" },
+  { name: "AddWishlist", component: AddWishlistScreen, titleKey: "nav.add_wishlist_item", presentation: "modal" },
+  { name: "PlannedExpenses", component: PlannedExpensesScreen, titleKey: "nav.planned_expenses" },
+  { name: "AddPlannedExpense", component: AddPlannedExpenseScreen, titleKey: "nav.add_planned_expense", presentation: "modal" },
+  { name: "PlannedIncome", component: PlannedIncomeScreen, titleKey: "nav.planned_income" },
+  { name: "AddPlannedIncome", component: AddPlannedIncomeScreen, titleKey: "nav.add_planned_income", presentation: "modal" },
+  { name: "ProductCatalog", component: ProductCatalogScreen, titleKey: "nav.product_catalog" },
+  { name: "ProductDetail", component: ProductDetailScreen, titleKey: "nav.product_detail" },
+  { name: "Billing", component: BillingScreen, titleKey: "nav.credits_billing" },
+  { name: "Assets", component: AssetsScreen, titleKey: "nav.assets" },
+  { name: "AssetDetail", component: AssetDetailScreen, titleKey: "nav.asset_detail" },
+  { name: "AddEditAsset", component: AddEditAssetScreen, titleKey: "nav.add_asset", presentation: "modal" },
+  { name: "Notifications", component: NotificationsScreen, titleKey: "nav.notifications" },
+  { name: "SwipeSort", component: SwipeSortScreen, titleKey: "nav.swipe_sort" },
 ];
 
 export function getFeatureScreens(
   Stack: any,
   headerStyle: NativeStackNavigationOptions["headerStyle"],
   headerTintColor: string,
+  t: (key: string) => string,
 ) {
   return screens.map((screen) => (
     <Stack.Screen
@@ -61,7 +62,7 @@ export function getFeatureScreens(
       component={screen.component}
       options={{
         headerShown: true,
-        title: screen.title,
+        title: t(screen.titleKey),
         headerStyle,
         headerTintColor,
         ...(screen.presentation ? { presentation: screen.presentation } : {}),

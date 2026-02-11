@@ -12,25 +12,26 @@ import CurrencyHistoryScreen from "../screens/CurrencyHistoryScreen";
 interface ScreenConfig {
   name: string;
   component: React.ComponentType<any>;
-  title: string;
+  titleKey: string;
   presentation?: "modal";
 }
 
 const screens: ScreenConfig[] = [
-  { name: "AddTransaction", component: AddTransactionScreen, title: "Add Transaction", presentation: "modal" },
-  { name: "EditTransaction", component: EditTransactionScreen, title: "Edit Transaction", presentation: "modal" },
-  { name: "AddEditCategory", component: AddEditCategoryScreen, title: "Category", presentation: "modal" },
-  { name: "AddEditBudget", component: AddEditBudgetScreen, title: "Budget", presentation: "modal" },
-  { name: "AddWallet", component: AddWalletScreen, title: "Add Wallet", presentation: "modal" },
-  { name: "Calibration", component: CalibrationScreen, title: "Calibration", presentation: "modal" },
-  { name: "Wallets", component: WalletsScreen, title: "Wallets" },
-  { name: "CurrencyHistory", component: CurrencyHistoryScreen, title: "Currency History" },
+  { name: "AddTransaction", component: AddTransactionScreen, titleKey: "nav.add_transaction", presentation: "modal" },
+  { name: "EditTransaction", component: EditTransactionScreen, titleKey: "nav.edit_transaction", presentation: "modal" },
+  { name: "AddEditCategory", component: AddEditCategoryScreen, titleKey: "nav.category", presentation: "modal" },
+  { name: "AddEditBudget", component: AddEditBudgetScreen, titleKey: "nav.budget", presentation: "modal" },
+  { name: "AddWallet", component: AddWalletScreen, titleKey: "nav.add_wallet", presentation: "modal" },
+  { name: "Calibration", component: CalibrationScreen, titleKey: "nav.calibration", presentation: "modal" },
+  { name: "Wallets", component: WalletsScreen, titleKey: "nav.wallets" },
+  { name: "CurrencyHistory", component: CurrencyHistoryScreen, titleKey: "nav.currency_history" },
 ];
 
 export function getTransactionScreens(
   Stack: any,
   headerStyle: NativeStackNavigationOptions["headerStyle"],
   headerTintColor: string,
+  t: (key: string) => string,
 ) {
   return screens.map((screen) => (
     <Stack.Screen
@@ -39,7 +40,7 @@ export function getTransactionScreens(
       component={screen.component}
       options={{
         headerShown: true,
-        title: screen.title,
+        title: t(screen.titleKey),
         headerStyle,
         headerTintColor,
         ...(screen.presentation ? { presentation: screen.presentation } : {}),
