@@ -7,6 +7,22 @@ import { Translations } from "./types";
 
 export const mobileExtraTranslations: Translations = {
   "ai.analysis_title": { en: "AI Analysis", ru: "AI Анализ" },
+  "ai.analysis_subtitle": { en: "AI-powered financial insights", ru: "Финансовая аналитика на основе AI" },
+  "ai.spending_analysis": { en: "Spending Analysis", ru: "Анализ расходов" },
+  "ai.analyzing": { en: "Analyzing...", ru: "Анализируем..." },
+  "ai.analyze_spending": { en: "Analyze My Spending", ru: "Проанализировать расходы" },
+  "ai.insights": { en: "AI Insights", ru: "AI Выводы" },
+  "ai.powered_by_claude": { en: "Powered by Claude", ru: "На базе Claude" },
+  "ai.financial_advisor": { en: "AI Financial Advisor", ru: "AI Финансовый советник" },
+  "ai.advisor_description": { en: "Ask questions about your spending, budgets, and finances", ru: "Задайте вопросы о расходах, бюджетах и финансах" },
+  "ai.open_chat": { en: "Open AI Chat", ru: "Открыть AI Чат" },
+  "ai.price_recommendations": { en: "Price Recommendations", ru: "Рекомендации по ценам" },
+  "ai.savings_overview": { en: "Savings Overview", ru: "Обзор экономии" },
+  "ai.total_potential_savings": { en: "Total Potential Savings", ru: "Потенциальная экономия" },
+  "ai.average_savings": { en: "Average Savings", ru: "Средняя экономия" },
+  "ai.shopping_tips": { en: "AI Shopping Tips", ru: "AI Советы по покупкам" },
+  "ai.found_better_prices": { en: "Found {count} items with better prices", ru: "Найдено {count} товаров с лучшими ценами" },
+  "ai.no_price_data": { en: "No price comparison data available yet. Scan receipts to get recommendations.", ru: "Данных для сравнения цен пока нет. Сканируйте чеки для рекомендаций." },
   "analytics.advanced": { en: "Advanced Analytics", ru: "Расширенная аналитика" },
   "analytics.expenses": { en: "Expense Analytics", ru: "Аналитика расходов" },
   "assets.manage": { en: "Manage your assets and liabilities", ru: "Управляйте активами и обязательствами" },
@@ -49,6 +65,7 @@ export const mobileExtraTranslations: Translations = {
   "voice_input.parsed_transaction": { en: "Parsed Transaction", ru: "Распознанная транзакция" },
   "receipts.title": { en: "Receipt Scanner", ru: "Сканер чеков" },
   "receipts.description": { en: "Upload a receipt to extract items and prices", ru: "Загрузите чек для извлечения позиций и цен" },
+  "receipts.description_multi": { en: "Upload one or more photos of a receipt", ru: "Загрузите одно или несколько фото чека" },
   "receipts.take_photo": { en: "Take Photo", ru: "Сфотографировать" },
   "receipts.pick_from_library": { en: "Pick from Library", ru: "Выбрать из галереи" },
   "receipts.scanning": { en: "Scanning receipt...", ru: "Сканирование чека..." },
@@ -279,4 +296,41 @@ export const mobileExtraTranslations: Translations = {
   "chart.expense_short": { en: "Exp", ru: "Расх" },
   "chart.capital_short": { en: "Cap", ru: "Кап" },
   "chart.forecast_label": { en: "forecast", ru: "прогноз" },
+
+  // Wishlist sort labels
+  "wishlist.sort_priority": { en: "Priority", ru: "Приоритет" },
+  "wishlist.sort_amount": { en: "Amount", ru: "Сумма" },
+  "wishlist.sort_date": { en: "Date", ru: "Дата" },
+
+  // Assets empty state
+  "assets.empty_add_asset": { en: "Add your first asset to track it", ru: "Добавьте первый актив для отслеживания" },
+  "assets.empty_add_liability": { en: "Add your first liability to track it", ru: "Добавьте первое обязательство для отслеживания" },
+
+  // Tags stats
+  "tags.delete_confirm_message": { en: "Are you sure you want to delete \"{name}\"?", ru: "Вы уверены, что хотите удалить \"{name}\"?" },
+  "tags.stats_transactions_label": { en: "transactions", ru: "транзакций" },
+  "tags.stats_spent_label": { en: "spent", ru: "потрачено" },
+
+  // Planned Expenses tab labels
+  "planned.tab_all": { en: "All", ru: "Все" },
+  "planned.tab_planned": { en: "Planned", ru: "Запланировано" },
+  "planned.tab_completed": { en: "Completed", ru: "Завершено" },
+
+  // Planned Income tab labels
+  "planned_income.tab_all": { en: "All", ru: "Все" },
+  "planned_income.tab_pending": { en: "Pending", ru: "Ожидается" },
+  "planned_income.tab_received": { en: "Received", ru: "Получено" },
+  "planned_income.tab_cancelled": { en: "Cancelled", ru: "Отменено" },
+
+  // Recurring delete
+  "recurring.delete_confirm": { en: "Delete \"{name}\"?", ru: "Удалить \"{name}\"?" },
+
+  // Receipt scanner
+  "receipts.permission_camera": { en: "Please grant camera permission", ru: "Разрешите доступ к камере" },
+  "receipts.permission_photos": { en: "Please grant photo library permission", ru: "Разрешите доступ к галерее" },
+  "receipts.image_too_large": { en: "Image is too large. Please try a smaller photo.", ru: "Изображение слишком большое. Попробуйте фото меньшего размера." },
+  "receipts.failed_to_scan": { en: "Failed to scan receipt", ru: "Не удалось отсканировать чек" },
+  "receipts.photos_count": { en: "{count} photo(s) selected", ru: "{count} фото выбрано" },
+  "receipts.clear": { en: "Clear", ru: "Очистить" },
+  "receipts.scan_another": { en: "Scan Another Receipt", ru: "Сканировать другой чек" },
 };

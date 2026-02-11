@@ -7,6 +7,7 @@ import { Card, CardHeader, CardContent } from "../Card";
 import { Badge } from "../Badge";
 import { Spacing, BorderRadius } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
+import { useTranslation } from "../../i18n";
 import type { PriceRecommendationsResponse } from "../../types";
 
 interface PriceRecommendationsSectionProps {
@@ -21,6 +22,7 @@ export function PriceRecommendationsSection({
   recQuery,
 }: PriceRecommendationsSectionProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const recs = recQuery.data;
 
   return (
@@ -30,7 +32,7 @@ export function PriceRecommendationsSection({
         style={[styles.accordionHeader, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}
       >
         <ThemedText type="body" style={styles.bold}>
-          {"Price Recommendations"}
+          {t("ai.price_recommendations")}
         </ThemedText>
         <Feather
           name={showRecommendations ? "chevron-up" : "chevron-down"}
@@ -50,16 +52,16 @@ export function PriceRecommendationsSection({
               <CardHeader>
                 <View style={styles.cardTitleRow}>
                   <Feather name="dollar-sign" size={18} color={theme.text} />
-                  <ThemedText type="h4" style={styles.bold}>{"Savings Overview"}</ThemedText>
+                  <ThemedText type="h4" style={styles.bold}>{t("ai.savings_overview")}</ThemedText>
                 </View>
               </CardHeader>
               <CardContent style={styles.savingsGrid}>
                 <View style={styles.savingsStat}>
-                  <ThemedText type="small" color={theme.textSecondary}>{"Total Potential Savings"}</ThemedText>
+                  <ThemedText type="small" color={theme.textSecondary}>{t("ai.total_potential_savings")}</ThemedText>
                   <ThemedText type="h3" mono style={styles.bold}>{"$"}{recs.totalPotentialSavings.toFixed(2)}</ThemedText>
                 </View>
                 <View style={styles.savingsStat}>
-                  <ThemedText type="small" color={theme.textSecondary}>{"Average Savings"}</ThemedText>
+                  <ThemedText type="small" color={theme.textSecondary}>{t("ai.average_savings")}</ThemedText>
                   <ThemedText type="h3" mono style={styles.bold}>{recs.averageSavingsPercent.toFixed(1)}{"%"}</ThemedText>
                 </View>
               </CardContent>
@@ -68,7 +70,7 @@ export function PriceRecommendationsSection({
             {recs.aiInsights ? (
               <Card style={[{ borderColor: theme.primary + "33" }, { backgroundColor: theme.primary + "08" }]}>
                 <CardHeader>
-                  <ThemedText type="bodySm" style={styles.bold}>{"AI Shopping Tips"}</ThemedText>
+                  <ThemedText type="bodySm" style={styles.bold}>{t("ai.shopping_tips")}</ThemedText>
                 </CardHeader>
                 <CardContent>
                   <ThemedText type="bodySm">{recs.aiInsights}</ThemedText>
@@ -80,10 +82,10 @@ export function PriceRecommendationsSection({
               <CardHeader>
                 <View style={styles.cardTitleRow}>
                   <Feather name="trending-down" size={18} color={theme.text} />
-                  <ThemedText type="h4" style={styles.bold}>{"Price Recommendations"}</ThemedText>
+                  <ThemedText type="h4" style={styles.bold}>{t("ai.price_recommendations")}</ThemedText>
                 </View>
                 <ThemedText type="small" color={theme.textSecondary}>
-                  {"Found "}{recs.recommendations.length}{" items with better prices"}
+                  {t("ai.found_better_prices").replace("{count}", String(recs.recommendations.length))}
                 </ThemedText>
               </CardHeader>
               <CardContent style={styles.recList}>
@@ -114,7 +116,7 @@ export function PriceRecommendationsSection({
           <Card>
             <CardContent>
               <ThemedText type="bodySm" color={theme.textSecondary} style={styles.centered}>
-                {"No price comparison data available yet. Scan receipts to get recommendations."}
+                {t("ai.no_price_data")}
               </ThemedText>
             </CardContent>
           </Card>

@@ -44,25 +44,32 @@ function normalizeItemName(name: string): string {
     .trim();
 }
 
+export type ImageInput = {
+  base64: string;
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif';
+};
+
 /**
  * Парсить чек с извлечением товаров через Claude API
- * 
- * @param imageBase64 - Base64 строка изображения чека (без префикса data:image/...)
- * @param apiKey - Anthropic API ключ пользователя
- * @param mimeType - MIME тип изображения (image/jpeg, image/png, image/webp, image/gif)
- * @returns Структурированные данные чека с нормализованными товарами
- * @throws Error если Claude не смог распарсить чек или вернул невалидный JSON
+ * Поддерживает одно или несколько изображений (длинный чек на нескольких фото)
  */
 export async function parseReceiptWithItems(
-  imageBase64: string,
+  images: string | string[] | ImageInput[],
   apiKey: string,
   mimeType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif' = 'image/jpeg'
 ): Promise<ParsedReceipt> {
-  
+
   const anthropic = new Anthropic({ apiKey });
-  
+
+  // Нормализуем вход в массив ImageInput
+  const imageList: ImageInput[] = Array.isArray(images)
+    ? images.map(img => typeof img === 'string' ? { base64: img, mimeType } : img)
+    : [{ base64: images, mimeType }];
+
+  const isMulti = imageList.length > 1;
+
   const prompt = `
-Parse this receipt image and extract structured data.
+Parse this receipt ${isMulti ? '(split across multiple photos — combine all items into ONE result)' : 'image'} and extract structured data.
 
 Return ONLY valid JSON in this exact format (no explanations, no markdown):
 {
@@ -103,30 +110,28 @@ Rules:
 - If currency symbol unclear, infer from merchant location/name
 - If quantity not specified, use 1
 - Calculate: pricePerUnit = totalPrice / quantity
-- Extract ALL items from receipt
+- Extract ALL items from receipt${isMulti ? ' across ALL photos' : ''}
+- ${isMulti ? 'Deduplicate items if same item appears on overlapping photos' : ''}
 - Return ONLY valid JSON, no other text
   `.trim();
-  
+
+  // Собираем content: все изображения + текст промпта
+  const content: Anthropic.MessageCreateParams['messages'][0]['content'] = [
+    ...imageList.map(img => ({
+      type: "image" as const,
+      source: {
+        type: "base64" as const,
+        media_type: img.mimeType,
+        data: img.base64,
+      },
+    })),
+    { type: "text" as const, text: prompt },
+  ];
+
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-5-20250929",
-    max_tokens: 2000,
-    messages: [{
-      role: "user",
-      content: [
-        {
-          type: "image",
-          source: {
-            type: "base64",
-            media_type: mimeType,
-            data: imageBase64
-          }
-        },
-        {
-          type: "text",
-          text: prompt
-        }
-      ]
-    }]
+    max_tokens: 4000,
+    messages: [{ role: "user", content }],
   });
   
   // Извлечь текст из ответа Claude (собрать все text блоки)

@@ -1,5 +1,5 @@
-import React from "react";
-import { View, ScrollView, Image } from "react-native";
+import React, { useLayoutEffect } from "react";
+import { View, ScrollView, Image, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "../components/ThemedText";
 import { Button } from "../components/Button";
@@ -14,7 +14,19 @@ export default function ReceiptScannerScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const navigation = useNavigation();
-  const { imageUri, result, scanMutation, pickImage } = useReceiptScannerScreen();
+  const {
+    imageUris,
+    result,
+    scanMutation,
+    pickImage,
+    scanImages,
+    removeImage,
+    clearImages,
+  } = useReceiptScannerScreen();
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ title: t("nav.receipt_scanner") });
+  }, [navigation, t]);
 
   return (
     <ScrollView
@@ -27,7 +39,7 @@ export default function ReceiptScannerScreen() {
             {t("receipts.title")}
           </ThemedText>
           <ThemedText type="small" color={theme.textSecondary}>
-            {t("receipts.description")}
+            {t("receipts.description_multi")}
           </ThemedText>
         </View>
       </View>
@@ -50,16 +62,64 @@ export default function ReceiptScannerScreen() {
         />
       </View>
 
-      {imageUri ? (
+      {imageUris.length > 0 ? (
         <Card>
           <CardContent>
-            <Image
-              source={{ uri: imageUri }}
-              style={styles.preview}
-              resizeMode="contain"
-            />
+            {imageUris.length === 1 ? (
+              <View style={styles.imageThumbWrapper}>
+                <TouchableOpacity style={styles.removeBtn} onPress={() => removeImage(0)}>
+                  <Feather name="x" size={12} color="#ffffff" />
+                </TouchableOpacity>
+                <Image
+                  source={{ uri: imageUris[0] }}
+                  style={styles.preview}
+                  resizeMode="contain"
+                />
+              </View>
+            ) : (
+              <View style={styles.imageGrid}>
+                {imageUris.map((uri, index) => (
+                  <View key={uri + index} style={styles.imageThumbWrapper}>
+                    <TouchableOpacity style={styles.removeBtn} onPress={() => removeImage(index)}>
+                      <Feather name="x" size={12} color="#ffffff" />
+                    </TouchableOpacity>
+                    <Image
+                      source={{ uri }}
+                      style={styles.imageThumb}
+                      resizeMode="cover"
+                    />
+                  </View>
+                ))}
+              </View>
+            )}
+            <View
+              style={[styles.photoBadge, { backgroundColor: theme.muted }]}
+            >
+              <Feather name="image" size={12} color={theme.textSecondary} />
+              <ThemedText type="small" color={theme.textSecondary}>
+                {t("receipts.photos_count").replace("{count}", String(imageUris.length))}
+              </ThemedText>
+            </View>
           </CardContent>
         </Card>
+      ) : null}
+
+      {imageUris.length > 0 && !scanMutation.isPending && !result ? (
+        <View style={styles.buttonRow}>
+          <Button
+            title={t("receipts.scan")}
+            onPress={scanImages}
+            icon={<Feather name="send" size={16} color="#ffffff" />}
+            style={styles.halfBtn}
+          />
+          <Button
+            title={t("receipts.clear")}
+            variant="outline"
+            onPress={clearImages}
+            icon={<Feather name="trash-2" size={16} color={theme.text} />}
+            style={styles.halfBtn}
+          />
+        </View>
       ) : null}
 
       {scanMutation.isPending ? (
@@ -163,10 +223,17 @@ export default function ReceiptScannerScreen() {
             }}
             icon={<Feather name="plus" size={16} color="#ffffff" />}
           />
+
+          <Button
+            title={t("receipts.scan_another")}
+            variant="outline"
+            onPress={clearImages}
+            icon={<Feather name="camera" size={16} color={theme.text} />}
+          />
         </>
       ) : null}
 
-      {!imageUri && !scanMutation.isPending && !result ? (
+      {imageUris.length === 0 && !scanMutation.isPending && !result ? (
         <View style={styles.emptyState}>
           <Feather name="camera" size={48} color={theme.textTertiary} />
           <ThemedText type="bodySm" color={theme.textSecondary}>

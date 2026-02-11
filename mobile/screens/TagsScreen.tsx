@@ -69,7 +69,7 @@ export default function TagsScreen() {
   });
 
   const handleDelete = (tag: PersonalTag) => {
-    Alert.alert(t("tags.delete_tag"), `Are you sure you want to delete "${tag.name}"?`, [
+    Alert.alert(t("tags.delete_tag"), t("tags.delete_confirm_message").replace("{name}", tag.name), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("common.delete"), style: "destructive", onPress: () => deleteMutation.mutate(tag.id) },
     ]);
@@ -91,7 +91,7 @@ export default function TagsScreen() {
           <Pressable onPress={() => navigation.navigate("TagDetail", { tagId: tag.id })} style={styles.tagInfoRow}>
             <TagBadge tag={tag} />
             <ThemedText type="small" color={theme.textSecondary}>
-              {stats.transactionCount} transactions{stats.totalSpent > 0 ? ` · $${stats.totalSpent.toFixed(0)} spent` : ""}
+              {stats.transactionCount} {t("tags.stats_transactions_label")}{stats.totalSpent > 0 ? ` · $${stats.totalSpent.toFixed(0)} ${t("tags.stats_spent_label")}` : ""}
             </ThemedText>
           </Pressable>
           {!tag.isDefault ? (

@@ -120,7 +120,7 @@ export default function TagDetailScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center", gap: Spacing.md },
-  content: { padding: Spacing.lg, paddingBottom: Spacing["5xl"] },
+  content: { padding: Spacing.lg, paddingTop: Spacing.xl, paddingBottom: Spacing["5xl"] },
   header: {
     flexDirection: "row", justifyContent: "space-between",
     alignItems: "flex-start", gap: Spacing.md, marginBottom: Spacing.lg,

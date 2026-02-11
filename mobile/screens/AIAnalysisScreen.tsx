@@ -37,7 +37,7 @@ export default function AIAnalysisScreen() {
       <View style={styles.headerRow}>
         <View>
           <ThemedText type="h3" style={styles.bold}>{t("ai.analysis_title")}</ThemedText>
-          <ThemedText type="small" color={theme.textSecondary}>{"AI-powered financial insights"}</ThemedText>
+          <ThemedText type="small" color={theme.textSecondary}>{t("ai.analysis_subtitle")}</ThemedText>
         </View>
       </View>
 
@@ -45,12 +45,12 @@ export default function AIAnalysisScreen() {
         <CardHeader>
           <View style={styles.cardTitleRow}>
             <Feather name="zap" size={18} color={theme.primary} />
-            <ThemedText type="h4" style={styles.bold}>{"Spending Analysis"}</ThemedText>
+            <ThemedText type="h4" style={styles.bold}>{t("ai.spending_analysis")}</ThemedText>
           </View>
         </CardHeader>
         <CardContent>
           <Button
-            title={isAnalyzing ? "Analyzing..." : "Analyze My Spending"}
+            title={isAnalyzing ? t("ai.analyzing") : t("ai.analyze_spending")}
             onPress={handleAnalyze}
             disabled={isAnalyzing}
             loading={isAnalyzing}
@@ -61,12 +61,12 @@ export default function AIAnalysisScreen() {
       {analysis ? (
         <Card>
           <CardHeader>
-            <ThemedText type="h4" style={styles.bold}>{"AI Insights"}</ThemedText>
+            <ThemedText type="h4" style={styles.bold}>{t("ai.insights")}</ThemedText>
           </CardHeader>
           <CardContent style={styles.analysisContent}>
             <ThemedText type="bodySm" style={styles.analysisText}>{analysis}</ThemedText>
             <View style={styles.badgeRow}>
-              <Badge label="Powered by Claude" variant="secondary" />
+              <Badge label={t("ai.powered_by_claude")} variant="secondary" />
             </View>
           </CardContent>
         </Card>
@@ -78,15 +78,15 @@ export default function AIAnalysisScreen() {
         <CardHeader>
           <View style={styles.cardTitleRow}>
             <Feather name="camera" size={18} color={theme.text} />
-            <ThemedText type="h4" style={styles.bold}>{"Receipt Scanner"}</ThemedText>
+            <ThemedText type="h4" style={styles.bold}>{t("receipts.title")}</ThemedText>
           </View>
         </CardHeader>
         <CardContent>
           <ThemedText type="small" color={theme.textSecondary} style={styles.cardDescription}>
-            {"Upload a receipt photo to automatically extract items and prices"}
+            {t("receipts.description")}
           </ThemedText>
           <Button
-            title="Scan Receipt"
+            title={t("receipts.scan")}
             variant="outline"
             onPress={() => navigation.navigate("ReceiptScanner")}
             icon={<Feather name="camera" size={16} color={theme.text} />}
@@ -98,15 +98,15 @@ export default function AIAnalysisScreen() {
         <CardHeader>
           <View style={styles.cardTitleRow}>
             <Feather name="message-circle" size={18} color={theme.primary} />
-            <ThemedText type="h4" style={styles.bold}>{"AI Financial Advisor"}</ThemedText>
+            <ThemedText type="h4" style={styles.bold}>{t("ai.financial_advisor")}</ThemedText>
           </View>
         </CardHeader>
         <CardContent>
           <ThemedText type="small" color={theme.textSecondary} style={styles.cardDescription}>
-            {"Ask questions about your spending, budgets, and finances"}
+            {t("ai.advisor_description")}
           </ThemedText>
           <Button
-            title="Open AI Chat"
+            title={t("ai.open_chat")}
             variant="outline"
             onPress={() => navigation.navigate("AIChat")}
             icon={<Feather name="message-circle" size={16} color={theme.text} />}
@@ -126,7 +126,7 @@ export default function AIAnalysisScreen() {
 const S = Spacing;
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { padding: S.lg, gap: S.lg, paddingBottom: S["5xl"] },
+  content: { padding: S.lg, paddingTop: S.xl, gap: S.lg, paddingBottom: S["5xl"] },
   headerRow: { gap: S.sm },
   bold: { fontWeight: "600" },
   cardTitleRow: { flexDirection: "row", alignItems: "center", gap: S.sm },

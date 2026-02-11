@@ -4,7 +4,7 @@ import { Spacing, BorderRadius } from "../constants/theme";
 export const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  content: { padding: Spacing.lg, paddingBottom: Spacing["5xl"] },
+  content: { padding: Spacing.lg, paddingTop: Spacing.xl, paddingBottom: Spacing["5xl"] },
   header: {
     flexDirection: "row",
     alignItems: "center",

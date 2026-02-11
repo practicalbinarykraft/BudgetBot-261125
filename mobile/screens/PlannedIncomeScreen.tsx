@@ -102,7 +102,7 @@ export default function PlannedIncomeScreen() {
               return (
                 <Pressable key={f} onPress={() => setTab(f)} style={[styles.tabBtn, { backgroundColor: isActive ? theme.primary : theme.secondary, borderColor: isActive ? theme.primary : theme.border }]}>
                   <ThemedText type="small" color={isActive ? "#ffffff" : theme.text}>
-                    {f.charAt(0).toUpperCase() + f.slice(1)} ({count})
+                    {t(`planned_income.tab_${f}`)} ({count})
                   </ThemedText>
                 </Pressable>
               );

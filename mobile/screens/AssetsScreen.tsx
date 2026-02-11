@@ -139,7 +139,7 @@ export default function AssetsScreen() {
             {tab === "asset" ? t("assets.no_assets") : t("assets.no_liabilities")}
           </ThemedText>
           <ThemedText type="bodySm" color={theme.textTertiary}>
-            {`Add your first ${tab} to track it`}
+            {tab === "asset" ? t("assets.empty_add_asset") : t("assets.empty_add_liability")}
           </ThemedText>
         </View>
       }
@@ -150,7 +150,7 @@ export default function AssetsScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  list: { padding: Spacing.lg, paddingBottom: Spacing["5xl"] },
+  list: { padding: Spacing.lg, paddingTop: Spacing.xl, paddingBottom: Spacing["5xl"] },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",

@@ -54,7 +54,7 @@ export default function RecurringScreen() {
   });
 
   const handleDelete = (item: Recurring) => {
-    Alert.alert(t("common.delete"), `Delete "${item.description}"?`, [
+    Alert.alert(t("common.delete"), t("recurring.delete_confirm").replace("{name}", item.description), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("common.delete"), style: "destructive", onPress: () => deleteMutation.mutate(item.id) },
     ]);

@@ -29,11 +29,6 @@ import { compressResponse } from "./middleware/compression";
 const app = express();
 const server = createServer(app);
 
-// Render.com requires longer timeouts for free tier
-// https://render.com/docs/troubleshooting-deploys
-server.keepAliveTimeout = 120000; // 120 seconds
-server.headersTimeout = 120000; // 120 seconds
-
 // Security headers - MUST be first middleware
 app.use(securityHeaders);
 

@@ -98,7 +98,7 @@ export default function WishlistScreen() {
                     ]}
                   >
                     <ThemedText type="small" color={isActive ? "#ffffff" : theme.text}>
-                      {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                      {t(`wishlist.sort_${opt}`)}
                     </ThemedText>
                   </Pressable>
                 );
@@ -131,7 +131,7 @@ export default function WishlistScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  list: { padding: Spacing.lg, paddingBottom: Spacing["5xl"] },
+  list: { padding: Spacing.lg, paddingTop: Spacing.xl, paddingBottom: Spacing["5xl"] },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
