@@ -1,6 +1,6 @@
 import { db } from "../db";
 import { wishlist, InsertWishlist, WishlistItem } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 
 export class WishlistRepository {
     async getWishlistByUserId(userId: number): Promise<WishlistItem[]> {
@@ -24,6 +24,26 @@ export class WishlistRepository {
 
     async deleteWishlist(id: number): Promise<void> {
         await db.delete(wishlist).where(eq(wishlist.id, id));
+    }
+
+    async reorderWishlist(userId: number, items: { id: number; sortOrder: number }[]): Promise<void> {
+        const ids = items.map((i) => i.id);
+
+        // Verify all items belong to this user
+        const owned = await db.select({ id: wishlist.id })
+            .from(wishlist)
+            .where(and(eq(wishlist.userId, userId), inArray(wishlist.id, ids)));
+
+        if (owned.length !== ids.length) {
+            throw new Error("Some wishlist items not found or not owned by user");
+        }
+
+        // Update sortOrder for each item
+        for (const item of items) {
+            await db.update(wishlist)
+                .set({ sortOrder: item.sortOrder })
+                .where(eq(wishlist.id, item.id));
+        }
     }
 }
 

@@ -59,6 +59,7 @@ export type RootStackParamList = {
   VoiceInput: undefined;
   Notifications: undefined;
   SwipeSort: undefined;
+  FullscreenChart: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();

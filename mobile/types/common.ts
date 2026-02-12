@@ -12,6 +12,7 @@ export interface WishlistItem {
   amount: string;
   targetDate: string | null;
   priority: string;
+  sortOrder: number;
   isPurchased: boolean;
   prediction: GoalPrediction | null;
 }

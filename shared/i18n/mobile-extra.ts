@@ -367,4 +367,22 @@ export const mobileExtraTranslations: Translations = {
   "category_picker.create_new": { en: "Create New Category", ru: "Создать новую категорию" },
   "transactions.approx_usd": { en: "\u2248 {amount} USD", ru: "\u2248 {amount} USD" },
   "transactions.add_category": { en: "Add +", ru: "Добавить +" },
+
+  // Wishlist on chart
+  "wishlist.summary_title": { en: "Goals", ru: "Цели" },
+  "wishlist.all_goals": { en: "All goals", ru: "Все цели" },
+  "wishlist.available_now": { en: "Available now", ru: "Уже доступно" },
+  "wishlist.available_in_months": { en: "~{count} months", ru: "~{count} мес." },
+  "wishlist.not_affordable": { en: "Not enough funds", ru: "Недостаточно средств" },
+  "wishlist.beyond_horizon": { en: "Beyond chart horizon", ru: "За пределами горизонта графика" },
+  "wishlist.reorder": { en: "Reorder", ru: "Порядок" },
+  "wishlist.reorder_saved": { en: "Order saved", ru: "Порядок сохранён" },
+  "wishlist.drag_hint": { en: "Hold and drag to reorder", ru: "Удерживайте и перетаскивайте" },
+
+  // Chart fullscreen & markers
+  "chart.fullscreen": { en: "Full screen", ru: "На весь экран" },
+  "chart.close_fullscreen": { en: "Close", ru: "Закрыть" },
+  "chart.goal_available": { en: "Available: {name}", ru: "Доступно: {name}" },
+  "chart.goals_on_date": { en: "{count} goals on this date", ru: "{count} целей на эту дату" },
+  "nav.fullscreen_chart": { en: "Chart", ru: "График" },
 };

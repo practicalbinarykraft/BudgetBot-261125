@@ -143,6 +143,7 @@ export const wishlist = pgTable("wishlist", {
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   targetDate: date("target_date"),
   priority: text("priority").default("medium"), // 'low', 'medium', 'high'
+  sortOrder: integer("sort_order").default(0),
   isPurchased: boolean("is_purchased").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

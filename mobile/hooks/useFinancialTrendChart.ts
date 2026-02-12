@@ -52,11 +52,8 @@ export function useFinancialTrendChart() {
 
   const trendData = trendQuery.data?.trendData || [];
 
-  const { incomeData, expenseData, capitalData, xLabels } = useMemo(() => {
-    if (trendData.length === 0) {
-      return { incomeData: [], expenseData: [], capitalData: [], xLabels: [] };
-    }
-
+  const sampledTrendData = useMemo(() => {
+    if (trendData.length === 0) return [];
     const maxPoints = historyDays <= 30 ? 50 : historyDays <= 90 ? 60 : 70;
     const step = Math.max(1, Math.floor(trendData.length / maxPoints));
     const sampled: TrendDataPoint[] = [];
@@ -66,11 +63,18 @@ export function useFinancialTrendChart() {
     if (sampled[sampled.length - 1] !== trendData[trendData.length - 1]) {
       sampled.push(trendData[trendData.length - 1]);
     }
+    return sampled;
+  }, [trendData, historyDays]);
 
-    const labelInterval = Math.max(1, Math.floor(sampled.length / 5));
-    const lastIdx = sampled.length - 1;
+  const { incomeData, expenseData, capitalData, xLabels } = useMemo(() => {
+    if (sampledTrendData.length === 0) {
+      return { incomeData: [], expenseData: [], capitalData: [], xLabels: [] };
+    }
 
-    const income = sampled.map((p, i) => ({
+    const labelInterval = Math.max(1, Math.floor(sampledTrendData.length / 5));
+    const lastIdx = sampledTrendData.length - 1;
+
+    const income = sampledTrendData.map((p, i) => ({
       value: p.income,
       date: formatChartDate(p.date, locale),
       isForecast: !!p.isForecast,
@@ -78,17 +82,17 @@ export function useFinancialTrendChart() {
       showDataPoint: false,
     }));
 
-    const expense = sampled.map((p) => ({
+    const expense = sampledTrendData.map((p) => ({
       value: p.expense,
       showDataPoint: false,
     }));
 
-    const capital = sampled.map((p) => ({
+    const capital = sampledTrendData.map((p) => ({
       value: p.capital,
       showDataPoint: false,
     }));
 
-    const labels = sampled.map((p) => formatChartDate(p.date, locale));
+    const labels = sampledTrendData.map((p) => formatChartDate(p.date, locale));
 
     return {
       incomeData: income,
@@ -96,7 +100,7 @@ export function useFinancialTrendChart() {
       capitalData: capital,
       xLabels: labels,
     };
-  }, [trendData, locale]);
+  }, [sampledTrendData, locale]);
 
   const forecastSummary = useMemo(() => {
     if (trendData.length === 0) return null;
@@ -123,6 +127,7 @@ export function useFinancialTrendChart() {
     showForecast,
     setShowForecast,
     screenWidth,
+    sampledTrendData,
     incomeData,
     expenseData,
     capitalData,

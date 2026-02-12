@@ -98,6 +98,57 @@ router.patch("/:id", withAuth(async (req, res) => {
   }
 }));
 
+// PATCH /api/wishlist/reorder
+router.patch("/reorder", withAuth(async (req, res) => {
+  try {
+    const userId = Number(req.user.id);
+    const items = req.body;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: "Expected non-empty array of { id, sortOrder }" });
+    }
+
+    // Validate each item has id and sortOrder
+    const sortOrders = new Set<number>();
+    for (const item of items) {
+      if (typeof item.id !== "number" || typeof item.sortOrder !== "number") {
+        return res.status(400).json({ error: "Each item must have numeric id and sortOrder" });
+      }
+      if (item.sortOrder < 1) {
+        return res.status(400).json({ error: "sortOrder must be >= 1" });
+      }
+      if (sortOrders.has(item.sortOrder)) {
+        return res.status(400).json({ error: "Duplicate sortOrder values" });
+      }
+      sortOrders.add(item.sortOrder);
+    }
+
+    await storage.reorderWishlist(userId, items);
+
+    // Return updated list with predictions
+    const wishlist = await storage.getWishlistByUserId(userId);
+    const stats = await getMonthlyStats(userId);
+    const budgetLimits = await getTotalBudgetLimits(userId);
+
+    const wishlistWithPredictions = wishlist.map((item) => {
+      const amount = parseFloat(item.amount);
+      if (isNaN(amount) || amount <= 0) {
+        return { ...item, prediction: null };
+      }
+      const prediction = predictGoalWithStats(amount, stats, budgetLimits);
+      return { ...item, prediction };
+    });
+
+    res.json(wishlistWithPredictions);
+  } catch (error: unknown) {
+    const msg = getErrorMessage(error);
+    if (msg.includes("not found or not owned")) {
+      return res.status(403).json({ error: msg });
+    }
+    res.status(400).json({ error: msg });
+  }
+}));
+
 // DELETE /api/wishlist/:id
 router.delete("/:id", withAuth(async (req, res) => {
   try {
