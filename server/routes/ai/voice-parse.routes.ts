@@ -100,8 +100,8 @@ router.post("/voice-parse", withAuth(async (req, res) => {
     // Определяем расширение файла согласно mimeType (поддержка iOS форматов)
     let extension = 'wav'; // fallback
     if (mimeType) {
-      if (mimeType.includes('mp4') || mimeType.includes('aac')) {
-        extension = 'm4a'; // iOS использует m4a для audio/mp4 и audio/aac
+      if (mimeType.includes('mp4') || mimeType.includes('m4a') || mimeType.includes('aac')) {
+        extension = 'm4a'; // iOS использует m4a для audio/mp4, audio/m4a и audio/aac
       } else if (mimeType.includes('webm')) {
         extension = 'webm';
       } else if (mimeType.includes('ogg')) {

@@ -333,4 +333,23 @@ export const mobileExtraTranslations: Translations = {
   "receipts.photos_count": { en: "{count} photo(s) selected", ru: "{count} фото выбрано" },
   "receipts.clear": { en: "Clear", ru: "Очистить" },
   "receipts.scan_another": { en: "Scan Another Receipt", ru: "Сканировать другой чек" },
+
+  // Receipt scanner — animated scanning phrases
+  "receipts.scanning_sending": { en: "Sending to server...", ru: "Отправляем на сервер..." },
+  "receipts.scanning_ai": { en: "AI is analyzing the receipt...", ru: "ИИ изучает чек..." },
+  "receipts.scanning_extracting": { en: "Extracting items and prices...", ru: "Извлекаем позиции и цены..." },
+  "receipts.scanning_almost": { en: "Almost done...", ru: "Почти готово..." },
+
+  // Receipt scanner — add photo + hints
+  "receipts.add_photo": { en: "+ Add photo", ru: "+ Добавить фото" },
+  "receipts.photo_hint": { en: "For long receipts — add 2-5 photos with overlap. Hold camera ~20-30 cm away so text is sharp.", ru: "Если чек длинный — добавьте 2–5 фото с перекрытием. Держите камеру на расстоянии ~20–30 см, чтобы текст был резким." },
+  "receipts.add_more_hint": { en: "You can add more photos of the same receipt.", ru: "Можно добавить ещё фото этого же чека." },
+
+  // Receipt scanner — currency hint
+  "receipts.currency_hint": { en: "Amounts extracted from receipt. Select the receipt currency — we'll auto-convert on the next step.", ru: "Мы извлекли суммы из чека. Выберите валюту чека — на следующем шаге мы автоматически конвертируем сумму." },
+
+  // AddTransaction — categories & currency
+  "transactions.no_categories": { en: "No categories for this type", ru: "Нет категорий для этого типа" },
+  "transactions.approx_usd": { en: "\u2248 {amount} USD", ru: "\u2248 {amount} USD" },
+  "transactions.add_category": { en: "Add +", ru: "Добавить +" },
 };

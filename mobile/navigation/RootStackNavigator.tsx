@@ -16,7 +16,7 @@ import type { Category, Transaction, PersonalTag } from "../types";
 export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
-  AddTransaction: undefined;
+  AddTransaction: { prefill?: { amount?: string; description?: string; type?: "expense" | "income"; currency?: string } } | undefined;
   EditTransaction: { transaction: Transaction };
   AddEditCategory: { category?: Category };
   AddEditBudget: {

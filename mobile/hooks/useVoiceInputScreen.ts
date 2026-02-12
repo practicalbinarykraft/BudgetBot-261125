@@ -85,18 +85,26 @@ export function useVoiceInputScreen() {
         allowsRecordingIOS: false,
       });
 
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      if (!fileInfo.exists || !("size" in fileInfo) || fileInfo.size === 0) {
+        Alert.alert("Error", "Recording file is empty or missing");
+        setIsParsing(false);
+        return;
+      }
+
       const base64 = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
 
       const data = await api.post<VoiceParsedResult>("/api/ai/voice-parse", {
         audioBase64: base64,
-        mimeType: "audio/m4a",
+        mimeType: "audio/mp4",
       });
 
       setResult(data);
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to process recording");
+      const message = error.message || "Failed to process recording";
+      Alert.alert("Voice Error", message);
     } finally {
       setIsParsing(false);
     }

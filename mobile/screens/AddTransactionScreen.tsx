@@ -1,5 +1,5 @@
 import React from "react";
-import { View, ScrollView, KeyboardAvoidingView, Platform, Pressable } from "react-native";
+import { View, ScrollView, KeyboardAvoidingView, Platform, Pressable, ActivityIndicator } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
@@ -10,6 +10,8 @@ import { useTheme } from "../hooks/useTheme";
 import { useAddTransactionScreen } from "../hooks/useAddTransactionScreen";
 import { useTranslation } from "../i18n";
 import { styles } from "./AddTransactionScreen.styles";
+
+const CURRENCY_OPTIONS = ["USD", "RUB", "IDR", "EUR", "KRW", "CNY"];
 
 export default function AddTransactionScreen() {
   const { theme } = useTheme();
@@ -59,6 +61,41 @@ export default function AddTransactionScreen() {
           containerStyle={styles.field}
         />
 
+        {/* Currency selector */}
+        <View style={styles.field}>
+          <ThemedText type="small" color={theme.textSecondary} style={styles.label}>
+            {t("common.currency")}
+          </ThemedText>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+            {CURRENCY_OPTIONS.map((cur) => (
+              <Pressable
+                key={cur}
+                onPress={() => h.setCurrency(cur)}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: h.currency === cur ? theme.primary + "30" : theme.secondary,
+                    borderColor: h.currency === cur ? theme.primary : theme.border,
+                  },
+                ]}
+              >
+                <ThemedText
+                  type="small"
+                  color={h.currency === cur ? theme.primary : theme.text}
+                  style={h.currency === cur ? { fontWeight: "600" } : undefined}
+                >
+                  {cur}
+                </ThemedText>
+              </Pressable>
+            ))}
+          </ScrollView>
+          {h.convertedAmount ? (
+            <ThemedText type="small" color={theme.textSecondary} style={{ marginTop: 4 }}>
+              {t("transactions.approx_usd").replace("{amount}", h.convertedAmount)}
+            </ThemedText>
+          ) : null}
+        </View>
+
         <Input
           label={t("transactions.description")}
           value={h.description}
@@ -90,26 +127,44 @@ export default function AddTransactionScreen() {
           <ThemedText type="small" color={theme.textSecondary} style={styles.label}>
             {t("transactions.category_optional")}
           </ThemedText>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
-            {h.categories.map((cat) => {
-              const isSelected = h.selectedCategoryId === cat.id;
-              return (
-                <Pressable
-                  key={cat.id}
-                  onPress={() => h.setSelectedCategoryId(isSelected ? null : cat.id)}
-                  style={[
-                    styles.chip,
-                    {
-                      backgroundColor: isSelected ? cat.color + "30" : theme.secondary,
-                      borderColor: isSelected ? cat.color : theme.border,
-                    },
-                  ]}
-                >
-                  <ThemedText type="small">{cat.icon + " " + cat.name}</ThemedText>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+          {h.categoriesLoading ? (
+            <ActivityIndicator size="small" color={theme.primary} />
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+              {h.categories.map((cat) => {
+                const isSelected = h.selectedCategoryId === cat.id;
+                return (
+                  <Pressable
+                    key={cat.id}
+                    onPress={() => h.setSelectedCategoryId(isSelected ? null : cat.id)}
+                    style={[
+                      styles.chip,
+                      {
+                        backgroundColor: isSelected ? cat.color + "30" : theme.secondary,
+                        borderColor: isSelected ? cat.color : theme.border,
+                      },
+                    ]}
+                  >
+                    <ThemedText type="small">{cat.icon + " " + cat.name}</ThemedText>
+                  </Pressable>
+                );
+              })}
+              <Pressable
+                onPress={() => nav.navigate("AddEditCategory", {})}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: "transparent",
+                    borderColor: theme.primary,
+                  },
+                ]}
+              >
+                <ThemedText type="small" color={theme.primary} style={{ fontWeight: "600" }}>
+                  {t("transactions.add_category")}
+                </ThemedText>
+              </Pressable>
+            </ScrollView>
+          )}
         </View>
 
         {/* Wallet picker */}

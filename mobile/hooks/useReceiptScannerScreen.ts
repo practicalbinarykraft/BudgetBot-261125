@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
@@ -11,10 +11,20 @@ import type { ReceiptScanResult } from "../types";
 const MAX_IMAGE_WIDTH = 1024;
 const MAX_BASE64_SIZE = 5_000_000; // ~5MB base64 ≈ ~3.7MB image
 
+const SCANNING_PHRASE_KEYS = [
+  "receipts.scanning_sending",
+  "receipts.scanning_ai",
+  "receipts.scanning_extracting",
+  "receipts.scanning_almost",
+] as const;
+
 export function useReceiptScannerScreen() {
   const { t } = useTranslation();
   const [imageUris, setImageUris] = useState<string[]>([]);
   const [result, setResult] = useState<ReceiptScanResult | null>(null);
+  const [scanningPhaseIndex, setScanningPhaseIndex] = useState(0);
+  const [receiptCurrency, setReceiptCurrency] = useState("IDR");
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const scanMutation = useMutation({
     mutationFn: async (base64Images: string[]) =>
@@ -24,20 +34,36 @@ export function useReceiptScannerScreen() {
       }),
     onSuccess: (data) => {
       setResult(data);
+      setReceiptCurrency(data.receipt?.currency || "IDR");
       queryClient.invalidateQueries({ queryKey: ["product-catalog"] });
-      const merchant = data.receipt?.merchant || "receipt";
-      const count = data.itemsCount || 0;
-      Alert.alert(
-        t("common.success"),
-        t("receipts.found_items")
-          .replace("{count}", String(count))
-          .replace("{merchant}", merchant),
-      );
     },
     onError: (error: Error) => {
       Alert.alert(t("common.error"), error.message || t("receipts.failed_to_scan"));
     },
   });
+
+  useEffect(() => {
+    if (scanMutation.isPending) {
+      setScanningPhaseIndex(0);
+      intervalRef.current = setInterval(() => {
+        setScanningPhaseIndex((prev) => (prev + 1) % SCANNING_PHRASE_KEYS.length);
+      }, 2500);
+    } else {
+      setScanningPhaseIndex(0);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [scanMutation.isPending]);
+
+  const scanningPhrase = t(SCANNING_PHRASE_KEYS[scanningPhaseIndex]);
 
   const compressAndEncode = async (uri: string, quality: number): Promise<string> => {
     const resized = await ImageManipulator.manipulateAsync(
@@ -117,6 +143,9 @@ export function useReceiptScannerScreen() {
     imageUris,
     result,
     scanMutation,
+    scanningPhrase,
+    receiptCurrency,
+    setReceiptCurrency,
     pickImage,
     scanImages,
     removeImage,

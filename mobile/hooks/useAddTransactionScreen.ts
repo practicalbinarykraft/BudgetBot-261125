@@ -7,10 +7,28 @@ import { queryClient } from "../lib/query-client";
 import { useTranslation } from "../i18n";
 import type { Category, Wallet, PersonalTag, PaginatedResponse } from "../types";
 
+interface ExchangeRatesResponse {
+  rates: Record<string, number>;
+  lastUpdated: string;
+  source: string;
+}
+
 interface Prefill {
   amount?: string;
   description?: string;
   type?: "expense" | "income";
+  currency?: string;
+}
+
+export function computeConvertedAmount(
+  amount: string,
+  currency: string,
+  rates: Record<string, number>,
+): string | null {
+  if (currency === "USD" || !amount) return null;
+  const rate = rates[currency];
+  if (!rate || rate === 0) return null;
+  return (parseFloat(amount) / rate).toFixed(2);
 }
 
 export function useAddTransactionScreen() {
@@ -22,6 +40,7 @@ export function useAddTransactionScreen() {
   const [type, setType] = useState<"expense" | "income">(prefill?.type || "expense");
   const [amount, setAmount] = useState(prefill?.amount || "");
   const [description, setDescription] = useState(prefill?.description || "");
+  const [currency, setCurrency] = useState(prefill?.currency || "USD");
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [selectedWalletId, setSelectedWalletId] = useState<number | null>(null);
   const [personalTagId, setPersonalTagId] = useState<number | null>(null);
@@ -41,11 +60,20 @@ export function useAddTransactionScreen() {
     queryFn: () => api.get<PersonalTag[]>("/api/tags"),
   });
 
+  const exchangeRatesQuery = useQuery({
+    queryKey: ["exchange-rates"],
+    queryFn: () => api.get<ExchangeRatesResponse>("/api/exchange-rates"),
+  });
+
   const categories = (categoriesQuery.data?.data || []).filter(
     (c) => c.type === type
   );
+  const categoriesLoading = categoriesQuery.isLoading;
   const wallets = walletsQuery.data?.data || [];
   const tags = tagsQuery.data || [];
+
+  const rates = exchangeRatesQuery.data?.rates || {};
+  const convertedAmount = computeConvertedAmount(amount, currency, rates);
 
   const createMutation = useMutation({
     mutationFn: (data: any) => api.post("/api/transactions", data),
@@ -79,7 +107,7 @@ export function useAddTransactionScreen() {
       walletId: selectedWalletId,
       personalTagId,
       date: today,
-      currency: "USD",
+      currency,
       source: "manual",
     });
   };
@@ -88,10 +116,12 @@ export function useAddTransactionScreen() {
     type, setType,
     amount, setAmount,
     description, setDescription,
+    currency, setCurrency,
     selectedCategoryId, setSelectedCategoryId,
     selectedWalletId, setSelectedWalletId,
     personalTagId, setPersonalTagId,
-    categories, wallets, tags,
+    categories, categoriesLoading, wallets, tags,
+    convertedAmount,
     createMutation,
     handleSubmit,
     navigation,
