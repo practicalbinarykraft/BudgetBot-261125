@@ -334,11 +334,22 @@ export const mobileExtraTranslations: Translations = {
   "receipts.clear": { en: "Clear", ru: "Очистить" },
   "receipts.scan_another": { en: "Scan Another Receipt", ru: "Сканировать другой чек" },
 
-  // Receipt scanner — animated scanning phrases
-  "receipts.scanning_sending": { en: "Sending to server...", ru: "Отправляем на сервер..." },
-  "receipts.scanning_ai": { en: "AI is analyzing the receipt...", ru: "ИИ изучает чек..." },
-  "receipts.scanning_extracting": { en: "Extracting items and prices...", ru: "Извлекаем позиции и цены..." },
-  "receipts.scanning_almost": { en: "Almost done...", ru: "Почти готово..." },
+  // Receipt scanner — error messages
+  "receipts.scan_error_title": { en: "Scan failed", ru: "Ошибка сканирования" },
+  "receipts.error_unauthorized": { en: "Session expired. Please log in again.", ru: "Сессия истекла. Войдите в приложение заново." },
+  "receipts.error_no_credits": { en: "Not enough credits for scanning.", ru: "Недостаточно кредитов для сканирования." },
+
+  // Receipt scanner — 10 scanning phrases (3 sec each = 30 sec)
+  "receipts.scan_p1": { en: "Uploading photos to server...", ru: "Отправляем фото на сервер..." },
+  "receipts.scan_p2": { en: "Preparing images...", ru: "Подготавливаем изображения..." },
+  "receipts.scan_p3": { en: "AI is reading the receipt text...", ru: "ИИ читает текст на чеке..." },
+  "receipts.scan_p4": { en: "Recognizing product names...", ru: "Распознаём названия товаров..." },
+  "receipts.scan_p5": { en: "Detecting prices and quantities...", ru: "Определяем цены и количество..." },
+  "receipts.scan_p6": { en: "Matching line items...", ru: "Сопоставляем позиции..." },
+  "receipts.scan_p7": { en: "Analyzing discounts and totals...", ru: "Анализируем скидки и итоги..." },
+  "receipts.scan_p8": { en: "Detecting currency and merchant...", ru: "Определяем валюту и магазин..." },
+  "receipts.scan_p9": { en: "Formatting results...", ru: "Формируем результат..." },
+  "receipts.scan_p10": { en: "Almost done, one more second...", ru: "Почти готово, ещё секунду..." },
 
   // Receipt scanner — add photo + hints
   "receipts.add_photo": { en: "+ Add photo", ru: "+ Добавить фото" },
@@ -350,6 +361,10 @@ export const mobileExtraTranslations: Translations = {
 
   // AddTransaction — categories & currency
   "transactions.no_categories": { en: "No categories for this type", ru: "Нет категорий для этого типа" },
+  "category_picker.title": { en: "Select Category", ru: "Выбор категории" },
+  "category_picker.select": { en: "Select...", ru: "Выбрать..." },
+  "category_picker.empty": { en: "No categories yet. Create your first one!", ru: "Категорий пока нет. Создайте первую!" },
+  "category_picker.create_new": { en: "Create New Category", ru: "Создать новую категорию" },
   "transactions.approx_usd": { en: "\u2248 {amount} USD", ru: "\u2248 {amount} USD" },
   "transactions.add_category": { en: "Add +", ru: "Добавить +" },
 };

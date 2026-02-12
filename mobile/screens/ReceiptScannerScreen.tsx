@@ -20,6 +20,7 @@ export default function ReceiptScannerScreen() {
     imageUris,
     result,
     scanMutation,
+    scanError,
     scanningPhrase,
     receiptCurrency,
     setReceiptCurrency,
@@ -168,6 +169,25 @@ export default function ReceiptScannerScreen() {
             </ThemedText>
           </CardContent>
         </Card>
+      ) : null}
+
+      {scanError && !scanMutation.isPending ? (
+        <View
+          style={[
+            styles.successBanner,
+            { backgroundColor: "#fef2f2", borderColor: "#fca5a5" },
+          ]}
+        >
+          <Feather name="alert-circle" size={16} color="#991b1b" />
+          <View style={styles.successText}>
+            <ThemedText type="bodySm" color="#991b1b" style={styles.bold}>
+              {t("receipts.scan_error_title")}
+            </ThemedText>
+            <ThemedText type="small" color="#b91c1c">
+              {scanError}
+            </ThemedText>
+          </View>
+        </View>
       ) : null}
 
       {result ? (

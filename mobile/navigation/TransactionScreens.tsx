@@ -3,6 +3,7 @@ import type { NativeStackNavigationOptions } from "@react-navigation/native-stac
 import AddTransactionScreen from "../screens/AddTransactionScreen";
 import EditTransactionScreen from "../screens/EditTransactionScreen";
 import AddEditCategoryScreen from "../screens/AddEditCategoryScreen";
+import CategoryPickerScreen from "../screens/CategoryPickerScreen";
 import AddEditBudgetScreen from "../screens/AddEditBudgetScreen";
 import AddWalletScreen from "../screens/AddWalletScreen";
 import CalibrationScreen from "../screens/CalibrationScreen";
@@ -20,6 +21,7 @@ const screens: ScreenConfig[] = [
   { name: "AddTransaction", component: AddTransactionScreen, titleKey: "nav.add_transaction", presentation: "modal" },
   { name: "EditTransaction", component: EditTransactionScreen, titleKey: "nav.edit_transaction", presentation: "modal" },
   { name: "AddEditCategory", component: AddEditCategoryScreen, titleKey: "nav.category", presentation: "modal" },
+  { name: "CategoryPicker", component: CategoryPickerScreen, titleKey: "category_picker.title", presentation: "modal" },
   { name: "AddEditBudget", component: AddEditBudgetScreen, titleKey: "nav.budget", presentation: "modal" },
   { name: "AddWallet", component: AddWalletScreen, titleKey: "nav.add_wallet", presentation: "modal" },
   { name: "Calibration", component: CalibrationScreen, titleKey: "nav.calibration", presentation: "modal" },

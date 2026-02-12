@@ -150,7 +150,7 @@ export default function AddTransactionScreen() {
                 );
               })}
               <Pressable
-                onPress={() => nav.navigate("AddEditCategory", {})}
+                onPress={() => nav.navigate("CategoryPicker", { type: h.type })}
                 style={[
                   styles.chip,
                   {
@@ -160,7 +160,7 @@ export default function AddTransactionScreen() {
                 ]}
               >
                 <ThemedText type="small" color={theme.primary} style={{ fontWeight: "600" }}>
-                  {t("transactions.add_category")}
+                  {h.categories.length === 0 ? t("category_picker.select") : t("transactions.add_category")}
                 </ThemedText>
               </Pressable>
             </ScrollView>

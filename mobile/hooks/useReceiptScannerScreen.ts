@@ -12,19 +12,33 @@ const MAX_IMAGE_WIDTH = 1024;
 const MAX_BASE64_SIZE = 5_000_000; // ~5MB base64 ≈ ~3.7MB image
 
 const SCANNING_PHRASE_KEYS = [
-  "receipts.scanning_sending",
-  "receipts.scanning_ai",
-  "receipts.scanning_extracting",
-  "receipts.scanning_almost",
+  "receipts.scan_p1",
+  "receipts.scan_p2",
+  "receipts.scan_p3",
+  "receipts.scan_p4",
+  "receipts.scan_p5",
+  "receipts.scan_p6",
+  "receipts.scan_p7",
+  "receipts.scan_p8",
+  "receipts.scan_p9",
+  "receipts.scan_p10",
 ] as const;
 
 export function useReceiptScannerScreen() {
   const { t } = useTranslation();
   const [imageUris, setImageUris] = useState<string[]>([]);
   const [result, setResult] = useState<ReceiptScanResult | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
   const [scanningPhaseIndex, setScanningPhaseIndex] = useState(0);
   const [receiptCurrency, setReceiptCurrency] = useState("IDR");
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const friendlyError = (error: Error): string => {
+    const msg = error.message || "";
+    if (msg === "Unauthorized") return t("receipts.error_unauthorized");
+    if (msg.includes("INSUFFICIENT_CREDITS")) return t("receipts.error_no_credits");
+    return msg || t("receipts.failed_to_scan");
+  };
 
   const scanMutation = useMutation({
     mutationFn: async (base64Images: string[]) =>
@@ -34,11 +48,12 @@ export function useReceiptScannerScreen() {
       }),
     onSuccess: (data) => {
       setResult(data);
+      setScanError(null);
       setReceiptCurrency(data.receipt?.currency || "IDR");
       queryClient.invalidateQueries({ queryKey: ["product-catalog"] });
     },
     onError: (error: Error) => {
-      Alert.alert(t("common.error"), error.message || t("receipts.failed_to_scan"));
+      setScanError(friendlyError(error));
     },
   });
 
@@ -46,8 +61,19 @@ export function useReceiptScannerScreen() {
     if (scanMutation.isPending) {
       setScanningPhaseIndex(0);
       intervalRef.current = setInterval(() => {
-        setScanningPhaseIndex((prev) => (prev + 1) % SCANNING_PHRASE_KEYS.length);
-      }, 2500);
+        setScanningPhaseIndex((prev) => {
+          const next = prev + 1;
+          if (next >= SCANNING_PHRASE_KEYS.length) {
+            // Stay on last phrase until done
+            if (intervalRef.current) {
+              clearInterval(intervalRef.current);
+              intervalRef.current = null;
+            }
+            return prev;
+          }
+          return next;
+        });
+      }, 3000);
     } else {
       setScanningPhaseIndex(0);
       if (intervalRef.current) {
@@ -131,11 +157,12 @@ export function useReceiptScannerScreen() {
 
   const scanImages = async () => {
     if (imageUris.length === 0) return;
+    setScanError(null);
     try {
       const base64Images = await Promise.all(imageUris.map(encodeImage));
       scanMutation.mutate(base64Images);
     } catch (err: any) {
-      Alert.alert(t("common.error"), err?.message || String(err));
+      setScanError(err?.message || String(err));
     }
   };
 
@@ -143,6 +170,7 @@ export function useReceiptScannerScreen() {
     imageUris,
     result,
     scanMutation,
+    scanError,
     scanningPhrase,
     receiptCurrency,
     setReceiptCurrency,

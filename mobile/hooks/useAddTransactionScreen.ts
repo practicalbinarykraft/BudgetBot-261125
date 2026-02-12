@@ -18,6 +18,7 @@ interface Prefill {
   description?: string;
   type?: "expense" | "income";
   currency?: string;
+  category?: string;
 }
 
 export function computeConvertedAmount(
@@ -35,7 +36,8 @@ export function useAddTransactionScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { t } = useTranslation();
-  const prefill = (route.params as { prefill?: Prefill } | undefined)?.prefill;
+  const params = route.params as { prefill?: Prefill; selectedCategoryId?: number } | undefined;
+  const prefill = params?.prefill;
 
   const [type, setType] = useState<"expense" | "income">(prefill?.type || "expense");
   const [amount, setAmount] = useState(prefill?.amount || "");
@@ -74,6 +76,28 @@ export function useAddTransactionScreen() {
 
   const rates = exchangeRatesQuery.data?.rates || {};
   const convertedAmount = computeConvertedAmount(amount, currency, rates);
+
+  // Reset category when switching expense↔income (category belongs to a type)
+  useEffect(() => {
+    setSelectedCategoryId(null);
+  }, [type]);
+
+  // Handle category selected from CategoryPicker
+  useEffect(() => {
+    if (params?.selectedCategoryId) {
+      setSelectedCategoryId(params.selectedCategoryId);
+    }
+  }, [params?.selectedCategoryId]);
+
+  // Auto-match prefill category name to existing categories
+  useEffect(() => {
+    if (prefill?.category && categories.length > 0 && selectedCategoryId === null) {
+      const match = categories.find(
+        (c) => c.name.toLowerCase() === prefill.category!.toLowerCase(),
+      );
+      if (match) setSelectedCategoryId(match.id);
+    }
+  }, [prefill?.category, categories.length]);
 
   const createMutation = useMutation({
     mutationFn: (data: any) => api.post("/api/transactions", data),
