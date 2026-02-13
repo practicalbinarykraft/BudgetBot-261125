@@ -11,7 +11,7 @@ import { useTranslation } from "../i18n";
 import { getTransactionScreens } from "./TransactionScreens";
 import { getFeatureScreens } from "./FeatureScreens";
 import { getAnalyticsScreens } from "./AnalyticsScreens";
-import { queryClient } from "../lib/query-client";
+import { queryClient, categoriesQueryKey } from "../lib/query-client";
 import { api } from "../lib/api-client";
 import type { Category, Transaction, PersonalTag, Wallet, PaginatedResponse } from "../types";
 
@@ -76,7 +76,7 @@ export default function RootStackNavigator() {
   useEffect(() => {
     if (isAuthenticated) {
       queryClient.prefetchQuery({
-        queryKey: ["categories"],
+        queryKey: categoriesQueryKey(),
         queryFn: () => api.get<PaginatedResponse<Category>>("/api/categories?limit=100"),
       });
       queryClient.prefetchQuery({
@@ -85,7 +85,7 @@ export default function RootStackNavigator() {
       });
       queryClient.prefetchQuery({
         queryKey: ["tags"],
-        queryFn: () => api.get<PersonalTag[]>("/api/tags"),
+        queryFn: () => api.get<PaginatedResponse<PersonalTag>>("/api/tags"),
       });
     }
   }, [isAuthenticated]);

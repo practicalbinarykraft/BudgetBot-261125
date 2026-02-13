@@ -13,7 +13,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, selectData } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Category } from "@shared/schema";
 import { useTranslation } from "@/i18n";
@@ -51,9 +51,10 @@ export function AssetForm({ open, onOpenChange, asset, type }: AssetFormProps) {
     imageUrl: z.string().optional(),
   });
 
-  const { data: categories = [] } = useQuery<Category[]>({
+  const { data: categories = [] } = useQuery({
     queryKey: ["/api/categories"],
     enabled: open,
+    select: (data: unknown) => selectData<Category>(data),
   });
 
   const assetCategories = categories.filter(

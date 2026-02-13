@@ -3,7 +3,7 @@ import { Alert } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
-import { queryClient } from "../lib/query-client";
+import { queryClient, categoriesQueryKey } from "../lib/query-client";
 import type { Category } from "../types";
 
 export const EMOJI_OPTIONS = [

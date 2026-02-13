@@ -3,8 +3,10 @@ import { Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import { useMutation } from "@tanstack/react-query";
+import { useNavigation } from "@react-navigation/native";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
+import { classifyReceiptError } from "../lib/receipt-errors";
 import { useTranslation } from "../i18n";
 import type { ReceiptScanResult } from "../types";
 
@@ -26,19 +28,14 @@ const SCANNING_PHRASE_KEYS = [
 
 export function useReceiptScannerScreen() {
   const { t } = useTranslation();
+  const navigation = useNavigation<any>();
   const [imageUris, setImageUris] = useState<string[]>([]);
   const [result, setResult] = useState<ReceiptScanResult | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [canRetry, setCanRetry] = useState(false);
   const [scanningPhaseIndex, setScanningPhaseIndex] = useState(0);
   const [receiptCurrency, setReceiptCurrency] = useState("IDR");
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const friendlyError = (error: Error): string => {
-    const msg = error.message || "";
-    if (msg === "Unauthorized") return t("receipts.error_unauthorized");
-    if (msg.includes("INSUFFICIENT_CREDITS")) return t("receipts.error_no_credits");
-    return msg || t("receipts.failed_to_scan");
-  };
 
   const scanMutation = useMutation({
     mutationFn: async (base64Images: string[]) =>
@@ -49,11 +46,14 @@ export function useReceiptScannerScreen() {
     onSuccess: (data) => {
       setResult(data);
       setScanError(null);
+      setCanRetry(false);
       setReceiptCurrency(data.receipt?.currency || "IDR");
       queryClient.invalidateQueries({ queryKey: ["product-catalog"] });
     },
     onError: (error: Error) => {
-      setScanError(friendlyError(error));
+      const classified = classifyReceiptError(error);
+      setScanError(t(classified.messageKey));
+      setCanRetry(classified.canRetry);
     },
   });
 
@@ -153,6 +153,12 @@ export function useReceiptScannerScreen() {
   const clearImages = () => {
     setImageUris([]);
     setResult(null);
+    setScanError(null);
+    setCanRetry(false);
+  };
+
+  const goManual = () => {
+    navigation.navigate("AddTransaction", {});
   };
 
   const scanImages = async () => {
@@ -171,6 +177,7 @@ export function useReceiptScannerScreen() {
     result,
     scanMutation,
     scanError,
+    canRetry,
     scanningPhrase,
     receiptCurrency,
     setReceiptCurrency,
@@ -178,5 +185,6 @@ export function useReceiptScannerScreen() {
     scanImages,
     removeImage,
     clearImages,
+    goManual,
   };
 }

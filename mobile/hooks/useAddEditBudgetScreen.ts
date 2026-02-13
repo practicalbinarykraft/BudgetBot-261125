@@ -3,7 +3,7 @@ import { Alert } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
-import { queryClient } from "../lib/query-client";
+import { queryClient, normalizePaginatedData, categoriesQueryKey } from "../lib/query-client";
 import type { Category, PaginatedResponse } from "../types";
 
 type Period = "week" | "month" | "year";
@@ -37,12 +37,12 @@ export function useAddEditBudgetScreen() {
   );
 
   const categoriesQuery = useQuery({
-    queryKey: ["categories"],
+    queryKey: categoriesQueryKey(),
     queryFn: () =>
       api.get<PaginatedResponse<Category>>("/api/categories?limit=100"),
   });
 
-  const expenseCategories = (categoriesQuery.data?.data || []).filter(
+  const expenseCategories = normalizePaginatedData<Category>(categoriesQuery.data).filter(
     (c) => c.type === "expense"
   );
 

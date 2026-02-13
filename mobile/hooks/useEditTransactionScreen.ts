@@ -4,7 +4,7 @@ import { useNavigation, useRoute, type RouteProp } from "@react-navigation/nativ
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
-import { queryClient } from "../lib/query-client";
+import { queryClient, normalizePaginatedData, categoriesQueryKey } from "../lib/query-client";
 import { useTranslation } from "../i18n";
 import type { Transaction, Category, PersonalTag, PaginatedResponse } from "../types";
 
@@ -49,18 +49,18 @@ export function useEditTransactionScreen() {
   const [date, setDate] = useState(tx.date);
 
   const categoriesQuery = useQuery({
-    queryKey: ["categories"],
+    queryKey: categoriesQueryKey(),
     queryFn: () =>
       api.get<PaginatedResponse<Category>>("/api/categories?limit=100"),
   });
 
   const tagsQuery = useQuery({
     queryKey: ["tags"],
-    queryFn: () => api.get<PersonalTag[]>("/api/tags"),
+    queryFn: () => api.get<PaginatedResponse<PersonalTag>>("/api/tags"),
   });
 
-  const allCategories = categoriesQuery.data?.data || [];
-  const tags = tagsQuery.data || [];
+  const allCategories = normalizePaginatedData<Category>(categoriesQuery.data);
+  const tags = normalizePaginatedData<PersonalTag>(tagsQuery.data);
 
   const updateMutation = useMutation({
     mutationFn: (data: any) => api.patch(`/api/transactions/${tx.id}`, data),

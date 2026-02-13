@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useQuery } from "@tanstack/react-query";
 import { Calendar, DollarSign, Tag, Plus } from "lucide-react";
 import type { Category } from "@shared/schema";
+import { selectData } from "@/lib/queryClient";
 import { useTranslation } from "@/i18n/context";
 import { useTranslateCategory } from "@/lib/category-translations";
 import { CategoryCreateDialog } from "@/components/categories/category-create-dialog";
@@ -53,9 +54,10 @@ export function AddPlannedDialog({ open, onOpenChange, onAdd, isSubmitting }: Ad
     },
   });
 
-  const { data: categories } = useQuery<Category[]>({
+  const { data: categories } = useQuery({
     queryKey: ["/api/categories"],
     enabled: open,
+    select: (data: unknown) => selectData<Category>(data),
   });
 
   useEffect(() => {

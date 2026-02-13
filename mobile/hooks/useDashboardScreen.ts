@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
+import { normalizePaginatedData, categoriesQueryKey } from "../lib/query-client";
 import type {
   Transaction,
   Wallet,
@@ -90,8 +91,8 @@ export function useDashboardScreen() {
   });
 
   const categoriesQuery = useQuery({
-    queryKey: ["categories"],
-    queryFn: () => api.get<PaginatedResponse<Category>>("/api/categories"),
+    queryKey: categoriesQueryKey(),
+    queryFn: () => api.get<PaginatedResponse<Category>>("/api/categories?limit=100"),
   });
 
   const budgetsQuery = useQuery({
@@ -101,10 +102,10 @@ export function useDashboardScreen() {
 
   const tagsQuery = useQuery({
     queryKey: ["tags"],
-    queryFn: () => api.get<PersonalTag[]>("/api/tags"),
+    queryFn: () => api.get<PaginatedResponse<PersonalTag>>("/api/tags"),
   });
 
-  const wallets = walletsQuery.data?.data ?? (Array.isArray(walletsQuery.data) ? walletsQuery.data as Wallet[] : []);
+  const wallets = normalizePaginatedData<Wallet>(walletsQuery.data);
   const totalBalanceUsd = wallets.reduce(
     (sum, w) => sum + parseFloat(w.balanceUsd || w.balance || "0"), 0
   );
@@ -116,8 +117,8 @@ export function useDashboardScreen() {
 
   const topCategories = categoryBreakdownQuery.data?.items ?? [];
   const recentTransactions = transactionsQuery.data?.data ?? [];
-  const categories = categoriesQuery.data?.data ?? (Array.isArray(categoriesQuery.data) ? categoriesQuery.data as Category[] : []);
-  const budgets = budgetsQuery.data?.data ?? (Array.isArray(budgetsQuery.data) ? budgetsQuery.data as Budget[] : []);
+  const categories = normalizePaginatedData<Category>(categoriesQuery.data);
+  const budgets = normalizePaginatedData<Budget>(budgetsQuery.data);
 
   const categoryMap = useMemo(() => {
     const map: Record<number, Category> = {};
@@ -131,7 +132,7 @@ export function useDashboardScreen() {
     return map;
   }, [budgets]);
 
-  const tags = tagsQuery.data ?? [];
+  const tags = normalizePaginatedData<PersonalTag>(tagsQuery.data);
   const tagMap = useMemo(() => {
     const map: Record<number, PersonalTag> = {};
     tags.forEach((t) => { map[t.id] = t; });

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { TagCard } from '@/components/tags/tag-card';
 import { CreateTagDialog } from '@/components/tags/create-tag-dialog';
 import { Plus, Loader2 } from 'lucide-react';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, selectData } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import type { PersonalTag } from '@shared/schema';
 import {
@@ -35,8 +35,9 @@ export default function TagsSettingsPage() {
   const [deletingTag, setDeletingTag] = useState<PersonalTag | null>(null);
   const { t } = useTranslation();
   
-  const { data: tags = [], isLoading } = useQuery<PersonalTag[]>({
+  const { data: tags = [], isLoading } = useQuery({
     queryKey: ['/api/tags'],
+    select: (data: unknown) => selectData<PersonalTag>(data),
   });
   
   const { data: tagStats = {} } = useQuery<Record<number, { transactionCount: number; totalSpent: number }>>({

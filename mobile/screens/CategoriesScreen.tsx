@@ -11,6 +11,8 @@ import { ThemedText } from "../components/ThemedText";
 import { Card, CardContent } from "../components/Card";
 import { Button } from "../components/Button";
 import { Badge } from "../components/Badge";
+import { ConfirmModal } from "../components/ConfirmModal";
+import { QueryErrorBanner } from "../components/QueryErrorBanner";
 import { useTheme } from "../hooks/useTheme";
 import { useCategoriesScreen } from "../hooks/useCategoriesScreen";
 import { styles } from "./styles/categoriesStyles";
@@ -21,8 +23,9 @@ export default function CategoriesScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const {
-    navigation, isLoading, isRefetching, refetch,
+    navigation, isLoading, isRefetching, isError, refetch,
     incomeCategories, expenseCategories, handleDelete, handlePress,
+    categoryToDelete, confirmDelete, cancelDelete,
   } = useCategoriesScreen();
 
   if (isLoading) {
@@ -76,6 +79,13 @@ export default function CategoriesScreen() {
           icon={<Feather name="plus" size={14} color={theme.primaryForeground} />}
         />
       </View>
+      {isError && (
+        <QueryErrorBanner
+          message={t("categories.load_error")}
+          onRetry={() => refetch()}
+          retryLabel={t("common.retry")}
+        />
+      )}
       <View style={styles.section}>
         <ThemedText type="h4" style={styles.sectionHeading}>{t("categories.income")}</ThemedText>
         {incomeCategories.length > 0 ? (
@@ -100,6 +110,16 @@ export default function CategoriesScreen() {
           </Card>
         )}
       </View>
+      <ConfirmModal
+        visible={categoryToDelete !== null}
+        title={t("common.delete_confirm_title")}
+        message={t("common.delete_confirm_message")}
+        confirmLabel={t("button.delete")}
+        cancelLabel={t("button.cancel")}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+        destructive
+      />
     </ScrollView>
   );
 }

@@ -8,6 +8,7 @@ import { queryClient } from "./lib/query-client";
 import RootStackNavigator from "./navigation/RootStackNavigator";
 import { ThemeProvider, useThemeProvider, useTheme } from "./hooks/useTheme";
 import { LanguageProvider } from "./i18n";
+import { ToastProvider } from "./components/Toast";
 
 function AppContent() {
   const { isDark } = useTheme();
@@ -30,7 +31,9 @@ export default function App() {
           <SafeAreaProvider>
             <QueryClientProvider client={queryClient}>
               <NavigationContainer>
-                <AppContent />
+                <ToastProvider>
+                  <AppContent />
+                </ToastProvider>
               </NavigationContainer>
             </QueryClientProvider>
           </SafeAreaProvider>

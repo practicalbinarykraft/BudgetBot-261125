@@ -1,8 +1,10 @@
 /**
  * Voice Parse Routes
  *
- * Combines audio transcription (Whisper) + AI parsing (DeepSeek/Claude)
- * for structured transaction extraction from voice input
+ * Combines audio transcription (Whisper) + deterministic parsing + AI parsing (DeepSeek)
+ * for structured transaction extraction from voice input.
+ *
+ * Currency & amount are detected deterministically (regex) — LLM only fills gaps.
  */
 
 import { Router } from "express";
@@ -10,6 +12,12 @@ import { withAuth } from "../../middleware/auth-utils";
 import { getApiKey } from "../../services/api-key-manager";
 import { chargeCredits } from "../../services/billing.service";
 import { parseTransactionWithDeepSeek } from "../../services/deepseek.service";
+import {
+  detectCurrencyFromText,
+  extractAmountFromText,
+  cleanDescription,
+  detectTypeFromText,
+} from "../../services/voice-parse-utils";
 import { BillingError } from "../../types/billing";
 import { getErrorMessage } from "../../lib/errors";
 import { settingsRepository } from "../../repositories/settings.repository";
@@ -36,31 +44,6 @@ interface ParsedTransaction {
   confidence: 'high' | 'medium' | 'low';
 }
 
-/**
- * POST /api/ai/voice-parse
- *
- * Transcribe audio and parse into structured transaction data
- *
- * Body:
- * - audioBase64: Base64-encoded audio data
- * - mimeType: Audio MIME type (audio/webm, audio/ogg, audio/wav)
- * - language?: Optional language code ('en' or 'ru')
- *
- * Response:
- * {
- *   success: true,
- *   transcription: "Пицца 50 000 рупий",
- *   parsed: {
- *     amount: "50000",
- *     currency: "IDR",
- *     description: "Пицца",
- *     category: "Food & Dining",
- *     type: "expense",
- *     confidence: "high"
- *   },
- *   creditsUsed: 2
- * }
- */
 router.post("/voice-parse", withAuth(async (req, res) => {
   let tempFilePath: string | null = null;
 
@@ -69,10 +52,7 @@ router.post("/voice-parse", withAuth(async (req, res) => {
     const userId = Number(req.user.id);
 
     if (!audioBase64) {
-      return res.status(400).json({
-        success: false,
-        error: "audioBase64 is required"
-      });
+      return res.status(400).json({ success: false, error: "audioBase64 is required" });
     }
 
     // Get user's preferred currency
@@ -86,9 +66,7 @@ router.post("/voice-parse", withAuth(async (req, res) => {
     } catch (error) {
       if (error instanceof BillingError && error.code === 'INSUFFICIENT_CREDITS') {
         return res.status(402).json({
-          success: false,
-          error: "Insufficient credits for voice transcription",
-          code: "INSUFFICIENT_CREDITS"
+          success: false, error: "Insufficient credits", code: "INSUFFICIENT_CREDITS"
         });
       }
       throw error;
@@ -96,34 +74,26 @@ router.post("/voice-parse", withAuth(async (req, res) => {
 
     // ========== STEP 2: Decode and save audio file ==========
     const audioBuffer = Buffer.from(audioBase64, 'base64');
-    
-    // Определяем расширение файла согласно mimeType (поддержка iOS форматов)
-    let extension = 'wav'; // fallback
+
+    let extension = 'wav';
     if (mimeType) {
       if (mimeType.includes('mp4') || mimeType.includes('m4a') || mimeType.includes('aac')) {
-        extension = 'm4a'; // iOS использует m4a для audio/mp4, audio/m4a и audio/aac
+        extension = 'm4a';
       } else if (mimeType.includes('webm')) {
         extension = 'webm';
       } else if (mimeType.includes('ogg')) {
         extension = 'ogg';
       } else if (mimeType.includes('mp3')) {
         extension = 'mp3';
-      } else if (mimeType.includes('wav')) {
-        extension = 'wav';
       }
     }
-    
+
     tempFilePath = path.join(tmpdir(), `voice_web_${Date.now()}.${extension}`);
     await fsp.writeFile(tempFilePath, audioBuffer);
 
-    // Логирование согласно ТЗ: mimeType, filename, size, userAgent
-    const userAgent = req.headers['user-agent'] || 'unknown';
-    console.log(`📁 [User ${userId}] Saved audio file:`, {
-      filename: tempFilePath,
-      size: `${audioBuffer.length} bytes (${Math.round(audioBuffer.length / 1024)}KB)`,
-      mimeType: mimeType || 'unknown',
-      extension,
-      userAgent: userAgent.substring(0, 100), // Ограничиваем длину
+    console.log(`📁 [User ${userId}] Saved audio:`, {
+      size: `${Math.round(audioBuffer.length / 1024)}KB`,
+      mimeType: mimeType || 'unknown', extension,
     });
 
     // ========== STEP 3: Transcribe with Whisper ==========
@@ -140,169 +110,94 @@ router.post("/voice-parse", withAuth(async (req, res) => {
       });
       transcription = typeof result === 'string' ? result : String(result);
       transcription = transcription.trim();
-
       console.log(`🎤 [User ${userId}] Transcription: "${transcription}"`);
     } catch (error: any) {
       console.error(`❌ [User ${userId}] Whisper error:`, error);
-
-      // Handle specific OpenAI errors
       if (error?.status === 401) {
-        return res.status(401).json({
-          success: false,
-          error: "Invalid OpenAI API key",
-          code: "INVALID_API_KEY"
-        });
+        return res.status(401).json({ success: false, error: "Invalid OpenAI API key", code: "INVALID_API_KEY" });
       }
-
-      return res.status(500).json({
-        success: false,
-        error: "Failed to transcribe audio",
-        details: getErrorMessage(error)
-      });
+      return res.status(500).json({ success: false, error: "Failed to transcribe audio", details: getErrorMessage(error) });
     }
 
     // Charge for transcription
     let creditsUsed = 0;
     if (whisperApiKey.shouldCharge) {
-      const durationEstimate = Math.max(audioBuffer.length / 16000, 1); // Rough estimate
-      await chargeCredits(
-        userId,
-        'voice_transcription',
-        whisperApiKey.provider,
-        { input: Math.ceil(durationEstimate * 100), output: 0 },
-        whisperApiKey.billingMode === 'free'
-      );
+      const durationEstimate = Math.max(audioBuffer.length / 16000, 1);
+      await chargeCredits(userId, 'voice_transcription', whisperApiKey.provider,
+        { input: Math.ceil(durationEstimate * 100), output: 0 }, whisperApiKey.billingMode === 'free');
       creditsUsed += 1;
     }
 
-    // ========== STEP 4: Parse with AI (DeepSeek - 12x cheaper) ==========
+    // ========== STEP 4: Deterministic parsing (regex) ==========
+    const detectedCurrency = detectCurrencyFromText(transcription);
+    const detectedAmount = extractAmountFromText(transcription);
+    const detectedDescription = cleanDescription(transcription);
+    const detectedType = detectTypeFromText(transcription);
+
+    console.log(`🔍 [User ${userId}] Deterministic:`, {
+      currency: detectedCurrency, amount: detectedAmount,
+      description: detectedDescription, type: detectedType,
+    });
+
+    // ========== STEP 5: AI parsing (fills gaps: category, better description) ==========
     let parsed: ParsedTransaction;
 
     try {
-      // Get API key for parsing (uses DeepSeek by default - much cheaper)
       const parseApiKey = await getApiKey(userId, 'voice_normalization');
-
-      const parseResult = await parseTransactionWithDeepSeek(
-        parseApiKey.key,
-        transcription,
-        userCurrency
-      );
+      const parseResult = await parseTransactionWithDeepSeek(parseApiKey.key, transcription, userCurrency);
 
       parsed = {
-        amount: String(parseResult.amount || 0),
-        currency: parseResult.currency || userCurrency,
-        description: parseResult.description || transcription,
+        // Deterministic values OVERRIDE LLM when available
+        amount: String(detectedAmount ?? parseResult.amount ?? 0),
+        currency: detectedCurrency || parseResult.currency || userCurrency,
+        description: detectedDescription || parseResult.description || transcription,
         category: parseResult.category,
-        type: 'expense', // Default to expense
-        confidence: parseResult.amount > 0 ? 'high' : 'low',
+        type: detectedType,
+        confidence: (detectedAmount && detectedAmount > 0) ? 'high' : (parseResult.amount > 0 ? 'medium' : 'low'),
       };
 
-      // Detect income keywords
-      const incomeKeywords = /получил|зарплата|доход|income|salary|received|earned/i;
-      if (incomeKeywords.test(transcription)) {
-        parsed.type = 'income';
-      }
-
-      // Charge for parsing
       if (parseApiKey.shouldCharge) {
-        await chargeCredits(
-          userId,
-          'voice_normalization',
-          parseApiKey.provider,
-          { input: transcription.length * 4, output: 200 },
-          parseApiKey.billingMode === 'free'
-        );
+        await chargeCredits(userId, 'voice_normalization', parseApiKey.provider,
+          { input: transcription.length * 4, output: 200 }, parseApiKey.billingMode === 'free');
         creditsUsed += 1;
       }
 
-      console.log(`✅ [User ${userId}] Parsed:`, parsed);
-
     } catch (parseError) {
-      console.error(`⚠️ [User ${userId}] Parse error, using fallback:`, parseError);
-
-      // Fallback: use transcription as description, try to extract amount
-      const amountMatch = transcription.match(/(\d+[\s.,]?\d*)/);
-      const amount = amountMatch ? amountMatch[1].replace(/\s/g, '').replace(',', '.') : '0';
+      console.error(`⚠️ [User ${userId}] LLM parse failed, using deterministic only:`, parseError);
 
       parsed = {
-        amount,
-        currency: userCurrency,
-        description: transcription,
-        type: 'expense',
-        confidence: 'low',
+        amount: String(detectedAmount ?? 0),
+        currency: detectedCurrency || userCurrency,
+        description: detectedDescription || transcription,
+        type: detectedType,
+        confidence: detectedAmount ? 'medium' : 'low',
       };
     }
 
-    // ========== STEP 5: Return result ==========
-    res.json({
-      success: true,
-      transcription,
-      parsed,
-      creditsUsed,
-    });
+    console.log(`✅ [User ${userId}] Final parsed:`, parsed);
+
+    // ========== STEP 6: Return result ==========
+    res.json({ success: true, transcription, parsed, creditsUsed });
 
   } catch (error: unknown) {
     console.error("💥 Voice parse error:", error);
-    
-    // Более детальная обработка ошибок для отладки
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const errorStack = error instanceof Error ? error.stack : undefined;
-    
-    console.error("Error details:", {
-      message: errorMessage,
-      stack: errorStack?.substring(0, 500), // Ограничиваем длину стека
-      userId: req.user?.id,
-      hasAudioBase64: !!req.body?.audioBase64
-    });
-    
-    // Если это известная ошибка - возвращаем её код
     if (error instanceof BillingError) {
-      return res.status(402).json({
-        success: false,
-        error: error.message,
-        code: error.code
-      });
+      return res.status(402).json({ success: false, error: error.message, code: error.code });
     }
-    
+    const errorMessage = error instanceof Error ? error.message : String(error);
     res.status(500).json({
-      success: false,
-      error: "Failed to process voice input",
-      details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+      success: false, error: "Failed to process voice input",
+      details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
     });
   } finally {
-    // Cleanup temp file
     if (tempFilePath) {
-      try {
-        await fsp.unlink(tempFilePath);
-      } catch (e) {
-        console.error("Failed to cleanup temp file:", e);
-      }
+      fsp.unlink(tempFilePath).catch(() => {});
     }
   }
 }));
 
 /**
- * POST /api/ai/parse-text
- *
- * Parse plain text into structured transaction data using AI
- * Used as fallback when local parsing fails
- *
- * Body:
- * - text: Plain text to parse (e.g., "вчера потратил на такси триста рублей")
- *
- * Response:
- * {
- *   success: true,
- *   parsed: {
- *     amount: "300",
- *     currency: "RUB",
- *     description: "Такси",
- *     category: "Transport",
- *     type: "expense",
- *     confidence: "high"
- *   },
- *   creditsUsed: 1
- * }
+ * POST /api/ai/parse-text — same logic for text input
  */
 router.post("/parse-text", withAuth(async (req, res) => {
   try {
@@ -310,103 +205,63 @@ router.post("/parse-text", withAuth(async (req, res) => {
     const userId = Number(req.user.id);
 
     if (!text || typeof text !== 'string') {
-      return res.status(400).json({
-        success: false,
-        error: "text is required"
-      });
+      return res.status(400).json({ success: false, error: "text is required" });
     }
 
-    // Get user's preferred currency
     const userSettings = await settingsRepository.getSettingsByUserId(userId);
     const userCurrency = userSettings?.currency || 'USD';
 
-    // Get API key for parsing
+    // Deterministic first
+    const detectedCurrency = detectCurrencyFromText(text);
+    const detectedAmount = extractAmountFromText(text);
+    const detectedDescription = cleanDescription(text);
+    const detectedType = detectTypeFromText(text);
+
     let parseApiKey;
     try {
       parseApiKey = await getApiKey(userId, 'voice_normalization');
     } catch (error) {
       if (error instanceof BillingError && error.code === 'INSUFFICIENT_CREDITS') {
-        return res.status(402).json({
-          success: false,
-          error: "Insufficient credits for AI parsing",
-          code: "INSUFFICIENT_CREDITS"
-        });
+        return res.status(402).json({ success: false, error: "Insufficient credits", code: "INSUFFICIENT_CREDITS" });
       }
       throw error;
     }
 
-    // Parse with DeepSeek
     let parsed: ParsedTransaction;
     let creditsUsed = 0;
 
     try {
-      const parseResult = await parseTransactionWithDeepSeek(
-        parseApiKey.key,
-        text,
-        userCurrency
-      );
+      const parseResult = await parseTransactionWithDeepSeek(parseApiKey.key, text, userCurrency);
 
       parsed = {
-        amount: String(parseResult.amount || 0),
-        currency: parseResult.currency || userCurrency,
-        description: parseResult.description || text,
+        amount: String(detectedAmount ?? parseResult.amount ?? 0),
+        currency: detectedCurrency || parseResult.currency || userCurrency,
+        description: detectedDescription || parseResult.description || text,
         category: parseResult.category,
-        type: 'expense',
-        confidence: parseResult.amount > 0 ? 'high' : 'low',
+        type: detectedType,
+        confidence: (detectedAmount && detectedAmount > 0) ? 'high' : (parseResult.amount > 0 ? 'medium' : 'low'),
       };
 
-      // Detect income keywords
-      const incomeKeywords = /получил|зарплата|доход|income|salary|received|earned/i;
-      if (incomeKeywords.test(text)) {
-        parsed.type = 'income';
-      }
-
-      // Charge for parsing
       if (parseApiKey.shouldCharge) {
-        await chargeCredits(
-          userId,
-          'voice_normalization',
-          parseApiKey.provider,
-          { input: text.length * 4, output: 200 },
-          parseApiKey.billingMode === 'free'
-        );
+        await chargeCredits(userId, 'voice_normalization', parseApiKey.provider,
+          { input: text.length * 4, output: 200 }, parseApiKey.billingMode === 'free');
         creditsUsed = 1;
       }
-
-      console.log(`✅ [User ${userId}] AI parsed text:`, parsed);
-
     } catch (parseError) {
       console.error(`⚠️ [User ${userId}] AI parse error:`, parseError);
-
-      // Return error - local parsing should be used as fallback on client
-      return res.status(500).json({
-        success: false,
-        error: "AI parsing failed",
-        details: getErrorMessage(parseError)
-      });
+      return res.status(500).json({ success: false, error: "AI parsing failed", details: getErrorMessage(parseError) });
     }
 
-    res.json({
-      success: true,
-      parsed,
-      creditsUsed,
-    });
+    res.json({ success: true, parsed, creditsUsed });
 
   } catch (error: unknown) {
     console.error("💥 Parse text error:", error);
-
     if (error instanceof BillingError) {
-      return res.status(402).json({
-        success: false,
-        error: error.message,
-        code: error.code
-      });
+      return res.status(402).json({ success: false, error: error.message, code: error.code });
     }
-
     res.status(500).json({
-      success: false,
-      error: "Failed to parse text",
-      details: process.env.NODE_ENV === 'development' ? getErrorMessage(error) : undefined
+      success: false, error: "Failed to parse text",
+      details: process.env.NODE_ENV === 'development' ? getErrorMessage(error) : undefined,
     });
   }
 }));

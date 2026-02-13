@@ -22,7 +22,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, selectData } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/i18n/context";
 import { useTranslateCategory } from "@/lib/category-translations";
@@ -58,14 +58,16 @@ export function EditTransactionDialog({ transaction, open, onOpenChange }: EditT
 
   type FormData = z.infer<typeof formSchema>;
 
-  const { data: categories = [] } = useQuery<Category[]>({
+  const { data: categories = [] } = useQuery({
     queryKey: ["/api/categories"],
     enabled: open,
+    select: (data: unknown) => selectData<Category>(data),
   });
 
-  const { data: tags = [] } = useQuery<PersonalTag[]>({
+  const { data: tags = [] } = useQuery({
     queryKey: ["/api/tags"],
     enabled: open,
+    select: (data: unknown) => selectData<PersonalTag>(data),
   });
 
   const form = useForm<FormData>({

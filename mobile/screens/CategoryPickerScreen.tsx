@@ -9,6 +9,7 @@ import { Button } from "../components/Button";
 import { useTheme } from "../hooks/useTheme";
 import { useTranslation } from "../i18n";
 import { api } from "../lib/api-client";
+import { normalizePaginatedData, categoriesQueryKey } from "../lib/query-client";
 import { Spacing, BorderRadius } from "../constants/theme";
 import type { Category, PaginatedResponse } from "../types";
 
@@ -22,11 +23,11 @@ export default function CategoryPickerScreen() {
   const categoryType = route.params.type;
 
   const categoriesQuery = useQuery({
-    queryKey: ["categories"],
-    queryFn: () => api.get<PaginatedResponse<Category>>("/api/categories"),
+    queryKey: categoriesQueryKey(),
+    queryFn: () => api.get<PaginatedResponse<Category>>("/api/categories?limit=100"),
   });
 
-  const categories = (categoriesQuery.data?.data || []).filter(
+  const categories = normalizePaginatedData<Category>(categoriesQuery.data).filter(
     (c) => c.type === categoryType,
   );
 

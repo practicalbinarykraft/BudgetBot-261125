@@ -106,17 +106,18 @@ router.get("/", withAuth(async (req, res) => {
     // If not in cache, get from database
     const result = await storage.getWalletsByUserId(Number(req.user.id), filters);
 
-    // Prepare response
-    const response = filters.limit !== undefined || filters.offset !== undefined
-      ? {
-          data: result.wallets,
-          pagination: {
-            total: result.total,
-            limit: filters.limit,
-            offset: filters.offset || 0,
-          },
-        }
-      : result.wallets; // Backward compatibility: return array if no pagination params
+    // Unified response: always { data, pagination }
+    const effectiveLimit = filters.limit ?? 100;
+    const effectiveOffset = filters.offset ?? 0;
+    const response = {
+      data: result.wallets,
+      pagination: {
+        total: result.total,
+        limit: effectiveLimit,
+        offset: effectiveOffset,
+        hasMore: effectiveOffset + result.wallets.length < result.total,
+      },
+    };
 
     // Store in cache for 30 minutes
     await cache.set(cacheKey, response, CACHE_TTL.LONG);
@@ -169,8 +170,8 @@ router.post("/", withAuth(async (req, res) => {
       req,
     });
 
-    // Invalidate cache
-    await cache.del(`wallets:user:${Number(req.user.id)}`);
+    // Invalidate cache (pattern: keys include :limit: and :offset: suffixes)
+    await cache.delPattern(`wallets:user:${Number(req.user.id)}:*`);
 
     res.json(wallet);
   } catch (error: unknown) {
@@ -218,8 +219,8 @@ router.patch("/:id", withAuth(async (req, res) => {
       req,
     });
 
-    // Invalidate cache
-    await cache.del(`wallets:user:${Number(req.user.id)}`);
+    // Invalidate cache (pattern: keys include :limit: and :offset: suffixes)
+    await cache.delPattern(`wallets:user:${Number(req.user.id)}:*`);
 
     res.json(updated);
   } catch (error: unknown) {
@@ -249,8 +250,8 @@ router.delete("/:id", withAuth(async (req, res) => {
       req,
     });
 
-    // Invalidate cache
-    await cache.del(`wallets:user:${Number(req.user.id)}`);
+    // Invalidate cache (pattern: keys include :limit: and :offset: suffixes)
+    await cache.delPattern(`wallets:user:${Number(req.user.id)}:*`);
 
     res.json({ success: true });
   } catch (error: unknown) {
@@ -291,8 +292,8 @@ router.post("/:id/calibrate", withAuth(async (req, res) => {
       req,
     });
 
-    // Invalidate cache after calibration
-    await cache.del(`wallets:user:${Number(req.user.id)}`);
+    // Invalidate cache after calibration (pattern: keys include :limit: and :offset: suffixes)
+    await cache.delPattern(`wallets:user:${Number(req.user.id)}:*`);
 
     res.json(result);
   } catch (error: unknown) {

@@ -40,7 +40,7 @@ export interface UseFinancialTrendChartOptions {
 }
 
 export function useFinancialTrendChart(options?: UseFinancialTrendChartOptions) {
-  const { language } = useTranslation();
+  const { language, t } = useTranslation();
   const locale = getDateLocale(language);
   const [historyDays, setHistoryDays] = useState<HistoryDays>(options?.initialHistoryDays ?? 30);
   const [showForecast, setShowForecast] = useState(options?.initialShowForecast ?? true);
@@ -72,6 +72,20 @@ export function useFinancialTrendChart(options?: UseFinancialTrendChartOptions) 
     return sampled;
   }, [trendData, historyDays, options?.maxPointsOverride]);
 
+  // Find today's index in sampled data
+  const todayIndex = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    for (let i = 0; i < sampledTrendData.length; i++) {
+      if (sampledTrendData[i].date === todayStr) return i;
+      if (sampledTrendData[i].date > todayStr && i > 0) return i - 1;
+    }
+    // If all data is historical, today is the last point
+    if (sampledTrendData.length > 0 && !sampledTrendData[sampledTrendData.length - 1].isForecast) {
+      return sampledTrendData.length - 1;
+    }
+    return -1;
+  }, [sampledTrendData]);
+
   const { incomeData, expenseData, capitalData, xLabels } = useMemo(() => {
     if (sampledTrendData.length === 0) {
       return { incomeData: [], expenseData: [], capitalData: [], xLabels: [] };
@@ -80,13 +94,26 @@ export function useFinancialTrendChart(options?: UseFinancialTrendChartOptions) 
     const labelInterval = Math.max(1, Math.floor(sampledTrendData.length / 5));
     const lastIdx = sampledTrendData.length - 1;
 
-    const income = sampledTrendData.map((p, i) => ({
-      value: p.income,
-      date: formatChartDate(p.date, locale),
-      isForecast: !!p.isForecast,
-      label: i % labelInterval === 0 || i === lastIdx ? formatChartDate(p.date, locale) : "",
-      showDataPoint: false,
-    }));
+    const income = sampledTrendData.map((p, i) => {
+      const isToday = i === todayIndex;
+      return {
+        value: p.income,
+        date: formatChartDate(p.date, locale),
+        isForecast: !!p.isForecast,
+        label: isToday
+          ? t("common.today")
+          : i % labelInterval === 0 || i === lastIdx
+            ? formatChartDate(p.date, locale)
+            : "",
+        labelTextStyle: isToday
+          ? { color: '#64748b', fontSize: 9, fontWeight: '700' as const }
+          : undefined,
+        showDataPoint: false,
+        showVerticalLine: isToday,
+        verticalLineColor: '#94a3b8',
+        verticalLineThickness: 1.5,
+      };
+    });
 
     const expense = sampledTrendData.map((p) => ({
       value: p.expense,
@@ -106,7 +133,7 @@ export function useFinancialTrendChart(options?: UseFinancialTrendChartOptions) 
       capitalData: capital,
       xLabels: labels,
     };
-  }, [sampledTrendData, locale]);
+  }, [sampledTrendData, locale, todayIndex, t]);
 
   const forecastSummary = useMemo(() => {
     if (trendData.length === 0) return null;
@@ -138,6 +165,7 @@ export function useFinancialTrendChart(options?: UseFinancialTrendChartOptions) 
     expenseData,
     capitalData,
     xLabels,
+    todayIndex,
     forecastSummary,
     isLoading,
     hasData,

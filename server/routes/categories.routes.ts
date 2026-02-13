@@ -54,17 +54,18 @@ router.get("/", withAuth(async (req, res) => {
     // If not in cache, get from database
     const result = await storage.getCategoriesByUserId(userId, filters);
 
-    // Prepare response
-    const response = filters.limit !== undefined || filters.offset !== undefined
-      ? {
-          data: result.categories,
-          pagination: {
-            total: result.total,
-            limit: filters.limit,
-            offset: filters.offset || 0,
-          },
-        }
-      : result.categories; // Backward compatibility: return array if no pagination params
+    // Always return unified { data, pagination } shape
+    const effectiveLimit = filters.limit ?? 100;
+    const effectiveOffset = filters.offset ?? 0;
+    const response = {
+      data: result.categories,
+      pagination: {
+        total: result.total,
+        limit: effectiveLimit,
+        offset: effectiveOffset,
+        hasMore: effectiveOffset + result.categories.length < result.total,
+      },
+    };
 
     // Store in cache for 30 minutes
     await cache.set(cacheKey, response, CACHE_TTL.LONG);
@@ -84,8 +85,8 @@ router.post("/", withAuth(async (req, res) => {
     });
     const category = await storage.createCategory(data);
 
-    // Invalidate cache
-    await cache.del(`categories:user:${Number(req.user.id)}`);
+    // Invalidate all cached category queries for this user
+    await cache.delPattern(`categories:user:${Number(req.user.id)}:*`);
 
     res.json(category);
   } catch (error: unknown) {
@@ -138,8 +139,8 @@ router.patch("/:id", withAuth(async (req, res) => {
 
     const updated = await storage.updateCategory(id, updateData);
 
-    // Invalidate cache
-    await cache.del(`categories:user:${userId}`);
+    // Invalidate all cached category queries for this user
+    await cache.delPattern(`categories:user:${userId}:*`);
 
     res.json(updated);
   } catch (error: unknown) {
@@ -157,8 +158,8 @@ router.delete("/:id", withAuth(async (req, res) => {
     }
     await storage.deleteCategory(id);
 
-    // Invalidate cache
-    await cache.del(`categories:user:${Number(req.user.id)}`);
+    // Invalidate all cached category queries for this user
+    await cache.delPattern(`categories:user:${Number(req.user.id)}:*`);
 
     res.json({ success: true });
   } catch (error: unknown) {

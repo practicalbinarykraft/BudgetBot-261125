@@ -48,6 +48,7 @@ export function useAuth() {
 
   const login = useCallback(async (email: string, password: string) => {
     const data = await authService.login(email, password);
+    queryClient.removeQueries();
     setUser(data.user);
     setIsAuthenticated(true);
     return data;
@@ -56,6 +57,7 @@ export function useAuth() {
   const register = useCallback(
     async (name: string, email: string, password: string) => {
       const data = await authService.register(name, email, password);
+      queryClient.removeQueries();
       setUser(data.user);
       setIsAuthenticated(true);
       return data;

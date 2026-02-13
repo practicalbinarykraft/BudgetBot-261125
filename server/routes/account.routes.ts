@@ -96,8 +96,8 @@ router.post("/reset", withAuth(async (req, res) => {
       req,
     });
 
-    // Invalidate caches
-    await cache.del(`wallets:user:${userId}`);
+    // Invalidate caches (pattern: keys include :limit: and :offset: suffixes)
+    await cache.delPattern(`wallets:user:${userId}:*`);
 
     res.json({
       success: true,

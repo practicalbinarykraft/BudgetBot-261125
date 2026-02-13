@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, selectData } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/i18n";
 import { Trash2, Plus, AlertTriangle } from "lucide-react";
@@ -56,9 +56,10 @@ export function CategoryManagerDialog({ open, onOpenChange, type }: CategoryMana
   });
 
   // Fetch all categories
-  const { data: allCategories = [] } = useQuery<Category[]>({
+  const { data: allCategories = [] } = useQuery({
     queryKey: ["/api/categories"],
     enabled: open,
+    select: (data: unknown) => selectData<Category>(data),
   });
 
   // Filter categories for assets

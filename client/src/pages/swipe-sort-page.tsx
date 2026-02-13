@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, selectData } from "@/lib/queryClient";
 import { useState, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -47,14 +47,16 @@ export default function SwipeSortPage() {
   
   const unsortedTransactions = unsortedData?.transactions ?? [];
 
-  const { data: categories } = useQuery<Category[]>({
+  const { data: categories } = useQuery({
     queryKey: ['/api/categories'],
     enabled: !!user,
+    select: (data: unknown) => selectData<Category>(data),
   });
 
-  const { data: tags } = useQuery<PersonalTag[]>({
+  const { data: tags } = useQuery({
     queryKey: ['/api/tags'],
     enabled: !!user,
+    select: (data: unknown) => selectData<PersonalTag>(data),
   });
 
   const { data: trainingStats } = useQuery<TrainingStats>({

@@ -81,20 +81,27 @@ export async function parseTransactionWithDeepSeek(
 }> {
 
   const systemPrompt = `You are a transaction parser. Extract amount, currency, and description from user's text.
-User's default currency: ${userCurrency}
+User's default currency (use ONLY if no currency is mentioned in text): ${userCurrency}
 
 Rules:
-- Extract numeric amount (handle text numbers like "триста" = 300)
-- Detect currency (₽/RUB, $/USD, Rp/IDR, etc.)
-- Extract short description
+- Extract numeric amount (handle text numbers like "триста" = 300, "пятьсот" = 500)
+- ALWAYS detect currency from text first: рублей/руб/₽ = RUB, долларов/$ = USD, рупий/Rp = IDR, евро/€ = EUR, вон/₩ = KRW, юаней/¥ = CNY
+- Only use default currency if NO currency is mentioned at all
+- Extract short description (the item/service name)
 - Respond ONLY with JSON: {"amount": number, "currency": "CODE", "description": "text", "category": "optional"}
 
 Examples:
+Input: "шашлык 500 рублей"
+Output: {"amount": 500, "currency": "RUB", "description": "шашлык", "category": "Food & Drinks"}
+
 Input: "купил кофе за триста рублей"
 Output: {"amount": 300, "currency": "RUB", "description": "кофе", "category": "Food & Drinks"}
 
 Input: "spent 50 dollars on groceries"
-Output: {"amount": 50, "currency": "USD", "description": "groceries", "category": "Food & Drinks"}`;
+Output: {"amount": 50, "currency": "USD", "description": "groceries", "category": "Food & Drinks"}
+
+Input: "такси 200"
+Output: {"amount": 200, "currency": "${userCurrency}", "description": "такси", "category": "Transport"}`;
 
   const response = await callDeepSeek(
     apiKey,

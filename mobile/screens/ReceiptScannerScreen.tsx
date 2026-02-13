@@ -21,6 +21,7 @@ export default function ReceiptScannerScreen() {
     result,
     scanMutation,
     scanError,
+    canRetry,
     scanningPhrase,
     receiptCurrency,
     setReceiptCurrency,
@@ -28,6 +29,7 @@ export default function ReceiptScannerScreen() {
     scanImages,
     removeImage,
     clearImages,
+    goManual,
   } = useReceiptScannerScreen();
 
   useLayoutEffect(() => {
@@ -186,6 +188,25 @@ export default function ReceiptScannerScreen() {
             <ThemedText type="small" color="#b91c1c">
               {scanError}
             </ThemedText>
+            <View style={styles.buttonRow}>
+              {canRetry ? (
+                <Button
+                  title={t("receipt.retry")}
+                  size="sm"
+                  onPress={scanImages}
+                  icon={<Feather name="refresh-cw" size={14} color="#ffffff" />}
+                  style={styles.halfBtn}
+                />
+              ) : null}
+              <Button
+                title={t("receipt.enter_manually")}
+                variant="outline"
+                size="sm"
+                onPress={goManual}
+                icon={<Feather name="edit" size={14} color={theme.text} />}
+                style={styles.halfBtn}
+              />
+            </View>
           </View>
         </View>
       ) : null}

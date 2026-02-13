@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from "react";
-import { View, StyleSheet, Pressable } from "react-native";
+import React, { useState, useMemo, useRef, useCallback } from "react";
+import { View, StyleSheet, Pressable, LayoutRectangle } from "react-native";
 import { LineChart } from "react-native-gifted-charts";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "./ThemedText";
@@ -17,12 +17,30 @@ import { ChartLegend } from "./financial-trend-chart/ChartLegend";
 import { WishlistChartMarkerDot } from "./wishlist/WishlistChartMarker";
 import { WishlistMarkerSheet } from "./wishlist/WishlistMarkerSheet";
 import { useTranslation } from "../i18n";
+import { computeTooltipPosition } from "./financial-trend-chart/tooltipPosition";
 import type { WishlistChartMarker } from "../hooks/useWishlistChart";
+
+/* ── Constants ─────────────────────────────────────────── */
+
+const CHART_HEIGHT = 200;
+const TOOLTIP_W = 150;
+const TOOLTIP_H = 90;
+const TAIL_SIZE = 8;
+const Y_AXIS_WIDTH = 48; // approximate y-axis label width
+
+/* ── Types ─────────────────────────────────────────────── */
 
 interface Props {
   wishlistMarkers?: WishlistChartMarker[];
   onFullscreen?: (params: { historyDays: number; showForecast: boolean }) => void;
 }
+
+interface PointerState {
+  index: number;
+  items: Array<{ value: number; date?: string; isForecast?: boolean }>;
+}
+
+/* ── Component ─────────────────────────────────────────── */
 
 export default function FinancialTrendChart({ wishlistMarkers, onFullscreen }: Props) {
   const { theme } = useTheme();
@@ -43,7 +61,25 @@ export default function FinancialTrendChart({ wishlistMarkers, onFullscreen }: P
     hasData,
   } = useFinancialTrendChart();
 
-  // Build marker index set for quick lookup
+  /* ── Pointer / tooltip overlay state ─────────────────── */
+  const [activePointer, setActivePointer] = useState<PointerState | null>(null);
+  const [chartLayout, setChartLayout] = useState<LayoutRectangle | null>(null);
+  const pointerIndexRef = useRef(-1);
+  const vanishTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const handleChartLayout = useCallback(
+    (e: { nativeEvent: { layout: LayoutRectangle } }) => {
+      setChartLayout(e.nativeEvent.layout);
+    },
+    [],
+  );
+
+  const clearPointer = useCallback(() => {
+    setActivePointer(null);
+    pointerIndexRef.current = -1;
+  }, []);
+
+  /* ── Wishlist markers ────────────────────────────────── */
   const markerMap = useMemo(() => {
     const map = new Map<number, WishlistChartMarker>();
     if (wishlistMarkers) {
@@ -52,7 +88,6 @@ export default function FinancialTrendChart({ wishlistMarkers, onFullscreen }: P
     return map;
   }, [wishlistMarkers]);
 
-  // Apply showDataPoint + customDataPoint to capital line at marker indices
   const capitalDataWithMarkers = useMemo(() => {
     if (markerMap.size === 0) return capitalData;
     return capitalData.map((point, i) => {
@@ -61,7 +96,7 @@ export default function FinancialTrendChart({ wishlistMarkers, onFullscreen }: P
       return {
         ...point,
         showDataPoint: true,
-        dataPointRadius: 0, // hide default dot, we render custom
+        dataPointRadius: 0,
         customDataPoint: () => (
           <WishlistChartMarkerDot marker={marker} onPress={setSelectedMarker} />
         ),
@@ -69,7 +104,6 @@ export default function FinancialTrendChart({ wishlistMarkers, onFullscreen }: P
     });
   }, [capitalData, markerMap]);
 
-  // Y-axis scale: account for ALL datasets (library auto-scales to data1 only)
   const maxValue = useMemo(() => {
     let max = 0;
     for (const p of incomeData) max = Math.max(max, p.value);
@@ -78,7 +112,6 @@ export default function FinancialTrendChart({ wishlistMarkers, onFullscreen }: P
     return max > 0 ? Math.ceil(max * 1.05) : undefined;
   }, [incomeData, expenseData, capitalData]);
 
-  // Find wishlist goal name for tooltip enrichment
   const getMarkerLabel = (index: number): string | null => {
     const marker = markerMap.get(index);
     if (!marker) return null;
@@ -88,6 +121,22 @@ export default function FinancialTrendChart({ wishlistMarkers, onFullscreen }: P
     return t("chart.goals_on_date").replace("{count}", String(marker.items.length));
   };
 
+  /* ── Tooltip position (absolute in chart area) ───────── */
+  const chartDataWidth = screenWidth - 40;
+
+  const tooltipPos = useMemo(() => {
+    if (!activePointer) return null;
+    return computeTooltipPosition({
+      pointerIndex: activePointer.index,
+      pointsCount: incomeData.length,
+      chartWidth: chartDataWidth,
+      chartHeight: CHART_HEIGHT,
+      tooltipWidth: TOOLTIP_W,
+      tooltipHeight: TOOLTIP_H,
+    });
+  }, [activePointer, incomeData.length, chartDataWidth]);
+
+  /* ── Render ──────────────────────────────────────────── */
   return (
     <Card>
       <CardHeader>
@@ -139,13 +188,20 @@ export default function FinancialTrendChart({ wishlistMarkers, onFullscreen }: P
             </ThemedText>
           </View>
         ) : (
-          <View style={styles.chartContainer}>
+          <View
+            style={styles.chartContainer}
+            onLayout={handleChartLayout}
+            onTouchEnd={() => {
+              clearTimeout(vanishTimerRef.current);
+              vanishTimerRef.current = setTimeout(clearPointer, 250);
+            }}
+          >
             <LineChart
               data={incomeData}
               data2={expenseData}
               data3={capitalDataWithMarkers}
-              width={screenWidth - 40}
-              height={200}
+              width={chartDataWidth}
+              height={CHART_HEIGHT}
               color1={CHART_COLORS.income}
               color2={CHART_COLORS.expense}
               color3={CHART_COLORS.capital}
@@ -177,36 +233,87 @@ export default function FinancialTrendChart({ wishlistMarkers, onFullscreen }: P
                 pointerStripWidth: 1,
                 pointerColor: theme.primary,
                 radius: 4,
-                pointerLabelWidth: 160,
-                pointerLabelHeight: 110,
-                pointerLabelComponent: (items: Array<{ value: number; date?: string; isForecast?: boolean }>, secondaryDataItem: any, pointerIndex: number) => {
-                  const date = items[0]?.date ?? "";
-                  const forecast = items[0]?.isForecast;
-                  const goalLabel = getMarkerLabel(pointerIndex);
-                  return (
-                    <View style={[styles.tooltip, { backgroundColor: theme.card, borderColor: theme.border }]}>
-                      <ThemedText type="small" style={styles.tooltipDate}>
-                        {date + (forecast ? ` (${t("chart.forecast_label")})` : "")}
-                      </ThemedText>
-                      <ThemedText type="small" color={CHART_COLORS.income}>
-                        {t("chart.income_short") + ": " + formatCompact(items[0]?.value ?? 0)}
-                      </ThemedText>
-                      <ThemedText type="small" color={CHART_COLORS.expense}>
-                        {t("chart.expense_short") + ": " + formatCompact(items[1]?.value ?? 0)}
-                      </ThemedText>
-                      <ThemedText type="small" color={CHART_COLORS.capital}>
-                        {t("chart.capital_short") + ": " + formatCompact(items[2]?.value ?? 0)}
-                      </ThemedText>
-                      {goalLabel ? (
-                        <ThemedText type="small" color={theme.primary} style={styles.bold}>
-                          {goalLabel}
-                        </ThemedText>
-                      ) : null}
-                    </View>
-                  );
+                pointerLabelWidth: 1,
+                pointerLabelHeight: 1,
+                autoAdjustPointerLabelPosition: true,
+                pointerLabelComponent: (
+                  items: Array<{ value: number; date?: string; isForecast?: boolean }>,
+                  _secondaryDataItem: unknown,
+                  pointerIndex: number,
+                ) => {
+                  // Capture pointer state for our overlay tooltip
+                  if (pointerIndexRef.current !== pointerIndex) {
+                    pointerIndexRef.current = pointerIndex;
+                    // Schedule state update outside of render cycle
+                    requestAnimationFrame(() =>
+                      setActivePointer({ index: pointerIndex, items }),
+                    );
+                  }
+                  // Reset vanish timer while pointer is active
+                  clearTimeout(vanishTimerRef.current);
+                  vanishTimerRef.current = setTimeout(clearPointer, 400);
+                  // Return invisible placeholder (library requires a return value)
+                  return <View />;
                 },
               }}
             />
+
+            {/* ── Comic-bubble tooltip overlay ─────────── */}
+            {activePointer && tooltipPos && (
+              <View
+                pointerEvents="none"
+                style={[
+                  styles.tooltipOverlay,
+                  {
+                    left: Y_AXIS_WIDTH + tooltipPos.left,
+                    top: tooltipPos.top,
+                  },
+                ]}
+              >
+                {/* Tail pointing toward the pointer line */}
+                <View
+                  style={
+                    tooltipPos.side === "right"
+                      ? [styles.tailLeft, { borderRightColor: theme.card }]
+                      : [styles.tailRight, { borderLeftColor: theme.card }]
+                  }
+                />
+                {/* Tooltip body */}
+                <View
+                  style={[
+                    styles.tooltipBody,
+                    { backgroundColor: theme.card, borderColor: theme.border },
+                  ]}
+                >
+                  <ThemedText type="small" style={styles.tooltipDate}>
+                    {(activePointer.items[0]?.date ?? "") +
+                      (activePointer.items[0]?.isForecast
+                        ? ` (${t("chart.forecast_label")})`
+                        : "")}
+                  </ThemedText>
+                  <ThemedText type="small" color={CHART_COLORS.income}>
+                    {t("chart.income_short") +
+                      ": " +
+                      formatCompact(activePointer.items[0]?.value ?? 0)}
+                  </ThemedText>
+                  <ThemedText type="small" color={CHART_COLORS.expense}>
+                    {t("chart.expense_short") +
+                      ": " +
+                      formatCompact(activePointer.items[1]?.value ?? 0)}
+                  </ThemedText>
+                  <ThemedText type="small" color={CHART_COLORS.capital}>
+                    {t("chart.capital_short") +
+                      ": " +
+                      formatCompact(activePointer.items[2]?.value ?? 0)}
+                  </ThemedText>
+                  {getMarkerLabel(activePointer.index) ? (
+                    <ThemedText type="small" color={theme.primary} style={styles.bold}>
+                      {getMarkerLabel(activePointer.index)}
+                    </ThemedText>
+                  ) : null}
+                </View>
+              </View>
+            )}
           </View>
         )}
 
@@ -222,6 +329,8 @@ export default function FinancialTrendChart({ wishlistMarkers, onFullscreen }: P
     </Card>
   );
 }
+
+/* ── Styles ─────────────────────────────────────────────── */
 
 const styles = StyleSheet.create({
   titleRow: {
@@ -240,16 +349,55 @@ const styles = StyleSheet.create({
   },
   chartContainer: {
     marginHorizontal: -Spacing.sm,
+    position: "relative",
   },
-  tooltip: {
+
+  /* ── Tooltip overlay ────────────────────────────────── */
+  tooltipOverlay: {
+    position: "absolute",
+    flexDirection: "row",
+    alignItems: "center",
+    zIndex: 10,
+  },
+  tooltipBody: {
     padding: Spacing.sm,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     gap: 2,
-    minWidth: 140,
+    minWidth: 130,
+    // subtle shadow
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
   },
   tooltipDate: {
     fontWeight: "600",
     marginBottom: 2,
+  },
+
+  /* ── Comic tail (CSS triangle via borders) ──────────── */
+  tailLeft: {
+    width: 0,
+    height: 0,
+    borderTopWidth: TAIL_SIZE,
+    borderBottomWidth: TAIL_SIZE,
+    borderRightWidth: TAIL_SIZE + 2,
+    borderTopColor: "transparent",
+    borderBottomColor: "transparent",
+    borderRightColor: "transparent", // overridden inline
+    marginRight: -1, // overlap border
+  },
+  tailRight: {
+    width: 0,
+    height: 0,
+    borderTopWidth: TAIL_SIZE,
+    borderBottomWidth: TAIL_SIZE,
+    borderLeftWidth: TAIL_SIZE + 2,
+    borderTopColor: "transparent",
+    borderBottomColor: "transparent",
+    borderLeftColor: "transparent", // overridden inline
+    marginLeft: -1, // overlap border
   },
 });

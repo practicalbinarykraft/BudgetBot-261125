@@ -10,6 +10,7 @@ import { ru, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/i18n";
 import { useQuery } from "@tanstack/react-query";
+import { selectData } from "@/lib/queryClient";
 import { useTranslateCategory } from "@/lib/category-translations";
 import { calculateBudgetProgress } from "@/lib/budget-helpers";
 
@@ -82,22 +83,22 @@ export function TransactionList({ transactions, onDelete, onEdit, showDelete = f
   const translateCategory = useTranslateCategory();
   
   // Fetch tags for displaying personal tags
-  const { data: tagsResponse } = useQuery<PersonalTag[] | { data: PersonalTag[] }>({
+  const { data: tags = [] } = useQuery({
     queryKey: ["/api/tags"],
+    select: (data: unknown) => selectData<PersonalTag>(data),
   });
-  const tags = Array.isArray(tagsResponse) ? tagsResponse : (tagsResponse?.data || []);
   
   // Fetch categories for displaying category names
-  const { data: categoriesResponse } = useQuery<Category[] | { data: Category[] }>({
+  const { data: categories = [] } = useQuery({
     queryKey: ["/api/categories"],
+    select: (data: unknown) => selectData<Category>(data),
   });
-  const categories = Array.isArray(categoriesResponse) ? categoriesResponse : (categoriesResponse?.data || []);
   
   // Fetch budgets for displaying budget limits
-  const { data: budgetsResponse } = useQuery<Budget[] | { data: Budget[] }>({
+  const { data: budgets = [] } = useQuery({
     queryKey: ["/api/budgets"],
+    select: (data: unknown) => selectData<Budget>(data),
   });
-  const budgets = Array.isArray(budgetsResponse) ? budgetsResponse : (budgetsResponse?.data || []);
   
   // Helper to get category for transaction
   const getCategoryForTransaction = (transaction: Transaction): Category | undefined => {

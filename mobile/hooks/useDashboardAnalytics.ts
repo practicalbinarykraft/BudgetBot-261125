@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
+import { normalizePaginatedData, categoriesQueryKey } from "../lib/query-client";
 import {
   type DateFilterValue,
   type StatsResponse,
@@ -49,8 +50,8 @@ export function useDashboardAnalytics() {
   });
 
   const categoriesQuery = useQuery({
-    queryKey: ["categories"],
-    queryFn: () => api.get<PaginatedResponse<Category>>("/api/categories"),
+    queryKey: categoriesQueryKey(),
+    queryFn: () => api.get<PaginatedResponse<Category>>("/api/categories?limit=100"),
   });
 
   const limitsQuery = useQuery({
@@ -60,12 +61,12 @@ export function useDashboardAnalytics() {
 
   const tagsQuery = useQuery({
     queryKey: ["tags"],
-    queryFn: () => api.get<PersonalTag[]>("/api/tags"),
+    queryFn: () => api.get<PaginatedResponse<PersonalTag>>("/api/tags"),
   });
 
   const wallets = walletsQuery.data?.data || [];
   const transactions = transactionsQuery.data?.data || [];
-  const categories = categoriesQuery.data?.data || [];
+  const categories = normalizePaginatedData<Category>(categoriesQuery.data);
   const stats = statsQuery.data;
   const limits = limitsQuery.data || [];
 
@@ -85,7 +86,7 @@ export function useDashboardAnalytics() {
     return map;
   }, [categories]);
 
-  const tags = tagsQuery.data ?? [];
+  const tags = normalizePaginatedData<PersonalTag>(tagsQuery.data);
   const tagMap = useMemo(() => {
     const map: Record<number, PersonalTag> = {};
     tags.forEach((t) => { map[t.id] = t; });

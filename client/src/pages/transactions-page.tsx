@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar, Tag, FolderOpen, ArrowUpDown, Check } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, selectData } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -100,14 +100,16 @@ export default function TransactionsPage() {
   }, [showFiltersPopover]);
 
   // Загружаем категории и теги для отображения названий фильтров
-  const { data: categories = [] } = useQuery<Category[]>({
+  const { data: categories = [] } = useQuery({
     queryKey: ["/api/categories"],
     enabled: !!user,
+    select: (data: unknown) => selectData<Category>(data),
   });
 
-  const { data: tags = [] } = useQuery<PersonalTag[]>({
+  const { data: tags = [] } = useQuery({
     queryKey: ["/api/tags"],
     enabled: !!user,
+    select: (data: unknown) => selectData<PersonalTag>(data),
   });
 
   // Формируем URL с фильтрами

@@ -19,8 +19,8 @@ import { useTheme } from "../hooks/useTheme";
 import { useTranslation } from "../i18n";
 import { getDateLocale } from "../lib/date-locale";
 import { api } from "../lib/api-client";
-import { queryClient } from "../lib/query-client";
-import type { Recurring } from "../types";
+import { queryClient, normalizePaginatedData } from "../lib/query-client";
+import type { Recurring, PaginatedResponse } from "../types";
 import { styles } from "./RecurringScreen.styles";
 
 const FREQUENCY_KEYS: Record<string, string> = {
@@ -38,10 +38,10 @@ export default function RecurringScreen() {
 
   const recurringQuery = useQuery({
     queryKey: ["recurring"],
-    queryFn: () => api.get<Recurring[]>("/api/recurring"),
+    queryFn: () => api.get<PaginatedResponse<Recurring>>("/api/recurring"),
   });
 
-  const recurring = recurringQuery.data || [];
+  const recurring = normalizePaginatedData<Recurring>(recurringQuery.data);
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/api/recurring/${id}`),

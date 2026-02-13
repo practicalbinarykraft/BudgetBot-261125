@@ -402,4 +402,21 @@ export const mobileExtraTranslations: Translations = {
   // Chart UX hints
   "chart.hint_rotate": { en: "Rotate your phone for a bigger chart", ru: "Поверните телефон для увеличения графика" },
   "chart.hint_swipe": { en: "Swipe on the chart to see exact values", ru: "Проведите по графику, чтобы увидеть точные значения" },
+
+  // Confirm modal
+  "common.confirm": { en: "Confirm", ru: "Подтвердить" },
+  "common.delete_confirm_title": { en: "Delete category", ru: "Удалить категорию" },
+  "common.delete_confirm_message": { en: "Are you sure? This cannot be undone.", ru: "Вы уверены? Это действие нельзя отменить." },
+
+  // Categories error UI
+  "categories.load_error": { en: "Failed to load categories", ru: "Не удалось загрузить категории" },
+  "common.retry": { en: "Retry", ru: "Повторить" },
+
+  // Receipt error classification
+  "receipt.error_network": { en: "Connection error. Check your internet.", ru: "Ошибка соединения. Проверьте интернет." },
+  "receipt.error_timeout": { en: "Server took too long. Try again.", ru: "Сервер не ответил вовремя. Попробуйте снова." },
+  "receipt.error_server": { en: "Server error. Try again later.", ru: "Ошибка сервера. Попробуйте позже." },
+  "receipt.error_unknown": { en: "Something went wrong.", ru: "Что-то пошло не так." },
+  "receipt.retry": { en: "Retry", ru: "Повторить" },
+  "receipt.enter_manually": { en: "Enter manually", ru: "Ввести вручную" },
 };

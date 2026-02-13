@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus } from "lucide-react";
 import { AddTransactionDialog } from "@/components/transactions/add-transaction-dialog";
 import { EditTransactionDialog } from "@/components/transactions/edit-transaction-dialog";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, selectData } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,8 +34,9 @@ export default function TagDetailPage() {
   const queryClient = useQueryClient();
 
   // Load all tags to find the current one
-  const { data: tags = [], isLoading: isLoadingTags } = useQuery<PersonalTag[]>({
+  const { data: tags = [], isLoading: isLoadingTags } = useQuery({
     queryKey: ["/api/tags"],
+    select: (data: unknown) => selectData<PersonalTag>(data),
   });
 
   // Load tag stats

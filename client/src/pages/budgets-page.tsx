@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertBudgetSchema } from "@shared/schema";
 import { z } from "zod";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, selectData } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -33,12 +33,14 @@ export default function BudgetsPage() {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
 
-  const { data: budgets = [], isLoading: budgetsLoading } = useQuery<Budget[]>({
+  const { data: budgets = [], isLoading: budgetsLoading } = useQuery({
     queryKey: ["/api/budgets"],
+    select: (data: unknown) => selectData<Budget>(data),
   });
 
-  const { data: categories = [], isLoading: categoriesLoading } = useQuery<Category[]>({
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
     queryKey: ["/api/categories"],
+    select: (data: unknown) => selectData<Category>(data),
   });
 
   const { data: transactionsResponse } = useQuery<{

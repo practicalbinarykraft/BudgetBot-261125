@@ -9,7 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, selectData } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "@/i18n/context";
@@ -89,14 +89,16 @@ export function AddTransactionDialog({
 
   type FormData = z.infer<typeof formSchema>;
 
-  const { data: categories = [] } = useQuery<Category[]>({
+  const { data: categories = [] } = useQuery({
     queryKey: ["/api/categories"],
     enabled: open,
+    select: (data: unknown) => selectData<Category>(data),
   });
 
-  const { data: tags = [] } = useQuery<PersonalTag[]>({
+  const { data: tags = [] } = useQuery({
     queryKey: ["/api/tags"],
     enabled: open,
+    select: (data: unknown) => selectData<PersonalTag>(data),
   });
 
   const form = useForm<FormData>({

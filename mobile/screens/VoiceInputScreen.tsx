@@ -13,7 +13,6 @@ import { Spacing } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
 import { useTranslation } from "../i18n";
 import { useVoiceInputScreen } from "../hooks/useVoiceInputScreen";
-import { VoiceResultCard } from "../components/voice-input/VoiceResultCard";
 
 export default function VoiceInputScreen() {
   const { theme } = useTheme();
@@ -79,22 +78,6 @@ export default function VoiceInputScreen() {
             </ThemedText>
           </CardContent>
         </Card>
-      ) : null}
-
-      {/* Result */}
-      {h.result ? (
-        <VoiceResultCard
-          result={h.result}
-          onCreateTransaction={() => {
-            (h.navigation as any).navigate("AddTransaction", {
-              prefill: {
-                amount: String(h.result!.parsed.amount),
-                description: h.result!.parsed.description,
-                type: h.result!.parsed.type,
-              },
-            } as never);
-          }}
-        />
       ) : null}
     </ScrollView>
   );

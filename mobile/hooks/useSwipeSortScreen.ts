@@ -4,8 +4,8 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
-import { queryClient } from "../lib/query-client";
-import type { Transaction, Category } from "../types";
+import { queryClient, normalizePaginatedData, categoriesQueryKey } from "../lib/query-client";
+import type { Transaction, Category, PaginatedResponse } from "../types";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const SWIPE_THRESHOLD = 120;
@@ -42,13 +42,13 @@ export function useSwipeSortScreen() {
   });
 
   const categoriesQuery = useQuery({
-    queryKey: ["categories"],
-    queryFn: () => api.get<{ data: Category[] }>("/api/categories"),
+    queryKey: categoriesQueryKey(),
+    queryFn: () => api.get<PaginatedResponse<Category>>("/api/categories?limit=100"),
   });
 
   const unsortedTransactions = unsortedQuery.data?.transactions ?? [];
   const stats = statsQuery.data;
-  const categories = categoriesQuery.data?.data ?? [];
+  const categories = normalizePaginatedData<Category>(categoriesQuery.data);
 
   const categoryMap = useMemo(() => {
     const map: Record<number, Category> = {};
