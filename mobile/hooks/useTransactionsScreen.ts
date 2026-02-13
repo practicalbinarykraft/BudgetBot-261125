@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
+import { normalizePaginatedData, categoriesQueryKey } from "../lib/query-client";
 import { buildFilterBadges } from "../components/transactions/buildFilterBadges";
 import type { Transaction, Category, PersonalTag, PaginatedResponse } from "../types";
 
@@ -59,16 +60,16 @@ export function useTransactionsScreen() {
   const [filters, setFilters] = useState<TransactionFilters>(emptyFilters);
 
   const categoriesQuery = useQuery({
-    queryKey: ["categories"],
-    queryFn: () => api.get<PaginatedResponse<Category>>("/api/categories"),
+    queryKey: categoriesQueryKey(),
+    queryFn: () => api.get<PaginatedResponse<Category>>("/api/categories?limit=100"),
   });
-  const categories = categoriesQuery.data?.data || [];
+  const categories = normalizePaginatedData<Category>(categoriesQuery.data);
 
   const tagsQuery = useQuery({
     queryKey: ["tags"],
-    queryFn: () => api.get<PersonalTag[]>("/api/tags"),
+    queryFn: () => api.get<PaginatedResponse<PersonalTag>>("/api/tags"),
   });
-  const tags = tagsQuery.data || [];
+  const tags = normalizePaginatedData<PersonalTag>(tagsQuery.data);
 
   const transactionsQuery = useQuery({
     queryKey: ["transactions", "list", filters],

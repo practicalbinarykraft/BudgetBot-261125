@@ -97,6 +97,16 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
+/** Extract array from paginated { data: T[] } or plain T[] response. */
+export function selectData<T>(response: unknown): T[] {
+  if (Array.isArray(response)) return response;
+  if (response != null && typeof response === "object" && "data" in response) {
+    const d = (response as Record<string, unknown>).data;
+    if (Array.isArray(d)) return d as T[];
+  }
+  return [];
+}
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

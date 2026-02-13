@@ -99,23 +99,29 @@ export async function calculateTrend(
   // Распаковать структуру {asset, category} в плоский массив
   const assets = assetsRaw.map(item => item.asset);
 
-  // Защита от NaN: нормализовать балансы перед суммированием
+  // Opening balance: сумма opening_balance_usd всех кошельков.
+  // Это якорь для тренда — НЕ зависит от текущего wallet.balanceUsd.
+  // История строится от opening + transactions, а не от "текущий баланс минус транзакции".
+  const openingBalancesTotal = wallets.reduce(
+    (sum, w) => sum + Number((w as any).openingBalanceUsd ?? 0),
+    0
+  );
+
+  // currentWalletsBalance нужен только для forecast/goals (не для исторического тренда)
   const currentWalletsBalance = wallets.reduce(
     (sum, w) => sum + Number(w.balanceUsd ?? 0),
     0
   );
-  
+
   // Рассчитать чистую стоимость активов (assets - liabilities)
-  // Используем Number() вместо parseFloat для безопасного приведения типов
   const currentAssetsValue = assets
     .filter(a => a.type === 'asset')
     .reduce((sum, a) => sum + Number(a.currentValue ?? 0), 0);
-    
+
   const currentLiabilitiesValue = assets
     .filter(a => a.type === 'liability')
     .reduce((sum, a) => sum + Number(a.currentValue ?? 0), 0);
-    
-  // Рассчитать чистую стоимость активов с учётом фильтров
+
   let currentAssetsNet = 0;
   if (includeAssetValue) {
     currentAssetsNet += currentAssetsValue;
@@ -123,8 +129,7 @@ export async function calculateTrend(
   if (includeLiabilityValue) {
     currentAssetsNet -= currentLiabilitiesValue;
   }
-  
-  // Полный капитал = кошельки + активы (опционально) - пассивы (опционально)
+
   const currentCapital = currentWalletsBalance + currentAssetsNet;
 
   // ШАГ 2: Рассчитать исторические данные
@@ -139,43 +144,39 @@ export async function calculateTrend(
   // ШАГ 3: Сделать income/expense накопительными (плавные линии!)
   const historicalCumulative = makeCumulative(historicalData);
 
-  // ШАГ 3.5: Рассчитать capital с учётом баланса кошельков
-  // Вычислить баланс кошельков на начало периода (до любых транзакций в периоде)
-  // walletsAtStart = currentWalletsBalance - (cumulative income до сегодня - cumulative expense до сегодня)
-  let walletsBalanceAtPeriodStart: number;
-  
-  if (historicalCumulative.length > 0) {
-    const lastPoint = historicalCumulative[historicalCumulative.length - 1];
-    // Вычесть кумулятивную разницу (доход - расход) от текущего баланса
-    walletsBalanceAtPeriodStart = currentWalletsBalance - (lastPoint.income - lastPoint.expense);
-  } else {
-    // Если нет исторических данных, используем текущий баланс
-    walletsBalanceAtPeriodStart = currentWalletsBalance;
-  }
-  
-  // Capital для каждого дня = баланс кошельков на начало периода + cumulative income - cumulative expense + assetsNet
-  // AssetsNet теперь ДИНАМИЧЕН - рассчитывается для каждой даты с учётом роста/падения/платежей
+  // ШАГ 3.5: Рассчитать capital на основе opening balances + транзакции.
+  //
+  // НОВАЯ МОДЕЛЬ: capital НЕ якорится от текущего wallet.balanceUsd.
+  // base = sum(openingBalanceUsd) — фиксированный якорь, не меняется при правке баланса.
+  // capital[day] = base + cumulativeIncome[day] - cumulativeExpense[day] + assetsNet[day]
+  //
+  // Чтобы учесть транзакции ДО начала периода (historyDays), нужно сосчитать
+  // net-эффект всех транзакций до historyStart и добавить к openingBalancesTotal.
+  const allTransactionsNetBeforePeriod = transactions
+    .filter(t => t.date < historyStartStr)
+    .reduce((sum, t) => {
+      const usd = parseFloat(t.amountUsd as unknown as string) || 0;
+      return sum + (t.type === 'income' ? usd : -usd);
+    }, 0);
+
+  const walletsBalanceAtPeriodStart = openingBalancesTotal + allTransactionsNetBeforePeriod;
+
   historicalCumulative.forEach(point => {
     const pointDate = new Date(point.date);
     let totalAssetsValue = 0;
     let totalLiabilitiesValue = 0;
-    
-    // Рассчитать стоимость каждого актива/обязательства на эту дату
+
     for (const item of assetsRaw) {
       const asset = item.asset;
-      
       if (asset.type === 'asset' && includeAssetValue) {
-        // Актив (квартира, машина) - растёт или падает
         const value = assetValueCalculator.calculateValueAtDate(asset, pointDate);
         totalAssetsValue += value;
       } else if (asset.type === 'liability' && includeLiabilityValue) {
-        // Обязательство (кредит) - уменьшается с платежами
         const value = liabilityCalculator.calculateValueAtDate(asset, pointDate);
-        totalLiabilitiesValue += value; // Уже отрицательное!
+        totalLiabilitiesValue += value;
       }
     }
-    
-    // Чистая стоимость = активы + обязательства (обязательства отрицательные)
+
     point.assetsNet = totalAssetsValue + totalLiabilitiesValue;
     point.capital = walletsBalanceAtPeriodStart + point.income - point.expense + point.assetsNet;
   });
@@ -188,6 +189,7 @@ export async function calculateTrend(
     forecastDays,
     currentWalletsBalance,
     walletsBalanceAtPeriodStart,
+    openingBalancesTotal,
     currentAssetsNet,
     assetsRaw,
     historicalCumulative,
@@ -220,6 +222,7 @@ async function generateAndProcessForecast(params: {
   forecastDays: number;
   currentWalletsBalance: number;
   walletsBalanceAtPeriodStart: number;
+  openingBalancesTotal: number;
   currentAssetsNet: number;
   assetsRaw: Array<{ asset: any; category: any }>;
   historicalCumulative: TrendDataPoint[];
@@ -247,6 +250,7 @@ async function generateAndProcessForecast(params: {
     forecastDays,
     currentWalletsBalance,
     walletsBalanceAtPeriodStart,
+    openingBalancesTotal,
     currentAssetsNet,
     assetsRaw,
     historicalCumulative,
@@ -523,7 +527,7 @@ async function generateAndProcessForecast(params: {
         }
 
         point.assetsNet = totalAssetsValue + totalLiabilitiesValue;
-        point.capital = currentWalletsBalance + point.income - point.expense + point.assetsNet;
+        point.capital = openingBalancesTotal + point.income - point.expense + point.assetsNet;
       });
     }
 

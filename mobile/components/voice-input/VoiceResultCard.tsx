@@ -43,7 +43,7 @@ export function VoiceResultCard({ result, onCreateTransaction }: VoiceResultCard
               {t("voice_input.parsed_transaction")}
             </ThemedText>
             <Badge
-              label={result.parsed.confidence}
+              label={t(`voice_input.confidence_${result.parsed.confidence}`)}
               variant={
                 result.parsed.confidence === "high"
                   ? "default"
@@ -60,7 +60,7 @@ export function VoiceResultCard({ result, onCreateTransaction }: VoiceResultCard
               {t("common.type")}
             </ThemedText>
             <Badge
-              label={result.parsed.type}
+              label={result.parsed.type === "income" ? t("transactions.type.income") : t("transactions.type.expense")}
               variant={
                 result.parsed.type === "income" ? "default" : "destructive"
               }

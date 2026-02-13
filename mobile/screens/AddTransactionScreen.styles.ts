@@ -16,10 +16,19 @@ export const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.full, borderWidth: 1,
   },
-  quickInputRow: { flexDirection: "row", gap: Spacing.md, marginBottom: Spacing.xl },
+  quickInputCol: { alignItems: "center", marginBottom: Spacing.xl },
+  quickInputRow: { flexDirection: "row", gap: Spacing.md, width: "100%" },
+  quickBtnWrap: { flex: 1 },
   quickBtn: {
     flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: Spacing.sm, paddingVertical: Spacing.md, borderRadius: BorderRadius.md, borderWidth: 1,
+  },
+  suggestionBox: {
+    padding: Spacing.md, borderRadius: BorderRadius.md, borderWidth: 1,
+    marginBottom: Spacing.xl, gap: Spacing.sm,
+  },
+  suggestionHeader: {
+    flexDirection: "row", alignItems: "center", gap: Spacing.xs,
   },
   submitBtn: { marginTop: Spacing.lg },
 });

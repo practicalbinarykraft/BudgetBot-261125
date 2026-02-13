@@ -14,8 +14,10 @@ import { Spacing, BorderRadius } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
 import { useTranslation } from "../i18n";
 import { useWishlistScreen } from "../hooks/useWishlistScreen";
+import { useWishlistReorder } from "../hooks/useWishlistReorder";
 import type { SortOption } from "../hooks/useWishlistScreen";
 import { WishlistCard } from "../components/wishlist/WishlistCard";
+import { WishlistReorderList } from "../components/wishlist/WishlistReorderList";
 import type { WishlistItem } from "../types";
 
 export default function WishlistScreen() {
@@ -34,10 +36,47 @@ export default function WishlistScreen() {
     handleTogglePurchased,
   } = useWishlistScreen();
 
+  const {
+    isReorderMode,
+    setReorderMode,
+    reorderItems,
+    handleDragEnd,
+    saveOrder,
+    cancelReorder,
+    isSaving,
+  } = useWishlistReorder(items);
+
   if (isLoading) {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
         <ActivityIndicator size="large" color={theme.primary} />
+      </View>
+    );
+  }
+
+  // Reorder mode
+  if (isReorderMode) {
+    return (
+      <View style={[styles.flex, { backgroundColor: theme.background }]}>
+        <View style={styles.reorderHeader}>
+          <ThemedText type="h3" style={styles.bold}>{t("wishlist.reorder")}</ThemedText>
+          <View style={styles.reorderActions}>
+            <Button
+              title={t("common.cancel")}
+              variant="outline"
+              size="sm"
+              onPress={cancelReorder}
+            />
+            <Button
+              title={isSaving ? t("common.loading") : t("common.save")}
+              size="sm"
+              onPress={saveOrder}
+              loading={isSaving}
+              disabled={isSaving}
+            />
+          </View>
+        </View>
+        <WishlistReorderList items={reorderItems} onDragEnd={handleDragEnd} />
       </View>
     );
   }
@@ -72,12 +111,22 @@ export default function WishlistScreen() {
                 {t("wishlist.manage")}
               </ThemedText>
             </View>
-            <Button
-              title={t("wishlist.add")}
-              size="sm"
-              onPress={() => navigation.navigate("AddWishlist")}
-              icon={<Feather name="plus" size={14} color={theme.primaryForeground} />}
-            />
+            <View style={styles.headerActions}>
+              {items.length > 1 ? (
+                <Pressable
+                  onPress={() => setReorderMode(true)}
+                  style={[styles.reorderBtn, { borderColor: theme.border }]}
+                >
+                  <Feather name="move" size={16} color={theme.textSecondary} />
+                </Pressable>
+              ) : null}
+              <Button
+                title={t("wishlist.add")}
+                size="sm"
+                onPress={() => navigation.navigate("AddWishlist")}
+                icon={<Feather name="plus" size={14} color={theme.primaryForeground} />}
+              />
+            </View>
           </View>
 
           {items.length > 0 ? (
@@ -140,6 +189,24 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   headerLeft: { flex: 1, gap: Spacing.xs },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: Spacing.sm },
+  reorderBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reorderHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: Spacing.lg,
+    paddingTop: Spacing.xl,
+  },
+  reorderActions: { flexDirection: "row", gap: Spacing.sm },
+  bold: { fontWeight: "600" },
   sortRow: {
     flexDirection: "row",
     alignItems: "center",

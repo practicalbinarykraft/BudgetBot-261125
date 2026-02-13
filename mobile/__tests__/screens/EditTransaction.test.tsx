@@ -19,6 +19,13 @@ jest.mock("../../lib/query-client", () => ({
   queryClient: {
     invalidateQueries: jest.fn(),
   },
+  categoriesQueryKey: (limit = 100) => ["categories", { limit }],
+  normalizePaginatedData: (response: any) => {
+    if (response == null) return [];
+    if (Array.isArray(response)) return response;
+    if (response?.data && Array.isArray(response.data)) return response.data;
+    return [];
+  },
 }));
 
 // Mock navigation

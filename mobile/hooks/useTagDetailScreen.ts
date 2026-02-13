@@ -3,7 +3,7 @@ import { useNavigation, useRoute, type RouteProp } from "@react-navigation/nativ
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
-import { queryClient } from "../lib/query-client";
+import { queryClient, normalizePaginatedData } from "../lib/query-client";
 import { useTranslation } from "../i18n";
 import { getDateLocale } from "../lib/date-locale";
 import type { PersonalTag, Transaction, PaginatedResponse } from "../types";
@@ -40,7 +40,7 @@ export function useTagDetailScreen() {
 
   const tagsQuery = useQuery({
     queryKey: ["tags"],
-    queryFn: () => api.get<PersonalTag[]>("/api/tags"),
+    queryFn: () => api.get<PaginatedResponse<PersonalTag>>("/api/tags"),
   });
 
   const statsQuery = useQuery({
@@ -77,7 +77,7 @@ export function useTagDetailScreen() {
     ]);
   };
 
-  const tags = tagsQuery.data || [];
+  const tags = normalizePaginatedData<PersonalTag>(tagsQuery.data);
   const currentTag = tags.find((t) => t.id === tagId);
   const stats = statsQuery.data || { transactionCount: 0, totalSpent: 0, totalIncome: 0 };
   const transactions = transactionsQuery.data || [];

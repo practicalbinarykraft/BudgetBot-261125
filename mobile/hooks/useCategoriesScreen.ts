@@ -1,17 +1,19 @@
-import { useCallback } from "react";
-import { Alert } from "react-native";
+import { useCallback, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
-import { queryClient } from "../lib/query-client";
+import { queryClient, normalizePaginatedData, categoriesQueryKey } from "../lib/query-client";
+import { useToast } from "../components/Toast";
 import type { Category, PaginatedResponse } from "../types";
 
 export function useCategoriesScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
+  const toast = useToast();
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
 
-  const { data, isLoading, isRefetching, refetch } = useQuery({
-    queryKey: ["categories"],
+  const { data, isLoading, isRefetching, isError, refetch } = useQuery({
+    queryKey: categoriesQueryKey(),
     queryFn: () =>
       api.get<PaginatedResponse<Category>>("/api/categories?limit=100"),
   });
@@ -23,11 +25,11 @@ export function useCategoriesScreen() {
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
     },
     onError: (error: Error) => {
-      Alert.alert("Error", error.message);
+      toast.show(error.message, "error");
     },
   });
 
-  const allCategories = data?.data || [];
+  const allCategories = normalizePaginatedData<Category>(data);
 
   const incomeCategories = allCategories.filter(
     (c) =>
@@ -42,21 +44,21 @@ export function useCategoriesScreen() {
 
   const handleDelete = useCallback(
     (category: Category) => {
-      Alert.alert(
-        "Delete Category",
-        `Delete "${category.name}"? Any budgets linked to this category will also be removed.`,
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Delete",
-            style: "destructive",
-            onPress: () => deleteMutation.mutate(category.id),
-          },
-        ]
-      );
+      setCategoryToDelete(category);
     },
-    [deleteMutation]
+    [],
   );
+
+  const confirmDelete = useCallback(() => {
+    if (categoryToDelete) {
+      deleteMutation.mutate(categoryToDelete.id);
+      setCategoryToDelete(null);
+    }
+  }, [categoryToDelete, deleteMutation]);
+
+  const cancelDelete = useCallback(() => {
+    setCategoryToDelete(null);
+  }, []);
 
   const handlePress = useCallback(
     (category: Category) => {
@@ -69,10 +71,14 @@ export function useCategoriesScreen() {
     navigation,
     isLoading,
     isRefetching,
+    isError,
     refetch,
     incomeCategories,
     expenseCategories,
     handleDelete,
     handlePress,
+    categoryToDelete,
+    confirmDelete,
+    cancelDelete,
   };
 }

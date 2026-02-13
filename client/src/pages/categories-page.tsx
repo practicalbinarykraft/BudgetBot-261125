@@ -12,7 +12,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertCategorySchema } from "@shared/schema";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, selectData } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Badge } from "@/components/ui/badge";
@@ -59,8 +59,9 @@ export default function CategoriesPage() {
   const { t } = useTranslation();
   const translateCategory = useTranslateCategory();
 
-  const { data: categories = [], isLoading } = useQuery<Category[]>({
+  const { data: categories = [], isLoading } = useQuery({
     queryKey: ["/api/categories"],
+    select: (data: unknown) => selectData<Category>(data),
   });
 
   const [selectedIcon, setSelectedIcon] = useState('🍔');

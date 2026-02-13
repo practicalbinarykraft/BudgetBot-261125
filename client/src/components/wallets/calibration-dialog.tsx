@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { selectData } from '@/lib/queryClient';
 import {
   Dialog,
   DialogContent,
@@ -44,9 +45,10 @@ export function CalibrationDialog({ open, onOpenChange }: Props) {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
 
-  const { data: wallets = [], isLoading } = useQuery<Wallet[]>({
+  const { data: wallets = [], isLoading } = useQuery({
     queryKey: ['/api/wallets'],
-    enabled: open
+    enabled: open,
+    select: (data: unknown) => selectData<Wallet>(data),
   });
 
   const [balances, setBalances] = useState<Record<number, string>>({});

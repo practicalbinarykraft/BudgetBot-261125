@@ -1,17 +1,21 @@
 import { useState, useRef } from "react";
 import { Alert, Animated } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Audio } from "expo-av";
 import * as FileSystem from "expo-file-system/legacy";
 import { api } from "../lib/api-client";
+import { fixVoiceParsedResult } from "../lib/voice-parse-utils";
+import { useTranslation } from "../i18n";
 import type { VoiceParsedResult } from "../types";
+import type { RootStackParamList } from "../navigation/RootStackNavigator";
 
 export function useVoiceInputScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { t, language } = useTranslation();
 
   const [isRecording, setIsRecording] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
-  const [result, setResult] = useState<VoiceParsedResult | null>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -41,7 +45,7 @@ export function useVoiceInputScreen() {
     try {
       const { status } = await Audio.requestPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permission Required", "Microphone permission is needed");
+        Alert.alert(t("voice_input.permission_required"), t("voice_input.mic_permission"));
         return;
       }
 
@@ -56,10 +60,9 @@ export function useVoiceInputScreen() {
 
       recordingRef.current = recording;
       setIsRecording(true);
-      setResult(null);
       startPulse();
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to start recording");
+      Alert.alert(t("common.error"), error.message || t("voice_input.error_start"));
     }
   };
 
@@ -76,7 +79,7 @@ export function useVoiceInputScreen() {
       recordingRef.current = null;
 
       if (!uri) {
-        Alert.alert("Error", "No recording found");
+        Alert.alert(t("common.error"), t("voice_input.error_empty"));
         setIsParsing(false);
         return;
       }
@@ -85,18 +88,40 @@ export function useVoiceInputScreen() {
         allowsRecordingIOS: false,
       });
 
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      if (!fileInfo.exists || !("size" in fileInfo) || fileInfo.size === 0) {
+        Alert.alert(t("common.error"), t("voice_input.error_empty"));
+        setIsParsing(false);
+        return;
+      }
+
       const base64 = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
 
       const data = await api.post<VoiceParsedResult>("/api/ai/voice-parse", {
         audioBase64: base64,
-        mimeType: "audio/m4a",
+        mimeType: "audio/mp4",
+        language: language === "ru" ? "ru" : "en",
       });
 
-      setResult(data);
+      // Client-side regex fix — overrides broken server parsing
+      // Detects currency from transcription text (рублей→RUB, долларов→USD etc.)
+      // Cleans description (removes amount + currency words)
+      const fixed = fixVoiceParsedResult(data.parsed, data.transcription);
+
+      navigation.replace("AddTransaction", {
+        prefill: {
+          amount: fixed.amount,
+          description: fixed.description,
+          type: fixed.type,
+          currency: fixed.currency,
+          category: fixed.category,
+        },
+      });
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to process recording");
+      const message = error.message || t("voice_input.error_process");
+      Alert.alert(t("common.error"), message);
     } finally {
       setIsParsing(false);
     }
@@ -113,7 +138,6 @@ export function useVoiceInputScreen() {
   return {
     isRecording,
     isParsing,
-    result,
     pulseAnim,
     handleToggleRecording,
     navigation,

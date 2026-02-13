@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Budget, Category, Transaction } from "@shared/schema";
+import { selectData } from "@/lib/queryClient";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, TrendingDown } from "lucide-react";
 import { Link } from "wouter";
@@ -20,12 +21,14 @@ export function BudgetAlerts() {
   const { t } = useTranslation();
   const translateCategory = useTranslateCategory();
   
-  const { data: budgets = [] } = useQuery<Budget[]>({
+  const { data: budgets = [] } = useQuery({
     queryKey: ["/api/budgets"],
+    select: (data: unknown) => selectData<Budget>(data),
   });
 
-  const { data: categories = [] } = useQuery<Category[]>({
+  const { data: categories = [] } = useQuery({
     queryKey: ["/api/categories"],
+    select: (data: unknown) => selectData<Category>(data),
   });
 
   const { data: transactionsResponse } = useQuery<{

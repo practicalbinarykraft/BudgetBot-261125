@@ -15,6 +15,10 @@ export const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   halfBtn: { flex: 1 },
+  photoHint: {
+    textAlign: "center",
+    paddingHorizontal: Spacing.md,
+  },
   preview: {
     width: "100%",
     height: 200,
@@ -68,6 +72,18 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
   },
   successText: { flex: 1, gap: 2 },
+  currencySection: {
+    gap: Spacing.sm,
+  },
+  currencyRow: {
+    gap: Spacing.sm,
+  },
+  currencyBtn: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+  },
   itemsList: { gap: 0 },
   itemRow: {
     flexDirection: "row",

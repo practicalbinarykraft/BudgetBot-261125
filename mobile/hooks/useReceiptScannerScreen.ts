@@ -1,20 +1,41 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import { useMutation } from "@tanstack/react-query";
+import { useNavigation } from "@react-navigation/native";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
+import { classifyReceiptError } from "../lib/receipt-errors";
 import { useTranslation } from "../i18n";
 import type { ReceiptScanResult } from "../types";
 
 const MAX_IMAGE_WIDTH = 1024;
 const MAX_BASE64_SIZE = 5_000_000; // ~5MB base64 ≈ ~3.7MB image
 
+const SCANNING_PHRASE_KEYS = [
+  "receipts.scan_p1",
+  "receipts.scan_p2",
+  "receipts.scan_p3",
+  "receipts.scan_p4",
+  "receipts.scan_p5",
+  "receipts.scan_p6",
+  "receipts.scan_p7",
+  "receipts.scan_p8",
+  "receipts.scan_p9",
+  "receipts.scan_p10",
+] as const;
+
 export function useReceiptScannerScreen() {
   const { t } = useTranslation();
+  const navigation = useNavigation<any>();
   const [imageUris, setImageUris] = useState<string[]>([]);
   const [result, setResult] = useState<ReceiptScanResult | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [canRetry, setCanRetry] = useState(false);
+  const [scanningPhaseIndex, setScanningPhaseIndex] = useState(0);
+  const [receiptCurrency, setReceiptCurrency] = useState("IDR");
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const scanMutation = useMutation({
     mutationFn: async (base64Images: string[]) =>
@@ -24,20 +45,51 @@ export function useReceiptScannerScreen() {
       }),
     onSuccess: (data) => {
       setResult(data);
+      setScanError(null);
+      setCanRetry(false);
+      setReceiptCurrency(data.receipt?.currency || "IDR");
       queryClient.invalidateQueries({ queryKey: ["product-catalog"] });
-      const merchant = data.receipt?.merchant || "receipt";
-      const count = data.itemsCount || 0;
-      Alert.alert(
-        t("common.success"),
-        t("receipts.found_items")
-          .replace("{count}", String(count))
-          .replace("{merchant}", merchant),
-      );
     },
     onError: (error: Error) => {
-      Alert.alert(t("common.error"), error.message || t("receipts.failed_to_scan"));
+      const classified = classifyReceiptError(error);
+      setScanError(t(classified.messageKey));
+      setCanRetry(classified.canRetry);
     },
   });
+
+  useEffect(() => {
+    if (scanMutation.isPending) {
+      setScanningPhaseIndex(0);
+      intervalRef.current = setInterval(() => {
+        setScanningPhaseIndex((prev) => {
+          const next = prev + 1;
+          if (next >= SCANNING_PHRASE_KEYS.length) {
+            // Stay on last phrase until done
+            if (intervalRef.current) {
+              clearInterval(intervalRef.current);
+              intervalRef.current = null;
+            }
+            return prev;
+          }
+          return next;
+        });
+      }, 3000);
+    } else {
+      setScanningPhaseIndex(0);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [scanMutation.isPending]);
+
+  const scanningPhrase = t(SCANNING_PHRASE_KEYS[scanningPhaseIndex]);
 
   const compressAndEncode = async (uri: string, quality: number): Promise<string> => {
     const resized = await ImageManipulator.manipulateAsync(
@@ -101,15 +153,22 @@ export function useReceiptScannerScreen() {
   const clearImages = () => {
     setImageUris([]);
     setResult(null);
+    setScanError(null);
+    setCanRetry(false);
+  };
+
+  const goManual = () => {
+    navigation.navigate("AddTransaction", {});
   };
 
   const scanImages = async () => {
     if (imageUris.length === 0) return;
+    setScanError(null);
     try {
       const base64Images = await Promise.all(imageUris.map(encodeImage));
       scanMutation.mutate(base64Images);
     } catch (err: any) {
-      Alert.alert(t("common.error"), err?.message || String(err));
+      setScanError(err?.message || String(err));
     }
   };
 
@@ -117,9 +176,15 @@ export function useReceiptScannerScreen() {
     imageUris,
     result,
     scanMutation,
+    scanError,
+    canRetry,
+    scanningPhrase,
+    receiptCurrency,
+    setReceiptCurrency,
     pickImage,
     scanImages,
     removeImage,
     clearImages,
+    goManual,
   };
 }

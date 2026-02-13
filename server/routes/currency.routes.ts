@@ -62,8 +62,8 @@ router.post("/wallets/refresh-rates", withAuth(async (req, res) => {
     
     const updatedWallets = await Promise.all(updates);
 
-    // Invalidate wallets cache since balances were updated
-    await cache.del(`wallets:user:${Number(req.user.id)}`);
+    // Invalidate wallets cache since balances were updated (pattern: keys include :limit: and :offset: suffixes)
+    await cache.delPattern(`wallets:user:${Number(req.user.id)}:*`);
 
     res.json({
       message: "Wallet balances refreshed successfully",

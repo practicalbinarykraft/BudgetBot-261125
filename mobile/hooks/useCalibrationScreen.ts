@@ -4,7 +4,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
-import { queryClient } from "../lib/query-client";
+import { queryClient, normalizePaginatedData } from "../lib/query-client";
 import type { Wallet, PaginatedResponse } from "../types";
 
 export interface WalletPreviewItem {
@@ -41,11 +41,7 @@ export function useCalibrationScreen() {
     queryFn: () => api.get<PaginatedResponse<Wallet>>("/api/wallets?limit=50"),
   });
 
-  const wallets =
-    walletsQuery.data?.data ??
-    (Array.isArray(walletsQuery.data)
-      ? (walletsQuery.data as Wallet[])
-      : []);
+  const wallets = normalizePaginatedData<Wallet>(walletsQuery.data);
 
   const [balances, setBalances] = useState<Record<number, string>>({});
 

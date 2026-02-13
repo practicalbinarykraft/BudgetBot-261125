@@ -53,7 +53,7 @@ import { calculateBudgetProgress, getBudgetPeriodDates } from "@/lib/budget-help
 import { parseISO } from "date-fns";
 import { useTheme } from "@/hooks/use-theme";
 import { parseTransactionText, isParseSuccessful } from "@/lib/parse-transaction-text";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, selectData } from "@/lib/queryClient";
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { CategorySelectDialog, loadSelectedCategories } from "@/components/dashboard/category-select-dialog";
 import { CreditsWidget } from "@/components/credits-widget";
@@ -257,18 +257,21 @@ export default function DashboardV2Page() {
   const allTransactions = allTransactionsResponse?.data || [];
 
   // Fetch categories
-  const { data: categories = [] } = useQuery<Category[]>({
+  const { data: categories = [] } = useQuery({
     queryKey: ['/api/categories'],
+    select: (data: unknown) => selectData<Category>(data),
   });
 
   // Fetch tags
-  const { data: tags = [] } = useQuery<PersonalTag[]>({
+  const { data: tags = [] } = useQuery({
     queryKey: ['/api/tags'],
+    select: (data: unknown) => selectData<PersonalTag>(data),
   });
 
   // Fetch budgets
-  const { data: budgets = [] } = useQuery<Budget[]>({
+  const { data: budgets = [] } = useQuery({
     queryKey: ['/api/budgets'],
+    select: (data: unknown) => selectData<Budget>(data),
   });
 
   const recentTransactions = transactionsResponse?.data || [];

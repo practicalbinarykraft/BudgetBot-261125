@@ -69,6 +69,7 @@ export interface IStorage {
   createWishlist(wishlist: InsertWishlist): Promise<WishlistItem>;
   updateWishlist(id: number, wishlist: Partial<InsertWishlist>): Promise<WishlistItem>;
   deleteWishlist(id: number): Promise<void>;
+  reorderWishlist(userId: number, items: { id: number; sortOrder: number }[]): Promise<void>;
 
   // Planned Transactions
   getPlannedByUserId(userId: number): Promise<PlannedTransaction[]>;
@@ -151,6 +152,7 @@ export class DatabaseStorage implements IStorage {
   createWishlist(wishlist: InsertWishlist) { return wishlistRepository.createWishlist(wishlist); }
   updateWishlist(id: number, wishlist: Partial<InsertWishlist>) { return wishlistRepository.updateWishlist(id, wishlist); }
   deleteWishlist(id: number) { return wishlistRepository.deleteWishlist(id); }
+  reorderWishlist(userId: number, items: { id: number; sortOrder: number }[]) { return wishlistRepository.reorderWishlist(userId, items); }
 
   // Planned Transactions
   getPlannedByUserId(userId: number) { return plannedRepository.getPlannedByUserId(userId); }

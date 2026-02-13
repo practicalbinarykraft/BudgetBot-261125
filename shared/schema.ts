@@ -99,6 +99,10 @@ export const wallets = pgTable("wallets", {
   currency: text("currency").default("USD"),
   // 💱 Multi-currency: auto-converted balance in USD for aggregations
   balanceUsd: decimal("balance_usd", { precision: 10, scale: 2 }),
+  // Opening balance: the wallet's starting balance at creation time.
+  // Used by trend calculator as the anchor instead of currentBalance.
+  openingBalanceUsd: decimal("opening_balance_usd", { precision: 12, scale: 2 }).default("0").notNull(),
+  openingBalanceDate: date("opening_balance_date"),
   isPrimary: integer("is_primary").default(0).notNull(), // 1 for primary wallet, 0 otherwise
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -143,6 +147,7 @@ export const wishlist = pgTable("wishlist", {
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   targetDate: date("target_date"),
   priority: text("priority").default("medium"), // 'low', 'medium', 'high'
+  sortOrder: integer("sort_order").default(0),
   isPurchased: boolean("is_purchased").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

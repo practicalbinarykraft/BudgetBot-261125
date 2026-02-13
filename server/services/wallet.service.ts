@@ -77,6 +77,8 @@ export async function getPrimaryWallet(userId: number) {
       balance: '0',
       currency: 'USD',
       balanceUsd: '0',
+      openingBalanceUsd: '0',
+      openingBalanceDate: new Date().toISOString().split('T')[0],
     })
     .returning();
 

@@ -9,6 +9,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
+import { normalizePaginatedData } from "../lib/query-client";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "../components/ThemedText";
 import { Card, CardHeader, CardContent } from "../components/Card";
@@ -30,7 +31,7 @@ export default function WalletsScreen() {
     queryFn: () => api.get<PaginatedResponse<Wallet>>("/api/wallets?limit=50"),
   });
 
-  const wallets = data?.data ?? (Array.isArray(data) ? (data as Wallet[]) : []);
+  const wallets = normalizePaginatedData<Wallet>(data);
 
   const totalBalanceUsd = wallets.reduce(
     (sum, w) => sum + parseFloat(w.balanceUsd || w.balance || "0"),

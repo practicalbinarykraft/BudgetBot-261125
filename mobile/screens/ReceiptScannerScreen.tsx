@@ -1,5 +1,5 @@
 import React, { useLayoutEffect } from "react";
-import { View, ScrollView, Image, TouchableOpacity } from "react-native";
+import { View, ScrollView, Image, TouchableOpacity, Alert, Pressable, ActivityIndicator } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "../components/ThemedText";
 import { Button } from "../components/Button";
@@ -10,6 +10,8 @@ import { useNavigation } from "@react-navigation/native";
 import { useReceiptScannerScreen } from "../hooks/useReceiptScannerScreen";
 import { styles } from "./styles/receiptScannerStyles";
 
+const CURRENCY_OPTIONS = ["USD", "RUB", "IDR", "EUR", "KRW", "CNY"];
+
 export default function ReceiptScannerScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -18,15 +20,33 @@ export default function ReceiptScannerScreen() {
     imageUris,
     result,
     scanMutation,
+    scanError,
+    canRetry,
+    scanningPhrase,
+    receiptCurrency,
+    setReceiptCurrency,
     pickImage,
     scanImages,
     removeImage,
     clearImages,
+    goManual,
   } = useReceiptScannerScreen();
 
   useLayoutEffect(() => {
     navigation.setOptions({ title: t("nav.receipt_scanner") });
   }, [navigation, t]);
+
+  const handleAddPhoto = () => {
+    Alert.alert(
+      t("receipts.add_photo"),
+      undefined,
+      [
+        { text: t("receipts.take_photo"), onPress: () => pickImage(true) },
+        { text: t("receipts.pick_from_library"), onPress: () => pickImage(false) },
+        { text: t("common.cancel"), style: "cancel" },
+      ],
+    );
+  };
 
   return (
     <ScrollView
@@ -44,23 +64,43 @@ export default function ReceiptScannerScreen() {
         </View>
       </View>
 
-      <View style={styles.buttonRow}>
-        <Button
-          title={t("receipts.take_photo")}
-          onPress={() => pickImage(true)}
-          disabled={scanMutation.isPending}
-          icon={<Feather name="camera" size={16} color="#ffffff" />}
-          style={styles.halfBtn}
-        />
-        <Button
-          title={t("receipts.pick_from_library")}
-          variant="outline"
-          onPress={() => pickImage(false)}
-          disabled={scanMutation.isPending}
-          icon={<Feather name="image" size={16} color={theme.text} />}
-          style={styles.halfBtn}
-        />
-      </View>
+      {imageUris.length === 0 ? (
+        <>
+          <View style={styles.buttonRow}>
+            <Button
+              title={t("receipts.take_photo")}
+              onPress={() => pickImage(true)}
+              disabled={scanMutation.isPending}
+              icon={<Feather name="camera" size={16} color="#ffffff" />}
+              style={styles.halfBtn}
+            />
+            <Button
+              title={t("receipts.pick_from_library")}
+              variant="outline"
+              onPress={() => pickImage(false)}
+              disabled={scanMutation.isPending}
+              icon={<Feather name="image" size={16} color={theme.text} />}
+              style={styles.halfBtn}
+            />
+          </View>
+          <ThemedText type="small" color={theme.textSecondary} style={styles.photoHint}>
+            {t("receipts.photo_hint")}
+          </ThemedText>
+        </>
+      ) : (
+        <>
+          <Button
+            title={t("receipts.add_photo")}
+            variant="outline"
+            onPress={handleAddPhoto}
+            disabled={scanMutation.isPending}
+            icon={<Feather name="plus" size={16} color={theme.text} />}
+          />
+          <ThemedText type="small" color={theme.textSecondary} style={styles.photoHint}>
+            {t("receipts.add_more_hint")}
+          </ThemedText>
+        </>
+      )}
 
       {imageUris.length > 0 ? (
         <Card>
@@ -125,12 +165,50 @@ export default function ReceiptScannerScreen() {
       {scanMutation.isPending ? (
         <Card>
           <CardContent style={styles.loadingContent}>
-            <Feather name="loader" size={24} color={theme.primary} />
+            <ActivityIndicator size="large" color={theme.primary} />
             <ThemedText type="bodySm" color={theme.textSecondary}>
-              {t("receipts.scanning")}
+              {scanningPhrase}
             </ThemedText>
           </CardContent>
         </Card>
+      ) : null}
+
+      {scanError && !scanMutation.isPending ? (
+        <View
+          style={[
+            styles.successBanner,
+            { backgroundColor: "#fef2f2", borderColor: "#fca5a5" },
+          ]}
+        >
+          <Feather name="alert-circle" size={16} color="#991b1b" />
+          <View style={styles.successText}>
+            <ThemedText type="bodySm" color="#991b1b" style={styles.bold}>
+              {t("receipts.scan_error_title")}
+            </ThemedText>
+            <ThemedText type="small" color="#b91c1c">
+              {scanError}
+            </ThemedText>
+            <View style={styles.buttonRow}>
+              {canRetry ? (
+                <Button
+                  title={t("receipt.retry")}
+                  size="sm"
+                  onPress={scanImages}
+                  icon={<Feather name="refresh-cw" size={14} color="#ffffff" />}
+                  style={styles.halfBtn}
+                />
+              ) : null}
+              <Button
+                title={t("receipt.enter_manually")}
+                variant="outline"
+                size="sm"
+                onPress={goManual}
+                icon={<Feather name="edit" size={14} color={theme.text} />}
+                style={styles.halfBtn}
+              />
+            </View>
+          </View>
+        </View>
       ) : null}
 
       {result ? (
@@ -152,6 +230,36 @@ export default function ReceiptScannerScreen() {
                   .replace("{merchant}", result.receipt?.merchant || t("receipts.receipt"))}
               </ThemedText>
             </View>
+          </View>
+
+          {/* Currency selector */}
+          <View style={styles.currencySection}>
+            <ThemedText type="small" color={theme.textSecondary}>
+              {t("receipts.currency_hint")}
+            </ThemedText>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.currencyRow}>
+              {CURRENCY_OPTIONS.map((cur) => (
+                <Pressable
+                  key={cur}
+                  onPress={() => setReceiptCurrency(cur)}
+                  style={[
+                    styles.currencyBtn,
+                    {
+                      backgroundColor: receiptCurrency === cur ? theme.primary : theme.secondary,
+                      borderColor: receiptCurrency === cur ? theme.primary : theme.border,
+                    },
+                  ]}
+                >
+                  <ThemedText
+                    type="small"
+                    color={receiptCurrency === cur ? "#ffffff" : theme.text}
+                    style={styles.bold}
+                  >
+                    {cur}
+                  </ThemedText>
+                </Pressable>
+              ))}
+            </ScrollView>
           </View>
 
           {result.receipt?.items && result.receipt.items.length > 0 ? (
@@ -218,6 +326,7 @@ export default function ReceiptScannerScreen() {
                   amount: String(result.receipt?.total || ""),
                   description: result.receipt?.merchant || "",
                   type: "expense" as const,
+                  currency: receiptCurrency,
                 },
               });
             }}

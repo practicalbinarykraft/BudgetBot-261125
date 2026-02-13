@@ -18,9 +18,9 @@ import { TagBadge } from "../components/TagBadge";
 import { useTheme } from "../hooks/useTheme";
 import { useTranslation } from "../i18n";
 import { api } from "../lib/api-client";
-import { queryClient } from "../lib/query-client";
+import { queryClient, normalizePaginatedData } from "../lib/query-client";
 import { styles } from "./styles/tagsStyles";
-import type { PersonalTag } from "../types";
+import type { PersonalTag, PaginatedResponse } from "../types";
 
 interface TagStats {
   transactionCount: number;
@@ -35,9 +35,9 @@ export default function TagsScreen() {
 
   const tagsQuery = useQuery({
     queryKey: ["tags"],
-    queryFn: () => api.get<PersonalTag[]>("/api/tags"),
+    queryFn: () => api.get<PaginatedResponse<PersonalTag>>("/api/tags"),
   });
-  const tags = tagsQuery.data || [];
+  const tags = normalizePaginatedData<PersonalTag>(tagsQuery.data);
 
   const statsQuery = useQuery({
     queryKey: ["tags-stats"],

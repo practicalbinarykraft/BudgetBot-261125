@@ -12,6 +12,7 @@ import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "../components/ThemedText";
 import { Button } from "../components/Button";
 import FinancialTrendChart from "../components/FinancialTrendChart";
+import { WishlistSummaryList } from "../components/wishlist/WishlistSummaryList";
 import { StatCardsGrid } from "../components/dashboard-analytics/StatCardsGrid";
 import { BudgetAlerts } from "../components/dashboard-analytics/BudgetAlerts";
 import { RecentTransactions } from "../components/dashboard-analytics/RecentTransactions";
@@ -19,6 +20,8 @@ import { Spacing } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
 import { useTranslation } from "../i18n";
 import { useDashboardAnalytics } from "../hooks/useDashboardAnalytics";
+import { useWishlistChart } from "../hooks/useWishlistChart";
+import { useFinancialTrendChart } from "../hooks/useFinancialTrendChart";
 import type { DateFilterValue } from "../utils/date-helpers";
 
 const dateFilterKeys: { value: DateFilterValue; labelKey: string }[] = [
@@ -48,6 +51,9 @@ export default function DashboardAnalyticsScreen() {
     isRefreshing,
     handleRefresh,
   } = useDashboardAnalytics();
+
+  const { sampledTrendData } = useFinancialTrendChart();
+  const { markers, wishlistItems } = useWishlistChart(sampledTrendData);
 
   if (isLoading) {
     return (
@@ -121,8 +127,14 @@ export default function DashboardAnalyticsScreen() {
         onViewDetails={() => navigation.navigate("Transactions")}
       />
 
-      {/* Block 5: FinancialTrendChart */}
-      <FinancialTrendChart />
+      {/* Block 5: FinancialTrendChart with wishlist markers */}
+      <FinancialTrendChart
+        wishlistMarkers={markers}
+        onFullscreen={(params) => navigation.navigate("FullscreenChart", params)}
+      />
+
+      {/* Block 5.5: Wishlist Goals Summary */}
+      <WishlistSummaryList items={wishlistItems} sampledTrendData={sampledTrendData} />
 
       {/* Block 6: Recent Transactions */}
       <RecentTransactions

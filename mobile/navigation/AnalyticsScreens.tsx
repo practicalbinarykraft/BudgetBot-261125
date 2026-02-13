@@ -7,6 +7,7 @@ import AdvancedAnalyticsScreen from "../screens/AdvancedAnalyticsScreen";
 import AIChatScreen from "../screens/AIChatScreen";
 import ReceiptScannerScreen from "../screens/ReceiptScannerScreen";
 import VoiceInputScreen from "../screens/VoiceInputScreen";
+import FullscreenChartScreen from "../screens/FullscreenChartScreen";
 
 interface ScreenConfig {
   name: string;
@@ -30,17 +31,28 @@ export function getAnalyticsScreens(
   headerTintColor: string,
   t: (key: string) => string,
 ) {
-  return screens.map((screen) => (
+  return [
+    ...screens.map((screen) => (
+      <Stack.Screen
+        key={screen.name}
+        name={screen.name}
+        component={screen.component}
+        options={{
+          headerShown: true,
+          title: t(screen.titleKey),
+          headerStyle,
+          headerTintColor,
+        }}
+      />
+    )),
     <Stack.Screen
-      key={screen.name}
-      name={screen.name}
-      component={screen.component}
+      key="FullscreenChart"
+      name="FullscreenChart"
+      component={FullscreenChartScreen}
       options={{
-        headerShown: true,
-        title: t(screen.titleKey),
-        headerStyle,
-        headerTintColor,
+        headerShown: false,
+        presentation: "modal",
       }}
-    />
-  ));
+    />,
+  ];
 }

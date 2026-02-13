@@ -188,7 +188,8 @@ export class CacheService {
   }
 
   /**
-   * Delete all keys matching a pattern
+   * Delete all keys matching a pattern using SCAN (production-safe).
+   * Unlike KEYS, SCAN doesn't block Redis on large datasets.
    */
   async delPattern(pattern: string): Promise<boolean> {
     if (!this.client || !(await isRedisAvailable())) {
@@ -196,9 +197,17 @@ export class CacheService {
     }
 
     try {
-      const keys = await this.client.keys(pattern);
-      if (keys.length > 0) {
-        await this.client.del(...keys);
+      const stream = this.client.scanStream({ match: pattern, count: 100 });
+      const allKeys: string[] = [];
+      await new Promise<void>((resolve, reject) => {
+        stream.on('data', (keys: string[]) => {
+          allKeys.push(...keys);
+        });
+        stream.on('end', resolve);
+        stream.on('error', reject);
+      });
+      if (allKeys.length > 0) {
+        await this.client.del(...allKeys);
       }
       return true;
     } catch (error) {

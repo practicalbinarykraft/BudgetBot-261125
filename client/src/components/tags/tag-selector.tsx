@@ -2,6 +2,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@
 import { TagBadge } from './tag-badge';
 import { useQuery } from '@tanstack/react-query';
 import type { PersonalTag } from '@shared/schema';
+import { selectData } from '@/lib/queryClient';
 
 interface TagSelectorProps {
   value: number | null | undefined;
@@ -10,8 +11,9 @@ interface TagSelectorProps {
 }
 
 export function TagSelector({ value, onChange, disabled = false }: TagSelectorProps) {
-  const { data: tags = [], isLoading } = useQuery<PersonalTag[]>({
+  const { data: tags = [], isLoading } = useQuery({
     queryKey: ['/api/tags'],
+    select: (data: unknown) => selectData<PersonalTag>(data),
   });
   
   const selectedTag = tags.find(t => t.id === value);

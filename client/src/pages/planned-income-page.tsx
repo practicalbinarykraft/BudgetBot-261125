@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PlannedIncome, Category, insertPlannedIncomeSchema } from "@shared/schema";
 import { Plus, CalendarDays, Coins } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, selectData } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/i18n/context";
 import { PlannedIncomeCard } from "@/components/planned-income/planned-income-card";
@@ -45,8 +45,9 @@ export default function PlannedIncomePage() {
     queryKey: ["/api/planned-income"],
   });
 
-  const { data: allCategories = [] } = useQuery<Category[]>({
+  const { data: allCategories = [] } = useQuery({
     queryKey: ["/api/categories"],
+    select: (data: unknown) => selectData<Category>(data),
   });
 
   const incomeCategories = useMemo(

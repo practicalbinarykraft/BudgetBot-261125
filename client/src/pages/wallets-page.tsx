@@ -12,7 +12,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertWalletSchema } from "@shared/schema";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, selectData } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -43,8 +43,9 @@ export default function WalletsPage() {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
 
-  const { data: wallets = [], isLoading } = useQuery<Wallet[]>({
+  const { data: wallets = [], isLoading } = useQuery({
     queryKey: ["/api/wallets"],
+    select: (data: unknown) => selectData<Wallet>(data),
   });
 
   const form = useForm<FormData>({

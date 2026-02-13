@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { ActivityIndicator, View, StyleSheet } from "react-native";
 import AuthStackNavigator from "./AuthStackNavigator";
@@ -11,12 +11,15 @@ import { useTranslation } from "../i18n";
 import { getTransactionScreens } from "./TransactionScreens";
 import { getFeatureScreens } from "./FeatureScreens";
 import { getAnalyticsScreens } from "./AnalyticsScreens";
-import type { Category, Transaction, PersonalTag } from "../types";
+import { queryClient, categoriesQueryKey } from "../lib/query-client";
+import { api } from "../lib/api-client";
+import type { Category, Transaction, PersonalTag, Wallet, PaginatedResponse } from "../types";
 
 export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
-  AddTransaction: undefined;
+  AddTransaction: { prefill?: { amount?: string; description?: string; type?: "expense" | "income"; currency?: string; category?: string }; selectedCategoryId?: number } | undefined;
+  CategoryPicker: { type: "expense" | "income" };
   EditTransaction: { transaction: Transaction };
   AddEditCategory: { category?: Category };
   AddEditBudget: {
@@ -58,6 +61,7 @@ export type RootStackParamList = {
   VoiceInput: undefined;
   Notifications: undefined;
   SwipeSort: undefined;
+  FullscreenChart: { historyDays?: 7 | 30 | 90 | 365; showForecast?: boolean } | undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -67,6 +71,24 @@ export default function RootStackNavigator() {
   const { t } = useTranslation();
   const { user, isLoading, isAuthenticated, login, register, logout } =
     useAuth();
+
+  // Prefetch core data as soon as user is authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      queryClient.prefetchQuery({
+        queryKey: categoriesQueryKey(),
+        queryFn: () => api.get<PaginatedResponse<Category>>("/api/categories?limit=100"),
+      });
+      queryClient.prefetchQuery({
+        queryKey: ["wallets"],
+        queryFn: () => api.get<PaginatedResponse<Wallet>>("/api/wallets?limit=50"),
+      });
+      queryClient.prefetchQuery({
+        queryKey: ["tags"],
+        queryFn: () => api.get<PaginatedResponse<PersonalTag>>("/api/tags"),
+      });
+    }
+  }, [isAuthenticated]);
 
   if (isLoading) {
     return (

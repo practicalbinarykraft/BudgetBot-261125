@@ -37,17 +37,18 @@ router.get("/", withAuth(async (req, res) => {
 
     const result = await storage.getRecurringByUserId(Number(req.user.id), filters);
 
-    // Backward compatibility: return array if no pagination params, object with metadata if paginated
-    const response = filters.limit !== undefined || filters.offset !== undefined
-      ? {
-          data: result.recurring,
-          pagination: {
-            total: result.total,
-            limit: filters.limit,
-            offset: filters.offset || 0,
-          },
-        }
-      : result.recurring;
+    // Unified response: always { data, pagination }
+    const effectiveLimit = filters.limit ?? 100;
+    const effectiveOffset = filters.offset ?? 0;
+    const response = {
+      data: result.recurring,
+      pagination: {
+        total: result.total,
+        limit: effectiveLimit,
+        offset: effectiveOffset,
+        hasMore: effectiveOffset + result.recurring.length < result.total,
+      },
+    };
 
     res.json(response);
   } catch (error: unknown) {

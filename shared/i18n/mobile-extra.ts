@@ -63,6 +63,19 @@ export const mobileExtraTranslations: Translations = {
   "voice_input.create_transaction": { en: "Create Transaction", ru: "Создать транзакцию" },
   "voice_input.transcription": { en: "Transcription", ru: "Транскрипция" },
   "voice_input.parsed_transaction": { en: "Parsed Transaction", ru: "Распознанная транзакция" },
+  "voice_input.permission_required": { en: "Permission Required", ru: "Требуется разрешение" },
+  "voice_input.mic_permission": { en: "Microphone permission is needed", ru: "Необходим доступ к микрофону" },
+  "voice_input.error_start": { en: "Failed to start recording", ru: "Не удалось начать запись" },
+  "voice_input.error_empty": { en: "No recording found", ru: "Запись не найдена" },
+  "voice_input.error_process": { en: "Failed to process recording", ru: "Не удалось обработать запись" },
+  "voice_input.tap_stop": { en: "Tap to stop", ru: "Нажмите для остановки" },
+  "voice_input.bubble_hint": { en: "Say: \"Shashlik 500 rubles\", \"Lunch 5 dollars\"", ru: "Скажите: \"Шашлык 500 рублей\", \"Обед 5 долларов\"" },
+  "voice_input.confidence_high": { en: "High", ru: "Высокая" },
+  "voice_input.confidence_medium": { en: "Medium", ru: "Средняя" },
+  "transactions.category_suggestion": { en: "Looks like this could be:", ru: "Похоже, это:" },
+  "transactions.category_suggestion_hint": { en: "If wrong \u2014 pick another category below.", ru: "Если не то \u2014 выберите другую категорию ниже." },
+  "transactions.other_category": { en: "Other...", ru: "Другое..." },
+  "voice_input.confidence_low": { en: "Low", ru: "Низкая" },
   "receipts.title": { en: "Receipt Scanner", ru: "Сканер чеков" },
   "receipts.description": { en: "Upload a receipt to extract items and prices", ru: "Загрузите чек для извлечения позиций и цен" },
   "receipts.description_multi": { en: "Upload one or more photos of a receipt", ru: "Загрузите одно или несколько фото чека" },
@@ -333,4 +346,77 @@ export const mobileExtraTranslations: Translations = {
   "receipts.photos_count": { en: "{count} photo(s) selected", ru: "{count} фото выбрано" },
   "receipts.clear": { en: "Clear", ru: "Очистить" },
   "receipts.scan_another": { en: "Scan Another Receipt", ru: "Сканировать другой чек" },
+
+  // Receipt scanner — error messages
+  "receipts.scan_error_title": { en: "Scan failed", ru: "Ошибка сканирования" },
+  "receipts.error_unauthorized": { en: "Session expired. Please log in again.", ru: "Сессия истекла. Войдите в приложение заново." },
+  "receipts.error_no_credits": { en: "Not enough credits for scanning.", ru: "Недостаточно кредитов для сканирования." },
+
+  // Receipt scanner — 10 scanning phrases (3 sec each = 30 sec)
+  "receipts.scan_p1": { en: "Uploading photos to server...", ru: "Отправляем фото на сервер..." },
+  "receipts.scan_p2": { en: "Preparing images...", ru: "Подготавливаем изображения..." },
+  "receipts.scan_p3": { en: "AI is reading the receipt text...", ru: "ИИ читает текст на чеке..." },
+  "receipts.scan_p4": { en: "Recognizing product names...", ru: "Распознаём названия товаров..." },
+  "receipts.scan_p5": { en: "Detecting prices and quantities...", ru: "Определяем цены и количество..." },
+  "receipts.scan_p6": { en: "Matching line items...", ru: "Сопоставляем позиции..." },
+  "receipts.scan_p7": { en: "Analyzing discounts and totals...", ru: "Анализируем скидки и итоги..." },
+  "receipts.scan_p8": { en: "Detecting currency and merchant...", ru: "Определяем валюту и магазин..." },
+  "receipts.scan_p9": { en: "Formatting results...", ru: "Формируем результат..." },
+  "receipts.scan_p10": { en: "Almost done, one more second...", ru: "Почти готово, ещё секунду..." },
+
+  // Receipt scanner — add photo + hints
+  "receipts.add_photo": { en: "+ Add photo", ru: "+ Добавить фото" },
+  "receipts.photo_hint": { en: "For long receipts — add 2-5 photos with overlap. Hold camera ~20-30 cm away so text is sharp.", ru: "Если чек длинный — добавьте 2–5 фото с перекрытием. Держите камеру на расстоянии ~20–30 см, чтобы текст был резким." },
+  "receipts.add_more_hint": { en: "You can add more photos of the same receipt.", ru: "Можно добавить ещё фото этого же чека." },
+
+  // Receipt scanner — currency hint
+  "receipts.currency_hint": { en: "Amounts extracted from receipt. Select the receipt currency — we'll auto-convert on the next step.", ru: "Мы извлекли суммы из чека. Выберите валюту чека — на следующем шаге мы автоматически конвертируем сумму." },
+
+  // AddTransaction — categories & currency
+  "transactions.no_categories": { en: "No categories for this type", ru: "Нет категорий для этого типа" },
+  "category_picker.title": { en: "Select Category", ru: "Выбор категории" },
+  "category_picker.select": { en: "Select...", ru: "Выбрать..." },
+  "category_picker.empty": { en: "No categories yet. Create your first one!", ru: "Категорий пока нет. Создайте первую!" },
+  "category_picker.create_new": { en: "Create New Category", ru: "Создать новую категорию" },
+  "transactions.approx_usd": { en: "\u2248 {amount} USD", ru: "\u2248 {amount} USD" },
+  "transactions.add_category": { en: "Add +", ru: "Добавить +" },
+
+  // Wishlist on chart
+  "wishlist.summary_title": { en: "Goals", ru: "Цели" },
+  "wishlist.all_goals": { en: "All goals", ru: "Все цели" },
+  "wishlist.available_now": { en: "Available now", ru: "Уже доступно" },
+  "wishlist.available_in_months": { en: "~{count} months", ru: "~{count} мес." },
+  "wishlist.not_affordable": { en: "Not enough funds", ru: "Недостаточно средств" },
+  "wishlist.beyond_horizon": { en: "Beyond chart horizon", ru: "За пределами горизонта графика" },
+  "wishlist.reorder": { en: "Reorder", ru: "Порядок" },
+  "wishlist.reorder_saved": { en: "Order saved", ru: "Порядок сохранён" },
+  "wishlist.drag_hint": { en: "Hold and drag to reorder", ru: "Удерживайте и перетаскивайте" },
+
+  // Chart fullscreen & markers
+  "chart.fullscreen": { en: "Full screen", ru: "На весь экран" },
+  "chart.close_fullscreen": { en: "Close", ru: "Закрыть" },
+  "chart.goal_available": { en: "Available: {name}", ru: "Доступно: {name}" },
+  "chart.goals_on_date": { en: "{count} goals on this date", ru: "{count} целей на эту дату" },
+  "nav.fullscreen_chart": { en: "Chart", ru: "График" },
+
+  // Chart UX hints
+  "chart.hint_rotate": { en: "Rotate your phone for a bigger chart", ru: "Поверните телефон для увеличения графика" },
+  "chart.hint_swipe": { en: "Swipe on the chart to see exact values", ru: "Проведите по графику, чтобы увидеть точные значения" },
+
+  // Confirm modal
+  "common.confirm": { en: "Confirm", ru: "Подтвердить" },
+  "common.delete_confirm_title": { en: "Delete category", ru: "Удалить категорию" },
+  "common.delete_confirm_message": { en: "Are you sure? This cannot be undone.", ru: "Вы уверены? Это действие нельзя отменить." },
+
+  // Categories error UI
+  "categories.load_error": { en: "Failed to load categories", ru: "Не удалось загрузить категории" },
+  "common.retry": { en: "Retry", ru: "Повторить" },
+
+  // Receipt error classification
+  "receipt.error_network": { en: "Connection error. Check your internet.", ru: "Ошибка соединения. Проверьте интернет." },
+  "receipt.error_timeout": { en: "Server took too long. Try again.", ru: "Сервер не ответил вовремя. Попробуйте снова." },
+  "receipt.error_server": { en: "Server error. Try again later.", ru: "Ошибка сервера. Попробуйте позже." },
+  "receipt.error_unknown": { en: "Something went wrong.", ru: "Что-то пошло не так." },
+  "receipt.retry": { en: "Retry", ru: "Повторить" },
+  "receipt.enter_manually": { en: "Enter manually", ru: "Ввести вручную" },
 };
