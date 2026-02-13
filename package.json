@@ -18,6 +18,7 @@
     "db:migrate:create": "tsx scripts/migrate.ts create",
     "db:migrate:validate": "tsx scripts/migrate.ts validate",
     "test": "vitest",
+    "test:mobile": "./mobile/node_modules/.bin/jest --config mobile/package.json --forceExit",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",

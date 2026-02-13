@@ -21,7 +21,7 @@ import type { WishlistChartMarker } from "../hooks/useWishlistChart";
 
 interface Props {
   wishlistMarkers?: WishlistChartMarker[];
-  onFullscreen?: () => void;
+  onFullscreen?: (params: { historyDays: number; showForecast: boolean }) => void;
 }
 
 export default function FinancialTrendChart({ wishlistMarkers, onFullscreen }: Props) {
@@ -69,6 +69,15 @@ export default function FinancialTrendChart({ wishlistMarkers, onFullscreen }: P
     });
   }, [capitalData, markerMap]);
 
+  // Y-axis scale: account for ALL datasets (library auto-scales to data1 only)
+  const maxValue = useMemo(() => {
+    let max = 0;
+    for (const p of incomeData) max = Math.max(max, p.value);
+    for (const p of expenseData) max = Math.max(max, p.value);
+    for (const p of capitalData) max = Math.max(max, p.value);
+    return max > 0 ? Math.ceil(max * 1.05) : undefined;
+  }, [incomeData, expenseData, capitalData]);
+
   // Find wishlist goal name for tooltip enrichment
   const getMarkerLabel = (index: number): string | null => {
     const marker = markerMap.get(index);
@@ -88,7 +97,7 @@ export default function FinancialTrendChart({ wishlistMarkers, onFullscreen }: P
           </ThemedText>
           <View style={styles.titleActions}>
             {onFullscreen ? (
-              <Pressable onPress={onFullscreen} hitSlop={8}>
+              <Pressable onPress={() => onFullscreen?.({ historyDays, showForecast })} hitSlop={8}>
                 <Feather name="maximize-2" size={16} color={theme.primary} />
               </Pressable>
             ) : null}
@@ -157,6 +166,7 @@ export default function FinancialTrendChart({ wishlistMarkers, onFullscreen }: P
               xAxisColor={theme.border}
               rulesColor={theme.border + "60"}
               formatYLabel={(val: string) => formatCompact(Number(val))}
+              maxValue={maxValue}
               noOfSections={4}
               initialSpacing={10}
               endSpacing={10}

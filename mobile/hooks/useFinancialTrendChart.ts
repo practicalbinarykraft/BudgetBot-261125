@@ -33,11 +33,17 @@ export const HISTORY_OPTIONS: { value: HistoryDays; label: string }[] = [
   { value: 365, label: "1Y" },
 ];
 
-export function useFinancialTrendChart() {
+export interface UseFinancialTrendChartOptions {
+  maxPointsOverride?: number;
+  initialHistoryDays?: HistoryDays;
+  initialShowForecast?: boolean;
+}
+
+export function useFinancialTrendChart(options?: UseFinancialTrendChartOptions) {
   const { language } = useTranslation();
   const locale = getDateLocale(language);
-  const [historyDays, setHistoryDays] = useState<HistoryDays>(30);
-  const [showForecast, setShowForecast] = useState(true);
+  const [historyDays, setHistoryDays] = useState<HistoryDays>(options?.initialHistoryDays ?? 30);
+  const [showForecast, setShowForecast] = useState(options?.initialShowForecast ?? true);
   const screenWidth = Dimensions.get("window").width - Spacing.lg * 2 - Spacing.lg * 2;
 
   const forecastDays = showForecast ? 365 : 0;
@@ -54,7 +60,7 @@ export function useFinancialTrendChart() {
 
   const sampledTrendData = useMemo(() => {
     if (trendData.length === 0) return [];
-    const maxPoints = historyDays <= 30 ? 50 : historyDays <= 90 ? 60 : 70;
+    const maxPoints = options?.maxPointsOverride ?? (historyDays <= 30 ? 50 : historyDays <= 90 ? 60 : 70);
     const step = Math.max(1, Math.floor(trendData.length / maxPoints));
     const sampled: TrendDataPoint[] = [];
     for (let i = 0; i < trendData.length; i += step) {
@@ -64,7 +70,7 @@ export function useFinancialTrendChart() {
       sampled.push(trendData[trendData.length - 1]);
     }
     return sampled;
-  }, [trendData, historyDays]);
+  }, [trendData, historyDays, options?.maxPointsOverride]);
 
   const { incomeData, expenseData, capitalData, xLabels } = useMemo(() => {
     if (sampledTrendData.length === 0) {

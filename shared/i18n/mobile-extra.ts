@@ -63,6 +63,19 @@ export const mobileExtraTranslations: Translations = {
   "voice_input.create_transaction": { en: "Create Transaction", ru: "Создать транзакцию" },
   "voice_input.transcription": { en: "Transcription", ru: "Транскрипция" },
   "voice_input.parsed_transaction": { en: "Parsed Transaction", ru: "Распознанная транзакция" },
+  "voice_input.permission_required": { en: "Permission Required", ru: "Требуется разрешение" },
+  "voice_input.mic_permission": { en: "Microphone permission is needed", ru: "Необходим доступ к микрофону" },
+  "voice_input.error_start": { en: "Failed to start recording", ru: "Не удалось начать запись" },
+  "voice_input.error_empty": { en: "No recording found", ru: "Запись не найдена" },
+  "voice_input.error_process": { en: "Failed to process recording", ru: "Не удалось обработать запись" },
+  "voice_input.tap_stop": { en: "Tap to stop", ru: "Нажмите для остановки" },
+  "voice_input.bubble_hint": { en: "Say: \"Shashlik 500 rubles\", \"Lunch 5 dollars\"", ru: "Скажите: \"Шашлык 500 рублей\", \"Обед 5 долларов\"" },
+  "voice_input.confidence_high": { en: "High", ru: "Высокая" },
+  "voice_input.confidence_medium": { en: "Medium", ru: "Средняя" },
+  "transactions.category_suggestion": { en: "Looks like this could be:", ru: "Похоже, это:" },
+  "transactions.category_suggestion_hint": { en: "If wrong \u2014 pick another category below.", ru: "Если не то \u2014 выберите другую категорию ниже." },
+  "transactions.other_category": { en: "Other...", ru: "Другое..." },
+  "voice_input.confidence_low": { en: "Low", ru: "Низкая" },
   "receipts.title": { en: "Receipt Scanner", ru: "Сканер чеков" },
   "receipts.description": { en: "Upload a receipt to extract items and prices", ru: "Загрузите чек для извлечения позиций и цен" },
   "receipts.description_multi": { en: "Upload one or more photos of a receipt", ru: "Загрузите одно или несколько фото чека" },
@@ -385,4 +398,8 @@ export const mobileExtraTranslations: Translations = {
   "chart.goal_available": { en: "Available: {name}", ru: "Доступно: {name}" },
   "chart.goals_on_date": { en: "{count} goals on this date", ru: "{count} целей на эту дату" },
   "nav.fullscreen_chart": { en: "Chart", ru: "График" },
+
+  // Chart UX hints
+  "chart.hint_rotate": { en: "Rotate your phone for a bigger chart", ru: "Поверните телефон для увеличения графика" },
+  "chart.hint_swipe": { en: "Swipe on the chart to see exact values", ru: "Проведите по графику, чтобы увидеть точные значения" },
 };

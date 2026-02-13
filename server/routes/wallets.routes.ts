@@ -145,6 +145,14 @@ router.post("/", withAuth(async (req, res) => {
       data = { ...data, balanceUsd: data.balance };
     }
 
+    // Set opening balance = initial balanceUsd (anchor for trend calculator)
+    const openingUsd = data.balanceUsd || data.balance;
+    data = {
+      ...data,
+      openingBalanceUsd: openingUsd,
+      openingBalanceDate: new Date().toISOString().split('T')[0],
+    };
+
     const wallet = await storage.createWallet(data);
 
     // Log audit event
@@ -266,6 +274,22 @@ router.post("/:id/calibrate", withAuth(async (req, res) => {
       walletId,
       parseFloat(actualBalance)
     );
+
+    // Log audit event for calibration
+    await logAuditEvent({
+      userId,
+      action: AuditAction.UPDATE,
+      entityType: AuditEntityType.WALLET,
+      entityId: walletId,
+      metadata: {
+        operation: 'calibration',
+        actualBalance: parseFloat(actualBalance),
+        expectedBalance: parseFloat(result.calibration.expectedBalance),
+        difference: parseFloat(result.calibration.difference),
+        transactionCreated: result.transactionCreated,
+      },
+      req,
+    });
 
     // Invalidate cache after calibration
     await cache.del(`wallets:user:${Number(req.user.id)}`);

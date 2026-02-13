@@ -130,7 +130,7 @@ export default function DashboardAnalyticsScreen() {
       {/* Block 5: FinancialTrendChart with wishlist markers */}
       <FinancialTrendChart
         wishlistMarkers={markers}
-        onFullscreen={() => navigation.navigate("FullscreenChart")}
+        onFullscreen={(params) => navigation.navigate("FullscreenChart", params)}
       />
 
       {/* Block 5.5: Wishlist Goals Summary */}
