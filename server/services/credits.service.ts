@@ -145,65 +145,22 @@ export async function deductMessage(
   usage: UsageLogEntry
 ): Promise<CreditBalance> {
   const messageCount = usage.messageCount || 1;
+  const { chargeCreditsAtomic } = await import('./billing.service');
 
-  // Get current balance
-  const balance = await getCreditBalance(userId);
+  const result = await chargeCreditsAtomic({
+    userId,
+    cost: messageCount,
+    operation: 'ai_chat',
+    provider: usage.model,
+    tokens: { input: usage.inputTokens, output: usage.outputTokens },
+  });
 
-  if (balance.messagesRemaining < messageCount) {
+  if (!result.success) {
     throw new Error("Insufficient messages remaining");
   }
 
-  const balanceBefore = balance.messagesRemaining;
-  const balanceAfter = balanceBefore - messageCount;
-
-  // Update credits in a transaction
-  await db.transaction(async (tx) => {
-    // Deduct messages
-    await tx
-      .update(userCredits)
-      .set({
-        messagesRemaining: balanceAfter,
-        totalUsed: balance.totalUsed + messageCount,
-        updatedAt: sql`NOW()`
-      })
-      .where(eq(userCredits.userId, userId));
-
-    // Log the usage
-    await tx.insert(aiUsageLog).values({
-      userId,
-      model: usage.model,
-      inputTokens: usage.inputTokens,
-      outputTokens: usage.outputTokens,
-      messageCount,
-      wasFree: true
-    });
-
-    // Record transaction
-    await tx.insert(creditTransactions).values({
-      userId,
-      type: "usage",
-      messagesChange: -messageCount,
-      balanceBefore,
-      balanceAfter,
-      description: `AI chat message (${usage.model})`,
-      metadata: {
-        model: usage.model,
-        inputTokens: usage.inputTokens,
-        outputTokens: usage.outputTokens
-      }
-    });
-  });
-
-  console.log(
-    `Deducted ${messageCount} message(s) from user ${userId}. ` +
-    `Balance: ${balanceAfter}/${balance.totalGranted}`
-  );
-
-  return {
-    messagesRemaining: balanceAfter,
-    totalGranted: balance.totalGranted,
-    totalUsed: balance.totalUsed + messageCount
-  };
+  const balance = await getCreditBalance(userId);
+  return balance;
 }
 
 /**
