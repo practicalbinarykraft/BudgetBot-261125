@@ -46,6 +46,8 @@ import twoFactorRouter from "./two-factor.routes";
 import creditsRouter from "./credits.routes";
 import mobileAuthRouter from "./mobile-auth.routes";
 import accountRouter from "./account.routes";
+import adminBridgeRouter from "./admin-bridge.routes";
+import supportTicketsRouter from "./support-tickets.routes";
 
 export function registerRoutes(app: Express) {
   // API Documentation (Swagger UI)
@@ -99,4 +101,10 @@ export function registerRoutes(app: Express) {
 
   // Account management (reset, etc.)
   app.use("/api/account", accountRouter);
+
+  // Admin bridge (receives requests from admin panel, sends via Telegram)
+  app.use("/api/admin-bridge", adminBridgeRouter);
+
+  // Support tickets (iOS app API)
+  app.use("/api/support", supportTicketsRouter);
 }
