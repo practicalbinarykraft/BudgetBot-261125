@@ -1,9 +1,10 @@
 /**
  * Test: Toast component — show, auto-dismiss, type variants.
+ * Fake timers used only for auto-dismiss test; show tests use real timers.
  */
 import React from "react";
 import { Pressable } from "react-native";
-import { render, fireEvent, act, waitFor } from "@testing-library/react-native";
+import { render, fireEvent, act } from "@testing-library/react-native";
 import { ToastProvider, useToast } from "../../components/Toast";
 
 jest.mock("react-native-safe-area-context", () => ({
@@ -43,70 +44,52 @@ function renderWithProvider(ui: React.ReactElement) {
 }
 
 describe("Toast", () => {
-  beforeEach(() => {
-    jest.useFakeTimers();
-  });
-
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
-  it("renders toast message when show() is called", async () => {
-    const { getByTestId, findByText } = renderWithProvider(
+  it("renders toast message when show() is called", () => {
+    const { getByTestId, getByText } = renderWithProvider(
       <TestConsumer message="Saved!" type="success" />
     );
 
-    await act(async () => {
-      fireEvent.press(getByTestId("show-toast"));
-    });
+    fireEvent.press(getByTestId("show-toast"));
 
-    const msg = await findByText("Saved!");
-    expect(msg).toBeTruthy();
+    expect(getByText("Saved!")).toBeTruthy();
   });
 
-  it("auto-dismisses after 3 seconds", async () => {
-    const { getByTestId, queryByText, findByText } = renderWithProvider(
+  it("auto-dismisses after 3 seconds", () => {
+    jest.useFakeTimers();
+
+    const { getByTestId, getByText, queryByText } = renderWithProvider(
       <TestConsumer message="Gone soon" />
     );
 
-    await act(async () => {
-      fireEvent.press(getByTestId("show-toast"));
-    });
+    fireEvent.press(getByTestId("show-toast"));
+    expect(getByText("Gone soon")).toBeTruthy();
 
-    await findByText("Gone soon");
-
-    await act(async () => {
+    act(() => {
       jest.advanceTimersByTime(3100);
     });
 
-    await waitFor(() => {
-      expect(queryByText("Gone soon")).toBeNull();
-    });
+    expect(queryByText("Gone soon")).toBeNull();
+
+    jest.useRealTimers();
   });
 
-  it("supports error type", async () => {
-    const { getByTestId, findByText } = renderWithProvider(
+  it("supports error type", () => {
+    const { getByTestId, getByText } = renderWithProvider(
       <TestConsumer message="Failed!" type="error" />
     );
 
-    await act(async () => {
-      fireEvent.press(getByTestId("show-toast"));
-    });
+    fireEvent.press(getByTestId("show-toast"));
 
-    const msg = await findByText("Failed!");
-    expect(msg).toBeTruthy();
+    expect(getByText("Failed!")).toBeTruthy();
   });
 
-  it("supports info type", async () => {
-    const { getByTestId, findByText } = renderWithProvider(
+  it("supports info type", () => {
+    const { getByTestId, getByText } = renderWithProvider(
       <TestConsumer message="FYI" type="info" />
     );
 
-    await act(async () => {
-      fireEvent.press(getByTestId("show-toast"));
-    });
+    fireEvent.press(getByTestId("show-toast"));
 
-    const msg = await findByText("FYI");
-    expect(msg).toBeTruthy();
+    expect(getByText("FYI")).toBeTruthy();
   });
 });
