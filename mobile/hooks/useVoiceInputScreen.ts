@@ -7,12 +7,14 @@ import * as FileSystem from "expo-file-system/legacy";
 import { api } from "../lib/api-client";
 import { fixVoiceParsedResult } from "../lib/voice-parse-utils";
 import { useTranslation } from "../i18n";
+import { useToast } from "../components/Toast";
 import type { VoiceParsedResult } from "../types";
 import type { RootStackParamList } from "../navigation/RootStackNavigator";
 
 export function useVoiceInputScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { t, language } = useTranslation();
+  const toast = useToast();
 
   const [isRecording, setIsRecording] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
@@ -62,7 +64,7 @@ export function useVoiceInputScreen() {
       setIsRecording(true);
       startPulse();
     } catch (error: any) {
-      Alert.alert(t("common.error"), error.message || t("voice_input.error_start"));
+      toast.show(error.message || t("voice_input.error_start"), "error");
     }
   };
 
@@ -79,7 +81,7 @@ export function useVoiceInputScreen() {
       recordingRef.current = null;
 
       if (!uri) {
-        Alert.alert(t("common.error"), t("voice_input.error_empty"));
+        toast.show(t("voice_input.error_empty"), "error");
         setIsParsing(false);
         return;
       }
@@ -90,7 +92,7 @@ export function useVoiceInputScreen() {
 
       const fileInfo = await FileSystem.getInfoAsync(uri);
       if (!fileInfo.exists || !("size" in fileInfo) || fileInfo.size === 0) {
-        Alert.alert(t("common.error"), t("voice_input.error_empty"));
+        toast.show(t("voice_input.error_empty"), "error");
         setIsParsing(false);
         return;
       }
@@ -120,8 +122,7 @@ export function useVoiceInputScreen() {
         },
       });
     } catch (error: any) {
-      const message = error.message || t("voice_input.error_process");
-      Alert.alert(t("common.error"), message);
+      toast.show(error.message || t("voice_input.error_process"), "error");
     } finally {
       setIsParsing(false);
     }

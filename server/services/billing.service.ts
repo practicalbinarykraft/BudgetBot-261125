@@ -5,8 +5,8 @@
  */
 
 import { db } from '../db';
-import { userCredits, aiUsageLog } from '@shared/schema';
-import { eq, sql } from 'drizzle-orm';
+import { userCredits, aiUsageLog, creditTransactions } from '@shared/schema';
+import { eq, sql, and, gte } from 'drizzle-orm';
 import {
   AIProvider,
   AIOperation,
@@ -15,7 +15,10 @@ import {
   AI_PRICING,
   SPECIAL_PRICING,
   OPERATION_CREDIT_COSTS,
+  BillingError,
 } from '../types/billing';
+
+const MONTHLY_RESET_DAYS = 30;
 
 /**
  * Calculate credit cost for an AI operation
@@ -74,59 +77,145 @@ export function estimateCreditCost(operation: AIOperation): number {
   return OPERATION_CREDIT_COSTS[operation] || 1;
 }
 
+export interface ChargeParams {
+  userId: number;
+  cost: number;
+  operation: string;
+  provider: string;
+  tokens: { input: number; output: number };
+}
+
+export interface ChargeResult {
+  success: boolean;
+  balanceAfter: number;
+  error?: 'INSUFFICIENT_CREDITS';
+}
+
 /**
- * Charge credits to user after AI operation
+ * Atomic credit deduction with lazy monthly reset.
  *
- * @param userId - User ID
- * @param operation - Type of operation
- * @param provider - AI provider used
- * @param tokens - Token usage
- * @param wasFree - Whether this was from free tier
+ * Single transaction:
+ * 1. SELECT FOR UPDATE (row lock)
+ * 2. Lazy monthly reset (if lastResetAt > 30 days or null)
+ * 3. UPDATE ... WHERE messages_remaining >= cost (guard)
+ * 4. INSERT credit_transactions + ai_usage_log
+ *
+ * Returns { success: false, error: 'INSUFFICIENT_CREDITS' } instead of throwing.
+ */
+export async function chargeCreditsAtomic(params: ChargeParams): Promise<ChargeResult> {
+  const { userId, cost, operation, provider, tokens } = params;
+
+  return db.transaction(async (tx) => {
+    // 1. Lock the row
+    const [row] = await tx
+      .select()
+      .from(userCredits)
+      .where(eq(userCredits.userId, userId))
+      .for('update')
+      .limit(1);
+
+    if (!row) {
+      return { success: false, balanceAfter: 0, error: 'INSUFFICIENT_CREDITS' as const };
+    }
+
+    // 2. Lazy monthly reset
+    let currentBalance = row.messagesRemaining;
+    const needsReset = !row.lastResetAt ||
+      (Date.now() - new Date(row.lastResetAt).getTime()) >= MONTHLY_RESET_DAYS * 24 * 60 * 60 * 1000;
+
+    if (needsReset) {
+      currentBalance = row.monthlyAllowance;
+      await tx
+        .update(userCredits)
+        .set({
+          messagesRemaining: currentBalance,
+          lastResetAt: sql`NOW()`,
+          updatedAt: sql`NOW()`,
+        })
+        .where(eq(userCredits.userId, userId));
+    }
+
+    // 3. Check balance AFTER potential reset
+    if (currentBalance < cost) {
+      return { success: false, balanceAfter: currentBalance, error: 'INSUFFICIENT_CREDITS' as const };
+    }
+
+    // 4. Atomic deduct with WHERE guard
+    const [updated] = await tx
+      .update(userCredits)
+      .set({
+        messagesRemaining: sql`messages_remaining - ${cost}`,
+        totalUsed: sql`total_used + ${cost}`,
+        updatedAt: sql`NOW()`,
+      })
+      .where(and(
+        eq(userCredits.userId, userId),
+        gte(userCredits.messagesRemaining, cost),
+      ))
+      .returning();
+
+    if (!updated) {
+      return { success: false, balanceAfter: currentBalance, error: 'INSUFFICIENT_CREDITS' as const };
+    }
+
+    const balanceAfter = updated.messagesRemaining;
+
+    // 5. Audit trail
+    await tx.insert(creditTransactions).values({
+      userId,
+      type: 'usage',
+      messagesChange: -cost,
+      balanceBefore: currentBalance,
+      balanceAfter,
+      description: `${operation} via ${provider}`,
+      metadata: {
+        operation,
+        provider,
+        inputTokens: tokens.input,
+        outputTokens: tokens.output,
+      },
+    });
+
+    await tx.insert(aiUsageLog).values({
+      userId,
+      model: `${provider}:${operation}`,
+      inputTokens: tokens.input,
+      outputTokens: tokens.output,
+      messageCount: cost,
+      wasFree: false,
+    });
+
+    return { success: true, balanceAfter };
+  });
+}
+
+/**
+ * Legacy wrapper — calls chargeCreditsAtomic and throws BillingError on failure.
+ * Used by existing callers (voice-parse, receipts, analyze, chat).
  */
 export async function chargeCredits(
   userId: number,
   operation: AIOperation,
   provider: AIProvider,
   tokens: TokenUsage,
-  wasFree: boolean = false
+  _wasFree: boolean = false
 ): Promise<void> {
-
   const cost = calculateCreditCost(operation, provider, tokens);
 
-  console.log(
-    `💳 [User ${userId}] Charging ${cost.credits} credits for ${operation} via ${provider} ` +
-    `($${cost.costUSD.toFixed(4)} actual cost, ${tokens.input + tokens.output} tokens)`
-  );
-
-  // Deduct credits
-  await db
-    .update(userCredits)
-    .set({
-      messagesRemaining: sql`messages_remaining - ${cost.credits}`,
-      totalUsed: sql`total_used + ${cost.credits}`,
-    })
-    .where(eq(userCredits.userId, userId));
-
-  // Log usage for analytics
-  await db.insert(aiUsageLog).values({
+  const result = await chargeCreditsAtomic({
     userId,
-    model: `${provider}:${operation}`,
-    inputTokens: tokens.input,
-    outputTokens: tokens.output,
-    messageCount: cost.credits,
-    wasFree,
+    cost: cost.credits,
+    operation,
+    provider,
+    tokens,
   });
 
-  // Check if user is running low on credits
-  const updatedCredits = await db
-    .select()
-    .from(userCredits)
-    .where(eq(userCredits.userId, userId))
-    .limit(1);
-
-  if (updatedCredits[0]?.messagesRemaining <= 5 && updatedCredits[0]?.messagesRemaining > 0) {
-    console.warn(`⚠️  [User ${userId}] Low credits: ${updatedCredits[0].messagesRemaining} remaining`);
-    // TODO: Send notification to user
+  if (!result.success) {
+    throw new BillingError(
+      'Insufficient credits. Your monthly allowance resets every 30 days.',
+      'INSUFFICIENT_CREDITS',
+      userId,
+    );
   }
 }
 
@@ -143,7 +232,7 @@ export async function grantCredits(
   reason: string = 'purchase'
 ): Promise<void> {
 
-  console.log(`💰 [User ${userId}] Granting ${credits} credits (${reason})`);
+  // Grant credits (purchase or admin)
 
   await db
     .update(userCredits)

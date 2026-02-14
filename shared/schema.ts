@@ -916,6 +916,8 @@ export const userCredits = pgTable("user_credits", {
   messagesRemaining: integer("messages_remaining").notNull().default(50),
   totalGranted: integer("total_granted").notNull().default(50),
   totalUsed: integer("total_used").notNull().default(0),
+  monthlyAllowance: integer("monthly_allowance").notNull().default(50),
+  lastResetAt: timestamp("last_reset_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
