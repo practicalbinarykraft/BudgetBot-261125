@@ -5,6 +5,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { api } from "../lib/api-client";
 import { fixVoiceParsedResult } from "../lib/voice-parse-utils";
 import { useTranslation } from "../i18n";
+import { useToast } from "../components/Toast";
 import type { VoiceParsedResult } from "../types";
 
 interface VoiceResult {
@@ -21,6 +22,7 @@ interface VoiceResult {
  */
 export function useInlineVoice(autoStart: boolean, onResult: (r: VoiceResult) => void) {
   const { t, language } = useTranslation();
+  const toast = useToast();
 
   const [isRecording, setIsRecording] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
@@ -59,7 +61,7 @@ export function useInlineVoice(autoStart: boolean, onResult: (r: VoiceResult) =>
       setIsRecording(true);
       startPulse();
     } catch (error: any) {
-      Alert.alert(t("common.error"), error.message || t("voice_input.error_start"));
+      toast.show(error.message || t("voice_input.error_start"), "error");
     }
   }, []);
 
@@ -97,7 +99,7 @@ export function useInlineVoice(autoStart: boolean, onResult: (r: VoiceResult) =>
       const fixed = fixVoiceParsedResult(data.parsed, data.transcription);
       onResultRef.current(fixed);
     } catch (error: any) {
-      Alert.alert(t("common.error"), error.message || t("voice_input.error_process"));
+      toast.show(error.message || t("voice_input.error_process"), "error");
     } finally {
       setIsParsing(false);
     }
