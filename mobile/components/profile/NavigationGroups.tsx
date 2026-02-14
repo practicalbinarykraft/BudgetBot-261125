@@ -6,6 +6,8 @@ import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "../ThemedText";
 import { useTheme } from "../../hooks/useTheme";
 import { useTranslation } from "../../i18n";
+import { openOnboarding } from "../../lib/onboarding-ref";
+import { useToast } from "../Toast";
 import { styles } from "./profileStyles";
 
 function NavGroup({ titleKey, items }: { titleKey: string; items: NavItemDef[] }) {
@@ -79,6 +81,7 @@ export default function NavigationGroups() {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
+  const toast = useToast();
 
   const billingItems: NavItemDef[] = [
     { screen: "Billing", icon: "zap", labelKey: "nav.credits_billing" },
@@ -92,6 +95,26 @@ export default function NavigationGroups() {
       <NavGroup titleKey="nav.goals" items={goalsItems} />
       <NavGroup titleKey="nav.group_ai_tools" items={aiToolsItems} />
       <NavGroup titleKey="nav.settings" items={billingItems} />
+      <Pressable
+        onPress={() => {
+          if (!openOnboarding()) {
+            toast.show(t("common.tutorial_unavailable"), "error");
+          }
+        }}
+        style={({ pressed }) => [
+          styles.navRow,
+          {
+            backgroundColor: pressed ? theme.muted : theme.card,
+            borderColor: theme.cardBorder,
+          },
+        ]}
+      >
+        <Feather name="help-circle" size={18} color={theme.text} />
+        <ThemedText type="body" style={styles.navRowText}>
+          {t("nav.tutorial")}
+        </ThemedText>
+        <Feather name="chevron-right" size={18} color={theme.textTertiary} />
+      </Pressable>
     </>
   );
 }

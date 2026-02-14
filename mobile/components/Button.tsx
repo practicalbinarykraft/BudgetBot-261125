@@ -14,7 +14,7 @@ import { useTheme } from "../hooks/useTheme";
 type ButtonVariant = "default" | "secondary" | "destructive" | "outline" | "ghost";
 type ButtonSize = "sm" | "default" | "lg" | "icon";
 
-interface ButtonProps {
+export interface ButtonProps {
   title?: string;
   onPress: () => void;
   variant?: ButtonVariant;
@@ -24,6 +24,7 @@ interface ButtonProps {
   icon?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   children?: React.ReactNode;
+  testID?: string;
 }
 
 const sizeStyles: Record<ButtonSize, ViewStyle> = {
@@ -43,6 +44,7 @@ export function Button({
   icon,
   style,
   children,
+  testID,
 }: ButtonProps) {
   const { theme } = useTheme();
 
@@ -67,6 +69,7 @@ export function Button({
 
   return (
     <Pressable
+      testID={testID}
       onPress={disabled || loading ? undefined : onPress}
       style={({ pressed }) => [
         styles.button,

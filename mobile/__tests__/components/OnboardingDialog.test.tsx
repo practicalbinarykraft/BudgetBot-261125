@@ -27,6 +27,12 @@ jest.mock("../../lib/query-client", () => ({
   },
 }));
 
+// Mock onboarding-ref
+jest.mock("../../lib/onboarding-ref", () => ({
+  registerOnboardingOpen: jest.fn(),
+  unregisterOnboardingOpen: jest.fn(),
+}));
+
 // Mock theme
 jest.mock("../../hooks/useTheme", () => ({
   useTheme: () => ({
@@ -71,7 +77,7 @@ describe("OnboardingDialog", () => {
   });
 
   it("does not show dialog when onboarding is already completed", async () => {
-    (AsyncStorage.getItem as jest.Mock).mockResolvedValue("true");
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue("completed");
     const { queryByText } = render(<OnboardingDialog userId={1} />);
     await waitFor(() => {
       expect(queryByText("Welcome to BudgetBot!")).toBeNull();
@@ -99,8 +105,8 @@ describe("OnboardingDialog", () => {
     fireEvent.press(skip);
     await waitFor(() => {
       expect(AsyncStorage.setItem).toHaveBeenCalledWith(
-        "budgetbot_onboarding_completed",
-        "true"
+        "budgetbot_onboarding_status",
+        "dismissed"
       );
     });
   });

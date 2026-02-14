@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { View, Modal, StyleSheet } from "react-native";
 import { Card, CardContent } from "./Card";
 import { Spacing } from "../constants/theme";
 import { useOnboarding } from "../hooks/useOnboarding";
+import { registerOnboardingOpen, unregisterOnboardingOpen } from "../lib/onboarding-ref";
 import { WelcomeStep } from "./onboarding/WelcomeStep";
 import { WalletStep } from "./onboarding/WalletStep";
 import { SuccessStep } from "./onboarding/SuccessStep";
@@ -13,6 +14,11 @@ interface OnboardingDialogProps {
 
 export default function OnboardingDialog({ userId }: OnboardingDialogProps) {
   const h = useOnboarding(userId);
+
+  useEffect(() => {
+    registerOnboardingOpen(h.open);
+    return () => unregisterOnboardingOpen();
+  }, [h.open]);
 
   return (
     <Modal
@@ -27,7 +33,7 @@ export default function OnboardingDialog({ userId }: OnboardingDialogProps) {
             {h.step === "welcome" && (
               <WelcomeStep
                 onGetStarted={() => h.setStep("wallet")}
-                onSkip={h.complete}
+                onSkip={h.skip}
               />
             )}
 
@@ -41,7 +47,7 @@ export default function OnboardingDialog({ userId }: OnboardingDialogProps) {
                 onInitialBalanceChange={h.setInitialBalance}
                 onCreateWallet={() => h.walletMutation.mutate()}
                 isPending={h.walletMutation.isPending}
-                onSkip={h.complete}
+                onSkip={h.skip}
               />
             )}
 
