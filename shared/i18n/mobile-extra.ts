@@ -115,6 +115,8 @@ export const mobileExtraTranslations: Translations = {
   "nav.receipt_scanner": { en: "Receipt Scanner", ru: "Сканер чеков" },
   "nav.voice_input": { en: "Voice Input", ru: "Голосовой ввод" },
   "nav.group_ai_tools": { en: "AI Tools", ru: "AI Инструменты" },
+  "nav.tutorial": { en: "Tutorial", ru: "Обучение" },
+  "common.tutorial_unavailable": { en: "Tutorial unavailable, please restart the app", ru: "Обучение недоступно, перезапустите приложение" },
   "dashboard.subtitle": { en: "Overview of your finances", ru: "Обзор ваших финансов" },
   "dashboard.calibrate": { en: "Calibrate", ru: "Калибровать" },
   "dashboard.add_transaction": { en: "Add Transaction", ru: "Добавить транзакцию" },

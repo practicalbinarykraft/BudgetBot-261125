@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
 
-const ONBOARDING_KEY = "budgetbot_onboarding_completed";
+const STORAGE_KEY = "budgetbot_onboarding_status";
 
 export type Step = "welcome" | "wallet" | "success";
+export type OnboardingStatus = "never" | "dismissed" | "completed";
 
 export function useOnboarding(userId: number | undefined) {
   const [visible, setVisible] = useState(false);
@@ -17,8 +18,8 @@ export function useOnboarding(userId: number | undefined) {
 
   useEffect(() => {
     if (!userId) return;
-    AsyncStorage.getItem(ONBOARDING_KEY).then((val) => {
-      if (val !== "true") {
+    AsyncStorage.getItem(STORAGE_KEY).then((val) => {
+      if (!val || val === "never") {
         setVisible(true);
       }
     });
@@ -38,10 +39,20 @@ export function useOnboarding(userId: number | undefined) {
     },
   });
 
-  const complete = async () => {
-    await AsyncStorage.setItem(ONBOARDING_KEY, "true");
+  const skip = useCallback(async () => {
+    await AsyncStorage.setItem(STORAGE_KEY, "dismissed");
     setVisible(false);
-  };
+  }, []);
+
+  const complete = useCallback(async () => {
+    await AsyncStorage.setItem(STORAGE_KEY, "completed");
+    setVisible(false);
+  }, []);
+
+  const open = useCallback(() => {
+    setStep("welcome");
+    setVisible(true);
+  }, []);
 
   return {
     visible,
@@ -50,6 +61,8 @@ export function useOnboarding(userId: number | undefined) {
     walletType, setWalletType,
     initialBalance, setInitialBalance,
     walletMutation,
+    skip,
     complete,
+    open,
   };
 }
