@@ -5,6 +5,7 @@ import { api } from "../lib/api-client";
 import { queryClient, normalizePaginatedData, categoriesQueryKey } from "../lib/query-client";
 import { useTranslation } from "../i18n";
 import { useToast } from "../components/Toast";
+import { completeTutorialStep } from "../lib/tutorial-step";
 import type { Category, Wallet, PersonalTag, PaginatedResponse } from "../types";
 
 interface ExchangeRatesResponse {
@@ -19,6 +20,7 @@ interface Prefill {
   type?: "expense" | "income";
   currency?: string;
   category?: string;
+  tutorialSource?: "voice" | "receipt";
 }
 
 export function computeConvertedAmount(
@@ -141,6 +143,12 @@ export function useAddTransactionScreen() {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["wallets"] });
       navigation.goBack();
+      completeTutorialStep("add_transaction");
+      if (prefill?.tutorialSource === "voice") {
+        completeTutorialStep("voice_input");
+      } else if (prefill?.tutorialSource === "receipt") {
+        completeTutorialStep("receipt_scan");
+      }
     },
     onError: (error: Error) => {
       toast.show(error.message, "error");

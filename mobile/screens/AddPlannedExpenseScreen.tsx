@@ -17,6 +17,7 @@ import { useTheme } from "../hooks/useTheme";
 import { useTranslation } from "../i18n";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
+import { completeTutorialStep } from "../lib/tutorial-step";
 
 export default function AddPlannedExpenseScreen() {
   const { theme } = useTheme();
@@ -35,6 +36,7 @@ export default function AddPlannedExpenseScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["planned"] });
       navigation.goBack();
+      completeTutorialStep("planned_expense");
     },
     onError: (error: Error) => {
       Alert.alert(t("common.error"), error.message);

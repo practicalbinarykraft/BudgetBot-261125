@@ -27,6 +27,7 @@ import {
   formatMonthYear,
   formatAmount,
 } from "../hooks/useDashboardScreen";
+import { completeTutorialStep } from "../lib/tutorial-step";
 
 export default function DashboardScreen() {
   const { theme } = useTheme();
@@ -141,7 +142,10 @@ export default function DashboardScreen() {
           recentTransactions={recentTransactions}
           categoryMap={categoryMap}
           tagMap={tagMap}
-          onViewAll={() => navigation.navigate("Transactions")}
+          onViewAll={() => {
+            completeTutorialStep("view_transactions");
+            navigation.navigate("Transactions");
+          }}
           onTransactionPress={(t) =>
             navigation.navigate("EditTransaction", { transaction: t })
           }

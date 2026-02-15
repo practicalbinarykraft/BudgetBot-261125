@@ -3,7 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { ActivityIndicator, View, StyleSheet } from "react-native";
 import AuthStackNavigator from "./AuthStackNavigator";
 import MainTabNavigator from "./MainTabNavigator";
-import OnboardingDialog from "../components/OnboardingDialog";
+import TutorialDialog from "../components/TutorialDialog";
 import WebSocketProvider from "../components/WebSocketProvider";
 import { useAuth } from "../hooks/useAuth";
 import { useTheme } from "../hooks/useTheme";
@@ -18,7 +18,7 @@ import type { Category, Transaction, PersonalTag, Wallet, PaginatedResponse } fr
 export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
-  AddTransaction: { prefill?: { amount?: string; description?: string; type?: "expense" | "income"; currency?: string; category?: string }; selectedCategoryId?: number } | undefined;
+  AddTransaction: { prefill?: { amount?: string; description?: string; type?: "expense" | "income"; currency?: string; category?: string; tutorialSource?: "voice" | "receipt" }; selectedCategoryId?: number } | undefined;
   CategoryPicker: { type: "expense" | "income" };
   EditTransaction: { transaction: Transaction };
   AddEditCategory: { category?: Category };
@@ -103,7 +103,7 @@ export default function RootStackNavigator() {
 
   return (
     <WebSocketProvider userId={user?.id}>
-      <OnboardingDialog userId={user?.id} />
+      <TutorialDialog userId={user?.id} />
       <Stack.Navigator screenOptions={{
         headerShown: false,
         headerBackTitle: t("common.back"),

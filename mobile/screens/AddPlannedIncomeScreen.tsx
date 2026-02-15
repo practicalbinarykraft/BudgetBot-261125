@@ -16,6 +16,7 @@ import { useTheme } from "../hooks/useTheme";
 import { useTranslation } from "../i18n";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
+import { completeTutorialStep } from "../lib/tutorial-step";
 
 export default function AddPlannedIncomeScreen() {
   const { theme } = useTheme();
@@ -33,6 +34,7 @@ export default function AddPlannedIncomeScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["planned-income"] });
       navigation.goBack();
+      completeTutorialStep("planned_income");
     },
     onError: (error: Error) => {
       Alert.alert(t("common.error"), error.message);

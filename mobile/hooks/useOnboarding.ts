@@ -1,29 +1,16 @@
-import { useState, useEffect, useCallback } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useState, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
-
-const STORAGE_KEY = "budgetbot_onboarding_status";
+import { completeTutorialStep } from "../lib/tutorial-step";
 
 export type Step = "welcome" | "wallet" | "success";
-export type OnboardingStatus = "never" | "dismissed" | "completed";
 
-export function useOnboarding(userId: number | undefined) {
-  const [visible, setVisible] = useState(false);
+export function useOnboarding() {
   const [step, setStep] = useState<Step>("welcome");
   const [walletName, setWalletName] = useState("");
   const [walletType, setWalletType] = useState<"card" | "cash" | "crypto">("card");
   const [initialBalance, setInitialBalance] = useState("0");
-
-  useEffect(() => {
-    if (!userId) return;
-    AsyncStorage.getItem(STORAGE_KEY).then((val) => {
-      if (!val || val === "never") {
-        setVisible(true);
-      }
-    });
-  }, [userId]);
 
   const walletMutation = useMutation({
     mutationFn: () =>
@@ -36,33 +23,23 @@ export function useOnboarding(userId: number | undefined) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["wallets"] });
       setStep("success");
+      completeTutorialStep("create_wallet");
     },
   });
 
-  const skip = useCallback(async () => {
-    await AsyncStorage.setItem(STORAGE_KEY, "dismissed");
-    setVisible(false);
-  }, []);
-
-  const complete = useCallback(async () => {
-    await AsyncStorage.setItem(STORAGE_KEY, "completed");
-    setVisible(false);
-  }, []);
-
-  const open = useCallback(() => {
+  const reset = useCallback(() => {
     setStep("welcome");
-    setVisible(true);
+    setWalletName("");
+    setWalletType("card");
+    setInitialBalance("0");
   }, []);
 
   return {
-    visible,
     step, setStep,
     walletName, setWalletName,
     walletType, setWalletType,
     initialBalance, setInitialBalance,
     walletMutation,
-    skip,
-    complete,
-    open,
+    reset,
   };
 }

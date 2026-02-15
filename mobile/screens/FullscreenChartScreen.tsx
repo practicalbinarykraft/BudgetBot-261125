@@ -27,6 +27,7 @@ import {
 } from "../hooks/useFinancialTrendChart";
 import { useWishlistChart, type WishlistChartMarker } from "../hooks/useWishlistChart";
 import { useFullscreenChart } from "../hooks/useFullscreenChart";
+import { completeTutorialStep } from "../lib/tutorial-step";
 
 const HINT_ROTATE_KEY = "budgetbot_hint_rotate_shown";
 const HINT_SWIPE_KEY = "budgetbot_hint_swipe_shown";
@@ -51,6 +52,10 @@ export default function FullscreenChartScreen() {
   }, []);
 
   useFullscreenChart();
+
+  useEffect(() => {
+    completeTutorialStep("view_chart");
+  }, []);
 
   const {
     historyDays,

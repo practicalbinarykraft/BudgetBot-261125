@@ -119,6 +119,7 @@ export function useVoiceInputScreen() {
           type: fixed.type,
           currency: fixed.currency,
           category: fixed.category,
+          tutorialSource: "voice" as const,
         },
       });
     } catch (error: any) {
