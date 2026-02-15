@@ -16,12 +16,14 @@ import { ThemedText } from "./ThemedText";
 import { useTheme } from "../hooks/useTheme";
 import { useAuth } from "../hooks/useAuth";
 import { useTranslation } from "../i18n";
+import { openOnboarding } from "../lib/onboarding-ref";
+import { useToast } from "./Toast";
 
 const PANEL_W = 300;
 const SCREEN_W = Dimensions.get("window").width;
 
 type IconName = React.ComponentProps<typeof Feather>["name"];
-interface NavItem { label: string; icon: IconName; route?: string; tab?: string; children?: NavItem[] }
+interface NavItem { label: string; icon: IconName; route?: string; tab?: string; action?: string; children?: NavItem[] }
 
 const NAV_ITEMS: NavItem[] = [
   { label: "nav.home", icon: "home", tab: "Dashboard" },
@@ -58,12 +60,14 @@ const NAV_ITEMS: NavItem[] = [
   },
   { label: "nav.settings", icon: "settings", tab: "Profile" },
   { label: "nav.billing", icon: "zap", route: "Billing" },
+  { label: "nav.tutorial", icon: "help-circle", action: "tutorial" },
 ];
 
 export default function MobileMenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { theme, isDark, setMode } = useTheme();
   const { user, logout } = useAuth();
   const { t } = useTranslation();
+  const toast = useToast();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(SCREEN_W)).current;
@@ -82,6 +86,15 @@ export default function MobileMenuSheet({ visible, onClose }: { visible: boolean
   };
 
   const go = (item: NavItem) => {
+    if (item.action === "tutorial") {
+      onClose();
+      setTimeout(() => {
+        if (!openOnboarding()) {
+          toast.show(t("common.tutorial_unavailable"), "error");
+        }
+      }, 300);
+      return;
+    }
     if (item.tab) {
       navigation.navigate("Main", { screen: item.tab });
     } else if (item.route) {
