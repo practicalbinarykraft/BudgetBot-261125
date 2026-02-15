@@ -20,3 +20,8 @@ export function openOnboarding(): boolean {
   }
   return false;
 }
+
+/** DEV-ONLY: check if openFn is registered */
+export function isOnboardingReady(): boolean {
+  return _openFn !== null;
+}
