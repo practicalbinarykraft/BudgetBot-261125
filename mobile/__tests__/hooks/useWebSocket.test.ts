@@ -32,9 +32,10 @@ jest.mock("../../lib/storage", () => ({
   storage: { getToken: jest.fn().mockResolvedValue("test-jwt-token") },
 }));
 
-// Mock Alert
+// Mock react-native (Alert + Platform used by uiAlert)
 jest.mock("react-native", () => ({
   Alert: { alert: jest.fn() },
+  Platform: { OS: "ios" },
 }));
 
 import { renderHook, act, waitFor } from "@testing-library/react-native";
