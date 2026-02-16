@@ -421,4 +421,58 @@ export const mobileExtraTranslations: Translations = {
   "receipt.error_unknown": { en: "Something went wrong.", ru: "Что-то пошло не так." },
   "receipt.retry": { en: "Retry", ru: "Повторить" },
   "receipt.enter_manually": { en: "Enter manually", ru: "Ввести вручную" },
+
+  // Tutorial
+  "tutorial.title": { en: "Tutorial", ru: "Обучение" },
+  "tutorial.welcome_title": { en: "Welcome to BudgetBot!", ru: "Добро пожаловать в BudgetBot!" },
+  "tutorial.welcome_desc": { en: "Complete these steps to learn the app and earn credits!", ru: "Пройдите шаги, чтобы изучить приложение и получить кредиты!" },
+  "tutorial.start": { en: "Start Tutorial", ru: "Начать обучение" },
+  "tutorial.skip": { en: "Skip", ru: "Пропустить" },
+  "tutorial.progress": { en: "{completed}/{total} completed", ru: "{completed}/{total} выполнено" },
+  "tutorial.credits_earned": { en: "+{count} credits earned!", ru: "+{count} кредитов получено!" },
+  "tutorial.total_earned": { en: "Total earned: {count} credits", ru: "Всего заработано: {count} кредитов" },
+  "tutorial.all_done_title": { en: "Tutorial Complete!", ru: "Обучение завершено!" },
+  "tutorial.all_done_desc": { en: "You've earned all {count} credits!", ru: "Вы заработали все {count} кредитов!" },
+  // Tutorial step titles
+  "tutorial.step.create_wallet": { en: "Create a wallet", ru: "Создайте кошелёк" },
+  "tutorial.step.add_transaction": { en: "Add a transaction", ru: "Добавьте транзакцию" },
+  "tutorial.step.voice_input": { en: "Use voice input", ru: "Используйте голосовой ввод" },
+  "tutorial.step.receipt_scan": { en: "Scan a receipt", ru: "Отсканируйте чек" },
+  "tutorial.step.planned_income": { en: "Plan an income", ru: "Запланируйте доход" },
+  "tutorial.step.planned_expense": { en: "Plan an expense", ru: "Запланируйте расход" },
+  "tutorial.step.view_chart": { en: "View chart", ru: "Откройте график" },
+  "tutorial.step.view_transactions": { en: "View all transactions", ru: "Посмотрите все транзакции" },
+  // Tutorial step descriptions
+  "tutorial.desc.create_wallet": { en: "Set up your first wallet to start tracking", ru: "Настройте первый кошелёк" },
+  "tutorial.desc.add_transaction": { en: "Record your first income or expense", ru: "Запишите первый доход или расход" },
+  "tutorial.desc.voice_input": { en: "Dictate a transaction by voice", ru: "Надиктуйте транзакцию голосом" },
+  "tutorial.desc.receipt_scan": { en: "Take a photo of a receipt", ru: "Сфотографируйте чек" },
+  "tutorial.desc.planned_income": { en: "Add expected future income", ru: "Добавьте ожидаемый доход" },
+  "tutorial.desc.planned_expense": { en: "Plan a future purchase", ru: "Запланируйте покупку" },
+  "tutorial.desc.view_chart": { en: "Open the financial trend chart fullscreen", ru: "Откройте график финансов на весь экран" },
+  "tutorial.desc.view_transactions": { en: "Tap 'Show all' on the dashboard", ru: "Нажмите 'Показать все' на главной" },
+
+  // Reward Modal
+  "reward.title": { en: "Reward!", ru: "Награда!" },
+  "reward.balance_change": { en: "{before} → {after} credits", ru: "{before} → {after} кредитов" },
+  "reward.next_step": { en: "Next step", ru: "Следующий шаг" },
+
+  // StepHelp
+  "tutorial.show_where": { en: "Show where to tap", ru: "Показать, куда нажать" },
+  "tutorial.open_screen": { en: "Open screen", ru: "Открыть экран" },
+  "tutorial.step_help.create_wallet": { en: "Create your first wallet to track balances across cards, cash and crypto.", ru: "Создайте первый кошелёк, чтобы отслеживать балансы по картам, наличным и крипте." },
+  "tutorial.step_help.add_transaction": { en: "Tap the '+' button at the bottom to add your first income or expense.", ru: "Нажмите кнопку '+' внизу, чтобы добавить первый доход или расход." },
+  "tutorial.step_help.voice_input": { en: "Use the microphone button to dictate a transaction hands-free.", ru: "Используйте кнопку микрофона, чтобы надиктовать транзакцию без рук." },
+  "tutorial.step_help.receipt_scan": { en: "Open the menu and tap Receipt Scanner to photograph a receipt.", ru: "Откройте меню и нажмите Сканер чеков, чтобы сфотографировать чек." },
+  "tutorial.step_help.planned_income": { en: "Add expected future income so you can plan ahead.", ru: "Добавьте ожидаемый доход, чтобы планировать наперёд." },
+  "tutorial.step_help.planned_expense": { en: "Plan a future purchase to keep your budget on track.", ru: "Запланируйте покупку, чтобы контролировать бюджет." },
+  "tutorial.step_help.view_chart": { en: "Open the financial trend chart to see your balance over time.", ru: "Откройте график финансового тренда, чтобы увидеть баланс во времени." },
+  "tutorial.step_help.view_transactions": { en: "Tap 'View all' on the dashboard to see your full transaction history.", ru: "Нажмите 'Показать все' на главной, чтобы увидеть полную историю транзакций." },
+
+  // Spotlight tooltips
+  "spotlight.add_transaction": { en: "Tap here to add a transaction", ru: "Нажмите сюда, чтобы добавить транзакцию" },
+  "spotlight.voice_input": { en: "Tap here to use voice input", ru: "Нажмите сюда для голосового ввода" },
+  "spotlight.receipt_scan": { en: "Tap here to open the menu", ru: "Нажмите сюда, чтобы открыть меню" },
+  "spotlight.view_transactions": { en: "Tap here to view all transactions", ru: "Нажмите сюда, чтобы посмотреть все транзакции" },
+  "spotlight.got_it": { en: "Got it", ru: "Понятно" },
 };

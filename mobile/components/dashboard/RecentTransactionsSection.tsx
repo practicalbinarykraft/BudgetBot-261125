@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useRef } from "react";
 import { View, Pressable, StyleSheet } from "react-native";
 import { ThemedText } from "../ThemedText";
 import { TransactionItem } from "../TransactionItem";
 import { Spacing } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
 import { useTranslation } from "../../i18n";
+import { setViewAllRect } from "../../lib/view-all-ref";
 import type { Transaction, Category, PersonalTag } from "../../types";
 
 interface RecentTransactionsSectionProps {
@@ -24,6 +25,7 @@ export function RecentTransactionsSection({
 }: RecentTransactionsSectionProps) {
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const viewAllRef = useRef<View>(null);
 
   return (
     <View style={styles.recentSection}>
@@ -31,7 +33,15 @@ export function RecentTransactionsSection({
         <ThemedText type="h4" style={styles.recentTitle}>
           {t("dashboard.recent_transactions")}
         </ThemedText>
-        <Pressable onPress={onViewAll}>
+        <Pressable
+          ref={viewAllRef}
+          onPress={onViewAll}
+          onLayout={() => {
+            viewAllRef.current?.measureInWindow((x, y, width, height) => {
+              setViewAllRect({ x, y, width, height });
+            });
+          }}
+        >
           <ThemedText type="bodySm" color={theme.primary}>
             {t("common.view_all")}
           </ThemedText>

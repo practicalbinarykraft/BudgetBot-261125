@@ -48,6 +48,7 @@ import mobileAuthRouter from "./mobile-auth.routes";
 import accountRouter from "./account.routes";
 import adminBridgeRouter from "./admin-bridge.routes";
 import supportTicketsRouter from "./support-tickets.routes";
+import tutorialRouter from "./tutorial.routes";
 
 export function registerRoutes(app: Express) {
   // API Documentation (Swagger UI)
@@ -80,6 +81,7 @@ export function registerRoutes(app: Express) {
   app.use("/api/product-catalog", productCatalogRouter);
   app.use("/api/audit-logs", auditLogRouter);
   app.use("/api/backup", backupRouter);
+  app.use("/api/tutorial", tutorialRouter);
 
 
   // Stats and analytics (mounted on /api for /api/stats and /api/financial-health)

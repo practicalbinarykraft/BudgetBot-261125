@@ -16,7 +16,7 @@ import { ThemedText } from "./ThemedText";
 import { useTheme } from "../hooks/useTheme";
 import { useAuth } from "../hooks/useAuth";
 import { useTranslation } from "../i18n";
-import { openOnboarding } from "../lib/onboarding-ref";
+import { openTutorial } from "../lib/tutorial-ref";
 import { useToast } from "./Toast";
 
 const PANEL_W = 300;
@@ -89,7 +89,7 @@ export default function MobileMenuSheet({ visible, onClose }: { visible: boolean
     if (item.action === "tutorial") {
       onClose();
       setTimeout(() => {
-        if (!openOnboarding()) {
+        if (!openTutorial()) {
           toast.show(t("common.tutorial_unavailable"), "error");
         }
       }, 300);

@@ -1,13 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Pressable, View } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "../ThemedText";
 import { useTheme } from "../../hooks/useTheme";
 import { useTranslation } from "../../i18n";
-import { openOnboarding, isOnboardingReady } from "../../lib/onboarding-ref";
+import { openTutorial } from "../../lib/tutorial-ref";
 import { useToast } from "../Toast";
 import { styles } from "./profileStyles";
 
@@ -84,31 +83,12 @@ export default function NavigationGroups() {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const toast = useToast();
 
-  // DEV-ONLY: diagnostic banner — remove before release
-  const [devStatus, setDevStatus] = useState<string | null>(null);
-  useEffect(() => {
-    if (__DEV__) {
-      AsyncStorage.getItem("budgetbot_onboarding_status").then((val) => {
-        setDevStatus(val);
-      });
-    }
-  }, []);
-
   const billingItems: NavItemDef[] = [
     { screen: "Billing", icon: "zap", labelKey: "nav.credits_billing" },
   ];
 
   return (
     <>
-      {__DEV__ && (
-        <View style={{ backgroundColor: "#fef3c7", padding: 8, borderRadius: 8, marginBottom: 8 }}>
-          <ThemedText type="small" color="#92400e">
-            {"[DEV] status: " + (devStatus ?? "null") +
-              " | openFn: " + (isOnboardingReady() ? "YES" : "NO") +
-              " | commit: a2b3df5"}
-          </ThemedText>
-        </View>
-      )}
       <NavGroup titleKey="nav.dashboard" items={dashboardItems} />
       <NavGroup titleKey="nav.money" items={financesItems} />
       <NavGroup titleKey="nav.analytics" items={analyticsItems} />
@@ -117,7 +97,7 @@ export default function NavigationGroups() {
       <NavGroup titleKey="nav.settings" items={billingItems} />
       <Pressable
         onPress={() => {
-          if (!openOnboarding()) {
+          if (!openTutorial()) {
             toast.show(t("common.tutorial_unavailable"), "error");
           }
         }}

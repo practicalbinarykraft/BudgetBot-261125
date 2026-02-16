@@ -1,5 +1,5 @@
-import React from "react";
-import { Pressable, StyleSheet } from "react-native";
+import React, { useRef, useEffect } from "react";
+import { Pressable, Animated, StyleSheet } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -20,11 +20,25 @@ export default function CreditsWidget() {
     refetchInterval: 30000,
   });
 
+  const prevBalance = useRef(data?.messagesRemaining);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (data && prevBalance.current !== undefined && data.messagesRemaining > prevBalance.current) {
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.3, duration: 200, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+      ]).start();
+    }
+    prevBalance.current = data?.messagesRemaining;
+  }, [data?.messagesRemaining]);
+
   if (isLoading || !data) return null;
 
+  const remaining = Math.max(0, data.messagesRemaining);
   const isByok = data.billingMode === "byok";
-  const isLow = data.messagesRemaining < 5;
-  const isVeryLow = data.messagesRemaining === 0;
+  const isLow = remaining < 5;
+  const isVeryLow = remaining === 0;
 
   const textColor = isByok
     ? "#22c55e"
@@ -35,19 +49,21 @@ export default function CreditsWidget() {
         : theme.primary;
 
   return (
-    <Pressable
-      onPress={() => navigation.navigate("Billing")}
-      style={[styles.container, { backgroundColor: textColor + "15", borderColor: textColor + "30" }]}
-    >
-      <Feather
-        name={isByok ? "key" : "zap"}
-        size={14}
-        color={textColor}
-      />
-      <ThemedText type="small" color={textColor} style={styles.text}>
-        {isByok ? "BYOK" : String(data.messagesRemaining)}
-      </ThemedText>
-    </Pressable>
+    <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+      <Pressable
+        onPress={() => navigation.navigate("Billing")}
+        style={[styles.container, { backgroundColor: textColor + "15", borderColor: textColor + "30" }]}
+      >
+        <Feather
+          name={isByok ? "key" : "zap"}
+          size={14}
+          color={textColor}
+        />
+        <ThemedText type="small" color={textColor} style={styles.text}>
+          {isByok ? "BYOK" : String(remaining)}
+        </ThemedText>
+      </Pressable>
+    </Animated.View>
   );
 }
 

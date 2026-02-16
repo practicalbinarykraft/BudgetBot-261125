@@ -27,10 +27,15 @@ import {
   formatMonthYear,
   formatAmount,
 } from "../hooks/useDashboardScreen";
+import { completeTutorialStep } from "../lib/tutorial-step";
+import { useTutorialProgress } from "../hooks/useTutorialProgress";
+import { openTutorial } from "../lib/tutorial-ref";
 
 export default function DashboardScreen() {
   const { theme } = useTheme();
   const { language } = useTranslation();
+  const tutorial = useTutorialProgress();
+  const showHelp = tutorial.completedSteps < tutorial.totalSteps;
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const [menuVisible, setMenuVisible] = useState(false);
@@ -71,6 +76,11 @@ export default function DashboardScreen() {
             </ThemedText>
           </Pressable>
           <View style={styles.headerRight}>
+            {showHelp && (
+              <Pressable onPress={() => openTutorial()} style={styles.headerIconButton}>
+                <Feather name="help-circle" size={20} color={theme.primary} />
+              </Pressable>
+            )}
             <CreditsWidget />
             <NotificationsBell />
             <Pressable
@@ -141,7 +151,10 @@ export default function DashboardScreen() {
           recentTransactions={recentTransactions}
           categoryMap={categoryMap}
           tagMap={tagMap}
-          onViewAll={() => navigation.navigate("Transactions")}
+          onViewAll={() => {
+            completeTutorialStep("view_transactions");
+            navigation.navigate("Transactions");
+          }}
           onTransactionPress={(t) =>
             navigation.navigate("EditTransaction", { transaction: t })
           }

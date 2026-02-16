@@ -327,6 +327,7 @@ export default function ReceiptScannerScreen() {
                   description: result.receipt?.merchant || "",
                   type: "expense" as const,
                   currency: receiptCurrency,
+                  tutorialSource: "receipt" as const,
                 },
               });
             }}

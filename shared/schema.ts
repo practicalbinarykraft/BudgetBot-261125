@@ -343,6 +343,17 @@ export const sortingProgress = pgTable("sorting_progress", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Tutorial Steps table (Gamified onboarding - tracks completed tutorial actions)
+export const tutorialSteps = pgTable("tutorial_steps", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  stepId: text("step_id").notNull(), // e.g. "create_wallet", "add_transaction"
+  creditsAwarded: integer("credits_awarded").notNull().default(0),
+  completedAt: timestamp("completed_at").defaultNow().notNull(),
+}, (table) => ({
+  uniqueUserStep: unique().on(table.userId, table.stepId),
+}));
+
 // Sorting Sessions table (History of sorting game sessions)
 export const sortingSessions = pgTable("sorting_sessions", {
   id: serial("id").primaryKey(),
@@ -459,6 +470,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   personalTags: many(personalTags),
   sortingSessions: many(sortingSessions),
   sortingProgress: one(sortingProgress),
+  tutorialSteps: many(tutorialSteps),
   settings: one(settings),
   aiTrainingExamples: many(aiTrainingExamples),
   aiChatMessages: many(aiChatMessages),
@@ -568,6 +580,13 @@ export const sortingProgressRelations = relations(sortingProgress, ({ one }) => 
 export const sortingSessionsRelations = relations(sortingSessions, ({ one }) => ({
   user: one(users, {
     fields: [sortingSessions.userId],
+    references: [users.id],
+  }),
+}));
+
+export const tutorialStepsRelations = relations(tutorialSteps, ({ one }) => ({
+  user: one(users, {
+    fields: [tutorialSteps.userId],
     references: [users.id],
   }),
 }));
@@ -753,6 +772,18 @@ export const insertSortingSessionSchema = createInsertSchema(sortingSessions, {
   userId: true,  // Server-side only
   createdAt: true,
 });
+
+export const insertTutorialStepSchema = createInsertSchema(tutorialSteps, {
+  stepId: z.string().min(1),
+  creditsAwarded: z.number().int().min(0),
+}).omit({
+  id: true,
+  userId: true,
+  completedAt: true,
+});
+
+export type InsertTutorialStep = z.infer<typeof insertTutorialStepSchema>;
+export type TutorialStep = typeof tutorialSteps.$inferSelect;
 
 export const insertAiTrainingExampleSchema = createInsertSchema(aiTrainingExamples, {
   transactionDescription: z.string().min(1),
