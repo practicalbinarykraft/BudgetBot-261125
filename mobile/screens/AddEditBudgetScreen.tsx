@@ -3,6 +3,7 @@ import {
   View,
   ScrollView,
   Pressable,
+  Platform,
 } from "react-native";
 import { KeyboardAvoidingView } from "@/components/KeyboardAvoidingView";
 import { ThemedText } from "../components/ThemedText";

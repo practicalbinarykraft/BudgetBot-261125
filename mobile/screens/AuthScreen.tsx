@@ -1,5 +1,5 @@
 import React from "react";
-import { View, ScrollView } from "react-native";
+import { View, ScrollView, Platform } from "react-native";
 import { KeyboardAvoidingView } from "@/components/KeyboardAvoidingView";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {

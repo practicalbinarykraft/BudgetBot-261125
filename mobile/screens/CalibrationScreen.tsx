@@ -4,6 +4,7 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { KeyboardAvoidingView } from "@/components/KeyboardAvoidingView";
 import { Feather } from "@expo/vector-icons";

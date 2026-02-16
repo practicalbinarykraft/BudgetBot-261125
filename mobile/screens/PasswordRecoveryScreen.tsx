@@ -4,6 +4,7 @@ import {
   ScrollView,
   StyleSheet,
   Pressable,
+  Platform,
 } from "react-native";
 import { KeyboardAvoidingView } from "@/components/KeyboardAvoidingView";
 import { useNavigation } from "@react-navigation/native";

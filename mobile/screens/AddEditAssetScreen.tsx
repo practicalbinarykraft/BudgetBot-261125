@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import {
   View,
   ScrollView,
+  Platform,
 } from "react-native";
 import { KeyboardAvoidingView } from "@/components/KeyboardAvoidingView";
 import { uiAlert } from "@/lib/uiAlert";
