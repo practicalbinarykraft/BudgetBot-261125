@@ -1,5 +1,6 @@
 import React from "react";
-import { View, StyleSheet, Modal, Image, Pressable, Alert } from "react-native";
+import { View, StyleSheet, Modal, Image, Pressable } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { Feather } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import { ThemedText } from "../ThemedText";
@@ -63,7 +64,7 @@ export function TwoFactorSetupModal({
             <Pressable
               onPress={() =>
                 Clipboard.setStringAsync(setupData.secret).then(() =>
-                  Alert.alert(t("settings.copied"), t("settings.secret_copied"))
+                  uiAlert(t("settings.copied"), t("settings.secret_copied"))
                 )
               }
               style={[

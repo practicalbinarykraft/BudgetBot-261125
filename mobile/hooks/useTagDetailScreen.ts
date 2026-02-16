@@ -1,4 +1,4 @@
-import { Alert } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -66,12 +66,12 @@ export function useTagDetailScreen() {
       queryClient.invalidateQueries({ queryKey: ["tags", tagId, "stats"] });
     },
     onError: (error: Error) => {
-      Alert.alert("Error", error.message);
+      uiAlert("Error", error.message);
     },
   });
 
   const handleDeleteTransaction = (tx: Transaction) => {
-    Alert.alert("Delete Transaction", `Delete "${tx.description}"?`, [
+    uiAlert("Delete Transaction", `Delete "${tx.description}"?`, [
       { text: "Cancel", style: "cancel" },
       { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate(tx.id) },
     ]);

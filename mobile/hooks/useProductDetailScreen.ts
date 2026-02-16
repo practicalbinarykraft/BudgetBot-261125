@@ -1,4 +1,4 @@
-import { Alert } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -33,11 +33,11 @@ export function useProductDetailScreen() {
       queryClient.invalidateQueries({ queryKey: ["product-catalog"] });
       navigation.goBack();
     },
-    onError: (error: Error) => Alert.alert("Error", error.message),
+    onError: (error: Error) => uiAlert("Error", error.message),
   });
 
   const handleDelete = () => {
-    Alert.alert("Delete Product", "Are you sure?", [
+    uiAlert("Delete Product", "Are you sure?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",

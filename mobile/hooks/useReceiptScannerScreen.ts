@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Alert } from "react-native";
+import { Platform } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import { useMutation } from "@tanstack/react-query";
@@ -10,6 +11,7 @@ import { classifyReceiptError } from "../lib/receipt-errors";
 import { useTranslation } from "../i18n";
 import type { ReceiptScanResult } from "../types";
 
+const isWeb = Platform.OS === "web";
 const MAX_IMAGE_WIDTH = 1024;
 const MAX_BASE64_SIZE = 5_000_000; // ~5MB base64 ≈ ~3.7MB image
 
@@ -64,7 +66,6 @@ export function useReceiptScannerScreen() {
         setScanningPhaseIndex((prev) => {
           const next = prev + 1;
           if (next >= SCANNING_PHRASE_KEYS.length) {
-            // Stay on last phrase until done
             if (intervalRef.current) {
               clearInterval(intervalRef.current);
               intervalRef.current = null;
@@ -91,7 +92,8 @@ export function useReceiptScannerScreen() {
 
   const scanningPhrase = t(SCANNING_PHRASE_KEYS[scanningPhaseIndex]);
 
-  const compressAndEncode = async (uri: string, quality: number): Promise<string> => {
+  // ===== Native image encoding (ImageManipulator) =====
+  const compressAndEncodeNative = async (uri: string, quality: number): Promise<string> => {
     const resized = await ImageManipulator.manipulateAsync(
       uri,
       [{ resize: { width: MAX_IMAGE_WIDTH } }],
@@ -103,10 +105,17 @@ export function useReceiptScannerScreen() {
     return resized.base64;
   };
 
+  // ===== Web image encoding (Canvas) =====
+  const compressAndEncodeWeb = async (dataUri: string, quality: number): Promise<string> => {
+    const { compressWebImage } = await import("../lib/web-image-picker");
+    return compressWebImage(dataUri, MAX_IMAGE_WIDTH, quality);
+  };
+
   const encodeImage = async (uri: string): Promise<string> => {
-    let base64 = await compressAndEncode(uri, 0.7);
+    const compress = isWeb ? compressAndEncodeWeb : compressAndEncodeNative;
+    let base64 = await compress(uri, 0.7);
     if (base64.length > MAX_BASE64_SIZE) {
-      base64 = await compressAndEncode(uri, 0.4);
+      base64 = await compress(uri, 0.4);
     }
     if (base64.length > MAX_BASE64_SIZE) {
       throw new Error(t("receipts.image_too_large"));
@@ -114,14 +123,24 @@ export function useReceiptScannerScreen() {
     return base64;
   };
 
-  const pickImage = async (useCamera: boolean) => {
+  // ===== Web: <input type="file"> =====
+  const pickImageWeb = async (_useCamera: boolean) => {
+    const { pickWebImages } = await import("../lib/web-image-picker");
+    const uris = await pickWebImages(true); // always multi-select on web
+    if (uris.length === 0) return;
+    setImageUris((prev) => [...prev, ...uris]);
+    setResult(null);
+  };
+
+  // ===== Native: expo-image-picker =====
+  const pickImageNative = async (useCamera: boolean) => {
     const permissionFn = useCamera
       ? ImagePicker.requestCameraPermissionsAsync
       : ImagePicker.requestMediaLibraryPermissionsAsync;
 
     const { status } = await permissionFn();
     if (status !== "granted") {
-      Alert.alert(
+      uiAlert(
         t("common.error"),
         t(useCamera ? "receipts.permission_camera" : "receipts.permission_photos"),
       );
@@ -145,6 +164,8 @@ export function useReceiptScannerScreen() {
     setImageUris((prev) => [...prev, ...newUris]);
     setResult(null);
   };
+
+  const pickImage = isWeb ? pickImageWeb : pickImageNative;
 
   const removeImage = (index: number) => {
     setImageUris((prev) => prev.filter((_, i) => i !== index));

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
@@ -23,7 +23,7 @@ export function useTwoFactor() {
       setShowSetup(true);
       setCode("");
     },
-    onError: (error: Error) => Alert.alert("Error", error.message),
+    onError: (error: Error) => uiAlert("Error", error.message),
   });
 
   const enableMutation = useMutation({
@@ -34,9 +34,9 @@ export function useTwoFactor() {
       setShowSetup(false);
       setSetupData(null);
       setCode("");
-      Alert.alert("Success", "Two-factor authentication enabled");
+      uiAlert("Success", "Two-factor authentication enabled");
     },
-    onError: () => Alert.alert("Error", "Invalid verification code"),
+    onError: () => uiAlert("Error", "Invalid verification code"),
   });
 
   const disableMutation = useMutation({
@@ -46,9 +46,9 @@ export function useTwoFactor() {
       queryClient.invalidateQueries({ queryKey: ["2fa-status"] });
       setShowDisable(false);
       setCode("");
-      Alert.alert("Success", "Two-factor authentication disabled");
+      uiAlert("Success", "Two-factor authentication disabled");
     },
-    onError: () => Alert.alert("Error", "Invalid verification code"),
+    onError: () => uiAlert("Error", "Invalid verification code"),
   });
 
   const handleEnable = () => {

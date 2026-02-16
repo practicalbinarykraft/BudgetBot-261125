@@ -3,10 +3,9 @@ import {
   View,
   ScrollView,
   Pressable,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
+import { KeyboardAvoidingView } from "@/components/KeyboardAvoidingView";
+import { uiAlert } from "@/lib/uiAlert";
 import { useNavigation } from "@react-navigation/native";
 import { useMutation } from "@tanstack/react-query";
 import { ThemedText } from "../components/ThemedText";
@@ -48,12 +47,12 @@ export default function AddWalletScreen() {
       queryClient.invalidateQueries({ queryKey: ["wallets"] });
       navigation.goBack();
     },
-    onError: (error: Error) => Alert.alert(t("common.error"), error.message),
+    onError: (error: Error) => uiAlert(t("common.error"), error.message),
   });
 
   const handleSubmit = () => {
-    if (!name.trim()) { Alert.alert(t("common.error"), t("wallets.error_enter_name")); return; }
-    if (!balance || parseFloat(balance) < 0) { Alert.alert(t("common.error"), t("wallets.error_enter_balance")); return; }
+    if (!name.trim()) { uiAlert(t("common.error"), t("wallets.error_enter_name")); return; }
+    if (!balance || parseFloat(balance) < 0) { uiAlert(t("common.error"), t("wallets.error_enter_balance")); return; }
     createMutation.mutate({ name: name.trim(), type, balance, currency });
   };
 

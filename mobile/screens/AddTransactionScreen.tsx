@@ -1,5 +1,6 @@
 import React, { useCallback } from "react";
-import { View, ScrollView, KeyboardAvoidingView, Platform, Pressable, ActivityIndicator, Animated } from "react-native";
+import { View, ScrollView, Pressable, ActivityIndicator, Animated } from "react-native";
+import { KeyboardAvoidingView } from "@/components/KeyboardAvoidingView";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";

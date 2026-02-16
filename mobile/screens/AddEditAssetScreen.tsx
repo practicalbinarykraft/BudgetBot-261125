@@ -2,10 +2,9 @@ import React, { useState } from "react";
 import {
   View,
   ScrollView,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
+import { KeyboardAvoidingView } from "@/components/KeyboardAvoidingView";
+import { uiAlert } from "@/lib/uiAlert";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import { useMutation } from "@tanstack/react-query";
@@ -48,16 +47,16 @@ export default function AddEditAssetScreen() {
       queryClient.invalidateQueries({ queryKey: ["assets-summary"] });
       navigation.goBack();
     },
-    onError: (error: Error) => Alert.alert(t("common.error"), error.message),
+    onError: (error: Error) => uiAlert(t("common.error"), error.message),
   });
 
   const handleSubmit = () => {
     if (!name.trim()) {
-      Alert.alert(t("common.error"), t("assets.error_enter_name"));
+      uiAlert(t("common.error"), t("assets.error_enter_name"));
       return;
     }
     if (!currentValue || parseFloat(currentValue) <= 0) {
-      Alert.alert(t("common.error"), t("assets.error_enter_value"));
+      uiAlert(t("common.error"), t("assets.error_enter_value"));
       return;
     }
     createMutation.mutate({

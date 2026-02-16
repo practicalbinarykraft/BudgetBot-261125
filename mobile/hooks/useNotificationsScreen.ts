@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { Alert } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
@@ -62,10 +62,10 @@ export function useNotificationsScreen() {
       invalidateAll();
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["stats"] });
-      Alert.alert("Success", "Transaction created from notification");
+      uiAlert("Success", "Transaction created from notification");
     },
     onError: (error: Error) => {
-      Alert.alert("Error", error.message || "Failed to complete notification");
+      uiAlert("Error", error.message || "Failed to complete notification");
     },
   });
 

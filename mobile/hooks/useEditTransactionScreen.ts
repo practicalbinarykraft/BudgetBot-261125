@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Alert } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -72,7 +72,7 @@ export function useEditTransactionScreen() {
       navigation.goBack();
     },
     onError: (error: Error) => {
-      Alert.alert(t("common.error"), error.message);
+      uiAlert(t("common.error"), error.message);
     },
   });
 
@@ -86,12 +86,12 @@ export function useEditTransactionScreen() {
       navigation.goBack();
     },
     onError: (error: Error) => {
-      Alert.alert(t("common.error"), error.message);
+      uiAlert(t("common.error"), error.message);
     },
   });
 
   const handleDelete = useCallback(() => {
-    Alert.alert(
+    uiAlert(
       t("common.delete"),
       `${t("transactions.delete_confirm")} "${tx.description}"?`,
       [
@@ -107,11 +107,11 @@ export function useEditTransactionScreen() {
 
   const handleSubmit = () => {
     if (!amount || parseFloat(amount) <= 0) {
-      Alert.alert(t("common.error"), t("transactions.error_invalid_amount"));
+      uiAlert(t("common.error"), t("transactions.error_invalid_amount"));
       return;
     }
     if (!description.trim()) {
-      Alert.alert(t("common.error"), t("transactions.error_enter_description"));
+      uiAlert(t("common.error"), t("transactions.error_enter_description"));
       return;
     }
 

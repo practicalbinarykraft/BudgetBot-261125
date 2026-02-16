@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation } from "@tanstack/react-query";
@@ -55,7 +55,7 @@ export function useAddEditTagScreen() {
       navigation.goBack();
     },
     onError: (error: Error) => {
-      Alert.alert("Error", error.message);
+      uiAlert("Error", error.message);
     },
   });
 
@@ -67,7 +67,7 @@ export function useAddEditTagScreen() {
       navigation.goBack();
     },
     onError: (error: Error) => {
-      Alert.alert("Error", error.message);
+      uiAlert("Error", error.message);
     },
   });
 
@@ -78,13 +78,13 @@ export function useAddEditTagScreen() {
       navigation.goBack();
     },
     onError: (error: Error) => {
-      Alert.alert("Error", error.message);
+      uiAlert("Error", error.message);
     },
   });
 
   const handleSubmit = () => {
     if (!name.trim()) {
-      Alert.alert("Error", "Please enter a tag name");
+      uiAlert("Error", "Please enter a tag name");
       return;
     }
     const data = { name: name.trim(), icon, color, type };
@@ -96,7 +96,7 @@ export function useAddEditTagScreen() {
   };
 
   const handleDelete = () => {
-    Alert.alert("Delete Tag", `Delete "${editTag?.name}"?`, [
+    uiAlert("Delete Tag", `Delete "${editTag?.name}"?`, [
       { text: "Cancel", style: "cancel" },
       { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate() },
     ]);

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -46,7 +46,7 @@ export function useAssetDetailScreen() {
       queryClient.invalidateQueries({ queryKey: ["assets-summary"] });
       navigation.goBack();
     },
-    onError: (error: Error) => Alert.alert("Error", error.message),
+    onError: (error: Error) => uiAlert("Error", error.message),
   });
 
   const calibrateMutation = useMutation({
@@ -58,13 +58,13 @@ export function useAssetDetailScreen() {
       setShowCalibrate(false);
       setCalibrateValue("");
       setCalibrateNotes("");
-      Alert.alert("Success", "Asset value updated");
+      uiAlert("Success", "Asset value updated");
     },
-    onError: (error: Error) => Alert.alert("Error", error.message),
+    onError: (error: Error) => uiAlert("Error", error.message),
   });
 
   const handleDelete = () => {
-    Alert.alert("Delete Asset", "Are you sure?", [
+    uiAlert("Delete Asset", "Are you sure?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
@@ -76,7 +76,7 @@ export function useAssetDetailScreen() {
 
   const handleCalibrate = () => {
     if (!calibrateValue || parseFloat(calibrateValue) <= 0) {
-      Alert.alert("Error", "Please enter a valid value");
+      uiAlert("Error", "Please enter a valid value");
       return;
     }
     calibrateMutation.mutate({

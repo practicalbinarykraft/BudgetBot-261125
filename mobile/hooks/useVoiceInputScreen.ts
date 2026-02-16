@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
-import { Alert, Animated } from "react-native";
+import { Animated, Platform } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Audio } from "expo-av";
@@ -10,6 +11,8 @@ import { useTranslation } from "../i18n";
 import { useToast } from "../components/Toast";
 import type { VoiceParsedResult } from "../types";
 import type { RootStackParamList } from "../navigation/RootStackNavigator";
+
+const isWeb = Platform.OS === "web";
 
 export function useVoiceInputScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -27,12 +30,12 @@ export function useVoiceInputScreen() {
         Animated.timing(pulseAnim, {
           toValue: 1.2,
           duration: 600,
-          useNativeDriver: true,
+          useNativeDriver: !isWeb,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
           duration: 600,
-          useNativeDriver: true,
+          useNativeDriver: !isWeb,
         }),
       ])
     ).start();
@@ -43,11 +46,68 @@ export function useVoiceInputScreen() {
     pulseAnim.setValue(1);
   };
 
-  const startRecording = async () => {
+  // ===== Web: MediaRecorder API =====
+  const startRecordingWeb = async () => {
+    try {
+      const { startWebRecording, requestWebMicPermission } = await import("../lib/web-audio");
+      const granted = await requestWebMicPermission();
+      if (!granted) {
+        uiAlert(t("voice_input.permission_required"), t("voice_input.mic_permission"));
+        return;
+      }
+      await startWebRecording();
+      setIsRecording(true);
+      startPulse();
+    } catch (error: any) {
+      toast.show(error.message || t("voice_input.error_start"), "error");
+    }
+  };
+
+  const stopRecordingWeb = async () => {
+    try {
+      stopPulse();
+      setIsRecording(false);
+      setIsParsing(true);
+
+      const { stopWebRecording } = await import("../lib/web-audio");
+      const result = await stopWebRecording();
+      if (!result) {
+        toast.show(t("voice_input.error_empty"), "error");
+        setIsParsing(false);
+        return;
+      }
+
+      const data = await api.post<VoiceParsedResult>("/api/ai/voice-parse", {
+        audioBase64: result.base64,
+        mimeType: result.mimeType,
+        language: language === "ru" ? "ru" : "en",
+      });
+
+      const fixed = fixVoiceParsedResult(data.parsed, data.transcription);
+
+      navigation.replace("AddTransaction", {
+        prefill: {
+          amount: fixed.amount,
+          description: fixed.description,
+          type: fixed.type,
+          currency: fixed.currency,
+          category: fixed.category,
+          tutorialSource: "voice" as const,
+        },
+      });
+    } catch (error: any) {
+      toast.show(error.message || t("voice_input.error_process"), "error");
+    } finally {
+      setIsParsing(false);
+    }
+  };
+
+  // ===== Native: expo-av =====
+  const startRecordingNative = async () => {
     try {
       const { status } = await Audio.requestPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(t("voice_input.permission_required"), t("voice_input.mic_permission"));
+        uiAlert(t("voice_input.permission_required"), t("voice_input.mic_permission"));
         return;
       }
 
@@ -68,7 +128,7 @@ export function useVoiceInputScreen() {
     }
   };
 
-  const stopRecording = async () => {
+  const stopRecordingNative = async () => {
     if (!recordingRef.current) return;
 
     try {
@@ -108,8 +168,6 @@ export function useVoiceInputScreen() {
       });
 
       // Client-side regex fix — overrides broken server parsing
-      // Detects currency from transcription text (рублей→RUB, долларов→USD etc.)
-      // Cleans description (removes amount + currency words)
       const fixed = fixVoiceParsedResult(data.parsed, data.transcription);
 
       navigation.replace("AddTransaction", {
@@ -131,9 +189,9 @@ export function useVoiceInputScreen() {
 
   const handleToggleRecording = () => {
     if (isRecording) {
-      stopRecording();
+      isWeb ? stopRecordingWeb() : stopRecordingNative();
     } else {
-      startRecording();
+      isWeb ? startRecordingWeb() : startRecordingNative();
     }
   };
 

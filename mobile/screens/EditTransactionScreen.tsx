@@ -3,9 +3,8 @@ import {
   View,
   ScrollView,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
+import { KeyboardAvoidingView } from "@/components/KeyboardAvoidingView";
 import { Feather } from "@expo/vector-icons";
 import { Input } from "../components/Input";
 import { Button } from "../components/Button";

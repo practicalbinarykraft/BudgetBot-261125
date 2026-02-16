@@ -4,9 +4,9 @@ import {
   FlatList,
   Pressable,
   ActivityIndicator,
-  Alert,
   RefreshControl,
 } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -49,12 +49,12 @@ export default function RecurringScreen() {
       queryClient.invalidateQueries({ queryKey: ["recurring"] });
     },
     onError: (error: Error) => {
-      Alert.alert(t("common.error"), error.message);
+      uiAlert(t("common.error"), error.message);
     },
   });
 
   const handleDelete = (item: Recurring) => {
-    Alert.alert(t("common.delete"), t("recurring.delete_confirm").replace("{name}", item.description), [
+    uiAlert(t("common.delete"), t("recurring.delete_confirm").replace("{name}", item.description), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("common.delete"), style: "destructive", onPress: () => deleteMutation.mutate(item.id) },
     ]);

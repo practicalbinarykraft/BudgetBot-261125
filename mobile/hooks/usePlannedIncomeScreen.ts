@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Alert } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
@@ -30,7 +30,7 @@ export function usePlannedIncomeScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["planned-income"] });
     },
-    onError: (error: Error) => Alert.alert("Error", error.message),
+    onError: (error: Error) => uiAlert("Error", error.message),
   });
 
   const receiveMutation = useMutation({
@@ -39,7 +39,7 @@ export function usePlannedIncomeScreen() {
       queryClient.invalidateQueries({ queryKey: ["planned-income"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
     },
-    onError: (error: Error) => Alert.alert("Error", error.message),
+    onError: (error: Error) => uiAlert("Error", error.message),
   });
 
   const cancelMutation = useMutation({
@@ -47,11 +47,11 @@ export function usePlannedIncomeScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["planned-income"] });
     },
-    onError: (error: Error) => Alert.alert("Error", error.message),
+    onError: (error: Error) => uiAlert("Error", error.message),
   });
 
   const handleDelete = (item: PlannedIncome) => {
-    Alert.alert("Delete", `Remove "${item.description}"?`, [
+    uiAlert("Delete", `Remove "${item.description}"?`, [
       { text: "Cancel", style: "cancel" },
       { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate(item.id) },
     ]);

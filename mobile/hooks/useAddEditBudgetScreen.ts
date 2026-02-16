@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
@@ -53,7 +53,7 @@ export function useAddEditBudgetScreen() {
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
       navigation.goBack();
     },
-    onError: (error: Error) => Alert.alert("Error", error.message),
+    onError: (error: Error) => uiAlert("Error", error.message),
   });
 
   const updateMutation = useMutation({
@@ -64,18 +64,18 @@ export function useAddEditBudgetScreen() {
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
       navigation.goBack();
     },
-    onError: (error: Error) => Alert.alert("Error", error.message),
+    onError: (error: Error) => uiAlert("Error", error.message),
   });
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   const handleSave = () => {
     if (!categoryId) {
-      Alert.alert("Error", "Please select a category");
+      uiAlert("Error", "Please select a category");
       return;
     }
     if (!limitAmount || parseFloat(limitAmount) <= 0) {
-      Alert.alert("Error", "Please enter a valid limit amount");
+      uiAlert("Error", "Please enter a valid limit amount");
       return;
     }
 
