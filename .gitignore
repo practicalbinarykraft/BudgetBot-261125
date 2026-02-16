@@ -36,3 +36,9 @@ playwright/.cache/
 
 # OS
 Thumbs.db
+
+# Local planning docs
+MOBILE_MVP_PLAN.md
+
+# PM2 config (may contain env overrides — secrets stay in .env)
+ecosystem.config.cjs
