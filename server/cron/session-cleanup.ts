@@ -10,6 +10,7 @@
 
 import cron from 'node-cron';
 import { pool } from '../db';
+import { logInfo, logError } from '../lib/logger';
 
 let isRunning = false;
 
@@ -18,7 +19,7 @@ let isRunning = false;
  */
 async function cleanupExpiredSessions(): Promise<void> {
   if (isRunning) {
-    console.log('⏭️  Session cleanup already running, skipping...');
+    logInfo('Session cleanup already running, skipping...');
     return;
   }
 
@@ -26,7 +27,7 @@ async function cleanupExpiredSessions(): Promise<void> {
   const startTime = Date.now();
 
   try {
-    console.log('🧹 Starting session cleanup...');
+    logInfo('Starting session cleanup...');
 
     // Count expired sessions before cleanup
     const countResult = await pool.query(
@@ -35,11 +36,11 @@ async function cleanupExpiredSessions(): Promise<void> {
     const expiredCount = parseInt(countResult.rows[0]?.count || '0');
 
     if (expiredCount === 0) {
-      console.log('✅ No expired sessions to clean up');
+      logInfo('No expired sessions to clean up');
       return;
     }
 
-    console.log(`   Found ${expiredCount} expired sessions`);
+    logInfo(`Found ${expiredCount} expired sessions`);
 
     // Delete expired sessions
     const deleteResult = await pool.query(
@@ -49,9 +50,7 @@ async function cleanupExpiredSessions(): Promise<void> {
     const deletedCount = deleteResult.rowCount || 0;
     const duration = Date.now() - startTime;
 
-    console.log(`✅ Session cleanup completed:`);
-    console.log(`   - Deleted: ${deletedCount} sessions`);
-    console.log(`   - Duration: ${duration}ms`);
+    logInfo(`Session cleanup completed: Deleted ${deletedCount} sessions in ${duration}ms`);
 
     // Get remaining session stats
     const statsResult = await pool.query(`
@@ -64,13 +63,10 @@ async function cleanupExpiredSessions(): Promise<void> {
     `);
 
     const stats = statsResult.rows[0];
-    console.log(`   - Remaining: ${stats.total} total, ${stats.active} active`);
+    logInfo(`Session stats: ${stats.total} total, ${stats.active} active`);
 
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
-    const stack = error instanceof Error ? error.stack : undefined;
-    console.error('❌ Session cleanup failed:', msg);
-    if (stack) console.error('   Stack:', stack);
+    logError('Session cleanup failed', error instanceof Error ? error : undefined);
   } finally {
     isRunning = false;
   }
@@ -81,20 +77,20 @@ async function cleanupExpiredSessions(): Promise<void> {
  * Runs daily at 3:00 AM
  */
 export function initSessionCleanup(): void {
-  console.log('📅 Initializing session cleanup cron job...');
+  logInfo('Initializing session cleanup cron job...');
 
   // Run daily at 3:00 AM
   cron.schedule('0 3 * * *', async () => {
     await cleanupExpiredSessions();
   });
 
-  console.log('✅ Session cleanup cron job scheduled (daily at 3:00 AM)');
+  logInfo('Session cleanup cron job scheduled (daily at 3:00 AM)');
 
   // Optional: Run immediately on startup for testing (comment out in production)
   if (process.env.NODE_ENV === 'development') {
-    console.log('🔧 Development mode: Running initial cleanup...');
+    logInfo('Development mode: Running initial cleanup...');
     setTimeout(() => {
-      cleanupExpiredSessions().catch(console.error);
+      cleanupExpiredSessions().catch((err) => logError('Session cleanup error', err));
     }, 5000); // Wait 5 seconds after startup
   }
 }

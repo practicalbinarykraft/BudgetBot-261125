@@ -12,6 +12,7 @@ import { eq } from 'drizzle-orm';
 import { formatCurrency } from '../parser';
 import { t } from '@shared/i18n';
 import { getUserLanguageByTelegramId, getUserLanguageByUserId } from '../language';
+import { logError } from '../../lib/logger';
 
 export async function handleBalanceCommand(bot: TelegramBot, msg: TelegramBot.Message) {
   const chatId = msg.chat.id;
@@ -66,7 +67,7 @@ export async function handleBalanceCommand(bot: TelegramBot, msg: TelegramBot.Me
 
     await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
   } catch (error) {
-    console.error('Balance command error:', error);
+    logError('Balance command error:', error);
     const lang = await getUserLanguageByTelegramId(telegramId);
     await bot.sendMessage(chatId, t('error.balance', lang));
   }

@@ -16,6 +16,7 @@ import { getUserLanguageByUserId } from '../language';
 import { getApiKey } from '../../services/api-key-manager';
 import { chargeCredits } from '../../services/billing.service';
 import { BillingError } from '../../types/billing';
+import { logError } from '../../lib/logger';
 
 // REMOVED: In-memory activeChats Map (not reliable across bot restarts)
 // AI chat active state is now determined by checking recent ai_chat_messages
@@ -221,7 +222,7 @@ export async function handleAiChatMessage(
     });
     
   } catch (error) {
-    console.error('AI chat error:', error);
+    logError('AI chat error:', error);
     
     const errorMessage = lang === 'ru'
       ? '❌ Ошибка при общении с AI. Проверь API ключ в настройках.'
@@ -290,7 +291,7 @@ export async function isAiChatActive(userId: number): Promise<boolean> {
     // Активен если последнее TELEGRAM сообщение отправлено недавно
     return new Date(recentTelegramMessage.createdAt) > thirtyMinutesAgo;
   } catch (error) {
-    console.error('Error checking AI chat active state:', error);
+    logError('Error checking AI chat active state:', error);
     return false;
   }
 }

@@ -5,6 +5,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
+import { logInfo, logWarning, logError } from '../lib/logger';
 
 export interface NormalizedTransaction {
   amount: number;
@@ -40,7 +41,7 @@ export class VoiceTransactionNormalizer {
     
     // If no API key, use fallback immediately
     if (!anthropicApiKey) {
-      console.log('[VoiceNormalizer] No Anthropic API key, using fallback parser');
+      logInfo('[VoiceNormalizer] No Anthropic API key, using fallback parser');
       return {
         success: false,
         error: { errorCode: 'no_api_key', fallbackUsed: true },
@@ -78,19 +79,19 @@ export class VoiceTransactionNormalizer {
       
       // Validate and sanitize required fields
       if (!normalized.amount || normalized.amount <= 0 || !normalized.currency || !normalized.type) {
-        console.warn('[VoiceNormalizer] Claude returned incomplete/invalid data:', normalized);
+        logWarning('[VoiceNormalizer] Claude returned incomplete/invalid data:', normalized);
         throw new Error('Claude response missing or invalid required fields');
       }
       
       // Ensure currency is uppercase for parser compatibility
       normalized.currency = normalized.currency.toUpperCase() as NormalizedTransaction['currency'];
       
-      console.log('✅ Voice transaction normalized:', normalized);
+      logInfo('✅ Voice transaction normalized:', normalized);
       
       return { success: true, data: normalized };
       
     } catch (error) {
-      console.error('❌ Voice normalization failed:', error);
+      logError('❌ Voice normalization failed:', error);
       
       return {
         success: false,

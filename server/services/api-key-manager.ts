@@ -8,6 +8,7 @@
  * 4. Return appropriate API key
  */
 
+import { logInfo } from '../lib/logger';
 import { settingsRepository } from '../repositories/settings.repository';
 import { db } from '../db';
 import { userCredits } from '@shared/schema';
@@ -36,7 +37,7 @@ export async function getApiKey(
   // 1. Check if user wants to use their own key (BYOK)
   const userKey = await checkUserOwnKey(userId, operation);
   if (userKey) {
-    console.log(`🔑 [User ${userId}] Using BYOK for ${operation}`);
+    logInfo(`[User ${userId}] Using BYOK for ${operation}`);
     return {
       provider: userKey.provider,
       key: userKey.key,
@@ -63,7 +64,7 @@ export async function getApiKey(
 
   const isFree = credits.totalUsed === 0 && credits.messagesRemaining === 25;
 
-  console.log(`🔑 [User ${userId}] Using ${provider} for ${operation} (${isFree ? 'FREE' : 'PAID'} tier, ${credits.messagesRemaining} credits left)`);
+  logInfo(`[User ${userId}] Using ${provider} for ${operation} (${isFree ? 'FREE' : 'PAID'} tier, ${credits.messagesRemaining} credits left)`);
 
   return {
     provider,

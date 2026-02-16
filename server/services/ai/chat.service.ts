@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { logError } from '../../lib/logger';
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -74,7 +75,7 @@ export async function chatWithAI(params: ChatWithAIParams): Promise<ChatResponse
       }
     };
   } catch (error: any) {
-    console.error("AI chat error:", error);
+    logError("AI chat error", error);
     
     if (error.status === 401) {
       throw new Error("Invalid Anthropic API key. Please check your settings.");

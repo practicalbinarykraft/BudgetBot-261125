@@ -4,6 +4,7 @@ import { DEFAULT_CATEGORY_EXPENSE, CATEGORY_KEYWORDS } from './config';
 import { storage } from '../storage';
 import { parseReceiptWithItems } from '../services/ocr/receipt-parser.service';
 import type { ParsedReceiptItem } from '../services/ocr/receipt-parser.service';
+import { logInfo, logWarning, logError } from '../lib/logger';
 
 export interface ReceiptData {
   amount: number;
@@ -43,7 +44,7 @@ export async function processReceiptImage(
   mimeType: string = 'image/jpeg'
 ): Promise<ProcessedReceipt | null> {
   try {
-    console.log('1️⃣ Starting OCR process for user:', userId);
+    logInfo('Starting OCR process', { userId });
 
     // 1. Use provided API key or load from user settings
     let apiKey = providedApiKey;
@@ -54,23 +55,23 @@ export async function processReceiptImage(
     }
 
     if (!apiKey) {
-      console.error('❌ OCR failed: User has no Anthropic API key in Settings');
+      logError('❌ OCR failed: User has no Anthropic API key in Settings');
       return null;
     }
-    console.log('2️⃣ API key found ✅');
-    console.log('3️⃣ Image size:', imageBase64.length, 'bytes');
+    logInfo('2️⃣ API key found ✅');
+    logInfo('Image size', { bytes: imageBase64.length });
 
     // 2. Использовать новый сервис с извлечением товаров
-    console.log('4️⃣ Calling parseReceiptWithItems...');
+    logInfo('4️⃣ Calling parseReceiptWithItems...');
     const validMimeType = mimeType as "image/jpeg" | "image/png" | "image/webp" | "image/gif";
     const parsedReceipt = await parseReceiptWithItems(imageBase64, apiKey, validMimeType);
 
     if (!parsedReceipt) {
-      console.error('❌ Failed to parse receipt with items');
+      logError('❌ Failed to parse receipt with items');
       return null;
     }
 
-    console.log('5️⃣ Parsed result:', {
+    logInfo('5️⃣ Parsed result:', {
       merchant: parsedReceipt.merchant,
       total: parsedReceipt.total,
       itemsCount: parsedReceipt.items?.length || 0,
@@ -82,11 +83,11 @@ export async function processReceiptImage(
     // 1. Claude OCR (parsedReceipt.currency) - HIGHEST (supports ANY ISO currency)
     // 2. Merchant name heuristic (mapCurrency) - FALLBACK
     const currency = parsedReceipt.currency || mapCurrency(parsedReceipt.merchant);
-    console.log('6️⃣ Currency detected:', currency, parsedReceipt.currency ? '(from OCR)' : '(from merchant)');
+    logInfo('Currency detected', { currency, source: parsedReceipt.currency ? 'OCR' : 'merchant' });
 
     // 4. Определить категорию
     const category = detectCategory(parsedReceipt.merchant);
-    console.log('7️⃣ Category detected:', category);
+    logInfo('Category detected', { category });
 
     // 5. Вернуть результат с товарами
     const result = {
@@ -98,11 +99,11 @@ export async function processReceiptImage(
       items: parsedReceipt.items || []
     };
     
-    console.log('✅ OCR completed successfully!');
+    logInfo('✅ OCR completed successfully!');
     return result;
 
   } catch (error) {
-    console.error('❌ OCR Error Details:', {
+    logError('❌ OCR Error Details:', {
       userId,
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
@@ -161,7 +162,7 @@ function parseReceiptJSON(text: string): ReceiptData | null {
     // Найти JSON
     const match = cleaned.match(/\{[\s\S]*\}/);
     if (!match) {
-      console.error('No JSON found in response');
+      logError('No JSON found in response');
       return null;
     }
 
@@ -170,7 +171,7 @@ function parseReceiptJSON(text: string): ReceiptData | null {
 
     // Валидация amount
     if (!data.amount || data.amount <= 0) {
-      console.error('Invalid amount:', data.amount);
+      logError('Invalid amount:', data.amount);
       return null;
     }
 
@@ -178,7 +179,7 @@ function parseReceiptJSON(text: string): ReceiptData | null {
     const validCurrencies: Array<'USD' | 'RUB' | 'IDR'> = ['USD', 'RUB', 'IDR'];
     const currency = data.currency?.toUpperCase();
     if (!currency || !validCurrencies.includes(currency as any)) {
-      console.warn('Invalid or missing currency, defaulting to USD');
+      logWarning('Invalid or missing currency, defaulting to USD');
       data.currency = 'USD';
     } else {
       data.currency = currency;
@@ -186,7 +187,7 @@ function parseReceiptJSON(text: string): ReceiptData | null {
 
     return data;
   } catch (error) {
-    console.error('JSON parse error:', error);
+    logError('JSON parse error:', error);
     return null;
   }
 }

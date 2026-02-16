@@ -2,6 +2,7 @@ import { db } from "../db";
 import { settings, InsertSettings, Settings } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { encrypt, decrypt, decryptIfNeeded } from "../lib/encryption";
+import { logError } from '../lib/logger';
 
 export class SettingsRepository {
     async getSettingsByUserId(userId: number): Promise<Settings | null> {
@@ -32,7 +33,7 @@ export class SettingsRepository {
             try {
                 return decrypt(setting.anthropicApiKeyEncrypted);
             } catch (err) {
-                console.error(`Failed to decrypt Anthropic API key for user ${userId}:`, err);
+                logError(`Failed to decrypt Anthropic API key for user ${userId}:`, err);
                 return null;
             }
         }
@@ -58,7 +59,7 @@ export class SettingsRepository {
             try {
                 return decrypt(setting.openaiApiKeyEncrypted);
             } catch (err) {
-                console.error(`Failed to decrypt OpenAI API key for user ${userId}:`, err);
+                logError(`Failed to decrypt OpenAI API key for user ${userId}:`, err);
                 return null;
             }
         }

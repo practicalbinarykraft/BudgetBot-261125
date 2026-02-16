@@ -16,6 +16,7 @@ import { handleLanguageCallback } from './language.callback';
 import { handleReceiptCallback } from './receipt.callback';
 import { handleIncomeCallback } from './income.callback';
 import { handleTransactionCallback } from './transaction.callback';
+import { logError } from '../../../lib/logger';
 
 export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.CallbackQuery) {
   const chatId = query.message?.chat.id;
@@ -57,7 +58,7 @@ export async function handleCallbackQuery(bot: TelegramBot, query: TelegramBot.C
     }
 
   } catch (error) {
-    console.error('Callback query handling error:', error);
+    logError('Callback query handling error:', error);
     const lang = await getUserLanguageByTelegramId(telegramId);
     await bot.answerCallbackQuery(query.id, { text: t('error.generic', lang) });
   }

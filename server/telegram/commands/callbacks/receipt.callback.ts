@@ -21,6 +21,7 @@ import { formatTransactionMessage } from '../utils/format-transaction-message';
 import { pendingReceipts } from '../../pending-receipts';
 import { processReceiptItems } from '../../../services/product-catalog.service';
 import { storage } from '../../../storage';
+import { logInfo, logError } from '../../../lib/logger';
 
 export async function handleReceiptCallback(
   bot: TelegramBot,
@@ -129,9 +130,9 @@ export async function handleReceiptCallback(
         });
 
         await receiptItemsRepo.createBulk(itemsToSave);
-        console.log(`✅ Saved ${itemsToSave.length} items from receipt for transaction ${transaction.id}`);
+        logInfo(`✅ Saved ${itemsToSave.length} items from receipt for transaction ${transaction.id}`);
       } catch (error) {
-        console.error('Failed to save receipt items:', error);
+        logError('Failed to save receipt items:', error);
         // Don't fail the transaction if items fail to save
       }
     }
@@ -172,9 +173,9 @@ export async function handleReceiptCallback(
           anthropicApiKey: userSettings?.anthropicApiKey || undefined
         });
 
-        console.log(`✅ Product catalog updated from Telegram receipt (user ${user.id}, ${parsed.items.length} items, currency: ${parsed.currency})`);
+        logInfo(`✅ Product catalog updated from Telegram receipt (user ${user.id}, ${parsed.items.length} items, currency: ${parsed.currency})`);
       } catch (error) {
-        console.error('❌ Failed to update product catalog from Telegram:', error);
+        logError('❌ Failed to update product catalog from Telegram:', error);
         // Don't fail the transaction if catalog update fails
       }
     }

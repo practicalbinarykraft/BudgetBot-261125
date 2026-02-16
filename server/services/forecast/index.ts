@@ -8,6 +8,7 @@
 import { storage } from "../../storage";
 import type { ForecastResult, ForecastFilters } from "./types";
 import { getHistoricalTransactions, calculateHistoricalStats } from "./utils";
+import { logInfo, logWarning, logError } from '../../lib/logger';
 import { generateSimpleForecast } from "./simple-forecast";
 import { generateAIForecast } from "./ai-forecast";
 
@@ -47,7 +48,7 @@ export async function generateForecast(
   // If useAI=false or no API key, use simple forecast immediately
   if (!useAI || !apiKey) {
     const reason = !useAI ? 'AI forecast not requested (opt-in)' : 'No API key provided';
-    console.log(`[Forecast] ${reason}, using simple linear forecast`);
+    logInfo(`[Forecast] ${reason}, using simple linear forecast`);
 
     // Check if user has any recurring income sources
     const hasRecurringIncome = activeRecurring.some(r => r.type === 'income');
@@ -86,9 +87,9 @@ export async function generateForecast(
     const errorName = error instanceof Error ? error.name : '';
     const isTimeout = errorName === 'AbortError' || errorMessage?.includes('timeout');
     if (isTimeout) {
-      console.warn('[Forecast] AI request timed out after 30s, using simple forecast');
+      logWarning('[Forecast] AI request timed out after 30s, using simple forecast');
     } else {
-      console.error('[Forecast] AI forecast failed:', errorMessage);
+      logError('[Forecast] AI forecast failed', undefined, { errorMessage });
     }
 
     // Fallback to simple linear forecast

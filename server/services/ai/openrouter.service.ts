@@ -2,6 +2,7 @@
  * OpenRouter AI Provider
  * Uses DeepSeek model through OpenRouter for free AI chat
  */
+import { logError } from '../../lib/logger';
 
 export interface OpenRouterMessage {
   role: "user" | "assistant" | "system";
@@ -98,7 +99,7 @@ export async function chatWithOpenRouter(
       }
     };
   } catch (error: any) {
-    console.error("OpenRouter chat error:", error);
+    logError("OpenRouter chat error", error);
 
     if (error.message.includes("fetch")) {
       throw new Error("Network error. Please check your internet connection.");

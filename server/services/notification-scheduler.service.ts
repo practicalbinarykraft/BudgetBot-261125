@@ -5,13 +5,14 @@ import { eq, and, isNotNull } from 'drizzle-orm';
 import { getTelegramBot } from '../telegram/bot';
 import { t } from '@shared/i18n';
 import { userRepository } from '../repositories/user.repository';
+import { logInfo, logError } from '../lib/logger';
 
 const scheduledTasks = new Map<number, cron.ScheduledTask>();
 
 async function sendDailySummary(telegramId: string, language: 'en' | 'ru') {
   const bot = getTelegramBot();
   if (!bot) {
-    console.error('Telegram bot not initialized');
+    logError('Telegram bot not initialized');
     return;
   }
 
@@ -64,7 +65,7 @@ export async function scheduleNotificationForUser(userId: number) {
 
     // Validate notification time format
     if (!/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/.test(notificationTime)) {
-      console.error(`Invalid notification time format for user ${userId}: ${notificationTime}`);
+      logError(`Invalid notification time format for user ${userId}: ${notificationTime}`);
       return;
     }
 
@@ -76,22 +77,22 @@ export async function scheduleNotificationForUser(userId: number) {
     
     // Validate cron expression
     if (!cron.validate(cronExpression)) {
-      console.error(`Invalid cron expression for user ${userId}: ${cronExpression}`);
+      logError(`Invalid cron expression for user ${userId}: ${cronExpression}`);
       return;
     }
 
     const task = cron.schedule(cronExpression, () => {
       sendDailySummary(telegramId, language).catch(error => {
-        console.error(`Failed to send daily summary to user ${userId}:`, error);
+        logError(`Failed to send daily summary to user ${userId}:`, error);
       });
     }, {
       timezone: timezone
     });
 
     scheduledTasks.set(userId, task);
-    console.log(`Scheduled daily notification for user ${userId} at ${notificationTime} ${timezone}`);
+    logInfo(`Scheduled daily notification for user ${userId} at ${notificationTime} ${timezone}`);
   } catch (error) {
-    console.error(`Failed to schedule notification for user ${userId}:`, error);
+    logError(`Failed to schedule notification for user ${userId}:`, error);
   }
 }
 
@@ -105,7 +106,7 @@ export async function initializeScheduledNotifications() {
     await scheduleNotificationForUser(setting.userId);
   }
 
-  console.log(`Initialized ${scheduledTasks.size} scheduled notifications`);
+  logInfo(`Initialized ${scheduledTasks.size} scheduled notifications`);
 }
 
 export async function updateScheduleForUser(userId: number) {
@@ -115,5 +116,5 @@ export async function updateScheduleForUser(userId: number) {
 export function stopAllScheduledNotifications() {
   Array.from(scheduledTasks.values()).forEach(task => task.stop());
   scheduledTasks.clear();
-  console.log('Stopped all scheduled notifications');
+  logInfo('Stopped all scheduled notifications');
 }

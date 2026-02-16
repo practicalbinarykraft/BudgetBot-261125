@@ -6,6 +6,7 @@ import { transactionRepository } from '../repositories/transaction.repository';
 import { walletRepository } from '../repositories/wallet.repository';
 import { categoryRepository } from '../repositories/category.repository';
 import { checkCategoryLimit, sendBudgetAlert } from './budget/limits-checker.service';
+import { logError } from '../lib/logger';
 
 export interface CreateTransactionInput {
   type: 'income' | 'expense';
@@ -139,7 +140,7 @@ export class TransactionService {
           }
         })
         .catch(error => {
-          console.error('Error checking budget limit:', error);
+          logError('Error checking budget limit', error);
         });
     }
 

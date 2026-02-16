@@ -12,6 +12,7 @@ import { formatCurrency } from '../parser';
 import { t } from '@shared/i18n';
 import { getUserLanguageByTelegramId, getUserLanguageByUserId } from '../language';
 import { format } from 'date-fns';
+import { logError } from '../../lib/logger';
 
 export async function handleLastCommand(bot: TelegramBot, msg: TelegramBot.Message) {
   const chatId = msg.chat.id;
@@ -66,7 +67,7 @@ export async function handleLastCommand(bot: TelegramBot, msg: TelegramBot.Messa
 
     await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
   } catch (error) {
-    console.error('Last command error:', error);
+    logError('Last command error:', error);
     const lang = await getUserLanguageByTelegramId(telegramId);
     await bot.sendMessage(chatId, t('error.generic', lang));
   }

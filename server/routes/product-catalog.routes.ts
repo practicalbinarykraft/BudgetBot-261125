@@ -5,6 +5,7 @@ import { productPriceHistoryRepository } from '../repositories/product-price-his
 import { priceSearchReportsRepository } from '../repositories/price-search-reports.repository';
 import { updateProductCatalogSchema } from '@shared/schema';
 import { normalizeName } from '../services/product-catalog.service';
+import { logError } from '../lib/logger';
 
 const router = Router();
 
@@ -32,7 +33,7 @@ router.get('/', withAuth(async (req, res) => {
     
     res.json(products);
   } catch (error) {
-    console.error('Error fetching products:', error);
+    logError('Error fetching products:', error);
     res.status(500).json({ error: 'Failed to fetch products' });
   }
 }));
@@ -79,7 +80,7 @@ router.get('/:id/price-history', withAuth(async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching price history:', error);
+    logError('Error fetching price history:', error);
     res.status(500).json({ error: 'Failed to fetch price history' });
   }
 }));
@@ -103,7 +104,7 @@ router.get('/:id', withAuth(async (req, res) => {
     
     res.json(product);
   } catch (error) {
-    console.error('Error fetching product:', error);
+    logError('Error fetching product:', error);
     res.status(500).json({ error: 'Failed to fetch product' });
   }
 }));
@@ -152,7 +153,7 @@ router.patch('/:id', withAuth(async (req, res) => {
     
     res.json(updatedProduct);
   } catch (error) {
-    console.error('Error updating product:', error);
+    logError('Error updating product:', error);
     res.status(500).json({ error: 'Failed to update product' });
   }
 }));
@@ -179,7 +180,7 @@ router.delete('/:id', withAuth(async (req, res) => {
     
     res.json({ success: true });
   } catch (error) {
-    console.error('Error deleting product:', error);
+    logError('Error deleting product:', error);
     res.status(500).json({ error: 'Failed to delete product' });
   }
 }));

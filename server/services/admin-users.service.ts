@@ -14,7 +14,7 @@
 import { db } from '../db';
 import { users, transactions, wallets, categories, budgets } from '@shared/schema';
 import { sql, eq, and, or, like, ilike, count, desc, asc } from 'drizzle-orm';
-import { logError } from '../lib/logger';
+import { logError, logDebug } from '../lib/logger';
 import { getCreditBalance } from './credits.service';
 
 /**
@@ -217,10 +217,10 @@ export interface UserDetails {
  */
 export async function getUserDetails(userId: number): Promise<UserDetails | null> {
   try {
-    console.error('[DEBUG] getUserDetails entry', { userId });
+    logDebug('[DEBUG] getUserDetails entry', { userId });
     // Получаем основную информацию о пользователе
     // Явно указываем поля, чтобы избежать ошибок с отсутствующими столбцами
-    console.error('[DEBUG] Before db.select users query', { userId });
+    logDebug('[DEBUG] Before db.select users query', { userId });
     const [user] = await db
       .select({
         id: users.id,
@@ -235,7 +235,7 @@ export async function getUserDetails(userId: number): Promise<UserDetails | null
       .from(users)
       .where(eq(users.id, userId))
       .limit(1);
-    console.error('[DEBUG] After db.select users query', { userId, hasUser: !!user });
+    logDebug('[DEBUG] After db.select users query', { userId, hasUser: !!user });
 
     if (!user) {
       return null;
@@ -286,11 +286,11 @@ export async function getUserDetails(userId: number): Promise<UserDetails | null
     // Получаем информацию о кредитах с обработкой ошибок
     let creditsBalance: { totalGranted: number; totalUsed: number; messagesRemaining: number };
     try {
-      console.error('[DEBUG] getUserDetails - Calling getCreditBalance for user:', userId);
+      logDebug('[DEBUG] getUserDetails - Calling getCreditBalance', { userId });
       const balanceResult = await getCreditBalance(userId);
-      console.error('[DEBUG] getUserDetails balanceResult:', JSON.stringify(balanceResult));
-      console.error('[DEBUG] getUserDetails balanceResult type:', typeof balanceResult);
-      console.error('[DEBUG] getUserDetails balanceResult keys:', balanceResult ? Object.keys(balanceResult) : 'null');
+      logDebug('[DEBUG] getUserDetails balanceResult', { balanceResult });
+      logDebug('[DEBUG] getUserDetails balanceResult type', { type: typeof balanceResult });
+      logDebug('[DEBUG] getUserDetails balanceResult keys', { keys: balanceResult ? Object.keys(balanceResult) : null });
       
       // Убеждаемся что результат валидный
       if (balanceResult && typeof balanceResult === 'object' && 'messagesRemaining' in balanceResult) {
@@ -300,7 +300,7 @@ export async function getUserDetails(userId: number): Promise<UserDetails | null
           messagesRemaining: Number(balanceResult.messagesRemaining) || 0,
         };
       } else {
-        console.error('[DEBUG] getUserDetails - Invalid balanceResult, using defaults');
+        logDebug('[DEBUG] getUserDetails - Invalid balanceResult, using defaults');
         creditsBalance = {
           totalGranted: 0,
           totalUsed: 0,
@@ -308,8 +308,8 @@ export async function getUserDetails(userId: number): Promise<UserDetails | null
         };
       }
     } catch (error) {
-      console.error('[DEBUG] getUserDetails ERROR getting credits:', error);
-      console.error('[DEBUG] getUserDetails ERROR stack:', error instanceof Error ? error.stack : 'no stack');
+      logDebug('[DEBUG] getUserDetails ERROR getting credits', { error: error instanceof Error ? error.message : String(error) });
+      logDebug('[DEBUG] getUserDetails ERROR stack', { stack: error instanceof Error ? error.stack : 'no stack' });
       // Если не удалось получить кредиты, используем значения по умолчанию
       creditsBalance = {
         totalGranted: 0,
@@ -318,7 +318,7 @@ export async function getUserDetails(userId: number): Promise<UserDetails | null
       };
     }
     
-    console.error('[DEBUG] getUserDetails final creditsBalance:', JSON.stringify(creditsBalance));
+    logDebug('[DEBUG] getUserDetails final creditsBalance', { creditsBalance });
 
     const result = {
       id: user.id,
@@ -345,7 +345,7 @@ export async function getUserDetails(userId: number): Promise<UserDetails | null
         messagesRemaining: creditsBalance.messagesRemaining,
       },
     };
-    console.error('[DEBUG] getUserDetails returning result:', { 
+    logDebug('[DEBUG] getUserDetails returning result:', { 
       userId,
       hasStats: !!result.stats,
       statsKeys: result.stats ? Object.keys(result.stats) : [],
@@ -354,10 +354,10 @@ export async function getUserDetails(userId: number): Promise<UserDetails | null
       creditsValue: result.credits,
       creditsBalanceValue: creditsBalance
     });
-    console.error('[DEBUG] getUserDetails full result JSON:', JSON.stringify(result, null, 2));
+    logDebug('[DEBUG] getUserDetails full result JSON', { result });
     return result;
   } catch (error) {
-    console.error('[DEBUG] Error in getUserDetails', { 
+    logDebug('[DEBUG] Error in getUserDetails', { 
       userId,
       errorMessage: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack?.substring(0, 500) : undefined 

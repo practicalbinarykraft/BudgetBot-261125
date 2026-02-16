@@ -8,6 +8,7 @@ import { db } from '../db';
 import { userCredits, settings, aiUsageLog } from '@shared/schema';
 import { eq, desc, sql } from 'drizzle-orm';
 import { withAuth } from '../middleware/auth-utils';
+import { logInfo, logError } from '../lib/logger';
 
 const router = Router();
 
@@ -16,7 +17,7 @@ const router = Router();
  * Get current user's credit balance and billing mode
  */
 router.get('/', withAuth(async (req, res) => {
-  console.log('🎯 CREDITS ROUTE HIT! User:', req.user?.id, req.user?.email);
+  logInfo('CREDITS ROUTE HIT', { userId: req.user?.id, email: req.user?.email });
   try {
     const userId = req.user!.id;
 
@@ -37,7 +38,7 @@ router.get('/', withAuth(async (req, res) => {
         totalUsed: 0,
       });
 
-      console.log('✅ Credits auto-initialized:', freeCredits);
+      logInfo('Credits auto-initialized', { credits: freeCredits });
       return res.json({
         messagesRemaining: freeCredits,
         totalGranted: freeCredits,
@@ -68,7 +69,7 @@ router.get('/', withAuth(async (req, res) => {
       billingMode = credits.messagesRemaining > 0 ? 'paid' : 'free';
     }
 
-    console.log('✅ Credits data:', { messagesRemaining: credits.messagesRemaining, billingMode });
+    logInfo('✅ Credits data:', { messagesRemaining: credits.messagesRemaining, billingMode });
     res.json({
       messagesRemaining: credits.messagesRemaining,
       totalGranted: credits.totalGranted,
@@ -77,7 +78,7 @@ router.get('/', withAuth(async (req, res) => {
       hasByok,
     });
   } catch (error) {
-    console.error('❌ Error fetching credits:', error);
+    logError('❌ Error fetching credits:', error);
     res.status(500).json({ error: 'Failed to fetch credits' });
   }
 }));
@@ -162,7 +163,7 @@ router.get('/pricing', withAuth(async (req, res) => {
       ],
     });
   } catch (error) {
-    console.error('Error fetching pricing:', error);
+    logError('Error fetching pricing:', error);
     res.status(500).json({ error: 'Failed to fetch pricing' });
   }
 }));
@@ -215,7 +216,7 @@ router.get('/usage', withAuth(async (req, res) => {
       summary,
     });
   } catch (error) {
-    console.error('Error fetching usage:', error);
+    logError('Error fetching usage:', error);
     res.status(500).json({ error: 'Failed to fetch usage history' });
   }
 }));

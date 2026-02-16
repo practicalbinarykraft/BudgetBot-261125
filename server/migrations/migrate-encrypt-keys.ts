@@ -12,9 +12,10 @@ import { db } from '../db';
 import { settings } from '@shared/schema';
 import { eq, or, isNotNull } from 'drizzle-orm';
 import { encrypt, isEncrypted } from '../lib/encryption';
+import { logInfo, logError } from '../lib/logger';
 
 async function migrateEncryptKeys() {
-  console.log('🔐 Starting API key encryption migration...\n');
+  logInfo('🔐 Starting API key encryption migration...\n');
 
   // Find all settings with unencrypted API keys
   const allSettings = await db
@@ -27,7 +28,7 @@ async function migrateEncryptKeys() {
       )
     );
 
-  console.log(`Found ${allSettings.length} users with API keys to migrate\n`);
+  logInfo(`Found ${allSettings.length} users with API keys to migrate\n`);
 
   let migratedCount = 0;
   let skippedCount = 0;
@@ -42,11 +43,11 @@ async function migrateEncryptKeys() {
       if (setting.anthropicApiKey && !setting.anthropicApiKeyEncrypted) {
         // Skip if already encrypted
         if (!isEncrypted(setting.anthropicApiKey)) {
-          console.log(`  [User ${setting.userId}] Encrypting Anthropic API key...`);
+          logInfo(`  [User ${setting.userId}] Encrypting Anthropic API key...`);
           updates.anthropicApiKeyEncrypted = encrypt(setting.anthropicApiKey);
           needsUpdate = true;
         } else {
-          console.log(`  [User ${setting.userId}] Anthropic key already encrypted, skipping`);
+          logInfo(`  [User ${setting.userId}] Anthropic key already encrypted, skipping`);
           skippedCount++;
         }
       }
@@ -55,11 +56,11 @@ async function migrateEncryptKeys() {
       if (setting.openaiApiKey && !setting.openaiApiKeyEncrypted) {
         // Skip if already encrypted
         if (!isEncrypted(setting.openaiApiKey)) {
-          console.log(`  [User ${setting.userId}] Encrypting OpenAI API key...`);
+          logInfo(`  [User ${setting.userId}] Encrypting OpenAI API key...`);
           updates.openaiApiKeyEncrypted = encrypt(setting.openaiApiKey);
           needsUpdate = true;
         } else {
-          console.log(`  [User ${setting.userId}] OpenAI key already encrypted, skipping`);
+          logInfo(`  [User ${setting.userId}] OpenAI key already encrypted, skipping`);
           skippedCount++;
         }
       }
@@ -72,31 +73,31 @@ async function migrateEncryptKeys() {
           .where(eq(settings.id, setting.id));
 
         migratedCount++;
-        console.log(`  ✅ [User ${setting.userId}] Migration successful\n`);
+        logInfo(`  ✅ [User ${setting.userId}] Migration successful\n`);
       }
 
     } catch (error: unknown) {
       errorCount++;
-      console.error(`  ❌ [User ${setting.userId}] Migration failed: ${error instanceof Error ? error.message : String(error)}\n`);
+      logError(`  ❌ [User ${setting.userId}] Migration failed: ${error instanceof Error ? error.message : String(error)}\n`);
     }
   }
 
-  console.log('\n📊 Migration Summary:');
-  console.log(`  ✅ Migrated: ${migratedCount}`);
-  console.log(`  ⏭️  Skipped:  ${skippedCount}`);
-  console.log(`  ❌ Errors:   ${errorCount}`);
-  console.log(`  📦 Total:    ${allSettings.length}\n`);
+  logInfo('\n📊 Migration Summary:');
+  logInfo(`  ✅ Migrated: ${migratedCount}`);
+  logInfo(`  ⏭️  Skipped:  ${skippedCount}`);
+  logInfo(`  ❌ Errors:   ${errorCount}`);
+  logInfo(`  📦 Total:    ${allSettings.length}\n`);
 
   if (errorCount === 0) {
-    console.log('🎉 Migration completed successfully!\n');
-    console.log('Next steps:');
-    console.log('  1. Verify the migration in production');
-    console.log('  2. Monitor for any errors');
-    console.log('  3. After 1-2 weeks, remove legacy columns:');
-    console.log('     ALTER TABLE settings DROP COLUMN anthropic_api_key;');
-    console.log('     ALTER TABLE settings DROP COLUMN openai_api_key;');
+    logInfo('🎉 Migration completed successfully!\n');
+    logInfo('Next steps:');
+    logInfo('  1. Verify the migration in production');
+    logInfo('  2. Monitor for any errors');
+    logInfo('  3. After 1-2 weeks, remove legacy columns:');
+    logInfo('     ALTER TABLE settings DROP COLUMN anthropic_api_key;');
+    logInfo('     ALTER TABLE settings DROP COLUMN openai_api_key;');
   } else {
-    console.log('⚠️  Migration completed with errors. Please check the logs above.\n');
+    logInfo('⚠️  Migration completed with errors. Please check the logs above.\n');
     process.exit(1);
   }
 }
@@ -104,10 +105,10 @@ async function migrateEncryptKeys() {
 // Run migration
 migrateEncryptKeys()
   .then(() => {
-    console.log('Done!');
+    logInfo('Done!');
     process.exit(0);
   })
   .catch((error) => {
-    console.error('Fatal error during migration:', error);
+    logError('Fatal error during migration:', error);
     process.exit(1);
   });

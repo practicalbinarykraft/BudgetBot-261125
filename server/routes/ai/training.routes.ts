@@ -4,6 +4,7 @@ import { getTrainingStats, saveTrainingExample } from "../../services/ai/trainin
 import { getTrainingHistory } from "../../services/ai/training-history.service";
 import { insertAiTrainingExampleSchema, type TrainingStats } from "@shared/schema";
 import { getErrorMessage } from "../../lib/errors";
+import { logError } from '../../lib/logger';
 
 const router = Router();
 
@@ -13,7 +14,7 @@ router.get("/training-stats", withAuth(async (req, res) => {
     const stats: TrainingStats = await getTrainingStats(Number(req.user.id));
     res.json(stats);
   } catch (error: unknown) {
-    console.error("Training stats error:", error);
+    logError("Training stats error:", error);
     res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
@@ -38,7 +39,7 @@ router.post("/training", withAuth(async (req, res) => {
 
     res.status(201).json({ success: true });
   } catch (error: unknown) {
-    console.error("Save training example error:", error);
+    logError("Save training example error:", error);
     res.status(400).json({ error: getErrorMessage(error) });
   }
 }));
@@ -55,7 +56,7 @@ router.get("/training/history", withAuth(async (req, res) => {
     const history = await getTrainingHistory(Number(req.user.id), limit, offset);
     res.json(history);
   } catch (error: unknown) {
-    console.error("Training history error:", error);
+    logError("Training history error:", error);
     res.status(500).json({ error: getErrorMessage(error) });
   }
 }));

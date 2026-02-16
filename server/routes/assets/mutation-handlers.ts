@@ -8,6 +8,7 @@
 import { Request, Response } from 'express';
 import { assetsRepository } from '../../repositories/assets.repository';
 import { getErrorMessage } from '../../lib/errors';
+import { logError } from '../../lib/logger';
 
 /**
  * POST /api/assets - Create new asset
@@ -45,7 +46,7 @@ export async function createAsset(req: Request, res: Response) {
       data: asset
     });
   } catch (error: unknown) {
-    console.error('Error creating asset:', error);
+    logError('Error creating asset:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to create asset'
@@ -89,7 +90,7 @@ export async function updateAsset(req: Request, res: Response) {
       data: updated
     });
   } catch (error: unknown) {
-    console.error('Error updating asset:', error);
+    logError('Error updating asset:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to update asset'
@@ -154,7 +155,7 @@ export async function calibrateAsset(req: Request, res: Response) {
       message: 'Price calibrated successfully'
     });
   } catch (error: unknown) {
-    console.error('Error calibrating price:', error);
+    logError('Error calibrating price:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to calibrate price'
@@ -195,7 +196,7 @@ export async function deleteAsset(req: Request, res: Response) {
       message: 'Asset deleted successfully'
     });
   } catch (error: unknown) {
-    console.error('Error deleting asset:', error);
+    logError('Error deleting asset:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to delete asset'

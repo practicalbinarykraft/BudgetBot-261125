@@ -15,6 +15,7 @@ import { convertToUSD, getUserExchangeRates } from '../../../services/currency-s
 import { resolveCategoryId } from '../../../services/category-resolution.service';
 import { getPrimaryWallet, updateWalletBalance } from '../../../services/wallet.service';
 import { ReceiptItemsRepository } from '../../../repositories/receipt-items.repository';
+import { logInfo, logError } from '../../../lib/logger';
 import { formatTransactionMessage } from '../utils/format-transaction-message';
 
 export async function handleShoppingList(
@@ -90,9 +91,9 @@ export async function handleShoppingList(
       });
 
       await receiptItemsRepo.createBulk(itemsToSave);
-      console.log(`✅ Saved ${itemsToSave.length} items from shopping list for transaction ${transaction.id}`);
+      logInfo(`✅ Saved ${itemsToSave.length} items from shopping list for transaction ${transaction.id}`);
     } catch (error) {
-      console.error('Failed to save shopping list items:', error);
+      logError('Failed to save shopping list items:', error);
     }
   }
 

@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { logError } from '../../lib/logger';
 
 /**
  * Сервис для парсинга чеков с извлечением списка товаров
@@ -160,8 +161,7 @@ Rules:
   try {
     parsed = JSON.parse(text);
   } catch (error) {
-    console.error('OCR Parse Error:', {
-      error: error instanceof Error ? error.message : String(error),
+    logError('OCR Parse Error', error instanceof Error ? error : undefined, {
       responseStart: text.substring(0, 300)
     });
     throw new Error(

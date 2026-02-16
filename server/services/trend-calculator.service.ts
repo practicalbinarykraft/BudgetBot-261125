@@ -29,6 +29,7 @@ import {
 import { assetsRepository } from "../repositories/assets.repository";
 import { assetValueCalculator } from './asset-value-calculator.service';
 import { liabilityCalculator } from './liability-calculator.service';
+import { logWarning, logError } from '../lib/logger';
 
 export type { TrendDataPoint };
 
@@ -441,7 +442,7 @@ async function generateAndProcessForecast(params: {
         };
       });
     } catch (filterError) {
-      console.warn('[Forecast] Filter application failed, using base forecast:', filterError);
+      logWarning('[Forecast] Filter application failed, using base forecast', { error: filterError instanceof Error ? filterError.message : String(filterError) });
       // Fallback: use base forecast without filters
       forecastDataWithFilters = result.forecast.map((f) => ({
         date: f.date,
@@ -536,7 +537,7 @@ async function generateAndProcessForecast(params: {
       metadata: result.metadata,
     };
   } catch (error: unknown) {
-    console.error("Forecast generation failed:", error instanceof Error ? error.message : String(error));
+    logError("Forecast generation failed", error instanceof Error ? error : undefined);
     return {
       forecastData: [],
       metadata: {

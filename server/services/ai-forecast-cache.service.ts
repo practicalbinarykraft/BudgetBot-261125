@@ -1,4 +1,5 @@
 import NodeCache from 'node-cache';
+import { logInfo } from '../lib/logger';
 
 /**
  * AI Forecast Cache Service
@@ -75,11 +76,11 @@ export function getAiForecastFromCache(params: {
   const cached = cache.get<AiForecastCacheData>(key);
   
   if (cached) {
-    console.log(`[AI Cache] HIT for user ${params.userId} (expires: ${cached.expiresAt.toISOString()})`);
+    logInfo(`[AI Cache] HIT for user ${params.userId} (expires: ${cached.expiresAt.toISOString()})`);
     return cached;
   }
   
-  console.log(`[AI Cache] MISS for user ${params.userId}`);
+  logInfo(`[AI Cache] MISS for user ${params.userId}`);
   return null;
 }
 
@@ -119,7 +120,7 @@ export function setAiForecastCache(
   };
   
   cache.set(key, cacheData);
-  console.log(`[AI Cache] SET for user ${params.userId} (expires: ${expiresAt.toISOString()})`);
+  logInfo(`[AI Cache] SET for user ${params.userId} (expires: ${expiresAt.toISOString()})`);
 }
 
 /**
@@ -130,7 +131,7 @@ export function clearAiForecastCache(userId: number): void {
   const userKeys = keys.filter((key: string) => key.startsWith(`ai-forecast:${userId}:`));
   
   userKeys.forEach((key: string) => cache.del(key));
-  console.log(`[AI Cache] CLEARED ${userKeys.length} entries for user ${userId}`);
+  logInfo(`[AI Cache] CLEARED ${userKeys.length} entries for user ${userId}`);
 }
 
 /**

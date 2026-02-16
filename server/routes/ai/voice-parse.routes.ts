@@ -26,6 +26,7 @@ import fs from "fs";
 import fsp from "fs/promises";
 import path from "path";
 import { tmpdir } from "os";
+import { logInfo, logError } from '../../lib/logger';
 
 const router = Router();
 
@@ -91,7 +92,7 @@ router.post("/voice-parse", withAuth(async (req, res) => {
     tempFilePath = path.join(tmpdir(), `voice_web_${Date.now()}.${extension}`);
     await fsp.writeFile(tempFilePath, audioBuffer);
 
-    console.log(`📁 [User ${userId}] Saved audio:`, {
+    logInfo(`📁 [User ${userId}] Saved audio:`, {
       size: `${Math.round(audioBuffer.length / 1024)}KB`,
       mimeType: mimeType || 'unknown', extension,
     });
@@ -110,9 +111,9 @@ router.post("/voice-parse", withAuth(async (req, res) => {
       });
       transcription = typeof result === 'string' ? result : String(result);
       transcription = transcription.trim();
-      console.log(`🎤 [User ${userId}] Transcription: "${transcription}"`);
+      logInfo(`🎤 [User ${userId}] Transcription: "${transcription}"`);
     } catch (error: any) {
-      console.error(`❌ [User ${userId}] Whisper error:`, error);
+      logError(`❌ [User ${userId}] Whisper error:`, error);
       if (error?.status === 401) {
         return res.status(401).json({ success: false, error: "Invalid OpenAI API key", code: "INVALID_API_KEY" });
       }
@@ -134,7 +135,7 @@ router.post("/voice-parse", withAuth(async (req, res) => {
     const detectedDescription = cleanDescription(transcription);
     const detectedType = detectTypeFromText(transcription);
 
-    console.log(`🔍 [User ${userId}] Deterministic:`, {
+    logInfo(`🔍 [User ${userId}] Deterministic:`, {
       currency: detectedCurrency, amount: detectedAmount,
       description: detectedDescription, type: detectedType,
     });
@@ -163,7 +164,7 @@ router.post("/voice-parse", withAuth(async (req, res) => {
       }
 
     } catch (parseError) {
-      console.error(`⚠️ [User ${userId}] LLM parse failed, using deterministic only:`, parseError);
+      logError(`⚠️ [User ${userId}] LLM parse failed, using deterministic only:`, parseError);
 
       parsed = {
         amount: String(detectedAmount ?? 0),
@@ -174,13 +175,13 @@ router.post("/voice-parse", withAuth(async (req, res) => {
       };
     }
 
-    console.log(`✅ [User ${userId}] Final parsed:`, parsed);
+    logInfo(`✅ [User ${userId}] Final parsed:`, parsed);
 
     // ========== STEP 6: Return result ==========
     res.json({ success: true, transcription, parsed, creditsUsed });
 
   } catch (error: unknown) {
-    console.error("💥 Voice parse error:", error);
+    logError("💥 Voice parse error:", error);
     if (error instanceof BillingError) {
       return res.status(402).json({ success: false, error: error.message, code: error.code });
     }
@@ -248,14 +249,14 @@ router.post("/parse-text", withAuth(async (req, res) => {
         creditsUsed = 1;
       }
     } catch (parseError) {
-      console.error(`⚠️ [User ${userId}] AI parse error:`, parseError);
+      logError(`⚠️ [User ${userId}] AI parse error:`, parseError);
       return res.status(500).json({ success: false, error: "AI parsing failed", details: getErrorMessage(parseError) });
     }
 
     res.json({ success: true, parsed, creditsUsed });
 
   } catch (error: unknown) {
-    console.error("💥 Parse text error:", error);
+    logError("💥 Parse text error:", error);
     if (error instanceof BillingError) {
       return res.status(402).json({ success: false, error: error.message, code: error.code });
     }

@@ -5,6 +5,8 @@
  * API is OpenAI-compatible
  */
 
+import { logError } from '../lib/logger';
+
 export interface DeepSeekMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
@@ -127,7 +129,7 @@ Output: {"amount": 200, "currency": "${userCurrency}", "description": "такс�
       category: parsed.category,
     };
   } catch (err) {
-    console.error('Failed to parse DeepSeek JSON:', content);
+    logError('Failed to parse DeepSeek JSON', undefined, { content });
     throw new Error('Invalid response format from DeepSeek');
   }
 }

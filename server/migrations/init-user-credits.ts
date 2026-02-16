@@ -11,17 +11,18 @@ import 'dotenv/config';
 import { db } from '../db';
 import { users, userCredits } from '@shared/schema';
 import { sql } from 'drizzle-orm';
+import { logInfo, logError } from '../lib/logger';
 
 const FREE_TIER_CREDITS = parseInt(process.env.FREE_TIER_CREDITS || '25', 10);
 
 async function initializeUserCredits() {
-  console.log('🚀 Starting user credits initialization...');
-  console.log(`📊 Free tier credits: ${FREE_TIER_CREDITS}`);
+  logInfo('🚀 Starting user credits initialization...');
+  logInfo(`📊 Free tier credits: ${FREE_TIER_CREDITS}`);
 
   try {
     // Get all users
     const allUsers = await db.select({ id: users.id }).from(users);
-    console.log(`👥 Found ${allUsers.length} total users`);
+    logInfo(`👥 Found ${allUsers.length} total users`);
 
     // Get users who already have credits
     const usersWithCredits = await db
@@ -29,14 +30,14 @@ async function initializeUserCredits() {
       .from(userCredits);
 
     const userIdsWithCredits = new Set(usersWithCredits.map(u => u.userId));
-    console.log(`💳 ${usersWithCredits.length} users already have credits`);
+    logInfo(`💳 ${usersWithCredits.length} users already have credits`);
 
     // Find users who need credits
     const usersNeedingCredits = allUsers.filter(u => !userIdsWithCredits.has(u.id));
-    console.log(`🆕 ${usersNeedingCredits.length} users need credits initialization`);
+    logInfo(`🆕 ${usersNeedingCredits.length} users need credits initialization`);
 
     if (usersNeedingCredits.length === 0) {
-      console.log('✅ All users already have credits. Nothing to do.');
+      logInfo('✅ All users already have credits. Nothing to do.');
       return;
     }
 
@@ -53,22 +54,22 @@ async function initializeUserCredits() {
           totalUsed: 0,
         });
         successCount++;
-        console.log(`✅ User ${user.id}: Granted ${FREE_TIER_CREDITS} credits`);
+        logInfo(`✅ User ${user.id}: Granted ${FREE_TIER_CREDITS} credits`);
       } catch (error) {
         errorCount++;
-        console.error(`❌ User ${user.id}: Failed to grant credits:`, error);
+        logError(`User ${user.id}: Failed to grant credits`, error);
       }
     }
 
-    console.log('\n📊 Migration Summary:');
-    console.log(`   Total users: ${allUsers.length}`);
-    console.log(`   Already had credits: ${usersWithCredits.length}`);
-    console.log(`   Successfully initialized: ${successCount}`);
-    console.log(`   Errors: ${errorCount}`);
-    console.log('\n✅ Migration completed!');
+    logInfo('\n📊 Migration Summary:');
+    logInfo(`   Total users: ${allUsers.length}`);
+    logInfo(`   Already had credits: ${usersWithCredits.length}`);
+    logInfo(`   Successfully initialized: ${successCount}`);
+    logInfo(`   Errors: ${errorCount}`);
+    logInfo('\n✅ Migration completed!');
 
   } catch (error) {
-    console.error('❌ Migration failed:', error);
+    logError('Migration failed', error);
     process.exit(1);
   }
 }
@@ -77,6 +78,6 @@ async function initializeUserCredits() {
 initializeUserCredits()
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error('Fatal error:', error);
+    logError('Fatal error', error);
     process.exit(1);
   });

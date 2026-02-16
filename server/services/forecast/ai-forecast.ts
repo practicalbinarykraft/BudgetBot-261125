@@ -15,6 +15,7 @@ import {
   getAiForecastFromCache,
   setAiForecastCache,
 } from "../ai-forecast-cache.service";
+import { logInfo, logWarning, logError } from '../../lib/logger';
 
 /**
  * Generate AI-powered forecast using Claude
@@ -55,7 +56,7 @@ export async function generateAIForecast(
   });
 
   if (cached) {
-    console.log(`[Forecast] Using cached AI forecast (expires: ${cached.expiresAt.toISOString()})`);
+    logInfo(`[Forecast] Using cached AI forecast (expires: ${cached.expiresAt.toISOString()})`);
     const forecast = buildForecastFromCache(cached, currentCapital);
     return {
       forecast,
@@ -85,7 +86,7 @@ export async function generateAIForecast(
   // Add 1000 tokens buffer for JSON formatting and markdown wrappers
   const estimatedTokens = Math.max(4096, Math.min(32000, (daysAhead * 50) + 1000));
 
-  console.log(`[Forecast] Generating ${daysAhead} days AI forecast, max_tokens: ${estimatedTokens}`);
+  logInfo(`[Forecast] Generating ${daysAhead} days AI forecast, max_tokens: ${estimatedTokens}`);
 
   // Create AbortController for request cancellation
   const controller = new AbortController();
@@ -93,7 +94,7 @@ export async function generateAIForecast(
 
   // Set timeout to abort the request
   const timeoutId = setTimeout(() => {
-    console.warn(`[Forecast] AI request timeout after ${timeoutMs}ms, aborting...`);
+    logWarning(`[Forecast] AI request timeout after ${timeoutMs}ms, aborting...`);
     controller.abort();
   }, timeoutMs);
 
@@ -113,7 +114,7 @@ export async function generateAIForecast(
 
     // Clear timeout on success
     clearTimeout(timeoutId);
-    console.log(`[Forecast] AI response received, stop_reason: ${message.stop_reason}`);
+    logInfo(`[Forecast] AI response received, stop_reason: ${message.stop_reason}`);
 
     const content = message.content[0];
     if (content.type !== "text") {
@@ -122,7 +123,7 @@ export async function generateAIForecast(
 
     // Check if response was truncated
     if (message.stop_reason === 'max_tokens') {
-      console.error(`[Forecast] Response truncated! Requested ${estimatedTokens} tokens but hit limit`);
+      logError(`[Forecast] Response truncated! Requested ${estimatedTokens} tokens but hit limit`);
       throw new Error(`AI forecast was cut short. Try reducing forecast days or contact support.`);
     }
 
@@ -181,11 +182,11 @@ function parseAIResponse(text: string): ForecastDataPoint[] {
   try {
     // Strategy 1: Direct parse (works for clean JSON)
     forecast = JSON.parse(cleanedText);
-    console.log(`[Forecast] Successfully parsed ${forecast.length} data points`);
+    logInfo(`[Forecast] Successfully parsed ${forecast.length} data points`);
     return forecast;
   } catch (parseError: unknown) {
     const msg = parseError instanceof Error ? parseError.message : String(parseError);
-    console.warn('[Forecast] Direct JSON parse failed, trying cleanup strategies:', msg);
+    logWarning('[Forecast] Direct JSON parse failed, trying cleanup strategies', { detail: msg });
 
     try {
       // Strategy 2: Clean up common JSON issues
@@ -197,27 +198,27 @@ function parseAIResponse(text: string): ForecastDataPoint[] {
       cleanedText = cleanedText.replace(/,\s*([\]}])/g, '$1');
 
       forecast = JSON.parse(cleanedText);
-      console.log(`[Forecast] Cleanup successful, parsed ${forecast.length} data points`);
+      logInfo(`[Forecast] Cleanup successful, parsed ${forecast.length} data points`);
       return forecast;
     } catch (cleanupError: unknown) {
       const msg = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
-      console.warn('[Forecast] Cleanup strategy failed, trying JSON extraction:', msg);
+      logWarning('[Forecast] Cleanup strategy failed, trying JSON extraction', { detail: msg });
 
       try {
         // Strategy 3: Extract first valid JSON array from response
         const jsonMatch = cleanedText.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
           forecast = JSON.parse(jsonMatch[0]);
-          console.log(`[Forecast] Extraction successful, parsed ${forecast.length} data points`);
+          logInfo(`[Forecast] Extraction successful, parsed ${forecast.length} data points`);
           return forecast;
         } else {
           throw new Error('No JSON array found in response');
         }
       } catch (extractError: unknown) {
         const msg = extractError instanceof Error ? extractError.message : String(extractError);
-        console.error('[Forecast] All JSON parsing strategies failed:', msg);
-        console.error('[Forecast] Raw response text:', text.substring(0, 500));
-        console.error('[Forecast] Response length:', text.length);
+        logError('[Forecast] All JSON parsing strategies failed:', msg);
+        logError('[Forecast] Raw response text:', text.substring(0, 500));
+        logError('[Forecast] Response length:', text.length);
         throw new Error('AI response could not be parsed. The forecast data may be incomplete.');
       }
     }

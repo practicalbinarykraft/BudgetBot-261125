@@ -13,6 +13,7 @@ import { parseTransactionText, formatCurrency } from '../parser';
 import { t } from '@shared/i18n';
 import { getUserLanguageByTelegramId, getUserLanguageByUserId } from '../language';
 import { convertToUSD, getUserExchangeRates } from '../../services/currency-service';
+import { logError } from '../../lib/logger';
 import { resolveCategoryId } from '../../services/category-resolution.service';
 
 export async function handleIncomeCommand(bot: TelegramBot, msg: TelegramBot.Message, text: string) {
@@ -95,7 +96,7 @@ export async function handleIncomeCommand(bot: TelegramBot, msg: TelegramBot.Mes
       }
     );
   } catch (error) {
-    console.error('Income command error:', error);
+    logError('Income command error:', error);
     const lang = await getUserLanguageByTelegramId(telegramId);
     await bot.sendMessage(chatId, t('error.generic', lang));
   }

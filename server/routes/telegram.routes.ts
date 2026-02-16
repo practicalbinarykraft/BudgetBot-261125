@@ -7,6 +7,7 @@ import { VERIFICATION_CODE_TTL_MINUTES } from "../telegram/config";
 import { TELEGRAM_BOT_TOKEN } from "../telegram/config";
 import { validateInitData } from "../services/telegram-validation.service";
 import { authRateLimiter } from "../middleware/rate-limit";
+import { logError } from '../lib/logger';
 
 const router = Router();
 
@@ -55,7 +56,7 @@ router.post("/webapp-auth", authRateLimiter, async (req, res) => {
         // User has email+password → Auto-login
         req.login(user, (err) => {
           if (err) {
-            console.error("Error creating session:", err);
+            logError("Error creating session:", err);
             return res.status(500).json({ message: "Failed to create session" });
           }
 
@@ -95,7 +96,7 @@ router.post("/webapp-auth", authRateLimiter, async (req, res) => {
       });
     }
   } catch (error) {
-    console.error("Error in webapp-auth:", error);
+    logError("Error in webapp-auth:", error);
     res.status(500).json({ message: "Authentication failed" });
   }
 });
@@ -135,7 +136,7 @@ router.post("/generate-code", withAuth(async (req, res) => {
       ttlMinutes: VERIFICATION_CODE_TTL_MINUTES,
     });
   } catch (error) {
-    console.error("Error generating verification code:", error);
+    logError("Error generating verification code:", error);
     res.status(500).json({ message: "Failed to generate verification code" });
   }
 }));
@@ -159,7 +160,7 @@ router.post("/disconnect", withAuth(async (req, res) => {
 
     res.json({ message: "Telegram disconnected successfully" });
   } catch (error) {
-    console.error("Error disconnecting Telegram:", error);
+    logError("Error disconnecting Telegram:", error);
     res.status(500).json({ message: "Failed to disconnect Telegram" });
   }
 }));
@@ -179,7 +180,7 @@ router.get("/status", withAuth(async (req, res) => {
       username: user.telegramUsername || null,
     });
   } catch (error) {
-    console.error("Error fetching Telegram status:", error);
+    logError("Error fetching Telegram status:", error);
     res.status(500).json({ message: "Failed to fetch Telegram status" });
   }
 }));

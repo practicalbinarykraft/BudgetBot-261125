@@ -16,6 +16,7 @@ import { resolveCategoryId } from '../../../services/category-resolution.service
 import { updateWalletBalance } from '../../../services/wallet.service';
 import { pendingEdits } from '../../pending-edits';
 import { formatTransactionMessage } from '../utils/format-transaction-message';
+import { logError } from '../../../lib/logger';
 
 export async function handleEditFlow(
   bot: TelegramBot,
@@ -84,7 +85,7 @@ export async function handleEditFlow(
 
     // Abort edit if we cannot safely calculate old USD amount
     if (oldAmountUsd === null || isNaN(oldAmountUsd) || !isFinite(oldAmountUsd)) {
-      console.error('Cannot calculate old USD amount for transaction:', pendingEdit.transactionId);
+      logError('Cannot calculate old USD amount for transaction:', pendingEdit.transactionId);
       pendingEdits.delete(telegramId);
       await bot.sendMessage(chatId, t('error.transaction', lang));
       return true;

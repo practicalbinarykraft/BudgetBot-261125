@@ -10,6 +10,7 @@ import { users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { t } from '@shared/i18n';
 import { getUserLanguageByTelegramId, getUserLanguageByUserId } from '../language';
+import { logError } from '../../lib/logger';
 
 export async function handleLanguageCommand(bot: TelegramBot, msg: TelegramBot.Message) {
   const chatId = msg.chat.id;
@@ -48,7 +49,7 @@ export async function handleLanguageCommand(bot: TelegramBot, msg: TelegramBot.M
       }
     });
   } catch (error) {
-    console.error('Language command error:', error);
+    logError('Language command error:', error);
     await bot.sendMessage(chatId, t('error.generic', lang));
   }
 }

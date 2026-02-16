@@ -4,6 +4,7 @@ import fs from "fs";
 import fsp from "fs/promises";
 import path from "path";
 import { tmpdir } from "os";
+import { logInfo, logError } from '../lib/logger';
 
 /**
  * Whisper Transcription Service
@@ -58,7 +59,7 @@ async function cleanupFile(filePath: string): Promise<void> {
   try {
     await fsp.unlink(filePath);
   } catch (err) {
-    console.error('[Whisper] Failed to cleanup temp file:', err);
+    logError('[Whisper] Failed to cleanup temp file:', err);
   }
 }
 
@@ -90,14 +91,14 @@ export async function transcribeVoiceMessage(
     const openai = new OpenAI({ apiKey });
 
     // Download voice file to temp location
-    console.log('[Whisper] Downloading voice file...');
+    logInfo('[Whisper] Downloading voice file...');
     tempFilePath = await downloadFile(fileUrl);
 
     // Create readable stream for OpenAI API (Node.js compatible)
     const audioStream = fs.createReadStream(tempFilePath);
 
     // Transcribe using Whisper API
-    console.log('[Whisper] Transcribing with Whisper API...');
+    logInfo('[Whisper] Transcribing with Whisper API...');
     const transcription = await openai.audio.transcriptions.create({
       file: audioStream,
       model: 'whisper-1',
@@ -105,14 +106,14 @@ export async function transcribeVoiceMessage(
       response_format: 'text',
     });
 
-    console.log('[Whisper] Transcription successful:', transcription);
+    logInfo('[Whisper] Transcription successful', { transcription });
 
     return {
       success: true,
       text: transcription.trim(),
     };
   } catch (err: any) {
-    console.error('[Whisper] Transcription error:', err);
+    logError('[Whisper] Transcription error:', err);
 
     // Return structured error codes for i18n
     if (err?.status === 401) {
@@ -165,20 +166,20 @@ export async function getTelegramFileUrl(
     );
 
     if (!response.ok) {
-      console.error('[Whisper] Failed to get Telegram file info:', response.statusText);
+      logError('[Whisper] Failed to get Telegram file info:', response.statusText);
       return null;
     }
 
     const data = await response.json();
 
     if (!data.ok || !data.result?.file_path) {
-      console.error('[Whisper] Invalid Telegram file response:', data);
+      logError('[Whisper] Invalid Telegram file response:', data);
       return null;
     }
 
     return `https://api.telegram.org/file/bot${botToken}/${data.result.file_path}`;
   } catch (err) {
-    console.error('[Whisper] Error getting Telegram file URL:', err);
+    logError('[Whisper] Error getting Telegram file URL:', err);
     return null;
   }
 }

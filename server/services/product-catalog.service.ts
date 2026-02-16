@@ -1,5 +1,6 @@
 import { productCatalogRepository } from '../repositories/product-catalog.repository';
 import { productPriceHistoryRepository } from '../repositories/product-price-history.repository';
+import { logInfo, logError } from '../lib/logger';
 
 // Нормализация названия товара
 export function normalizeName(name: string): string {
@@ -203,9 +204,9 @@ export async function processReceiptItems(params: {
       // 5. Обновить лучшую цену
       await updateBestPrice(productId);
       
-      console.log(`✅ Processed: ${item.name} → Product ID ${productId}`);
+      logInfo(`Processed: ${item.name} -> Product ID ${productId}`);
     } catch (error) {
-      console.error(`❌ Failed to process item: ${item.name}`, error);
+      logError(`Failed to process item: ${item.name}`, error);
       // Продолжаем обработку остальных товаров
     }
   }

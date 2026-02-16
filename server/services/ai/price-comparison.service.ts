@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { ReceiptItem } from "@shared/schema";
+import { logError } from '../../lib/logger';
 
 export interface PriceRecommendation {
   itemName: string;
@@ -144,7 +145,7 @@ Provide practical advice about where to shop and what to watch out for.`;
 
     return "Unable to generate price insights at this time.";
   } catch (error: any) {
-    console.error("AI price insights error:", error);
+    logError("AI price insights error", error);
     throw new Error(`Failed to generate AI insights: ${error.message}`);
   }
 }

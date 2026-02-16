@@ -12,9 +12,10 @@
 import { db } from "../db";
 import { transactions, categories } from "@shared/schema";
 import { eq, and, isNull } from "drizzle-orm";
+import { logInfo, logError } from '../lib/logger';
 
 async function backfillTransactionCategories() {
-  console.log("🔄 Starting transaction categoryId backfill...");
+  logInfo("🔄 Starting transaction categoryId backfill...");
 
   try {
     // Get all transactions without categoryId
@@ -23,7 +24,7 @@ async function backfillTransactionCategories() {
       .from(transactions)
       .where(isNull(transactions.categoryId));
 
-    console.log(`Found ${transactionsToUpdate.length} transactions to backfill`);
+    logInfo(`Found ${transactionsToUpdate.length} transactions to backfill`);
 
     let updated = 0;
     let skipped = 0;
@@ -56,21 +57,21 @@ async function backfillTransactionCategories() {
         updated++;
         
         if (updated % 10 === 0) {
-          console.log(`  ✅ Updated ${updated} transactions...`);
+          logInfo(`  ✅ Updated ${updated} transactions...`);
         }
       } else {
-        console.log(`  ⚠️  No category found for "${transaction.category}" (transaction #${transaction.id})`);
+        logInfo(`  ⚠️  No category found for "${transaction.category}" (transaction #${transaction.id})`);
         skipped++;
       }
     }
 
-    console.log("\n✅ Backfill completed!");
-    console.log(`  - Updated: ${updated} transactions`);
-    console.log(`  - Skipped: ${skipped} transactions`);
-    console.log(`  - Total: ${transactionsToUpdate.length} transactions\n`);
+    logInfo("\n✅ Backfill completed!");
+    logInfo(`  - Updated: ${updated} transactions`);
+    logInfo(`  - Skipped: ${skipped} transactions`);
+    logInfo(`  - Total: ${transactionsToUpdate.length} transactions\n`);
 
   } catch (error) {
-    console.error("❌ Backfill failed:", error);
+    logError("Backfill failed", error);
     throw error;
   }
 }

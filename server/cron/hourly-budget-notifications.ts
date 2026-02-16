@@ -8,6 +8,7 @@ import { getUserLanguageByTelegramId } from '../telegram/language';
 import { t } from '@shared/i18n';
 import { formatInTimeZone } from 'date-fns-tz';
 import { format } from 'date-fns';
+import { logInfo, logError, logWarning } from '../lib/logger';
 
 /**
  * Check if it's time to send notification for a user
@@ -54,7 +55,7 @@ function isNotificationTime(
     
     return false;
   } catch (error) {
-    console.error('Error checking notification time:', error);
+    logError('Error checking notification time', error);
     return false;
   }
 }
@@ -152,7 +153,7 @@ async function sendDailySummaryToUser(
   try {
     const bot = getTelegramBot();
     if (!bot) {
-      console.warn('Telegram bot not initialized');
+      logWarning('Telegram bot not initialized');
       return false;
     }
 
@@ -163,10 +164,10 @@ async function sendDailySummaryToUser(
     const message = await formatDailySummaryMessage(userId, timezone, language);
     await bot.sendMessage(telegramId, message, { parse_mode: 'Markdown' });
 
-    console.log(`✅ Daily summary sent to user ${userId}`);
+    logInfo(`Daily summary sent to user ${userId}`);
     return true;
   } catch (error) {
-    console.error(`Error sending daily summary to user ${userId}:`, error);
+    logError(`Error sending daily summary to user ${userId}`, error);
     return false;
   }
 }
@@ -178,7 +179,7 @@ async function sendDailySummaryToUser(
  * to those whose local time matches their notification time
  */
 async function hourlyNotificationCheck() {
-  console.log('🕐 Running hourly budget notification check...');
+  logInfo('Running hourly budget notification check...');
 
   try {
     // Get all users with active Telegram notifications
@@ -218,9 +219,9 @@ async function hourlyNotificationCheck() {
       }
     }
 
-    console.log(`✅ Hourly check complete. Sent ${sentCount} notifications.`);
+    logInfo(`Hourly check complete. Sent ${sentCount} notifications.`);
   } catch (error) {
-    console.error('Error in hourly notification check:', error);
+    logError('Error in hourly notification check', error);
   }
 }
 
@@ -236,5 +237,5 @@ export function initHourlyBudgetNotifications() {
     await hourlyNotificationCheck();
   });
 
-  console.log('✅ Hourly budget notifications initialized (runs every 15 min)');
+  logInfo('Hourly budget notifications initialized (runs every 15 min)');
 }
