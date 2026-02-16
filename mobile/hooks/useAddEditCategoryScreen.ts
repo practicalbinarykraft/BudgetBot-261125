@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
@@ -41,7 +41,7 @@ export function useAddEditCategoryScreen() {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
       navigation.goBack();
     },
-    onError: (error: Error) => Alert.alert("Error", error.message),
+    onError: (error: Error) => uiAlert("Error", error.message),
   });
 
   const updateMutation = useMutation({
@@ -51,14 +51,14 @@ export function useAddEditCategoryScreen() {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
       navigation.goBack();
     },
-    onError: (error: Error) => Alert.alert("Error", error.message),
+    onError: (error: Error) => uiAlert("Error", error.message),
   });
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   const handleSave = () => {
     if (!name.trim()) {
-      Alert.alert("Error", "Please enter a category name");
+      uiAlert("Error", "Please enter a category name");
       return;
     }
 

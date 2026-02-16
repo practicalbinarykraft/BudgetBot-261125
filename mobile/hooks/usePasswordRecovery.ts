@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { useNavigation } from "@react-navigation/native";
 import { api } from "../lib/api-client";
 
@@ -18,7 +18,7 @@ export function usePasswordRecovery() {
 
   const handleRequestRecovery = async () => {
     if (!emailOrTelegramId.trim()) {
-      Alert.alert("Error", "Email or Telegram ID is required");
+      uiAlert("Error", "Email or Telegram ID is required");
       return;
     }
     setIsPending(true);
@@ -27,9 +27,9 @@ export function usePasswordRecovery() {
         emailOrTelegramId: emailOrTelegramId.trim(),
       });
       setStep("verify");
-      Alert.alert("Success", "Recovery code sent! Check your Telegram.");
+      uiAlert("Success", "Recovery code sent! Check your Telegram.");
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to request recovery code");
+      uiAlert("Error", error.message || "Failed to request recovery code");
     } finally {
       setIsPending(false);
     }
@@ -37,7 +37,7 @@ export function usePasswordRecovery() {
 
   const handleVerifyCode = async () => {
     if (code.length !== 6) {
-      Alert.alert("Error", "Code must be exactly 6 digits");
+      uiAlert("Error", "Code must be exactly 6 digits");
       return;
     }
     setIsPending(true);
@@ -54,9 +54,9 @@ export function usePasswordRecovery() {
       }
       setResetToken(result.resetToken);
       setStep("reset");
-      Alert.alert("Success", "Code verified! Now set your new password.");
+      uiAlert("Success", "Code verified! Now set your new password.");
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Invalid or expired code");
+      uiAlert("Error", error.message || "Invalid or expired code");
     } finally {
       setIsPending(false);
     }
@@ -64,11 +64,11 @@ export function usePasswordRecovery() {
 
   const handleResetPassword = async () => {
     if (newPassword.length < 8) {
-      Alert.alert("Error", "Password must be at least 8 characters");
+      uiAlert("Error", "Password must be at least 8 characters");
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match");
+      uiAlert("Error", "Passwords do not match");
       return;
     }
     setIsPending(true);
@@ -77,11 +77,11 @@ export function usePasswordRecovery() {
         token: resetToken,
         newPassword,
       });
-      Alert.alert("Success", "Password reset! You can now login.", [
+      uiAlert("Success", "Password reset! You can now login.", [
         { text: "OK", onPress: () => navigation.goBack() },
       ]);
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to reset password");
+      uiAlert("Error", error.message || "Failed to reset password");
     } finally {
       setIsPending(false);
     }

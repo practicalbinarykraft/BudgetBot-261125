@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Alert } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
@@ -53,10 +53,10 @@ export function useProfileData() {
       api.patch("/api/settings", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
-      Alert.alert("Success", "Settings saved");
+      uiAlert("Success", "Settings saved");
     },
     onError: (error: Error) => {
-      Alert.alert("Error", error.message);
+      uiAlert("Error", error.message);
     },
   });
 

@@ -1,5 +1,6 @@
 import React, { useLayoutEffect } from "react";
-import { View, ScrollView, Image, TouchableOpacity, Alert, Pressable, ActivityIndicator } from "react-native";
+import { View, ScrollView, Image, TouchableOpacity, Pressable, ActivityIndicator } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "../components/ThemedText";
 import { Button } from "../components/Button";
@@ -37,7 +38,7 @@ export default function ReceiptScannerScreen() {
   }, [navigation, t]);
 
   const handleAddPhoto = () => {
-    Alert.alert(
+    uiAlert(
       t("receipts.add_photo"),
       undefined,
       [

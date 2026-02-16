@@ -3,10 +3,10 @@ import {
   View,
   ScrollView,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
+  Platform,
 } from "react-native";
+import { KeyboardAvoidingView } from "@/components/KeyboardAvoidingView";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";

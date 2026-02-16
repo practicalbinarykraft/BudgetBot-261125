@@ -4,10 +4,10 @@ import {
   ScrollView,
   StyleSheet,
   Pressable,
-  Alert,
-  KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { KeyboardAvoidingView } from "@/components/KeyboardAvoidingView";
+import { uiAlert } from "@/lib/uiAlert";
 import { useNavigation } from "@react-navigation/native";
 import { useMutation } from "@tanstack/react-query";
 import { ThemedText } from "../components/ThemedText";
@@ -42,17 +42,17 @@ export default function AddWishlistScreen() {
       navigation.goBack();
     },
     onError: (error: Error) => {
-      Alert.alert(t("common.error"), error.message);
+      uiAlert(t("common.error"), error.message);
     },
   });
 
   const handleSubmit = () => {
     if (!name.trim()) {
-      Alert.alert(t("common.error"), t("wishlist.error_enter_name"));
+      uiAlert(t("common.error"), t("wishlist.error_enter_name"));
       return;
     }
     if (!amount || parseFloat(amount) <= 0) {
-      Alert.alert(t("common.error"), t("wishlist.error_enter_amount"));
+      uiAlert(t("common.error"), t("wishlist.error_enter_amount"));
       return;
     }
 

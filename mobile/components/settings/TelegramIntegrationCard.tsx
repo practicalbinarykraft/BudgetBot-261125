@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Alert } from "react-native";
+import { View } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { Feather } from "@expo/vector-icons";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import * as Clipboard from "expo-clipboard";
@@ -40,16 +41,16 @@ export default function TelegramIntegrationCard() {
     onSuccess: (data) => {
       setVerificationCode(data);
     },
-    onError: (error: Error) => Alert.alert(t("common.error"), error.message),
+    onError: (error: Error) => uiAlert(t("common.error"), error.message),
   });
 
   const disconnectMutation = useMutation({
     mutationFn: () => api.post("/api/telegram/disconnect", {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["telegram-status"] });
-      Alert.alert(t("common.success"), t("settings.telegram_disconnected"));
+      uiAlert(t("common.success"), t("settings.telegram_disconnected"));
     },
-    onError: (error: Error) => Alert.alert(t("common.error"), error.message),
+    onError: (error: Error) => uiAlert(t("common.error"), error.message),
   });
 
   // Countdown timer
@@ -84,7 +85,7 @@ export default function TelegramIntegrationCard() {
   };
 
   const handleDisconnect = () => {
-    Alert.alert(t("settings.disconnect_confirm_title"), t("settings.disconnect_confirm_message"), [
+    uiAlert(t("settings.disconnect_confirm_title"), t("settings.disconnect_confirm_message"), [
       { text: t("common.cancel"), style: "cancel" },
       {
         text: t("settings.disconnect_telegram"),

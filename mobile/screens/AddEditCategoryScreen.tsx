@@ -4,9 +4,9 @@ import {
   ScrollView,
   StyleSheet,
   Pressable,
-  KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { KeyboardAvoidingView } from "@/components/KeyboardAvoidingView";
 import { ThemedText } from "../components/ThemedText";
 import { Input } from "../components/Input";
 import { Button } from "../components/Button";

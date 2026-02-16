@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
+import { View, FlatList, StyleSheet, Platform } from "react-native";
 import DraggableFlatList, {
   ScaleDecorator,
   RenderItemParams,
@@ -19,6 +19,43 @@ interface Props {
 export function WishlistReorderList({ items, onDragEnd }: Props) {
   const { theme } = useTheme();
   const { t } = useTranslation();
+
+  // Web fallback: DraggableFlatList requires native gesture handler
+  if (Platform.OS === "web") {
+    return (
+      <View style={styles.container}>
+        <ThemedText type="small" color={theme.textSecondary} style={styles.hint}>
+          {t("wishlist.drag_hint")}
+        </ThemedText>
+        <FlatList
+          data={items}
+          keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={styles.list}
+          renderItem={({ item, index }) => (
+            <View
+              style={[
+                styles.row,
+                { backgroundColor: theme.card, borderColor: theme.cardBorder },
+              ]}
+            >
+              <View style={[styles.rank, { backgroundColor: theme.primary + "20" }]}>
+                <ThemedText type="bodySm" color={theme.primary} style={styles.bold}>
+                  #{(index ?? 0) + 1}
+                </ThemedText>
+              </View>
+              <View style={styles.info}>
+                <ThemedText type="body" style={styles.bold}>{item.name}</ThemedText>
+                <ThemedText type="small" color={theme.textSecondary}>
+                  ${parseFloat(item.amount).toLocaleString()}
+                </ThemedText>
+              </View>
+              <Feather name="menu" size={20} color={theme.textTertiary} />
+            </View>
+          )}
+        />
+      </View>
+    );
+  }
 
   const renderItem = ({ item, drag, isActive, getIndex }: RenderItemParams<WishlistItem>) => {
     const index = getIndex() ?? 0;

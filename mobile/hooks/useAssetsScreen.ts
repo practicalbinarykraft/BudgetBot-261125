@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Alert } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -32,7 +32,7 @@ export function useAssetsScreen() {
       queryClient.invalidateQueries({ queryKey: ["assets"] });
       queryClient.invalidateQueries({ queryKey: ["assets-summary"] });
     },
-    onError: (error: Error) => Alert.alert("Error", error.message),
+    onError: (error: Error) => uiAlert("Error", error.message),
   });
 
   const allAssets = assetsQuery.data?.assets || [];
@@ -44,7 +44,7 @@ export function useAssetsScreen() {
   const summary = summaryQuery.data;
 
   const handleDelete = (item: Asset) => {
-    Alert.alert("Delete", `Remove "${item.name}"?`, [
+    uiAlert("Delete", `Remove "${item.name}"?`, [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",

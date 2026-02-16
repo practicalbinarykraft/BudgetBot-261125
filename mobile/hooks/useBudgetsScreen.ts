@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { Alert } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -21,7 +21,7 @@ export function useBudgetsScreen() {
       queryClient.invalidateQueries({ queryKey: ["limits"] });
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
     },
-    onError: (error: Error) => Alert.alert("Error", error.message),
+    onError: (error: Error) => uiAlert("Error", error.message),
   });
 
   const limits = data || [];
@@ -29,7 +29,7 @@ export function useBudgetsScreen() {
 
   const handleDelete = useCallback(
     (item: LimitProgress) => {
-      Alert.alert(
+      uiAlert(
         "Delete Budget",
         `Delete budget for "${item.categoryName}"?`,
         [

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Alert } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
@@ -47,7 +47,7 @@ export function useWishlistReorder(items: WishlistItem[]) {
       if (context?.previousData) {
         queryClient.setQueryData(["wishlist"], context.previousData);
       }
-      Alert.alert(t("common.error"), _error.message);
+      uiAlert(t("common.error"), _error.message);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["wishlist"] });

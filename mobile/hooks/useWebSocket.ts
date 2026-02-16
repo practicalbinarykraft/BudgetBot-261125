@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { io, Socket } from "socket.io-client";
-import { Alert } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { storage } from "../lib/storage";
 import { queryClient } from "../lib/query-client";
 
@@ -39,11 +39,11 @@ export function useWebSocket(userId: number | undefined) {
       socket.on("connect_error", () => setConnected(false));
 
       socket.on("budget:warning", (data: { categoryName: string; percentage: number }) => {
-        Alert.alert("Budget Warning", `${data.categoryName} is at ${data.percentage}% of budget`);
+        uiAlert("Budget Warning", `${data.categoryName} is at ${data.percentage}% of budget`);
       });
 
       socket.on("budget:exceeded", (data: { categoryName: string; percentage: number }) => {
-        Alert.alert("Budget Exceeded", `${data.categoryName} has exceeded budget (${data.percentage}%)`);
+        uiAlert("Budget Exceeded", `${data.categoryName} has exceeded budget (${data.percentage}%)`);
         queryClient.invalidateQueries({ queryKey: ["budgets"] });
       });
 
@@ -58,11 +58,11 @@ export function useWebSocket(userId: number | undefined) {
       });
 
       socket.on("wallet:balance_low", (data: { walletName: string; balance: string }) => {
-        Alert.alert("Low Balance", `${data.walletName} balance is low: $${data.balance}`);
+        uiAlert("Low Balance", `${data.walletName} balance is low: $${data.balance}`);
       });
 
       socket.on("system:maintenance", (data: { message: string }) => {
-        Alert.alert("System Notice", data.message);
+        uiAlert("System Notice", data.message);
       });
 
       socket.connect();

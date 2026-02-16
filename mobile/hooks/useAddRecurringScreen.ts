@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { useNavigation } from "@react-navigation/native";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
@@ -42,17 +42,17 @@ export function useAddRecurringScreen() {
       navigation.goBack();
     },
     onError: (error: Error) => {
-      Alert.alert("Error", error.message);
+      uiAlert("Error", error.message);
     },
   });
 
   const handleSubmit = () => {
     if (!description.trim()) {
-      Alert.alert("Error", "Please enter a description");
+      uiAlert("Error", "Please enter a description");
       return;
     }
     if (!amount || parseFloat(amount) <= 0) {
-      Alert.alert("Error", "Please enter a valid amount");
+      uiAlert("Error", "Please enter a valid amount");
       return;
     }
 

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Alert } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
@@ -132,7 +132,7 @@ export function useCalibrationScreen() {
           transactionsCreated++;
         }
       } catch (error: any) {
-        Alert.alert(
+        uiAlert(
           "Error",
           `Failed to calibrate ${preview.wallet.name}: ${error.message}`
         );
@@ -145,13 +145,13 @@ export function useCalibrationScreen() {
       queryClient.invalidateQueries({ queryKey: ["wallets"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
 
-      Alert.alert(
+      uiAlert(
         "Calibration complete",
         `${calibratedCount} wallet(s) calibrated. ${transactionsCreated} unaccounted expense(s) created.`,
         [{ text: "OK", onPress: () => navigation.goBack() }]
       );
     } else {
-      Alert.alert("No changes", "No wallets were modified.");
+      uiAlert("No changes", "No wallets were modified.");
     }
   };
 

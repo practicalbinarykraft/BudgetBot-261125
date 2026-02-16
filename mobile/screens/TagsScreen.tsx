@@ -5,8 +5,8 @@ import {
   Pressable,
   RefreshControl,
   ActivityIndicator,
-  Alert,
 } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -65,11 +65,11 @@ export default function TagsScreen() {
       queryClient.invalidateQueries({ queryKey: ["tags"] });
       queryClient.invalidateQueries({ queryKey: ["tags-stats"] });
     },
-    onError: (error: Error) => Alert.alert(t("common.error"), error.message),
+    onError: (error: Error) => uiAlert(t("common.error"), error.message),
   });
 
   const handleDelete = (tag: PersonalTag) => {
-    Alert.alert(t("tags.delete_tag"), t("tags.delete_confirm_message").replace("{name}", tag.name), [
+    uiAlert(t("tags.delete_tag"), t("tags.delete_confirm_message").replace("{name}", tag.name), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("common.delete"), style: "destructive", onPress: () => deleteMutation.mutate(tag.id) },
     ]);

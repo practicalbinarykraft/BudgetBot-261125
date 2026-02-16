@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Alert } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
@@ -32,7 +32,7 @@ export function usePlannedExpensesScreen() {
       queryClient.invalidateQueries({ queryKey: ["planned"] });
     },
     onError: (error: Error) => {
-      Alert.alert("Error", error.message);
+      uiAlert("Error", error.message);
     },
   });
 
@@ -44,7 +44,7 @@ export function usePlannedExpensesScreen() {
       queryClient.invalidateQueries({ queryKey: ["wallets"] });
     },
     onError: (error: Error) => {
-      Alert.alert("Error", error.message);
+      uiAlert("Error", error.message);
     },
   });
 
@@ -54,12 +54,12 @@ export function usePlannedExpensesScreen() {
       queryClient.invalidateQueries({ queryKey: ["planned"] });
     },
     onError: (error: Error) => {
-      Alert.alert("Error", error.message);
+      uiAlert("Error", error.message);
     },
   });
 
   const handleDelete = (item: PlannedTransaction) => {
-    Alert.alert("Delete", `Remove "${item.name}"?`, [
+    uiAlert("Delete", `Remove "${item.name}"?`, [
       { text: "Cancel", style: "cancel" },
       { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate(item.id) },
     ]);

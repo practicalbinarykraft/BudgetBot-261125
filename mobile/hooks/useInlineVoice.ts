@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Alert, Animated } from "react-native";
+import { Animated, Platform } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { Audio } from "expo-av";
 import * as FileSystem from "expo-file-system/legacy";
 import { api } from "../lib/api-client";
@@ -7,6 +8,8 @@ import { fixVoiceParsedResult } from "../lib/voice-parse-utils";
 import { useTranslation } from "../i18n";
 import { useToast } from "../components/Toast";
 import type { VoiceParsedResult } from "../types";
+
+const isWeb = Platform.OS === "web";
 
 interface VoiceResult {
   amount: string;
@@ -34,8 +37,8 @@ export function useInlineVoice(autoStart: boolean, onResult: (r: VoiceResult) =>
   const startPulse = () => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.15, duration: 500, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.15, duration: 500, useNativeDriver: !isWeb }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 500, useNativeDriver: !isWeb }),
       ])
     ).start();
   };
@@ -45,12 +48,58 @@ export function useInlineVoice(autoStart: boolean, onResult: (r: VoiceResult) =>
     pulseAnim.setValue(1);
   };
 
-  const startRecording = useCallback(async () => {
-    if (recordingRef.current) return; // already recording
+  const sendAndParse = useCallback(async (base64: string, mimeType: string) => {
+    const data = await api.post<VoiceParsedResult>("/api/ai/voice-parse", {
+      audioBase64: base64,
+      mimeType,
+      language: language === "ru" ? "ru" : "en",
+    });
+    const fixed = fixVoiceParsedResult(data.parsed, data.transcription);
+    onResultRef.current(fixed);
+  }, [language]);
+
+  // ===== Web: MediaRecorder =====
+  const startRecordingWeb = useCallback(async () => {
+    try {
+      const { startWebRecording, requestWebMicPermission } = await import("../lib/web-audio");
+      const granted = await requestWebMicPermission();
+      if (!granted) {
+        uiAlert(t("voice_input.permission_required"), t("voice_input.mic_permission"));
+        return;
+      }
+      await startWebRecording();
+      setIsRecording(true);
+      startPulse();
+    } catch (error: any) {
+      toast.show(error.message || t("voice_input.error_start"), "error");
+    }
+  }, []);
+
+  const stopRecordingWeb = useCallback(async () => {
+    try {
+      stopPulse();
+      setIsRecording(false);
+      setIsParsing(true);
+
+      const { stopWebRecording } = await import("../lib/web-audio");
+      const result = await stopWebRecording();
+      if (!result) { setIsParsing(false); return; }
+
+      await sendAndParse(result.base64, result.mimeType);
+    } catch (error: any) {
+      toast.show(error.message || t("voice_input.error_process"), "error");
+    } finally {
+      setIsParsing(false);
+    }
+  }, [language, sendAndParse]);
+
+  // ===== Native: expo-av =====
+  const startRecordingNative = useCallback(async () => {
+    if (recordingRef.current) return;
     try {
       const { status } = await Audio.requestPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(t("voice_input.permission_required"), t("voice_input.mic_permission"));
+        uiAlert(t("voice_input.permission_required"), t("voice_input.mic_permission"));
         return;
       }
       await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
@@ -65,7 +114,7 @@ export function useInlineVoice(autoStart: boolean, onResult: (r: VoiceResult) =>
     }
   }, []);
 
-  const stopRecording = useCallback(async () => {
+  const stopRecordingNative = useCallback(async () => {
     if (!recordingRef.current) return;
     try {
       stopPulse();
@@ -90,20 +139,16 @@ export function useInlineVoice(autoStart: boolean, onResult: (r: VoiceResult) =>
         encoding: FileSystem.EncodingType.Base64,
       });
 
-      const data = await api.post<VoiceParsedResult>("/api/ai/voice-parse", {
-        audioBase64: base64,
-        mimeType: "audio/mp4",
-        language: language === "ru" ? "ru" : "en",
-      });
-
-      const fixed = fixVoiceParsedResult(data.parsed, data.transcription);
-      onResultRef.current(fixed);
+      await sendAndParse(base64, "audio/mp4");
     } catch (error: any) {
       toast.show(error.message || t("voice_input.error_process"), "error");
     } finally {
       setIsParsing(false);
     }
-  }, [language]);
+  }, [language, sendAndParse]);
+
+  const startRecording = isWeb ? startRecordingWeb : startRecordingNative;
+  const stopRecording = isWeb ? stopRecordingWeb : stopRecordingNative;
 
   const toggle = useCallback(async () => {
     if (isRecording) {

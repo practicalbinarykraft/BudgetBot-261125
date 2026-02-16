@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Alert } from "react-native";
+import { uiAlert } from "@/lib/uiAlert";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -40,7 +40,7 @@ export function useWishlistScreen() {
       queryClient.invalidateQueries({ queryKey: ["wishlist"] });
     },
     onError: (error: Error) => {
-      Alert.alert("Error", error.message);
+      uiAlert("Error", error.message);
     },
   });
 
@@ -51,12 +51,12 @@ export function useWishlistScreen() {
       queryClient.invalidateQueries({ queryKey: ["wishlist"] });
     },
     onError: (error: Error) => {
-      Alert.alert("Error", error.message);
+      uiAlert("Error", error.message);
     },
   });
 
   const handleDelete = (item: WishlistItem) => {
-    Alert.alert("Delete", `Remove "${item.name}"?`, [
+    uiAlert("Delete", `Remove "${item.name}"?`, [
       { text: "Cancel", style: "cancel" },
       { text: "Delete", style: "destructive", onPress: () => deleteMutation.mutate(item.id) },
     ]);
