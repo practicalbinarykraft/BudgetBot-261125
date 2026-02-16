@@ -25,12 +25,16 @@ import { apiLimiter } from "./middleware/rate-limiter";
 import { securityHeaders } from "./middleware/security-headers";
 import { requestId } from "./middleware/request-id";
 import { compressResponse } from "./middleware/compression";
+import { corsMiddleware } from "./middleware/cors";
 
 const app = express();
 const server = createServer(app);
 
 // Security headers - MUST be first middleware
 app.use(securityHeaders);
+
+// CORS - allow mobile web app (m.budgetbot.online)
+app.use(corsMiddleware);
 
 // Request ID for tracing
 app.use(requestId);
