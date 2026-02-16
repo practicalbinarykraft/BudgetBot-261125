@@ -15,21 +15,13 @@ import { ThemedText } from "./ThemedText";
 import { Spacing, BorderRadius } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
 import { useTranslation, type Language } from "../i18n";
-import { useToast } from "./Toast";
 import { useTutorialDialog } from "../hooks/useTutorialDialog";
 import { registerTutorialOpen, unregisterTutorialOpen } from "../lib/tutorial-ref";
-import { registerTutorialToast, unregisterTutorialToast } from "../lib/tutorial-toast-ref";
+import { showSpotlight } from "../lib/spotlight-ref";
+import type { SpotlightTarget } from "../lib/spotlight-ref";
+import { StepHelpView, type StepDef } from "./tutorial/StepHelpView";
 
 type IconName = React.ComponentProps<typeof Feather>["name"];
-
-interface StepDef {
-  stepId: string;
-  icon: IconName;
-  titleKey: string;
-  descKey: string;
-  credits: number;
-  route?: string;
-}
 
 const STEPS: StepDef[] = [
   { stepId: "create_wallet", icon: "credit-card", titleKey: "tutorial.step.create_wallet", descKey: "tutorial.desc.create_wallet", credits: 10, route: "AddWallet" },
@@ -49,31 +41,32 @@ interface TutorialDialogProps {
 export default function TutorialDialog({ userId }: TutorialDialogProps) {
   const { theme } = useTheme();
   const { t, language, setLanguage } = useTranslation();
-  const toast = useToast();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
-  const { visible, view, setView, open, dismiss, tutorial } = useTutorialDialog(userId);
+  const { visible, view, setView, open, dismiss, tutorial, selectedStepId, openStepHelp, backToChecklist } = useTutorialDialog(userId);
 
   useEffect(() => {
     registerTutorialOpen(open);
     return () => unregisterTutorialOpen();
   }, [open]);
 
-  useEffect(() => {
-    registerTutorialToast((credits: number) => {
-      toast.show(t("tutorial.credits_earned").replace("{count}", String(credits)), "success");
-    });
-    return () => unregisterTutorialToast();
-  }, [toast, t]);
-
   const allDone = tutorial.completedSteps >= tutorial.totalSteps;
 
   const handleStepPress = (step: StepDef) => {
     if (tutorial.isStepCompleted(step.stepId)) return;
-    dismiss();
-    if (step.route) {
-      setTimeout(() => navigation.navigate(step.route as any), 200);
-    }
+    openStepHelp(step.stepId);
   };
+
+  const handleShowWhere = (targetId: SpotlightTarget) => {
+    dismiss();
+    setTimeout(() => showSpotlight(targetId), 200);
+  };
+
+  const handleOpenScreen = (route: string) => {
+    dismiss();
+    setTimeout(() => navigation.navigate(route as any), 200);
+  };
+
+  const selectedStep = selectedStepId ? STEPS.find((s) => s.stepId === selectedStepId) : null;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={dismiss}>
@@ -125,6 +118,13 @@ export default function TutorialDialog({ userId }: TutorialDialogProps) {
                   </ThemedText>
                 </Pressable>
               </>
+            ) : view === "stepHelp" && selectedStep ? (
+              <StepHelpView
+                step={selectedStep}
+                onBack={backToChecklist}
+                onShowWhere={handleShowWhere}
+                onOpenScreen={handleOpenScreen}
+              />
             ) : (
               <>
                 {/* Header */}

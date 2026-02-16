@@ -4,6 +4,8 @@ import { ActivityIndicator, View, StyleSheet } from "react-native";
 import AuthStackNavigator from "./AuthStackNavigator";
 import MainTabNavigator from "./MainTabNavigator";
 import TutorialDialog from "../components/TutorialDialog";
+import RewardModal from "../components/RewardModal";
+import SpotlightOverlay from "../components/SpotlightOverlay";
 import WebSocketProvider from "../components/WebSocketProvider";
 import { useAuth } from "../hooks/useAuth";
 import { useTheme } from "../hooks/useTheme";
@@ -104,6 +106,8 @@ export default function RootStackNavigator() {
   return (
     <WebSocketProvider userId={user?.id}>
       <TutorialDialog userId={user?.id} />
+      <RewardModal />
+      <SpotlightOverlay />
       <Stack.Navigator screenOptions={{
         headerShown: false,
         headerBackTitle: t("common.back"),

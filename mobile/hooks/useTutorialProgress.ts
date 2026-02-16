@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
-import { showTutorialRewardToast } from "../lib/tutorial-toast-ref";
+import { showRewardModal } from "../lib/reward-modal-ref";
 
 interface TutorialProgressData {
   steps: Array<{ stepId: string; completedAt: string }>;
@@ -24,8 +24,10 @@ export function useTutorialProgress() {
       ),
     onSuccess: (result) => {
       if (!result.alreadyCompleted && result.creditsAwarded > 0) {
+        const cached = queryClient.getQueryData<{ messagesRemaining: number }>(["credits"]);
+        const before = Math.max(0, cached?.messagesRemaining ?? 0);
         queryClient.invalidateQueries({ queryKey: ["credits"] });
-        showTutorialRewardToast(result.creditsAwarded);
+        showRewardModal({ creditsAwarded: result.creditsAwarded, balanceBefore: before, balanceAfter: before + result.creditsAwarded });
       }
       queryClient.invalidateQueries({ queryKey: ["tutorial"] });
     },

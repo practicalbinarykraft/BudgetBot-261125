@@ -451,4 +451,28 @@ export const mobileExtraTranslations: Translations = {
   "tutorial.desc.planned_expense": { en: "Plan a future purchase", ru: "Запланируйте покупку" },
   "tutorial.desc.view_chart": { en: "Open the financial trend chart fullscreen", ru: "Откройте график финансов на весь экран" },
   "tutorial.desc.view_transactions": { en: "Tap 'Show all' on the dashboard", ru: "Нажмите 'Показать все' на главной" },
+
+  // Reward Modal
+  "reward.title": { en: "Reward!", ru: "Награда!" },
+  "reward.balance_change": { en: "{before} → {after} credits", ru: "{before} → {after} кредитов" },
+  "reward.next_step": { en: "Next step", ru: "Следующий шаг" },
+
+  // StepHelp
+  "tutorial.show_where": { en: "Show where to tap", ru: "Показать, куда нажать" },
+  "tutorial.open_screen": { en: "Open screen", ru: "Открыть экран" },
+  "tutorial.step_help.create_wallet": { en: "Create your first wallet to track balances across cards, cash and crypto.", ru: "Создайте первый кошелёк, чтобы отслеживать балансы по картам, наличным и крипте." },
+  "tutorial.step_help.add_transaction": { en: "Tap the '+' button at the bottom to add your first income or expense.", ru: "Нажмите кнопку '+' внизу, чтобы добавить первый доход или расход." },
+  "tutorial.step_help.voice_input": { en: "Use the microphone button to dictate a transaction hands-free.", ru: "Используйте кнопку микрофона, чтобы надиктовать транзакцию без рук." },
+  "tutorial.step_help.receipt_scan": { en: "Open the menu and tap Receipt Scanner to photograph a receipt.", ru: "Откройте меню и нажмите Сканер чеков, чтобы сфотографировать чек." },
+  "tutorial.step_help.planned_income": { en: "Add expected future income so you can plan ahead.", ru: "Добавьте ожидаемый доход, чтобы планировать наперёд." },
+  "tutorial.step_help.planned_expense": { en: "Plan a future purchase to keep your budget on track.", ru: "Запланируйте покупку, чтобы контролировать бюджет." },
+  "tutorial.step_help.view_chart": { en: "Open the financial trend chart to see your balance over time.", ru: "Откройте график финансового тренда, чтобы увидеть баланс во времени." },
+  "tutorial.step_help.view_transactions": { en: "Tap 'View all' on the dashboard to see your full transaction history.", ru: "Нажмите 'Показать все' на главной, чтобы увидеть полную историю транзакций." },
+
+  // Spotlight tooltips
+  "spotlight.add_transaction": { en: "Tap here to add a transaction", ru: "Нажмите сюда, чтобы добавить транзакцию" },
+  "spotlight.voice_input": { en: "Tap here to use voice input", ru: "Нажмите сюда для голосового ввода" },
+  "spotlight.receipt_scan": { en: "Tap here to open the menu", ru: "Нажмите сюда, чтобы открыть меню" },
+  "spotlight.view_transactions": { en: "Tap here to view all transactions", ru: "Нажмите сюда, чтобы посмотреть все транзакции" },
+  "spotlight.got_it": { en: "Got it", ru: "Понятно" },
 };

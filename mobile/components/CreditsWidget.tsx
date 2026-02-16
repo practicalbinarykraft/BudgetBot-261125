@@ -35,9 +35,10 @@ export default function CreditsWidget() {
 
   if (isLoading || !data) return null;
 
+  const remaining = Math.max(0, data.messagesRemaining);
   const isByok = data.billingMode === "byok";
-  const isLow = data.messagesRemaining < 5;
-  const isVeryLow = data.messagesRemaining === 0;
+  const isLow = remaining < 5;
+  const isVeryLow = remaining === 0;
 
   const textColor = isByok
     ? "#22c55e"
@@ -59,7 +60,7 @@ export default function CreditsWidget() {
           color={textColor}
         />
         <ThemedText type="small" color={textColor} style={styles.text}>
-          {isByok ? "BYOK" : String(data.messagesRemaining)}
+          {isByok ? "BYOK" : String(remaining)}
         </ThemedText>
       </Pressable>
     </Animated.View>

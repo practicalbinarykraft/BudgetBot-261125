@@ -21,9 +21,9 @@ import { useTranslation } from "../i18n";
 type WalletType = "card" | "cash" | "crypto";
 
 const walletTypeKeys: { key: WalletType; labelKey: string }[] = [
-  { key: "card", labelKey: "wallets.card" },
-  { key: "cash", labelKey: "wallets.cash" },
-  { key: "crypto", labelKey: "wallets.crypto" },
+  { key: "card", labelKey: "wallets.type_card" },
+  { key: "cash", labelKey: "wallets.type_cash" },
+  { key: "crypto", labelKey: "wallets.type_crypto" },
 ];
 
 const currencies = [
