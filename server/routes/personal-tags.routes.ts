@@ -4,6 +4,7 @@ import * as tagService from '../services/tag.service';
 import { insertPersonalTagSchema } from '@shared/schema';
 import { fromZodError } from 'zod-validation-error';
 import { getErrorMessage } from '../lib/errors';
+import { logError } from '../lib/logger';
 
 const router = Router();
 
@@ -56,7 +57,7 @@ router.get('/', withAuth(async (req, res) => {
 
     res.json(response);
   } catch (error: unknown) {
-    console.error('Failed to load tags:', error);
+    logError('Failed to load tags:', error);
     res.status(500).json({ error: 'Failed to load tags' });
   }
 }));
@@ -79,7 +80,7 @@ router.post('/', withAuth(async (req, res) => {
     const tag = await tagService.createTag(userId, validation.data);
     res.json(tag);
   } catch (error: unknown) {
-    console.error('Failed to create tag:', error);
+    logError('Failed to create tag:', error);
     res.status(500).json({ error: 'Failed to create tag' });
   }
 }));
@@ -106,7 +107,7 @@ router.patch('/:id', withAuth(async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
   } catch (error: unknown) {
-    console.error('Failed to verify tag ownership:', error);
+    logError('Failed to verify tag ownership:', error);
     return res.status(500).json({ error: 'Failed to verify tag ownership' });
   }
 
@@ -121,7 +122,7 @@ router.patch('/:id', withAuth(async (req, res) => {
     const updatedTag = await tagService.updateTag(tagId, validation.data);
     res.json(updatedTag);
   } catch (error: unknown) {
-    console.error('Failed to update tag:', error);
+    logError('Failed to update tag:', error);
     res.status(500).json({ error: 'Failed to update tag' });
   }
 }));
@@ -155,7 +156,7 @@ router.delete('/:id', withAuth(async (req, res) => {
     await tagService.deleteTag(tagId);
     res.json({ success: true });
   } catch (error: unknown) {
-    console.error('Failed to delete tag:', error);
+    logError('Failed to delete tag:', error);
     res.status(500).json({ error: 'Failed to delete tag' });
   }
 }));
@@ -182,7 +183,7 @@ router.get('/:id/stats', withAuth(async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
   } catch (error: unknown) {
-    console.error('Failed to verify tag ownership:', error);
+    logError('Failed to verify tag ownership:', error);
     return res.status(500).json({ error: 'Failed to verify tag ownership' });
   }
 
@@ -190,7 +191,7 @@ router.get('/:id/stats', withAuth(async (req, res) => {
     const stats = await tagService.getTagStats(tagId);
     res.json(stats);
   } catch (error: unknown) {
-    console.error('Failed to load stats:', error);
+    logError('Failed to load stats:', error);
     res.status(500).json({ error: 'Failed to load stats' });
   }
 }));

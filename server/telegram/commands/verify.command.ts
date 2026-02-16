@@ -11,6 +11,7 @@ import { users, telegramVerificationCodes } from '@shared/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { t } from '@shared/i18n';
 import { getUserLanguageByTelegramId } from '../language';
+import { logError } from '../../lib/logger';
 
 export async function handleVerifyCommand(
   bot: TelegramBot,
@@ -80,7 +81,7 @@ export async function handleVerifyCommand(
       reply_markup: getMainMenuKeyboard()
     });
   } catch (error) {
-    console.error('Verification error:', error);
+    logError('Verification error:', error);
     await bot.sendMessage(chatId, t('error.generic', lang));
   }
 }

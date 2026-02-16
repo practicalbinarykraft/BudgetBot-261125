@@ -11,6 +11,7 @@ import { settings } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { getSettingsKeyboard } from './keyboards';
 import { getUserLanguageByUserId } from '../language';
+import { logError } from '../../lib/logger';
 
 /**
  * Показать раздел настроек
@@ -77,7 +78,7 @@ export async function showSettings(
     });
     
   } catch (error) {
-    console.error('Settings display error:', error);
+    logError('Settings display error:', error);
     
     const errorMessage = lang === 'ru'
       ? '❌ Ошибка при загрузке настроек'

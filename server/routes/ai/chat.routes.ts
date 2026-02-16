@@ -13,6 +13,7 @@ import { ZodError } from "zod";
 import { getErrorMessage } from "../../lib/errors";
 import { checkCreditsAvailable, deductMessage, getCreditBalance } from "../../services/credits.service";
 import { chatWithOpenRouter, buildFinancialAdvisorPrompt } from "../../services/ai/openrouter.service";
+import { logError } from '../../lib/logger';
 
 const router = Router();
 
@@ -28,7 +29,7 @@ router.get("/balance", withAuth(async (req, res) => {
       totalUsed: balance.totalUsed
     });
   } catch (error: unknown) {
-    console.error("Balance check error:", error);
+    logError("Balance check error:", error);
     res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
@@ -49,7 +50,7 @@ router.get("/history", withAuth(async (req, res) => {
     const messages = await storage.getAIChatMessages(userId, limit);
     res.json(messages);
   } catch (error: unknown) {
-    console.error("Chat history error:", error);
+    logError("Chat history error:", error);
     res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
@@ -253,7 +254,7 @@ router.post("/", withAuth(async (req, res) => {
     });
     
   } catch (error: unknown) {
-    console.error("AI chat error:", error);
+    logError("AI chat error:", error);
     return res.status(500).json({
       error: "Failed to process chat",
       details: getErrorMessage(error)

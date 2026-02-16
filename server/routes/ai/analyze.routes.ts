@@ -4,6 +4,7 @@ import { analyzeSpending, scanReceipt } from "../../services/ai-service";
 import { withAuth } from "../../middleware/auth-utils";
 import { predictForTransaction, enrichPrediction } from "../../services/ai/prediction.service";
 import { getErrorMessage } from "../../lib/errors";
+import { logError } from '../../lib/logger';
 
 const router = Router();
 
@@ -110,7 +111,7 @@ router.get("/predict/:transactionId", withAuth(async (req, res) => {
     
     res.json(enriched);
   } catch (error: unknown) {
-    console.error("AI prediction error:", error);
+    logError("AI prediction error:", error);
     res.status(500).json({ error: getErrorMessage(error) });
   }
 }));

@@ -11,6 +11,7 @@ import { users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { t } from '@shared/i18n';
 import { getUserLanguageByTelegramId, getUserLanguageByUserId } from '../language';
+import { logError } from '../../lib/logger';
 
 export async function handleStatusCommand(bot: TelegramBot, msg: TelegramBot.Message) {
   const chatId = msg.chat.id;
@@ -53,7 +54,7 @@ export async function handleStatusCommand(bot: TelegramBot, msg: TelegramBot.Mes
 
     await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
   } catch (error) {
-    console.error('Status command error:', error);
+    logError('Status command error:', error);
     const lang = await getUserLanguageByTelegramId(telegramId);
     await bot.sendMessage(chatId, t('error.generic', lang));
   }

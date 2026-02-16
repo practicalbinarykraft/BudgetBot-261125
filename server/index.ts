@@ -74,9 +74,9 @@ app.use((req, res, next) => {
   // Setup authentication (async - needs to check DB connection)
   await setupAuth(app);
   
-  console.log('[SERVER] About to register routes...');
+  logInfo('[SERVER] About to register routes...');
   registerRoutes(app);
-  console.log('[SERVER] Routes registered');
+  logInfo('[SERVER] Routes registered');
 
   // Setup static file serving BEFORE error handler
   // This ensures SPA routes work correctly in production

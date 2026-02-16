@@ -11,6 +11,7 @@ import { getApiKey } from "../services/api-key-manager";
 import { chargeCredits } from "../services/billing.service";
 import { parseTransactionWithDeepSeek } from "../services/deepseek.service";
 import { BillingError } from "../types/billing";
+import { logInfo, logError } from '../lib/logger';
 
 /**
  * Voice Message Handler for Telegram Bot
@@ -104,7 +105,7 @@ export async function handleVoiceMessage(bot: TelegramBot, msg: TelegramBot.Mess
     // Get Telegram bot token
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     if (!botToken) {
-      console.error('[Voice] TELEGRAM_BOT_TOKEN not found');
+      logError('[Voice] TELEGRAM_BOT_TOKEN not found');
       await bot.editMessageText(
         t('voice.error_unexpected', lang),
         { chat_id: chatId, message_id: statusMsg.message_id }
@@ -116,7 +117,7 @@ export async function handleVoiceMessage(bot: TelegramBot, msg: TelegramBot.Mess
     const fileUrl = await getTelegramFileUrl(botToken, voiceFile);
 
     if (!fileUrl) {
-      console.error('[Voice] Failed to get Telegram file URL');
+      logError('[Voice] Failed to get Telegram file URL');
       await bot.editMessageText(
         t('voice.download_error', lang),
         { chat_id: chatId, message_id: statusMsg.message_id }
@@ -124,7 +125,7 @@ export async function handleVoiceMessage(bot: TelegramBot, msg: TelegramBot.Mess
       return;
     }
 
-    console.log(`[Voice] Transcribing voice message for user ${user.id} (${lang})`);
+    logInfo(`[Voice] Transcribing voice message for user ${user.id} (${lang})`);
 
     // Transcribe using OpenAI Whisper
     const result = await transcribeVoiceMessage(
@@ -134,7 +135,7 @@ export async function handleVoiceMessage(bot: TelegramBot, msg: TelegramBot.Mess
     );
 
     if (!result.success || !result.text) {
-      console.error('[Voice] Transcription failed:', result.errorCode);
+      logError('[Voice] Transcription failed:', result.errorCode);
 
       // Map error code to i18n key
       const errorKey = result.errorCode
@@ -148,7 +149,7 @@ export async function handleVoiceMessage(bot: TelegramBot, msg: TelegramBot.Mess
       return;
     }
 
-    console.log(`[Voice] Transcription successful: "${result.text}"`);
+    logInfo(`[Voice] Transcription successful: "${result.text}"`);
 
     // 💳 Charge credits for Whisper transcription
     if (whisperBillingMode.shouldCharge) {
@@ -178,7 +179,7 @@ export async function handleVoiceMessage(bot: TelegramBot, msg: TelegramBot.Mess
       // Get API key for normalization (DeepSeek by default)
       const normalizationApiKey = await getApiKey(user.id, 'voice_normalization');
 
-      console.log(`[Voice] Attempting AI normalization with ${normalizationApiKey.provider}...`);
+      logInfo(`[Voice] Attempting AI normalization with ${normalizationApiKey.provider}...`);
 
       // Parse transaction with DeepSeek
       const parsed = await parseTransactionWithDeepSeek(
@@ -187,7 +188,7 @@ export async function handleVoiceMessage(bot: TelegramBot, msg: TelegramBot.Mess
         userSettings?.currency || 'USD'
       );
 
-      console.log('[Voice] AI normalization successful:', parsed);
+      logInfo('[Voice] AI normalization successful:', parsed);
 
       // Convert normalized data back to "smart" text for handleTextMessage
       // Format: "{amount} {currency} {description}"
@@ -212,14 +213,14 @@ export async function handleVoiceMessage(bot: TelegramBot, msg: TelegramBot.Mess
           );
         }
       } else {
-        console.log('[Voice] AI normalization incomplete (missing amount or currency), using original text');
+        logInfo('[Voice] AI normalization incomplete (missing amount or currency), using original text');
       }
     } catch (normError) {
       // If normalization fails (no credits or error), use original text
       if (normError instanceof BillingError) {
-        console.log('[Voice] Skipping AI normalization: no credits');
+        logInfo('[Voice] Skipping AI normalization: no credits');
       } else {
-        console.error('[Voice] AI normalization error:', normError);
+        logError('[Voice] AI normalization error:', normError);
       }
       // Continue with original text
     }
@@ -235,7 +236,7 @@ export async function handleVoiceMessage(bot: TelegramBot, msg: TelegramBot.Mess
     await handleTextMessage(bot, syntheticMsg);
 
   } catch (err: any) {
-    console.error('[Voice] Unexpected error:', err);
+    logError('[Voice] Unexpected error:', err);
     await bot.sendMessage(
       chatId,
       t('voice.error_unexpected', lang)

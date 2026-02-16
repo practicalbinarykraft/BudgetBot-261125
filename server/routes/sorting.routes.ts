@@ -3,6 +3,7 @@ import { getSortingStats } from '../services/sorting/sorting-stats.service';
 import { createOrUpdateSession } from '../services/sorting/sorting-session.service';
 import { insertSortingSessionSchema } from '@shared/schema';
 import type { User } from '@shared/schema';
+import { logError } from '../lib/logger';
 
 const router = Router();
 
@@ -25,7 +26,7 @@ router.get('/stats', async (req, res) => {
     const stats = await getSortingStats(user.id);
     res.json(stats);
   } catch (error) {
-    console.error('Get sorting stats error:', error);
+    logError('Get sorting stats error:', error);
     res.status(500).send('Failed to get sorting stats');
   }
 });
@@ -54,7 +55,7 @@ router.post('/session', async (req, res) => {
 
     res.json(result);
   } catch (error) {
-    console.error('Create sorting session error:', error);
+    logError('Create sorting session error:', error);
     res.status(500).send('Failed to create sorting session');
   }
 });

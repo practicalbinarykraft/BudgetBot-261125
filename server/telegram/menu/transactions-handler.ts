@@ -12,6 +12,7 @@ import { eq, desc, and } from 'drizzle-orm';
 import { getTransactionsFiltersKeyboard } from './keyboards';
 import { getUserLanguageByUserId } from '../language';
 import { format } from 'date-fns';
+import { logError } from '../../lib/logger';
 
 /**
  * Показать раздел транзакций
@@ -135,7 +136,7 @@ export async function showTransactions(
     });
     
   } catch (error) {
-    console.error('Transactions display error:', error);
+    logError('Transactions display error:', error);
     
     const errorMessage = lang === 'ru'
       ? '❌ Ошибка при загрузке транзакций'

@@ -5,6 +5,7 @@ import { users, settings } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { getUserLanguageByTelegramId } from '../../telegram/language';
 import { t } from '@shared/i18n';
+import { logWarning, logError } from '../../lib/logger';
 
 export type LimitStatus = 'ok' | 'caution' | 'warning' | 'exceeded';
 
@@ -122,7 +123,7 @@ export async function sendBudgetAlert(
   try {
     const bot = getTelegramBot();
     if (!bot) {
-      console.warn('Telegram bot not initialized, skipping alert');
+      logWarning('Telegram bot not initialized, skipping alert');
       return false;
     }
 
@@ -173,7 +174,7 @@ export async function sendBudgetAlert(
 
     return false;
   } catch (error) {
-    console.error('Error sending budget alert:', error);
+    logError('Error sending budget alert', error);
     return false;
   }
 }

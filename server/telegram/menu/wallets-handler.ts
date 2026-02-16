@@ -11,6 +11,7 @@ import { wallets } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { getWalletsKeyboard } from './keyboards';
 import { getUserLanguageByUserId } from '../language';
+import { logError } from '../../lib/logger';
 
 /**
  * Показать раздел кошельков
@@ -95,7 +96,7 @@ export async function showWallets(
     });
     
   } catch (error) {
-    console.error('Wallets display error:', error);
+    logError('Wallets display error:', error);
     
     const errorMessage = lang === 'ru'
       ? '❌ Ошибка при загрузке кошельков'

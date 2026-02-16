@@ -6,18 +6,12 @@ import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { logInfo } from "./lib/logger";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export function log(message: string, source = "express") {
-  const formattedTime = new Date().toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  });
-
-  console.log(`${formattedTime} [${source}] ${message}`);
+  logInfo(message, { source });
 }
 
 export function serveStatic(app: Express) {

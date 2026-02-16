@@ -4,6 +4,7 @@ import { withAuth } from "../../middleware/auth-utils";
 import { receiptItemsRepository } from "../../repositories/receipt-items.repository";
 import { comparePrices, getAIPriceInsights } from "../../services/ai/price-comparison.service";
 import { getErrorMessage } from "../../lib/errors";
+import { logError } from '../../lib/logger';
 
 const router = Router();
 
@@ -39,7 +40,7 @@ router.get("/price-recommendations", withAuth(async (req, res) => {
             anthropicApiKey
           );
         } catch (error) {
-          console.error("AI insights generation failed:", error);
+          logError("AI insights generation failed:", error);
         }
       }
     }
@@ -49,7 +50,7 @@ router.get("/price-recommendations", withAuth(async (req, res) => {
       aiInsights
     });
   } catch (error: unknown) {
-    console.error("Price recommendations error:", error);
+    logError("Price recommendations error:", error);
     res.status(500).json({ error: getErrorMessage(error) });
   }
 }));

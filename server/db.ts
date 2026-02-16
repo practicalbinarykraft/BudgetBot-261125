@@ -8,6 +8,7 @@
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
+import { logError } from './lib/logger';
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -36,7 +37,7 @@ export const pool = new Pool({
  * Neon serverless DB closes idle connections - this prevents server crash
  */
 pool.on('error', (err) => {
-  console.error('[DB Pool] Unexpected error on idle client:', err.message);
+  logError('[DB Pool] Unexpected error on idle client', err);
   // Don't exit - pool will create new connections as needed
 });
 

@@ -9,6 +9,11 @@
  * - Early error detection (at startup, not runtime)
  * - Clear error messages
  * - Documentation of required config
+ *
+ * NOTE: This file uses console.* intentionally (not Winston logger).
+ * Reason: logger.ts imports env.ts → importing logger here would create
+ * a circular dependency. This runs once at startup before logger is ready.
+ * TODO: If needed, extract env parsing into a standalone module to break the cycle.
  */
 
 import { z } from 'zod';

@@ -1,6 +1,7 @@
 import { db } from "../db";
 import { userCredits, creditTransactions, aiUsageLog } from "../../shared/schema";
 import { eq, sql } from "drizzle-orm";
+import { logInfo, logError } from '../lib/logger';
 
 /**
  * AI Credits Service
@@ -35,7 +36,7 @@ export async function grantWelcomeBonus(userId: number): Promise<void> {
     .limit(1);
 
   if (existing.length > 0) {
-    console.log(`User ${userId} already has credits, skipping welcome bonus`);
+    logInfo(`User ${userId} already has credits, skipping welcome bonus`);
     return;
   }
 
@@ -58,7 +59,7 @@ export async function grantWelcomeBonus(userId: number): Promise<void> {
     metadata: { source: "registration", autoGranted: true }
   });
 
-  console.log(`Granted ${FREE_MESSAGES_INITIAL} welcome messages to user ${userId}`);
+  logInfo(`Granted ${FREE_MESSAGES_INITIAL} welcome messages to user ${userId}`);
 }
 
 /**
@@ -66,17 +67,17 @@ export async function grantWelcomeBonus(userId: number): Promise<void> {
  */
 export async function getCreditBalance(userId: number): Promise<CreditBalance> {
   try {
-    console.log(`[getCreditBalance] Getting balance for user ${userId}`);
+    logInfo(`[getCreditBalance] Getting balance for user ${userId}`);
     const credits = await db
       .select()
       .from(userCredits)
       .where(eq(userCredits.userId, userId))
       .limit(1);
 
-    console.log(`[getCreditBalance] Query result: ${credits.length} records found`);
+    logInfo(`[getCreditBalance] Query result: ${credits.length} records found`);
 
     if (credits.length === 0) {
-      console.log(`[getCreditBalance] No credits record found, granting welcome bonus`);
+      logInfo(`[getCreditBalance] No credits record found, granting welcome bonus`);
       // Auto-grant welcome bonus if user doesn't have credits yet
       await grantWelcomeBonus(userId);
 
@@ -93,7 +94,7 @@ export async function getCreditBalance(userId: number): Promise<CreditBalance> {
           totalGranted: newCredits.totalGranted,
           totalUsed: newCredits.totalUsed
         };
-        console.log(`[getCreditBalance] Returning welcome bonus from DB:`, result);
+        logInfo(`[getCreditBalance] Returning welcome bonus from DB:`, result);
         return result;
       }
 
@@ -103,7 +104,7 @@ export async function getCreditBalance(userId: number): Promise<CreditBalance> {
         totalGranted: FREE_MESSAGES_INITIAL,
         totalUsed: 0
       };
-      console.log(`[getCreditBalance] Returning welcome bonus fallback:`, result);
+      logInfo(`[getCreditBalance] Returning welcome bonus fallback:`, result);
       return result;
     }
 
@@ -113,10 +114,10 @@ export async function getCreditBalance(userId: number): Promise<CreditBalance> {
       totalGranted: record.totalGranted,
       totalUsed: record.totalUsed
     };
-    console.log(`[getCreditBalance] Returning balance:`, result);
+    logInfo(`[getCreditBalance] Returning balance:`, result);
     return result;
   } catch (error) {
-    console.error(`[getCreditBalance] ERROR for user ${userId}:`, error);
+    logError(`[getCreditBalance] ERROR for user ${userId}:`, error);
     throw error;
   }
 }
@@ -171,7 +172,7 @@ export async function grantMessages(
   amount: number,
   reason: string = "Admin grant"
 ): Promise<void> {
-  console.log(`[grantMessages] Starting grant for user ${userId}, amount: ${amount}`);
+  logInfo(`[grantMessages] Starting grant for user ${userId}, amount: ${amount}`);
   
   await db.transaction(async (tx) => {
     // Получаем текущий баланс внутри транзакции (с блокировкой для предотвращения race conditions)
@@ -194,7 +195,7 @@ export async function grantMessages(
       newTotalGranted = existing.totalGranted + amount;
       currentTotalUsed = existing.totalUsed;
       
-      console.log(`[grantMessages] Updating existing record: before=${balanceBefore}, after=${balanceAfter}, totalGranted=${newTotalGranted}`);
+      logInfo(`[grantMessages] Updating existing record: before=${balanceBefore}, after=${balanceAfter}, totalGranted=${newTotalGranted}`);
       
       const [updated] = await tx
         .update(userCredits)
@@ -210,7 +211,7 @@ export async function grantMessages(
         throw new Error(`Failed to update credits for user ${userId}`);
       }
       
-      console.log(`[grantMessages] Updated record: ${JSON.stringify(updated)}`);
+      logInfo(`[grantMessages] Updated record: ${JSON.stringify(updated)}`);
     } else {
       // Записи нет - создаем новую
       // Если пользователь новый, даем welcome bonus + admin grant
@@ -219,7 +220,7 @@ export async function grantMessages(
       newTotalGranted = FREE_MESSAGES_INITIAL + amount;
       currentTotalUsed = 0;
       
-      console.log(`[grantMessages] Creating new record: after=${balanceAfter}, totalGranted=${newTotalGranted}`);
+      logInfo(`[grantMessages] Creating new record: after=${balanceAfter}, totalGranted=${newTotalGranted}`);
       
       const [created] = await tx.insert(userCredits).values({
         userId,
@@ -233,7 +234,7 @@ export async function grantMessages(
         throw new Error(`Failed to create credits record for user ${userId}`);
       }
       
-      console.log(`[grantMessages] Created record: ${JSON.stringify(created)}`);
+      logInfo(`[grantMessages] Created record: ${JSON.stringify(created)}`);
     }
 
     // Логируем транзакцию
@@ -247,15 +248,15 @@ export async function grantMessages(
       metadata: { source: "admin" }
     });
     
-    console.log(`[grantMessages] Transaction logged: balanceBefore=${balanceBefore}, balanceAfter=${balanceAfter}`);
+    logInfo(`[grantMessages] Transaction logged: balanceBefore=${balanceBefore}, balanceAfter=${balanceAfter}`);
   });
 
   // Проверяем результат после транзакции
   const finalBalance = await getCreditBalance(userId);
-  console.log(`[grantMessages] Final balance after grant: ${JSON.stringify(finalBalance)}`);
-  console.log(`[grantMessages] Granted ${amount} messages to user ${userId}. New balance: ${finalBalance.messagesRemaining}`);
+  logInfo(`[grantMessages] Final balance after grant: ${JSON.stringify(finalBalance)}`);
+  logInfo(`[grantMessages] Granted ${amount} messages to user ${userId}. New balance: ${finalBalance.messagesRemaining}`);
   
   if (finalBalance.messagesRemaining === 0 && amount > 0) {
-    console.error(`[grantMessages] WARNING: Credits were granted but balance is still 0! This indicates a problem.`);
+    logError(`[grantMessages] WARNING: Credits were granted but balance is still 0! This indicates a problem.`);
   }
 }

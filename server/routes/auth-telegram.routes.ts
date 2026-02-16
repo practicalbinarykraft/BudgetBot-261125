@@ -9,6 +9,7 @@ import { db } from '../db';
 import { users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
+import { logInfo, logWarning, logError } from '../lib/logger';
 import type { Request, Response } from 'express';
 
 const router = Router();
@@ -229,7 +230,7 @@ router.post('/telegram', async (req: Request, res: Response) => {
     // Security: Never expose bot token in code or to frontend!
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     if (!botToken) {
-      console.error('TELEGRAM_BOT_TOKEN not configured');
+      logError('TELEGRAM_BOT_TOKEN not configured');
       return res.status(500).json({ error: 'Telegram authentication not configured' });
     }
 
@@ -238,7 +239,7 @@ router.post('/telegram', async (req: Request, res: Response) => {
     // HOW: Compute hash of data using bot token, compare with provided hash
     // If hashes don't match → data is fake or modified → reject!
     if (!verifyTelegramAuth(authData, botToken)) {
-      console.warn('Invalid Telegram auth hash:', authData);
+      logWarning('Invalid Telegram auth hash:', authData);
       return res.status(401).json({ error: 'Invalid Telegram authentication data' });
     }
 
@@ -268,7 +269,7 @@ router.post('/telegram', async (req: Request, res: Response) => {
       // Their telegram_id is already in our database
       // Just log them in and update their latest Telegram data
 
-      console.log(`Telegram login: User ${user.id} (telegram_id: ${telegramId})`);
+      logInfo(`Telegram login: User ${user.id} (telegram_id: ${telegramId})`);
 
       // Update Telegram data (username/photo might have changed)
       // WHY: Users can change their Telegram username or profile photo
@@ -288,7 +289,7 @@ router.post('/telegram', async (req: Request, res: Response) => {
       // After this, user will be authenticated for subsequent requests
       req.login(user, (err) => {
         if (err) {
-          console.error('Session creation error:', err);
+          logError('Session creation error:', err);
           return res.status(500).json({ error: 'Failed to create session' });
         }
 
@@ -311,7 +312,7 @@ router.post('/telegram', async (req: Request, res: Response) => {
       // This is a brand new user registering via Telegram
       // Create account with telegram_id, leave email/password as NULL
 
-      console.log(`New Telegram user: telegram_id ${telegramId}, name: ${authData.first_name}`);
+      logInfo(`New Telegram user: telegram_id ${telegramId}, name: ${authData.first_name}`);
 
       // Generate display name from Telegram data
       // Priority: username > first_name > fallback to "User{id}"
@@ -336,7 +337,7 @@ router.post('/telegram', async (req: Request, res: Response) => {
       // Same as above: serialize user into session, create cookie
       req.login(newUser, (err) => {
         if (err) {
-          console.error('Session creation error:', err);
+          logError('Session creation error:', err);
           return res.status(500).json({ error: 'Failed to create session' });
         }
 
@@ -355,7 +356,7 @@ router.post('/telegram', async (req: Request, res: Response) => {
       });
     }
   } catch (error) {
-    console.error('Telegram auth error:', error);
+    logError('Telegram auth error:', error);
     return res.status(500).json({ error: 'Internal server error during Telegram authentication' });
   }
 });
@@ -479,14 +480,14 @@ router.post('/link-telegram', async (req: Request, res: Response) => {
       })
       .where(eq(users.id, userId));
 
-    console.log(`Linked Telegram account ${telegramId} to user ${userId}`);
+    logInfo(`Linked Telegram account ${telegramId} to user ${userId}`);
 
     return res.json({
       success: true,
       message: 'Telegram account linked successfully',
     });
   } catch (error) {
-    console.error('Link Telegram error:', error);
+    logError('Link Telegram error:', error);
     return res.status(500).json({ error: 'Failed to link Telegram account' });
   }
 });
@@ -582,14 +583,14 @@ router.post('/unlink-telegram', async (req: Request, res: Response) => {
       })
       .where(eq(users.id, userId));
 
-    console.log(`Unlinked Telegram from user ${userId}`);
+    logInfo(`Unlinked Telegram from user ${userId}`);
 
     return res.json({
       success: true,
       message: 'Telegram account unlinked successfully',
     });
   } catch (error) {
-    console.error('Unlink Telegram error:', error);
+    logError('Unlink Telegram error:', error);
     return res.status(500).json({ error: 'Failed to unlink Telegram account' });
   }
 });

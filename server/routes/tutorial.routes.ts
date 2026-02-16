@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { withAuth } from "../middleware/auth-utils";
 import { completeStep, getProgress } from "../services/tutorial.service";
+import { logError } from '../lib/logger';
 
 const router = Router();
 
@@ -14,7 +15,7 @@ router.get("/", withAuth(async (req, res) => {
     const progress = await getProgress(userId);
     res.json(progress);
   } catch (error: any) {
-    console.error("Error fetching tutorial progress:", error);
+    logError("Error fetching tutorial progress:", error);
     res.status(500).json({ error: "Failed to fetch tutorial progress" });
   }
 }));
@@ -38,7 +39,7 @@ router.post("/complete-step", withAuth(async (req, res) => {
     if (error.message?.startsWith("Invalid tutorial step")) {
       return res.status(400).json({ error: error.message });
     }
-    console.error("Error completing tutorial step:", error);
+    logError("Error completing tutorial step:", error);
     res.status(500).json({ error: "Failed to complete tutorial step" });
   }
 }));

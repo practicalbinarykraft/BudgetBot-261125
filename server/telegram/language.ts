@@ -2,6 +2,7 @@ import { db } from '../db';
 import { users, settings } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { getUserLanguage, type Language } from '@shared/i18n';
+import { logError } from '../lib/logger';
 
 /**
  * Helper function to get user's language preference by Telegram ID
@@ -27,7 +28,7 @@ export async function getUserLanguageByTelegramId(telegramId: string): Promise<L
 
     return getUserLanguageByUserId(user.id);
   } catch (err) {
-    console.error('Error fetching user language:', err);
+    logError('Error fetching user language:', err);
     return 'en';
   }
 }
@@ -49,7 +50,7 @@ export async function getUserLanguageByUserId(userId: number): Promise<Language>
     
     return getUserLanguage(userSettings);
   } catch (err) {
-    console.error('Error fetching user settings:', err);
+    logError('Error fetching user settings:', err);
     return 'en';
   }
 }

@@ -8,6 +8,7 @@ import { getCategoryBreakdown } from "../services/analytics/category-breakdown.s
 import { getPersonBreakdown } from "../services/analytics/person-breakdown.service";
 import { getTypeBreakdown } from "../services/analytics/type-breakdown.service";
 import { getUnsortedTransactions } from "../services/analytics/unsorted-filter.service";
+import { logError } from '../lib/logger';
 import { getMonthlyStats, getTotalBudgetLimits } from "../services/budget-stats.service";
 import { predictGoalWithStats } from "../services/goal-predictor.service";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, format, addYears } from "date-fns";
@@ -209,7 +210,7 @@ router.get("/trend", withAuth(async (req, res) => {
       metadata, // Already serialized to ISO string in forecast.service.ts
     });
   } catch (error: unknown) {
-    console.error("Trend data error:", error);
+    logError("Trend data error:", error);
     res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
@@ -223,7 +224,7 @@ router.get("/by-category", withAuth(async (req, res) => {
 
     return res.json(breakdown);
   } catch (error: unknown) {
-    console.error('Error in /api/analytics/by-category:', error);
+    logError('Error in /api/analytics/by-category:', error);
     return res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
@@ -237,7 +238,7 @@ router.get("/by-person", withAuth(async (req, res) => {
 
     return res.json(breakdown);
   } catch (error: unknown) {
-    console.error('Error in /api/analytics/by-person:', error);
+    logError('Error in /api/analytics/by-person:', error);
     return res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
@@ -251,7 +252,7 @@ router.get("/by-type", withAuth(async (req, res) => {
 
     return res.json(breakdown);
   } catch (error: unknown) {
-    console.error('Error in /api/analytics/by-type:', error);
+    logError('Error in /api/analytics/by-type:', error);
     return res.status(500).json({ error: getErrorMessage(error) });
   }
 }));
@@ -279,7 +280,7 @@ router.get("/unsorted", withAuth(async (req, res) => {
       transactions,
     });
   } catch (error: unknown) {
-    console.error('Error in /api/analytics/unsorted:', error);
+    logError('Error in /api/analytics/unsorted:', error);
     return res.status(500).json({ error: getErrorMessage(error) });
   }
 }));

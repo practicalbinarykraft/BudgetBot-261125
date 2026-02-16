@@ -5,6 +5,7 @@ import { parseReceiptWithItems } from "../../services/ocr/receipt-parser.service
 import { receiptItemsRepository } from "../../repositories/receipt-items.repository";
 import { processReceiptItems } from "../../services/product-catalog.service";
 import { getErrorMessage } from "../../lib/errors";
+import { logInfo, logError } from '../../lib/logger';
 
 const router = Router();
 
@@ -152,9 +153,9 @@ router.post("/receipt-with-items", withAuth(async (req, res) => {
         anthropicApiKey: apiKeyInfo.key
       });
 
-      console.log('✅ Product catalog updated from receipt');
+      logInfo('✅ Product catalog updated from receipt');
     } catch (error) {
-      console.error('❌ Failed to update product catalog:', error);
+      logError('❌ Failed to update product catalog:', error);
       // Не прерываем обработку чека, просто логируем
     }
 
@@ -176,7 +177,7 @@ router.post("/receipt-with-items", withAuth(async (req, res) => {
     });
     
   } catch (error: unknown) {
-    console.error("Receipt parsing error:", error);
+    logError("Receipt parsing error:", error);
     res.status(500).json({
       error: "Failed to parse receipt",
       details: getErrorMessage(error)

@@ -3,6 +3,7 @@ import { plannedRepository } from "../repositories/planned.repository";
 import { plannedIncomeRepository } from "../repositories/planned-income.repository";
 import { recurringRepository } from "../repositories/recurring.repository";
 import { InsertNotification, notificationTransactionDataSchema } from "@shared/schema";
+import { logInfo } from '../lib/logger';
 
 /**
  * Service for checking planned transactions, income, and recurring payments
@@ -28,15 +29,15 @@ export class NotificationService {
 
     // Check planned expenses
     const plannedExpenses = await plannedRepository.getPlannedByUserId(userId);
-    console.log(`[NotificationService] Found ${plannedExpenses.length} planned expenses for user ${userId}`);
+    logInfo(`[NotificationService] Found ${plannedExpenses.length} planned expenses for user ${userId}`);
     for (const planned of plannedExpenses) {
-      console.log(`[NotificationService] Checking planned ${planned.id}: status=${planned.status}, targetDate=${planned.targetDate}, todayStr=${todayStr}`);
+      logInfo(`[NotificationService] Checking planned ${planned.id}: status=${planned.status}, targetDate=${planned.targetDate}, todayStr=${todayStr}`);
       // Create notifications only for planned transactions that have reached their target date
       // (targetDate <= todayStr) - not for future transactions
       // Compare dates as strings in YYYY-MM-DD format (lexicographic comparison works correctly)
       const isDueOrOverdue = planned.targetDate <= todayStr;
       if (planned.status === "planned" && isDueOrOverdue) {
-        console.log(`[NotificationService] Planned ${planned.id} matches criteria, checking for existing notifications...`);
+        logInfo(`[NotificationService] Planned ${planned.id} matches criteria, checking for existing notifications...`);
         // Check if notification already exists (only count active notifications, not completed/dismissed)
         const hasActiveNotification = allNotifications.some(
           n => n.plannedTransactionId === planned.id && 
@@ -48,7 +49,7 @@ export class NotificationService {
           n => n.plannedTransactionId === planned.id
         );
 
-        console.log(`[NotificationService] Planned ${planned.id}: hasActiveNotification=${hasActiveNotification}, hasAnyNotification=${hasAnyNotification}`);
+        logInfo(`[NotificationService] Planned ${planned.id}: hasActiveNotification=${hasActiveNotification}, hasAnyNotification=${hasAnyNotification}`);
 
         // Only create notification if there's no notification at all (active or completed/dismissed)
         // If any notification exists, don't create a new one
@@ -71,10 +72,10 @@ export class NotificationService {
           };
 
           await notificationRepository.createNotification(notificationData, userId);
-          console.log(`[NotificationService] Created notification for planned ${planned.id} with targetDate ${planned.targetDate}`);
+          logInfo(`[NotificationService] Created notification for planned ${planned.id} with targetDate ${planned.targetDate}`);
         }
       } else {
-        console.log(`[NotificationService] Planned ${planned.id} skipped: status=${planned.status}, targetDate=${planned.targetDate} (future date or not planned)`);
+        logInfo(`[NotificationService] Planned ${planned.id} skipped: status=${planned.status}, targetDate=${planned.targetDate} (future date or not planned)`);
       }
     }
 
