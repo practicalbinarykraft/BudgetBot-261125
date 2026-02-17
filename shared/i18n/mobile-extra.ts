@@ -475,4 +475,12 @@ export const mobileExtraTranslations: Translations = {
   "spotlight.receipt_scan": { en: "Tap here to open the menu", ru: "Нажмите сюда, чтобы открыть меню" },
   "spotlight.view_transactions": { en: "Tap here to view all transactions", ru: "Нажмите сюда, чтобы посмотреть все транзакции" },
   "spotlight.got_it": { en: "Got it", ru: "Понятно" },
+
+  // Spotlight flow: create_wallet
+  "spotlight.flow.create_wallet.step1": { en: "These are your wallets and balance. Tap here.", ru: "Это ваши кошельки и баланс. Нажмите сюда." },
+  "spotlight.flow.create_wallet.step2": { en: "Create your first wallet.", ru: "Создайте первый кошелёк." },
+  "spotlight.flow.create_wallet.step3": { en: "Choose the type: card, cash, crypto.", ru: "Выберите тип: карта, наличные, крипто." },
+  "spotlight.flow.create_wallet.step4": { en: "Choose the currency.", ru: "Выберите валюту." },
+  "spotlight.flow.create_wallet.step5": { en: "Fill in the details and tap here!", ru: "Заполните и нажмите!" },
+  "spotlight.skip_flow": { en: "Skip", ru: "Пропустить" },
 };

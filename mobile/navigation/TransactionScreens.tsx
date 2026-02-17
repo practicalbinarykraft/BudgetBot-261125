@@ -23,7 +23,7 @@ const screens: ScreenConfig[] = [
   { name: "AddEditCategory", component: AddEditCategoryScreen, titleKey: "nav.category", presentation: "modal" },
   { name: "CategoryPicker", component: CategoryPickerScreen, titleKey: "category_picker.title", presentation: "modal" },
   { name: "AddEditBudget", component: AddEditBudgetScreen, titleKey: "nav.budget", presentation: "modal" },
-  { name: "AddWallet", component: AddWalletScreen, titleKey: "nav.add_wallet", presentation: "modal" },
+  { name: "AddWallet", component: AddWalletScreen, titleKey: "nav.add_wallet" },
   { name: "Calibration", component: CalibrationScreen, titleKey: "nav.calibration", presentation: "modal" },
   { name: "Wallets", component: WalletsScreen, titleKey: "nav.wallets" },
   { name: "CurrencyHistory", component: CurrencyHistoryScreen, titleKey: "nav.currency_history" },

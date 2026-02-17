@@ -30,6 +30,7 @@ import {
 import { completeTutorialStep } from "../lib/tutorial-step";
 import { useTutorialProgress } from "../hooks/useTutorialProgress";
 import { openTutorial } from "../lib/tutorial-ref";
+import { useSpotlightTarget } from "../tutorial/spotlight";
 
 export default function DashboardScreen() {
   const { theme } = useTheme();
@@ -39,6 +40,7 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const [menuVisible, setMenuVisible] = useState(false);
+  const walletBalanceTarget = useSpotlightTarget("wallet_balance");
   const {
     selectedMonth, goToPrevMonth, goToNextMonth,
     totalBalanceUsd, totalIncome, totalExpense, balance,
@@ -67,6 +69,8 @@ export default function DashboardScreen() {
         {/* Header */}
         <View style={[styles.headerRow, { paddingTop: insets.top + 8 }]}>
           <Pressable
+            ref={walletBalanceTarget.ref}
+            onLayout={walletBalanceTarget.onLayout}
             onPress={() => navigation.navigate("Wallets")}
             style={styles.headerLeft}
           >

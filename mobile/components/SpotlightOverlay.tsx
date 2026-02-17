@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { View, Pressable, Dimensions, Animated, StyleSheet, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, { Path } from "react-native-svg";
+import Svg, { Path, Rect } from "react-native-svg";
 import { Button } from "./Button";
 import { ThemedText } from "./ThemedText";
 import { Spacing } from "../constants/theme";
@@ -9,9 +9,18 @@ import { useTranslation } from "../i18n";
 import {
   registerSpotlightShow,
   unregisterSpotlightShow,
+  registerSpotlightFlow,
+  unregisterSpotlightFlow,
+  getSpotlightTargetRect,
+  onSpotlightTargetChange,
   type SpotlightTarget,
 } from "../lib/spotlight-ref";
 import { getViewAllRect } from "../lib/view-all-ref";
+import { SPOTLIGHT_FLOWS } from "../tutorial/spotlight/flows";
+import type { SpotlightFlowStep } from "../tutorial/spotlight/spotlight.types";
+import type { LayoutRect } from "../lib/view-all-ref";
+
+// ─── Legacy helpers (unchanged) ─────────────────────────────────────
 
 interface TargetPosition {
   cx: number;
@@ -19,7 +28,7 @@ interface TargetPosition {
   radius: number;
 }
 
-function useTargetPosition(targetId: SpotlightTarget | null): TargetPosition | null {
+function useLegacyTargetPosition(targetId: SpotlightTarget | null): TargetPosition | null {
   const insets = useSafeAreaInsets();
   if (!targetId) return null;
 
@@ -27,26 +36,21 @@ function useTargetPosition(targetId: SpotlightTarget | null): TargetPosition | n
 
   switch (targetId) {
     case "add_transaction": {
-      // FloatingActionPanel "+" button: panel centered horizontally, bottom = insets.bottom + 8
-      // Container 160x160, plus button at (bottom:0, left:56, 48x48)
       const cx = SW / 2 - 80 + 56 + 24;
       const cy = SH - insets.bottom - 8 - 24;
       return { cx, cy, radius: 32 };
     }
     case "voice_input": {
-      // FloatingActionPanel mic button: same panel, mic at (top:0, left:48, 64x64)
       const cx = SW / 2 - 80 + 48 + 32;
       const cy = SH - insets.bottom - 8 - 160 + 32;
       return { cx, cy, radius: 40 };
     }
     case "receipt_scan": {
-      // Dashboard menu hamburger icon: rightmost icon in header
       const cx = SW - 16 - 20;
       const cy = insets.top + 8 + 20;
       return { cx, cy, radius: 28 };
     }
     case "view_transactions": {
-      // "View all" Pressable — measured dynamically
       const rect = getViewAllRect();
       if (rect) {
         return {
@@ -55,7 +59,6 @@ function useTargetPosition(targetId: SpotlightTarget | null): TargetPosition | n
           radius: Math.max(rect.width, rect.height) / 2 + 8,
         };
       }
-      // Fallback: approximate position
       return { cx: SW - 60, cy: 420, radius: 32 };
     }
     default:
@@ -63,85 +66,374 @@ function useTargetPosition(targetId: SpotlightTarget | null): TargetPosition | n
   }
 }
 
-function buildCutoutPath(sw: number, sh: number, cx: number, cy: number, r: number): string {
-  // Full-screen rect with circular hole using evenodd fill rule
-  // Outer rect (clockwise)
+function buildCircleCutoutPath(sw: number, sh: number, cx: number, cy: number, r: number): string {
   const outer = `M0,0 H${sw} V${sh} H0 Z`;
-  // Inner circle (counter-clockwise for evenodd cutout)
   const circle = `M${cx - r},${cy} A${r},${r} 0 1,0 ${cx + r},${cy} A${r},${r} 0 1,0 ${cx - r},${cy} Z`;
   return `${outer} ${circle}`;
 }
 
-const TOOLTIP_KEYS: Record<SpotlightTarget, string> = {
+const LEGACY_TOOLTIP_KEYS: Record<SpotlightTarget, string> = {
   add_transaction: "spotlight.add_transaction",
   voice_input: "spotlight.voice_input",
   receipt_scan: "spotlight.receipt_scan",
   view_transactions: "spotlight.view_transactions",
 };
 
+// ─── Flow helpers ───────────────────────────────────────────────────
+
+const CUTOUT_PADDING = 10;
+const CUTOUT_RADIUS = 14;
+const STROKE_WIDTH = 2.5;
+const ACCENT = "#3b82f6";
+
+function roundRect(rect: LayoutRect): LayoutRect {
+  return {
+    x: Math.round(rect.x),
+    y: Math.round(rect.y),
+    width: Math.round(rect.width),
+    height: Math.round(rect.height),
+  };
+}
+
+function buildRoundedRectCutoutPath(
+  sw: number,
+  sh: number,
+  rect: LayoutRect,
+): string {
+  const x = rect.x - CUTOUT_PADDING;
+  const y = rect.y - CUTOUT_PADDING;
+  const w = rect.width + CUTOUT_PADDING * 2;
+  const h = rect.height + CUTOUT_PADDING * 2;
+  const r = CUTOUT_RADIUS;
+
+  const outer = `M0,0 H${sw} V${sh} H0 Z`;
+  const inner =
+    `M${x + r},${y}` +
+    ` H${x + w - r}` +
+    ` Q${x + w},${y} ${x + w},${y + r}` +
+    ` V${y + h - r}` +
+    ` Q${x + w},${y + h} ${x + w - r},${y + h}` +
+    ` H${x + r}` +
+    ` Q${x},${y + h} ${x},${y + h - r}` +
+    ` V${y + r}` +
+    ` Q${x},${y} ${x + r},${y}` +
+    ` Z`;
+
+  return `${outer} ${inner}`;
+}
+
+// ─── Component ──────────────────────────────────────────────────────
+
 export default function SpotlightOverlay() {
   const { t } = useTranslation();
-  const [targetId, setTargetId] = useState<SpotlightTarget | null>(null);
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const position = useTargetPosition(targetId);
+  const insets = useSafeAreaInsets();
+  const useND = Platform.OS !== "web";
 
-  const show = useCallback((id: SpotlightTarget) => {
-    setTargetId(id);
+  // ── Legacy state ──
+  const [legacyTargetId, setLegacyTargetId] = useState<SpotlightTarget | null>(null);
+  const legacyPosition = useLegacyTargetPosition(legacyTargetId);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  // ── Flow state ──
+  const [flowId, setFlowId] = useState<string | null>(null);
+  const [flowStepIndex, setFlowStepIndex] = useState(0);
+  const [flowRect, setFlowRect] = useState<LayoutRect | null>(null);
+  const navigationRef = useRef<any>(null);
+  const arrowAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // ── Legacy registration ──
+  const showLegacy = useCallback((id: SpotlightTarget) => {
+    setLegacyTargetId(id);
   }, []);
 
   useEffect(() => {
-    registerSpotlightShow(show);
+    registerSpotlightShow(showLegacy);
     return () => unregisterSpotlightShow();
-  }, [show]);
+  }, [showLegacy]);
 
-  // Pulse animation
+  // ── Pulse animation (shared by legacy + flow) ──
   useEffect(() => {
-    if (!targetId) return;
+    if (!legacyTargetId && !flowRect) return;
     pulseAnim.setValue(1);
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.4, duration: 800, useNativeDriver: Platform.OS !== "web" }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: Platform.OS !== "web" }),
+        Animated.timing(pulseAnim, { toValue: 1.15, duration: 900, useNativeDriver: useND }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: useND }),
       ]),
     );
     loop.start();
     return () => loop.stop();
-  }, [targetId, pulseAnim]);
+  }, [legacyTargetId, flowRect, pulseAnim]);
 
-  const handleDismiss = () => setTargetId(null);
+  const handleLegacyDismiss = () => setLegacyTargetId(null);
 
-  // Web-only debug badge (dev builds only)
-  const showDebug = __DEV__ && Platform.OS === "web";
-  const lastTargetRef = useRef<SpotlightTarget | null>(null);
-  if (targetId) lastTargetRef.current = targetId;
+  // ── Flow registration ──
+  const startFlow = useCallback((id: string, navigation: any) => {
+    if (flowId) return;
+    navigationRef.current = navigation;
+    setFlowId(id);
+    setFlowStepIndex(0);
+    setFlowRect(null);
+  }, [flowId]);
 
-  if (!targetId || !position) {
-    return showDebug ? (
-      <View style={styles.debugBadge} pointerEvents="none">
-        <ThemedText type="small" color="#888">
-          {`[Spotlight] mounted | last=${lastTargetRef.current ?? "none"} | active=none`}
-        </ThemedText>
-      </View>
-    ) : null;
+  const advanceFlow = useCallback(() => {
+    if (!flowId) return;
+    const flow = SPOTLIGHT_FLOWS[flowId];
+    if (!flow) return;
+    const nextIndex = flowStepIndex + 1;
+    if (nextIndex >= flow.steps.length) {
+      setFlowId(null);
+      setFlowStepIndex(0);
+      setFlowRect(null);
+      return;
+    }
+    setFlowStepIndex(nextIndex);
+    setFlowRect(null);
+  }, [flowId, flowStepIndex]);
+
+  const dismissFlow = useCallback(() => {
+    Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: useND }).start(() => {
+      setFlowId(null);
+      setFlowStepIndex(0);
+      setFlowRect(null);
+    });
+  }, [fadeAnim]);
+
+  useEffect(() => {
+    registerSpotlightFlow({ start: startFlow, advance: advanceFlow, dismiss: dismissFlow });
+    return () => unregisterSpotlightFlow();
+  }, [startFlow, advanceFlow, dismissFlow]);
+
+  // ── Flow: resolve current step & poll for rect ──
+  const currentFlowStep: SpotlightFlowStep | null =
+    flowId && SPOTLIGHT_FLOWS[flowId]
+      ? SPOTLIGHT_FLOWS[flowId].steps[flowStepIndex] ?? null
+      : null;
+
+  useEffect(() => {
+    if (!currentFlowStep) return;
+
+    const targetId = currentFlowStep.targetId;
+
+    const tryResolve = (rect: LayoutRect) => {
+      setFlowRect(roundRect(rect));
+    };
+
+    const immediate = getSpotlightTargetRect(targetId);
+    if (immediate) {
+      tryResolve(immediate);
+      return;
+    }
+
+    let cancelled = false;
+
+    const unsubscribe = onSpotlightTargetChange((changedId) => {
+      if (changedId === targetId && !cancelled) {
+        const rect = getSpotlightTargetRect(targetId);
+        if (rect) {
+          tryResolve(rect);
+          cancelled = true;
+          clearInterval(intervalId);
+          unsubscribe();
+        }
+      }
+    });
+
+    const intervalId = setInterval(() => {
+      if (cancelled) return;
+      const rect = getSpotlightTargetRect(targetId);
+      if (rect) {
+        tryResolve(rect);
+        cancelled = true;
+        clearInterval(intervalId);
+        unsubscribe();
+      }
+    }, 100);
+
+    const timeoutId = setTimeout(() => {
+      cancelled = true;
+      clearInterval(intervalId);
+      unsubscribe();
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+      clearTimeout(timeoutId);
+      unsubscribe();
+    };
+  }, [currentFlowStep]);
+
+  // ── Flow: fade in when rect appears ──
+  useEffect(() => {
+    if (flowRect) {
+      fadeAnim.setValue(0);
+      Animated.timing(fadeAnim, { toValue: 1, duration: 250, useNativeDriver: useND }).start();
+    }
+  }, [flowRect, fadeAnim]);
+
+  // ── Flow: arrow bounce ──
+  useEffect(() => {
+    if (!flowRect) return;
+    arrowAnim.setValue(0);
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(arrowAnim, { toValue: -6, duration: 300, useNativeDriver: useND }),
+        Animated.timing(arrowAnim, { toValue: 0, duration: 300, useNativeDriver: useND }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [flowRect, arrowAnim]);
+
+  // ── Flow: auto-advance ──
+  useEffect(() => {
+    if (!currentFlowStep?.autoAdvanceMs || !flowRect) return;
+    const timer = setTimeout(() => {
+      advanceFlow();
+    }, currentFlowStep.autoAdvanceMs);
+    return () => clearTimeout(timer);
+  }, [currentFlowStep, flowRect, advanceFlow]);
+
+  // ── Flow: tap handler ──
+  const handleFlowTap = useCallback(() => {
+    if (!currentFlowStep) return;
+    if (currentFlowStep.autoAdvanceMs) return;
+    if (currentFlowStep.navigateTo && navigationRef.current) {
+      navigationRef.current.navigate(currentFlowStep.navigateTo);
+    }
+    advanceFlow();
+  }, [currentFlowStep, advanceFlow]);
+
+  // ─── Render: Flow mode ────────────────────────────────────────────
+  if (flowId && currentFlowStep && flowRect) {
+    const { width: SW, height: SH } = Dimensions.get("window");
+    const tooltipAbove = flowRect.y + flowRect.height / 2 > SH / 2;
+
+    // Border rect (padded around target)
+    const bx = flowRect.x - CUTOUT_PADDING;
+    const by = flowRect.y - CUTOUT_PADDING;
+    const bw = flowRect.width + CUTOUT_PADDING * 2;
+    const bh = flowRect.height + CUTOUT_PADDING * 2;
+
+    // Arrow position — clamped to screen
+    const arrowCenterX = Math.min(Math.max(flowRect.x + flowRect.width / 2, 20), SW - 20);
+    const arrowTop = tooltipAbove
+      ? by - 24
+      : by + bh + 4;
+
+    // Tooltip Y — clamped with safe area
+    const tooltipMargin = 32;
+    const tooltipTop = tooltipAbove
+      ? undefined
+      : Math.min(by + bh + tooltipMargin, SH - insets.bottom - 60);
+    const tooltipBottom = tooltipAbove
+      ? Math.min(SH - by + tooltipMargin, SH - insets.top - 60)
+      : undefined;
+
+    return (
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeAnim }]} pointerEvents="box-none">
+        {/* Dark overlay with rounded-rect cutout + blue stroke */}
+        <Pressable style={StyleSheet.absoluteFill} onPress={handleFlowTap}>
+          <Svg width={SW} height={SH}>
+            <Path
+              d={buildRoundedRectCutoutPath(SW, SH, flowRect)}
+              fill="rgba(0,0,0,0.65)"
+              fillRule="evenodd"
+            />
+            <Rect
+              x={bx}
+              y={by}
+              width={bw}
+              height={bh}
+              rx={CUTOUT_RADIUS}
+              ry={CUTOUT_RADIUS}
+              fill="none"
+              stroke={ACCENT}
+              strokeWidth={STROKE_WIDTH}
+            />
+          </Svg>
+        </Pressable>
+
+        {/* Pulsing glow ring */}
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.flowPulseRing,
+            {
+              left: bx - 3,
+              top: by - 3,
+              width: bw + 6,
+              height: bh + 6,
+              borderRadius: CUTOUT_RADIUS + 3,
+              transform: [{ scale: pulseAnim }],
+            },
+          ]}
+        />
+
+        {/* Bouncing arrow */}
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.arrow,
+            {
+              left: arrowCenterX - 10,
+              top: arrowTop,
+              transform: [{ translateY: arrowAnim }],
+            },
+          ]}
+        >
+          <ThemedText type="body" color={ACCENT} style={styles.arrowText}>
+            {tooltipAbove ? "\u25BC" : "\u25B2"}
+          </ThemedText>
+        </Animated.View>
+
+        {/* Tooltip */}
+        <View
+          pointerEvents="none"
+          style={[
+            styles.tooltip,
+            styles.flowTooltip,
+            {
+              left: Spacing.xl,
+              right: Spacing.xl,
+              ...(tooltipBottom !== undefined
+                ? { bottom: tooltipBottom }
+                : { top: tooltipTop }),
+            },
+          ]}
+        >
+          <ThemedText type="bodySm" color="#ffffff" style={styles.tooltipText}>
+            {t(currentFlowStep.tooltipKey)}
+          </ThemedText>
+        </View>
+
+        {/* Skip button */}
+        <View style={[styles.skipContainer, { bottom: Math.max(insets.bottom, 16) + 16 }]}>
+          <Pressable onPress={dismissFlow} style={styles.skipButton}>
+            <ThemedText type="bodySm" color="#ffffffaa" style={styles.skipText}>
+              {t("spotlight.skip_flow")}
+            </ThemedText>
+          </Pressable>
+        </View>
+      </Animated.View>
+    );
   }
 
+  // ─── Render: Legacy mode ──────────────────────────────────────────
+  if (!legacyTargetId || !legacyPosition) return null;
+
   const { width: SW, height: SH } = Dimensions.get("window");
-  const { cx, cy, radius } = position;
+  const { cx, cy, radius } = legacyPosition;
   const tooltipAbove = cy > SH / 2;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-      {showDebug && (
-        <View style={styles.debugBadge} pointerEvents="none">
-          <ThemedText type="small" color="#0f0">
-            {`[Spotlight] target=${targetId} | cx=${Math.round(cx)} cy=${Math.round(cy)} r=${radius}`}
-          </ThemedText>
-        </View>
-      )}
-      <Pressable style={StyleSheet.absoluteFill} onPress={handleDismiss}>
+      <Pressable style={StyleSheet.absoluteFill} onPress={handleLegacyDismiss}>
         <Svg width={SW} height={SH}>
           <Path
-            d={buildCutoutPath(SW, SH, cx, cy, radius)}
+            d={buildCircleCutoutPath(SW, SH, cx, cy, radius)}
             fill="rgba(0,0,0,0.6)"
             fillRule="evenodd"
           />
@@ -179,13 +471,13 @@ export default function SpotlightOverlay() {
         ]}
       >
         <ThemedText type="bodySm" color="#ffffff" style={styles.tooltipText}>
-          {t(TOOLTIP_KEYS[targetId])}
+          {t(LEGACY_TOOLTIP_KEYS[legacyTargetId])}
         </ThemedText>
       </View>
 
       {/* Got it button */}
       <View style={[styles.gotItContainer, { bottom: 40 }]}>
-        <Button title={t("spotlight.got_it")} onPress={handleDismiss} />
+        <Button title={t("spotlight.got_it")} onPress={handleLegacyDismiss} />
       </View>
     </View>
   );
@@ -201,6 +493,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     alignItems: "center",
   },
+  flowTooltip: {
+    backgroundColor: "rgba(0,0,0,0.75)",
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignSelf: "center",
+  },
   tooltipText: {
     fontWeight: "600",
     textAlign: "center",
@@ -214,14 +513,34 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: "center",
   },
-  debugBadge: {
+  arrow: {
     position: "absolute",
-    top: 4,
-    left: 4,
-    backgroundColor: "rgba(0,0,0,0.7)",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    zIndex: 99999,
+    width: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  arrowText: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  flowPulseRing: {
+    position: "absolute",
+    borderWidth: 2,
+    borderColor: "#3b82f650",
+  },
+  skipContainer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+  },
+  skipButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+  },
+  skipText: {
+    fontWeight: "500",
+    textDecorationLine: "underline",
   },
 });

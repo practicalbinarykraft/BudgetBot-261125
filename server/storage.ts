@@ -34,7 +34,7 @@ export interface IStorage {
   // Transactions
   getTransactionsByUserId(userId: number, filters?: { personalTagId?: number; from?: string; to?: string; limit?: number; offset?: number }): Promise<{ transactions: Transaction[]; total: number }>;
   getTransactionById(id: number): Promise<Transaction | null>;
-  createTransaction(transaction: InsertTransaction): Promise<Transaction>;
+  createTransaction(transaction: InsertTransaction & { amountUsd: string }): Promise<Transaction>;
   updateTransaction(id: number, transaction: Partial<InsertTransaction>): Promise<Transaction>;
   deleteTransaction(id: number): Promise<void>;
 
@@ -117,7 +117,7 @@ export class DatabaseStorage implements IStorage {
   // Transactions
   getTransactionsByUserId(userId: number, filters?: { personalTagId?: number; from?: string; to?: string; limit?: number; offset?: number }) { return transactionRepository.getTransactionsByUserId(userId, filters); }
   getTransactionById(id: number) { return transactionRepository.getTransactionById(id); }
-  createTransaction(transaction: InsertTransaction) { return transactionRepository.createTransaction(transaction); }
+  createTransaction(transaction: InsertTransaction & { amountUsd: string }) { return transactionRepository.createTransaction(transaction); }
   updateTransaction(id: number, transaction: Partial<InsertTransaction>) { return transactionRepository.updateTransaction(id, transaction); }
   deleteTransaction(id: number) { return transactionRepository.deleteTransaction(id); }
 

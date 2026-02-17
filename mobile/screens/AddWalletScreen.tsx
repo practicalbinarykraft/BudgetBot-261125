@@ -17,6 +17,9 @@ import { api } from "../lib/api-client";
 import { queryClient } from "../lib/query-client";
 import { styles } from "./styles/addWalletStyles";
 import { useTranslation } from "../i18n";
+import { useSpotlightTarget } from "../tutorial/spotlight";
+import { completeTutorialStep } from "../lib/tutorial-step";
+import { dismissSpotlightFlow } from "../lib/spotlight-ref";
 
 type WalletType = "card" | "cash" | "crypto";
 
@@ -40,12 +43,17 @@ export default function AddWalletScreen() {
   const [type, setType] = useState<WalletType>("card");
   const [balance, setBalance] = useState("");
   const [currency, setCurrency] = useState("USD");
+  const typeTarget = useSpotlightTarget("wallet_type_row");
+  const currencyTarget = useSpotlightTarget("wallet_currency_row");
+  const submitTarget = useSpotlightTarget("wallet_submit_btn");
 
   const createMutation = useMutation({
     mutationFn: (data: { name: string; type: string; balance: string; currency: string }) =>
       api.post("/api/wallets", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["wallets"] });
+      dismissSpotlightFlow();
+      completeTutorialStep("create_wallet");
       navigation.goBack();
     },
     onError: (error: Error) => uiAlert(t("common.error"), error.message),
@@ -66,7 +74,7 @@ export default function AddWalletScreen() {
         <Input label={t("wallets.name")} value={name} onChangeText={setName} placeholder={t("wallets.name_placeholder")} containerStyle={styles.field} />
         <View style={styles.field}>
           <ThemedText type="small" color={theme.textSecondary} style={styles.label}>{t("wallets.type")}</ThemedText>
-          <View style={styles.toggleRow}>
+          <View style={styles.toggleRow} ref={typeTarget.ref} onLayout={typeTarget.onLayout} collapsable={false}>
             {walletTypeKeys.map((wt) => {
               const isActive = type === wt.key;
               return (
@@ -83,7 +91,7 @@ export default function AddWalletScreen() {
           </View>
           <View style={styles.rowHalf}>
             <ThemedText type="small" color={theme.textSecondary} style={styles.label}>{t("common.currency")}</ThemedText>
-            <View style={styles.currencyRow}>
+            <View style={styles.currencyRow} ref={currencyTarget.ref} onLayout={currencyTarget.onLayout} collapsable={false}>
               {currencies.map((c) => {
                 const isActive = currency === c.key;
                 return (
@@ -97,7 +105,9 @@ export default function AddWalletScreen() {
         </View>
         <View style={styles.footerRow}>
           <Button title={t("common.cancel")} variant="outline" onPress={() => navigation.goBack()} style={styles.footerBtn} />
-          <Button title={createMutation.isPending ? t("transactions.adding") : t("wallets.add_wallet")} onPress={handleSubmit} loading={createMutation.isPending} disabled={createMutation.isPending} style={styles.footerBtn} />
+          <View ref={submitTarget.ref} onLayout={submitTarget.onLayout} collapsable={false} style={styles.footerBtn}>
+            <Button title={createMutation.isPending ? t("transactions.adding") : t("wallets.add_wallet")} onPress={handleSubmit} loading={createMutation.isPending} disabled={createMutation.isPending} />
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useTutorialProgress } from "./useTutorialProgress";
 
 export type TutorialView = "welcome" | "checklist" | "stepHelp";
@@ -8,10 +8,12 @@ export function useTutorialDialog(userId: number | undefined) {
   const [view, setView] = useState<TutorialView>("welcome");
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const tutorial = useTutorialProgress();
+  const autoShownRef = useRef(false);
 
-  // Auto-show on first launch (0 completed steps)
+  // Auto-show on first launch (0 completed steps), once per session
   useEffect(() => {
-    if (userId && tutorial.completedSteps === 0 && !tutorial.isLoading) {
+    if (userId && tutorial.completedSteps === 0 && !tutorial.isLoading && !autoShownRef.current) {
+      autoShownRef.current = true;
       setVisible(true);
       setView("welcome");
     }

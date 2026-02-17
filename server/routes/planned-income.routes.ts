@@ -123,7 +123,7 @@ router.post("/:id/receive", withAuth(async (req, res) => {
       source: "manual",
     });
     
-    const transaction = await storage.createTransaction(transactionData);
+    const transaction = await storage.createTransaction({ ...transactionData, amountUsd: plannedItem.amountUsd });
     
     if (primaryWallet) {
       const currentBalanceUsd = parseFloat(primaryWallet.balanceUsd || primaryWallet.balance);

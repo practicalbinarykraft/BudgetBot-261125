@@ -26,16 +26,22 @@ const SPOTLIGHT_MAP: Record<string, SpotlightTarget> = {
   view_transactions: "view_transactions",
 };
 
+export const FLOW_MAP: Record<string, string> = {
+  create_wallet: "create_wallet",
+};
+
 interface StepHelpViewProps {
   step: StepDef;
   onBack: () => void;
   onShowWhere: (targetId: SpotlightTarget) => void;
   onOpenScreen: (route: string) => void;
+  onStartFlow?: (flowId: string) => void;
 }
 
-export function StepHelpView({ step, onBack, onShowWhere, onOpenScreen }: StepHelpViewProps) {
+export function StepHelpView({ step, onBack, onShowWhere, onOpenScreen, onStartFlow }: StepHelpViewProps) {
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const flowId = FLOW_MAP[step.stepId] ?? null;
   const spotlightTarget = SPOTLIGHT_MAP[step.stepId] ?? null;
   const hasRoute = !!step.route && step.stepId !== "view_transactions";
 
@@ -61,14 +67,21 @@ export function StepHelpView({ step, onBack, onShowWhere, onOpenScreen }: StepHe
       </ThemedText>
 
       <View style={styles.actions}>
-        {spotlightTarget && (
+        {flowId && onStartFlow ? (
+          <Button
+            title={t("tutorial.show_where")}
+            variant="outline"
+            onPress={() => onStartFlow(flowId)}
+            style={styles.btn}
+          />
+        ) : spotlightTarget ? (
           <Button
             title={t("tutorial.show_where")}
             variant="outline"
             onPress={() => onShowWhere(spotlightTarget)}
             style={styles.btn}
           />
-        )}
+        ) : null}
         {hasRoute && (
           <Button
             title={t("tutorial.open_screen")}

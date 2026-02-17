@@ -621,7 +621,7 @@ export const insertUserSchema = createInsertSchema(users, {
 
 export const insertTransactionSchema = createInsertSchema(transactions, {
   amount: z.string().regex(/^\d+(\.\d{1,2})?$/),
-  amountUsd: z.string().regex(/^\d+(\.\d{1,2})?$/),
+  amountUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
   originalAmount: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
   originalCurrency: z.string().optional(),
   exchangeRate: z.string().regex(/^\d+(\.\d{1,4})?$/).optional(),

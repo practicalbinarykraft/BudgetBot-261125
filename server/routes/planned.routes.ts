@@ -104,7 +104,7 @@ router.post("/:id/purchase", withAuth(async (req, res) => {
       source: "manual",
     });
     
-    const transaction = await storage.createTransaction(transactionData);
+    const transaction = await storage.createTransaction({ ...transactionData, amountUsd });
     
     if (primaryWallet) {
       const newBalance = parseFloat(primaryWallet.balance) - parseFloat(plannedItem.amount);

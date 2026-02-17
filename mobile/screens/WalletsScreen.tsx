@@ -20,12 +20,14 @@ import { useTheme } from "../hooks/useTheme";
 import { api } from "../lib/api-client";
 import type { Wallet, PaginatedResponse } from "../types";
 import { useTranslation } from "../i18n";
+import { useSpotlightTarget } from "../tutorial/spotlight";
 
 export default function WalletsScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
 
+  const addWalletTarget = useSpotlightTarget("add_wallet_btn");
   const { data, isLoading, isRefetching, refetch } = useQuery({
     queryKey: ["wallets"],
     queryFn: () => api.get<PaginatedResponse<Wallet>>("/api/wallets?limit=50"),
@@ -64,14 +66,16 @@ export default function WalletsScreen() {
             onPress={() => navigation.navigate("Calibration")}
             icon={<Feather name="settings" size={14} color={theme.text} />}
           />
-          <Button
-            title={t("wallets.add_wallet")}
-            size="sm"
-            onPress={() => navigation.navigate("AddWallet")}
-            icon={
-              <Feather name="plus" size={14} color={theme.primaryForeground} />
-            }
-          />
+          <View ref={addWalletTarget.ref} onLayout={addWalletTarget.onLayout} collapsable={false} style={{ alignSelf: "flex-start" }}>
+            <Button
+              title={t("wallets.add_wallet")}
+              size="sm"
+              onPress={() => navigation.navigate("AddWallet")}
+              icon={
+                <Feather name="plus" size={14} color={theme.primaryForeground} />
+              }
+            />
+          </View>
         </View>
       </View>
 

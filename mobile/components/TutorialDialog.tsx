@@ -17,9 +17,9 @@ import { useTheme } from "../hooks/useTheme";
 import { useTranslation, type Language } from "../i18n";
 import { useTutorialDialog } from "../hooks/useTutorialDialog";
 import { registerTutorialOpen, unregisterTutorialOpen } from "../lib/tutorial-ref";
-import { showSpotlight } from "../lib/spotlight-ref";
+import { showSpotlight, startSpotlightFlow } from "../lib/spotlight-ref";
 import type { SpotlightTarget } from "../lib/spotlight-ref";
-import { StepHelpView, type StepDef } from "./tutorial/StepHelpView";
+import { StepHelpView, type StepDef, FLOW_MAP } from "./tutorial/StepHelpView";
 
 type IconName = React.ComponentProps<typeof Feather>["name"];
 
@@ -53,6 +53,11 @@ export default function TutorialDialog({ userId }: TutorialDialogProps) {
 
   const handleStepPress = (step: StepDef) => {
     if (tutorial.isStepCompleted(step.stepId)) return;
+    const flowId = FLOW_MAP[step.stepId];
+    if (flowId) {
+      handleStartFlow(flowId);
+      return;
+    }
     openStepHelp(step.stepId);
   };
 
@@ -64,6 +69,11 @@ export default function TutorialDialog({ userId }: TutorialDialogProps) {
   const handleOpenScreen = (route: string) => {
     dismiss();
     setTimeout(() => navigation.navigate(route as any), 200);
+  };
+
+  const handleStartFlow = (flowId: string) => {
+    dismiss();
+    setTimeout(() => startSpotlightFlow(flowId, navigation), 200);
   };
 
   const selectedStep = selectedStepId ? STEPS.find((s) => s.stepId === selectedStepId) : null;
@@ -124,6 +134,7 @@ export default function TutorialDialog({ userId }: TutorialDialogProps) {
                 onBack={backToChecklist}
                 onShowWhere={handleShowWhere}
                 onOpenScreen={handleOpenScreen}
+                onStartFlow={handleStartFlow}
               />
             ) : (
               <>

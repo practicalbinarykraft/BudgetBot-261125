@@ -107,7 +107,6 @@ export default function RootStackNavigator() {
     <WebSocketProvider userId={user?.id}>
       <TutorialDialog userId={user?.id} />
       <RewardModal />
-      <SpotlightOverlay />
       <Stack.Navigator screenOptions={{
         headerShown: false,
         headerBackTitle: t("common.back"),
@@ -129,6 +128,7 @@ export default function RootStackNavigator() {
           </Stack.Screen>
         )}
       </Stack.Navigator>
+      <SpotlightOverlay />
     </WebSocketProvider>
   );
 }

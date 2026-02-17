@@ -44,6 +44,7 @@ describe("StepHelpView", () => {
   const onBack = jest.fn();
   const onShowWhere = jest.fn();
   const onOpenScreen = jest.fn();
+  const onStartFlow = jest.fn();
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -56,7 +57,7 @@ describe("StepHelpView", () => {
     route: "AddTransaction",
   };
 
-  const stepWithoutSpotlightOrRoute: StepDef = {
+  const stepCreateWallet: StepDef = {
     stepId: "create_wallet",
     icon: "credit-card",
     titleKey: "tutorial.step.create_wallet",
@@ -105,10 +106,20 @@ describe("StepHelpView", () => {
     expect(onBack).toHaveBeenCalled();
   });
 
-  it("hides Show where for steps without spotlight mapping", () => {
-    const { queryByText } = render(
-      <StepHelpView step={stepWithoutSpotlightOrRoute} onBack={onBack} onShowWhere={onShowWhere} onOpenScreen={onOpenScreen} />
+  it("create_wallet uses onStartFlow instead of onShowWhere", () => {
+    const { getByText } = render(
+      <StepHelpView step={stepCreateWallet} onBack={onBack} onShowWhere={onShowWhere} onOpenScreen={onOpenScreen} onStartFlow={onStartFlow} />
     );
+    fireEvent.press(getByText("Show where to tap"));
+    expect(onStartFlow).toHaveBeenCalledWith("create_wallet");
+    expect(onShowWhere).not.toHaveBeenCalled();
+  });
+
+  it("create_wallet hides Show where when no onStartFlow provided", () => {
+    const { queryByText } = render(
+      <StepHelpView step={stepCreateWallet} onBack={onBack} onShowWhere={onShowWhere} onOpenScreen={onOpenScreen} />
+    );
+    // Without onStartFlow, create_wallet has no SPOTLIGHT_MAP entry, so no button
     expect(queryByText("Show where to tap")).toBeNull();
   });
 
