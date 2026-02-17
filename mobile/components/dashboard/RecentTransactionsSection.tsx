@@ -1,10 +1,11 @@
-import React, { useRef } from "react";
+import React, { useRef, useCallback } from "react";
 import { View, Pressable, StyleSheet } from "react-native";
 import { ThemedText } from "../ThemedText";
 import { TransactionItem } from "../TransactionItem";
 import { Spacing } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
 import { useTranslation } from "../../i18n";
+import { measureView } from "../../lib/measure-view";
 import { setViewAllRect } from "../../lib/view-all-ref";
 import type { Transaction, Category, PersonalTag } from "../../types";
 
@@ -27,6 +28,12 @@ export function RecentTransactionsSection({
   const { t } = useTranslation();
   const viewAllRef = useRef<View>(null);
 
+  const handleLayout = useCallback(() => {
+    measureView(viewAllRef).then((rect) => {
+      if (rect) setViewAllRect(rect);
+    });
+  }, []);
+
   return (
     <View style={styles.recentSection}>
       <View style={styles.recentHeader}>
@@ -36,11 +43,7 @@ export function RecentTransactionsSection({
         <Pressable
           ref={viewAllRef}
           onPress={onViewAll}
-          onLayout={() => {
-            viewAllRef.current?.measureInWindow((x, y, width, height) => {
-              setViewAllRect({ x, y, width, height });
-            });
-          }}
+          onLayout={handleLayout}
         >
           <ThemedText type="bodySm" color={theme.primary}>
             {t("common.view_all")}

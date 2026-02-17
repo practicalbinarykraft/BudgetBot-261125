@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from "react";
-import { Pressable, Animated, StyleSheet } from "react-native";
+import { Pressable, Animated, StyleSheet, Platform } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -26,8 +26,8 @@ export default function CreditsWidget() {
   useEffect(() => {
     if (data && prevBalance.current !== undefined && data.messagesRemaining > prevBalance.current) {
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.3, duration: 200, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.3, duration: 200, useNativeDriver: Platform.OS !== "web" }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 200, useNativeDriver: Platform.OS !== "web" }),
       ]).start();
     }
     prevBalance.current = data?.messagesRemaining;

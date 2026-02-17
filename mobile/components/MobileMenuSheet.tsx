@@ -7,6 +7,7 @@ import {
   Modal,
   StyleSheet,
   Dimensions,
+  Platform,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -77,7 +78,7 @@ export default function MobileMenuSheet({ visible, onClose }: { visible: boolean
     Animated.timing(slideAnim, {
       toValue: visible ? SCREEN_W - PANEL_W : SCREEN_W,
       duration: 250,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== "web",
     }).start();
   }, [visible, slideAnim]);
 

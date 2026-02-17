@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { View, Pressable, Dimensions, Animated, StyleSheet } from "react-native";
+import { View, Pressable, Dimensions, Animated, StyleSheet, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { Button } from "./Button";
@@ -100,8 +100,8 @@ export default function SpotlightOverlay() {
     pulseAnim.setValue(1);
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.4, duration: 800, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.4, duration: 800, useNativeDriver: Platform.OS !== "web" }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: Platform.OS !== "web" }),
       ]),
     );
     loop.start();
@@ -110,7 +110,20 @@ export default function SpotlightOverlay() {
 
   const handleDismiss = () => setTargetId(null);
 
-  if (!targetId || !position) return null;
+  // Web-only debug badge (dev builds only)
+  const showDebug = __DEV__ && Platform.OS === "web";
+  const lastTargetRef = useRef<SpotlightTarget | null>(null);
+  if (targetId) lastTargetRef.current = targetId;
+
+  if (!targetId || !position) {
+    return showDebug ? (
+      <View style={styles.debugBadge} pointerEvents="none">
+        <ThemedText type="small" color="#888">
+          {`[Spotlight] mounted | last=${lastTargetRef.current ?? "none"} | active=none`}
+        </ThemedText>
+      </View>
+    ) : null;
+  }
 
   const { width: SW, height: SH } = Dimensions.get("window");
   const { cx, cy, radius } = position;
@@ -118,6 +131,13 @@ export default function SpotlightOverlay() {
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+      {showDebug && (
+        <View style={styles.debugBadge} pointerEvents="none">
+          <ThemedText type="small" color="#0f0">
+            {`[Spotlight] target=${targetId} | cx=${Math.round(cx)} cy=${Math.round(cy)} r=${radius}`}
+          </ThemedText>
+        </View>
+      )}
       <Pressable style={StyleSheet.absoluteFill} onPress={handleDismiss}>
         <Svg width={SW} height={SH}>
           <Path
@@ -193,5 +213,15 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: "center",
+  },
+  debugBadge: {
+    position: "absolute",
+    top: 4,
+    left: 4,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    zIndex: 99999,
   },
 });
