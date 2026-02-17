@@ -8,6 +8,7 @@ import {
   Pressable,
   Platform,
 } from "react-native";
+import { FullWindowOverlay } from "react-native-screens";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../hooks/useTheme";
@@ -27,6 +28,7 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 const AUTO_DISMISS_MS = 3000;
+const ERROR_DISMISS_MS = 5000;
 
 export function useToast(): ToastContextValue {
   const ctx = useContext(ToastContext);
@@ -52,9 +54,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       if (timerRef.current) clearTimeout(timerRef.current);
       const id = ++idRef.current;
       setToast({ message, type, id });
+      const delay = type === "error" ? ERROR_DISMISS_MS : AUTO_DISMISS_MS;
       timerRef.current = setTimeout(() => {
         setToast((prev) => (prev?.id === id ? null : prev));
-      }, AUTO_DISMISS_MS);
+      }, delay);
     },
     [],
   );
@@ -65,10 +68,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const toastElement = toast ? <ToastView toast={toast} onDismiss={dismiss} /> : null;
+
   return (
     <ToastContext.Provider value={{ show }}>
       {children}
-      {toast ? <ToastView toast={toast} onDismiss={dismiss} /> : null}
+      {toastElement && Platform.OS === "ios" ? (
+        <FullWindowOverlay>{toastElement}</FullWindowOverlay>
+      ) : (
+        toastElement
+      )}
     </ToastContext.Provider>
   );
 }

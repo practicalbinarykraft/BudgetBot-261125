@@ -13,6 +13,17 @@ import logger from "../lib/logger";
 const router = Router();
 
 /**
+ * Input schema for POST /api/transactions.
+ * Computed fields (calculated by the server, not sent by client) are omitted:
+ *  - userId: set from auth session
+ *  - amountUsd: computed by transactionService via currency conversion
+ */
+export const insertTransactionInputSchema = insertTransactionSchema.omit({
+  userId: true,
+  amountUsd: true,
+});
+
+/**
  * @swagger
  * /api/transactions:
  *   get:
@@ -305,7 +316,7 @@ router.get("/", withAuth(async (req, res) => {
  */
 router.post("/", withAuth(async (req, res) => {
   try {
-    const validated = insertTransactionSchema.omit({ userId: true }).parse(req.body);
+    const validated = insertTransactionInputSchema.parse(req.body);
     const userId = Number(req.user.id);
 
     // Get wallet for balance update
