@@ -30,4 +30,38 @@ export const SPOTLIGHT_FLOWS: Record<string, SpotlightFlow> = {
       },
     ],
   },
+  add_transaction: {
+    id: "add_transaction",
+    steps: [
+      {
+        targetId: "fab_plus_btn",
+        tooltipKey: "spotlight.flow.add_transaction.step1",
+        navigateBefore: "Main",
+        navigateTo: "AddTransaction",
+      },
+      {
+        targetId: "voice_receipt_row",
+        tooltipKey: "spotlight.flow.add_transaction.step2",
+        choices: [
+          {
+            labelKey: "spotlight.flow.add_transaction.step2.try_voice",
+            navigateTo: "VoiceInput",
+            endFlow: true,
+          },
+          {
+            labelKey: "spotlight.flow.add_transaction.step2.later",
+          },
+        ],
+      },
+      {
+        targetId: "tag_row",
+        tooltipKey: "spotlight.flow.add_transaction.step3",
+        autoAdvanceMs: 3000,
+      },
+      {
+        targetId: "txn_submit_btn",
+        tooltipKey: "spotlight.flow.add_transaction.step4",
+      },
+    ],
+  },
 };

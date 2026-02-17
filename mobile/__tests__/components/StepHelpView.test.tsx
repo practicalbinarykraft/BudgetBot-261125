@@ -48,7 +48,7 @@ describe("StepHelpView", () => {
 
   beforeEach(() => jest.clearAllMocks());
 
-  const stepWithSpotlightAndRoute: StepDef = {
+  const stepAddTransaction: StepDef = {
     stepId: "add_transaction",
     icon: "plus-circle",
     titleKey: "tutorial.step.add_transaction",
@@ -76,23 +76,24 @@ describe("StepHelpView", () => {
 
   it("renders title and description", () => {
     const { getByText } = render(
-      <StepHelpView step={stepWithSpotlightAndRoute} onBack={onBack} onShowWhere={onShowWhere} onOpenScreen={onOpenScreen} />
+      <StepHelpView step={stepAddTransaction} onBack={onBack} onShowWhere={onShowWhere} onOpenScreen={onOpenScreen} onStartFlow={onStartFlow} />
     );
     expect(getByText("Add a transaction")).toBeTruthy();
     expect(getByText("Tap the '+' button at the bottom.")).toBeTruthy();
   });
 
-  it("Show where calls onShowWhere with target id", () => {
+  it("add_transaction uses onStartFlow (flow) instead of onShowWhere (spotlight)", () => {
     const { getByText } = render(
-      <StepHelpView step={stepWithSpotlightAndRoute} onBack={onBack} onShowWhere={onShowWhere} onOpenScreen={onOpenScreen} />
+      <StepHelpView step={stepAddTransaction} onBack={onBack} onShowWhere={onShowWhere} onOpenScreen={onOpenScreen} onStartFlow={onStartFlow} />
     );
     fireEvent.press(getByText("Show where to tap"));
-    expect(onShowWhere).toHaveBeenCalledWith("add_transaction");
+    expect(onStartFlow).toHaveBeenCalledWith("add_transaction");
+    expect(onShowWhere).not.toHaveBeenCalled();
   });
 
   it("Open screen calls onOpenScreen with route", () => {
     const { getByText } = render(
-      <StepHelpView step={stepWithSpotlightAndRoute} onBack={onBack} onShowWhere={onShowWhere} onOpenScreen={onOpenScreen} />
+      <StepHelpView step={stepAddTransaction} onBack={onBack} onShowWhere={onShowWhere} onOpenScreen={onOpenScreen} onStartFlow={onStartFlow} />
     );
     fireEvent.press(getByText("Open screen"));
     expect(onOpenScreen).toHaveBeenCalledWith("AddTransaction");
@@ -100,7 +101,7 @@ describe("StepHelpView", () => {
 
   it("Back calls onBack", () => {
     const { getByText } = render(
-      <StepHelpView step={stepWithSpotlightAndRoute} onBack={onBack} onShowWhere={onShowWhere} onOpenScreen={onOpenScreen} />
+      <StepHelpView step={stepAddTransaction} onBack={onBack} onShowWhere={onShowWhere} onOpenScreen={onOpenScreen} />
     );
     fireEvent.press(getByText("Back"));
     expect(onBack).toHaveBeenCalled();
@@ -120,6 +121,14 @@ describe("StepHelpView", () => {
       <StepHelpView step={stepCreateWallet} onBack={onBack} onShowWhere={onShowWhere} onOpenScreen={onOpenScreen} />
     );
     // Without onStartFlow, create_wallet has no SPOTLIGHT_MAP entry, so no button
+    expect(queryByText("Show where to tap")).toBeNull();
+  });
+
+  it("add_transaction hides Show where when no onStartFlow provided", () => {
+    const { queryByText } = render(
+      <StepHelpView step={stepAddTransaction} onBack={onBack} onShowWhere={onShowWhere} onOpenScreen={onOpenScreen} />
+    );
+    // add_transaction is now in FLOW_MAP, not SPOTLIGHT_MAP — without onStartFlow, no button
     expect(queryByText("Show where to tap")).toBeNull();
   });
 

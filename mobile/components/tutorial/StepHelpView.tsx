@@ -20,7 +20,6 @@ export interface StepDef {
 }
 
 const SPOTLIGHT_MAP: Record<string, SpotlightTarget> = {
-  add_transaction: "add_transaction",
   voice_input: "voice_input",
   receipt_scan: "receipt_scan",
   view_transactions: "view_transactions",
@@ -28,6 +27,7 @@ const SPOTLIGHT_MAP: Record<string, SpotlightTarget> = {
 
 export const FLOW_MAP: Record<string, string> = {
   create_wallet: "create_wallet",
+  add_transaction: "add_transaction",
 };
 
 interface StepHelpViewProps {

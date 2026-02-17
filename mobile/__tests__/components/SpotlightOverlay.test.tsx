@@ -38,9 +38,12 @@ jest.mock("../../i18n", () => ({
     t: (key: string) => {
       const map: Record<string, string> = {
         "spotlight.add_transaction": "Tap here to add a transaction",
-        "spotlight.got_it": "Got it",
         "spotlight.skip_flow": "Skip",
         "spotlight.flow.create_wallet.step1": "These are your wallets and balance. Tap here.",
+        "spotlight.flow.add_transaction.step1": "Tap here to add a transaction",
+        "spotlight.flow.add_transaction.step2": "We have voice input and receipt scanning!",
+        "spotlight.flow.add_transaction.step2.try_voice": "Try voice now",
+        "spotlight.flow.add_transaction.step2.later": "Can't talk, later",
       };
       return map[key] ?? key;
     },
@@ -72,6 +75,20 @@ jest.mock("../../tutorial/spotlight/flows", () => ({
       steps: [
         { targetId: "wallet_balance", tooltipKey: "spotlight.flow.create_wallet.step1", navigateTo: "Wallets" },
         { targetId: "add_wallet_btn", tooltipKey: "spotlight.flow.create_wallet.step2", navigateTo: "AddWallet" },
+      ],
+    },
+    add_transaction: {
+      id: "add_transaction",
+      steps: [
+        { targetId: "fab_plus_btn", tooltipKey: "spotlight.flow.add_transaction.step1", navigateBefore: "Main", navigateTo: "AddTransaction" },
+        {
+          targetId: "voice_receipt_row",
+          tooltipKey: "spotlight.flow.add_transaction.step2",
+          choices: [
+            { labelKey: "spotlight.flow.add_transaction.step2.try_voice", navigateTo: "VoiceInput", endFlow: true },
+            { labelKey: "spotlight.flow.add_transaction.step2.later" },
+          ],
+        },
       ],
     },
   },
@@ -106,14 +123,24 @@ describe("SpotlightOverlay", () => {
     expect(getByText("Tap here to add a transaction")).toBeTruthy();
   });
 
-  it("Got it clears the overlay", () => {
-    const { getByText, queryByText } = render(<SpotlightOverlay />);
+  it("tapping overlay clears the legacy spotlight", () => {
+    const { getByText, queryByText, getByTestId } = render(<SpotlightOverlay />);
     act(() => {
       registeredShow?.("add_transaction");
     });
-    expect(getByText("Got it")).toBeTruthy();
-    fireEvent.press(getByText("Got it"));
+    expect(getByText("Tap here to add a transaction")).toBeTruthy();
+    // Tap the SVG overlay (Pressable wrapping the Svg)
+    const svgPath = getByTestId("svg-path");
+    fireEvent.press(svgPath.parent!);
     expect(queryByText("Tap here to add a transaction")).toBeNull();
+  });
+
+  it("legacy mode does not render Got it button", () => {
+    const { queryByText } = render(<SpotlightOverlay />);
+    act(() => {
+      registeredShow?.("add_transaction");
+    });
+    expect(queryByText("Got it")).toBeNull();
   });
 
   // ── Flow tests ──
@@ -154,5 +181,67 @@ describe("SpotlightOverlay", () => {
     // dismissFlow uses a 200ms fade-out animation before clearing state
     act(() => { jest.advanceTimersByTime(300); });
     expect(queryByText("These are your wallets and balance. Tap here.")).toBeNull();
+  });
+
+  // ── Choice tests ──
+
+  it("renders choice buttons when step has choices", () => {
+    mockGetTargetRect.mockReturnValue({ x: 50, y: 100, width: 200, height: 60 });
+
+    const { getByText } = render(<SpotlightOverlay />);
+    const mockNav = { navigate: jest.fn() };
+    act(() => {
+      registeredFlow?.start("add_transaction", mockNav);
+    });
+    // Wait for settle to resolve step 0
+    act(() => { jest.advanceTimersByTime(600); });
+    // Advance past step 0 via flow controller
+    act(() => {
+      registeredFlow?.advance();
+    });
+
+    // Now on step 1: resolve rect for new step
+    mockGetTargetRect.mockReturnValue({ x: 30, y: 200, width: 300, height: 50 });
+    act(() => { jest.advanceTimersByTime(600); });
+
+    expect(getByText("We have voice input and receipt scanning!")).toBeTruthy();
+    expect(getByText("Try voice now")).toBeTruthy();
+    expect(getByText("Can't talk, later")).toBeTruthy();
+  });
+
+  it("choice with endFlow dismisses flow and navigates", () => {
+    mockGetTargetRect.mockReturnValue({ x: 50, y: 100, width: 200, height: 60 });
+
+    const { getByText, queryByText } = render(<SpotlightOverlay />);
+    const mockNav = { navigate: jest.fn() };
+    act(() => {
+      registeredFlow?.start("add_transaction", mockNav);
+    });
+    act(() => { jest.advanceTimersByTime(600); });
+    act(() => {
+      registeredFlow?.advance();
+    });
+
+    mockGetTargetRect.mockReturnValue({ x: 30, y: 200, width: 300, height: 50 });
+    act(() => { jest.advanceTimersByTime(600); });
+
+    // Tap "Try voice now" — should endFlow and navigate to VoiceInput
+    fireEvent.press(getByText("Try voice now"));
+
+    expect(mockNav.navigate).toHaveBeenCalledWith("VoiceInput");
+    expect(queryByText("We have voice input and receipt scanning!")).toBeNull();
+  });
+
+  it("navigateBefore navigates before showing the first step", () => {
+    mockGetTargetRect.mockReturnValue({ x: 50, y: 100, width: 200, height: 60 });
+
+    render(<SpotlightOverlay />);
+    const mockNav = { navigate: jest.fn() };
+    act(() => {
+      registeredFlow?.start("add_transaction", mockNav);
+    });
+
+    // navigateBefore="Main" should have been called
+    expect(mockNav.navigate).toHaveBeenCalledWith("Main");
   });
 });

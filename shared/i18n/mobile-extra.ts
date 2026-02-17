@@ -483,4 +483,12 @@ export const mobileExtraTranslations: Translations = {
   "spotlight.flow.create_wallet.step4": { en: "Choose the currency.", ru: "Выберите валюту." },
   "spotlight.flow.create_wallet.step5": { en: "Fill in the details and tap here!", ru: "Заполните и нажмите!" },
   "spotlight.skip_flow": { en: "Skip", ru: "Пропустить" },
+
+  // Spotlight flow: add_transaction
+  "spotlight.flow.add_transaction.step1": { en: "Tap here to add a transaction", ru: "Нажмите сюда, чтобы добавить транзакцию" },
+  "spotlight.flow.add_transaction.step2": { en: "We have voice input and receipt scanning! Separate tutorial tasks will let you try these and earn credits.", ru: "У нас есть голосовой ввод и сканирование чеков! Отдельные задания позволят вам попробовать их и заработать кредиты." },
+  "spotlight.flow.add_transaction.step2.try_voice": { en: "Try voice now", ru: "Попробовать голос" },
+  "spotlight.flow.add_transaction.step2.later": { en: "Can't talk, later", ru: "Не могу говорить, позже" },
+  "spotlight.flow.add_transaction.step3": { en: "Tags track who you spent money on \u2014 yourself, family, or your partner", ru: "Теги отслеживают, на кого вы потратили \u2014 на себя, семью или партнёра" },
+  "spotlight.flow.add_transaction.step4": { en: "Fill in the details and tap here!", ru: "Заполните данные и нажмите сюда!" },
 };

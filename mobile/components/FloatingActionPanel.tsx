@@ -8,6 +8,7 @@ import { useTheme } from "../hooks/useTheme";
 import { useInlineVoice } from "../hooks/useInlineVoice";
 import { SpeechBubble } from "./SpeechBubble";
 import { useTranslation } from "../i18n";
+import { useSpotlightTarget } from "../tutorial/spotlight";
 
 type IconName = React.ComponentProps<typeof Feather>["name"];
 
@@ -49,6 +50,7 @@ export default function FloatingActionPanel() {
   }, [nav]);
 
   const voice = useInlineVoice(false, handleVoiceResult);
+  const fabTarget = useSpotlightTarget("fab_plus_btn");
 
   const micBg = voice.isRecording ? "#ef4444" : voice.isParsing ? theme.secondary : theme.primary;
   const micBorder = voice.isRecording ? "#ef4444" : undefined;
@@ -99,7 +101,7 @@ export default function FloatingActionPanel() {
           <Btn name="message-circle" size={22} color={s.c} bg={s.bg} d={48} border={s.border}
             onPress={() => nav.navigate("AIChat")} />
         </View>
-        <View style={[styles.abs, { bottom: 0, left: 56 }]}>
+        <View style={[styles.abs, { bottom: 0, left: 56 }]} ref={fabTarget.ref} onLayout={fabTarget.onLayout}>
           <Btn name="plus" size={22} color={s.c} bg={s.bg} d={48} border={s.border}
             onPress={() => nav.navigate("AddTransaction")} />
         </View>

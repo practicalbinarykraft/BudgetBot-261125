@@ -12,6 +12,7 @@ import { useTheme } from "../hooks/useTheme";
 import { useAddTransactionScreen } from "../hooks/useAddTransactionScreen";
 import { useInlineVoice } from "../hooks/useInlineVoice";
 import { useTranslation } from "../i18n";
+import { useSpotlightTarget } from "../tutorial/spotlight";
 import { styles } from "./AddTransactionScreen.styles";
 
 const CURRENCY_OPTIONS = ["USD", "RUB", "IDR", "EUR", "KRW", "CNY"];
@@ -31,6 +32,10 @@ export default function AddTransactionScreen() {
   }, []);
 
   const voice = useInlineVoice(false, handleVoiceResult);
+
+  const voiceReceiptTarget = useSpotlightTarget("voice_receipt_row");
+  const tagRowTarget = useSpotlightTarget("tag_row");
+  const submitBtnTarget = useSpotlightTarget("txn_submit_btn");
 
   return (
     <KeyboardAvoidingView
@@ -118,7 +123,7 @@ export default function AddTransactionScreen() {
         />
 
         {/* Quick input: inline voice + receipt scan */}
-        <View style={styles.quickInputCol}>
+        <View style={styles.quickInputCol} ref={voiceReceiptTarget.ref} onLayout={voiceReceiptTarget.onLayout}>
           <SpeechBubble
             text={voice.isRecording
               ? t("voice_input.recording")
@@ -274,7 +279,7 @@ export default function AddTransactionScreen() {
         </View>
 
         {/* Tag picker */}
-        <View style={styles.field}>
+        <View style={styles.field} ref={tagRowTarget.ref} onLayout={tagRowTarget.onLayout}>
           <ThemedText type="small" color={theme.textSecondary} style={styles.label}>
             {t("transactions.tag_optional")}
           </ThemedText>
@@ -312,13 +317,15 @@ export default function AddTransactionScreen() {
           </ScrollView>
         </View>
 
-        <Button
-          title={t("transactions.add_transaction")}
-          onPress={h.handleSubmit}
-          loading={h.createMutation.isPending}
-          disabled={h.createMutation.isPending}
-          style={styles.submitBtn}
-        />
+        <View ref={submitBtnTarget.ref} onLayout={submitBtnTarget.onLayout}>
+          <Button
+            title={t("transactions.add_transaction")}
+            onPress={h.handleSubmit}
+            loading={h.createMutation.isPending}
+            disabled={h.createMutation.isPending}
+            style={styles.submitBtn}
+          />
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
