@@ -133,6 +133,8 @@ describe("SpotlightOverlay", () => {
     act(() => {
       registeredFlow?.start("create_wallet", { navigate: jest.fn() });
     });
+    // Wait for settle delay (500ms) before rect is resolved
+    act(() => { jest.advanceTimersByTime(600); });
 
     expect(getByText("These are your wallets and balance. Tap here.")).toBeTruthy();
     expect(getByText("Skip")).toBeTruthy();
@@ -145,6 +147,8 @@ describe("SpotlightOverlay", () => {
     act(() => {
       registeredFlow?.start("create_wallet", { navigate: jest.fn() });
     });
+    // Wait for settle delay
+    act(() => { jest.advanceTimersByTime(600); });
 
     fireEvent.press(getByText("Skip"));
     // dismissFlow uses a 200ms fade-out animation before clearing state

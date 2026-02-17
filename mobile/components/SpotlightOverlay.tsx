@@ -215,53 +215,57 @@ export default function SpotlightOverlay() {
     if (!currentFlowStep) return;
 
     const targetId = currentFlowStep.targetId;
-
-    const tryResolve = (rect: LayoutRect) => {
-      setFlowRect(roundRect(rect));
-    };
-
-    const immediate = getSpotlightTargetRect(targetId);
-    if (immediate) {
-      tryResolve(immediate);
-      return;
-    }
-
     let cancelled = false;
 
-    const unsubscribe = onSpotlightTargetChange((changedId) => {
-      if (changedId === targetId && !cancelled) {
-        const rect = getSpotlightTargetRect(targetId);
-        if (rect) {
-          tryResolve(rect);
-          cancelled = true;
-          clearInterval(intervalId);
-          unsubscribe();
-        }
-      }
-    });
+    // Wait for navigation animations to settle before resolving the rect.
+    // Targets re-measure at 400ms and 800ms after layout (useSpotlightTarget),
+    // so we wait 500ms to get post-animation coordinates.
+    const SETTLE_MS = 500;
 
-    const intervalId = setInterval(() => {
+    const settleTimer = setTimeout(() => {
       if (cancelled) return;
-      const rect = getSpotlightTargetRect(targetId);
-      if (rect) {
-        tryResolve(rect);
-        cancelled = true;
-        clearInterval(intervalId);
-        unsubscribe();
-      }
-    }, 100);
 
-    const timeoutId = setTimeout(() => {
-      cancelled = true;
-      clearInterval(intervalId);
-      unsubscribe();
-    }, 3000);
+      const resolve = (rect: LayoutRect) => {
+        if (!cancelled) {
+          setFlowRect(roundRect(rect));
+          cancelled = true;
+          clearInterval(pollId);
+          unsub?.();
+        }
+      };
+
+      // Check immediately after settle
+      const immediate = getSpotlightTargetRect(targetId);
+      if (immediate) {
+        resolve(immediate);
+        return;
+      }
+
+      // Poll + listen for target registration
+      let unsub: (() => void) | undefined;
+      unsub = onSpotlightTargetChange((changedId) => {
+        if (changedId === targetId && !cancelled) {
+          const r = getSpotlightTargetRect(targetId);
+          if (r) resolve(r);
+        }
+      });
+
+      const pollId = setInterval(() => {
+        if (cancelled) return;
+        const r = getSpotlightTargetRect(targetId);
+        if (r) resolve(r);
+      }, 100);
+
+      setTimeout(() => {
+        cancelled = true;
+        clearInterval(pollId);
+        unsub?.();
+      }, 3000);
+    }, SETTLE_MS);
 
     return () => {
       cancelled = true;
-      clearInterval(intervalId);
-      clearTimeout(timeoutId);
-      unsubscribe();
+      clearTimeout(settleTimer);
     };
   }, [currentFlowStep]);
 
