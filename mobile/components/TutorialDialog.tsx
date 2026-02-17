@@ -17,8 +17,9 @@ import { useTheme } from "../hooks/useTheme";
 import { useTranslation, type Language } from "../i18n";
 import { useTutorialDialog } from "../hooks/useTutorialDialog";
 import { registerTutorialOpen, unregisterTutorialOpen } from "../lib/tutorial-ref";
-import { showSpotlight, startSpotlightFlow } from "../lib/spotlight-ref";
+import { startSpotlightFlow } from "../lib/spotlight-ref";
 import type { SpotlightTarget } from "../lib/spotlight-ref";
+import { showSpotlightOnMain } from "../lib/spotlight-navigation";
 import { StepHelpView, type StepDef, FLOW_MAP } from "./tutorial/StepHelpView";
 
 type IconName = React.ComponentProps<typeof Feather>["name"];
@@ -63,7 +64,7 @@ export default function TutorialDialog({ userId }: TutorialDialogProps) {
 
   const handleShowWhere = (targetId: SpotlightTarget) => {
     dismiss();
-    setTimeout(() => showSpotlight(targetId), 200);
+    showSpotlightOnMain(navigation, targetId);
   };
 
   const handleOpenScreen = (route: string) => {

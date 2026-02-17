@@ -7,6 +7,7 @@ export const SPOTLIGHT_FLOWS: Record<string, SpotlightFlow> = {
       {
         targetId: "wallet_balance",
         tooltipKey: "spotlight.flow.create_wallet.step1",
+        navigateBefore: "Main",
         navigateTo: "Wallets",
       },
       {
