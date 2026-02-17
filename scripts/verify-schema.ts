@@ -45,10 +45,9 @@ async function tableExists(tableName: string): Promise<boolean> {
 }
 
 async function columnExists(table: string, column: string, expectedType?: string): Promise<{ exists: boolean; type?: string }> {
-  const r = await db.execute<{ data_type: string }>(sql`
-    SELECT data_type FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = ${table} AND column_name = ${column}
-  `);
+  const r = await db.execute<{ data_type: string }>(
+    sql.raw(`SELECT data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '${table}' AND column_name = '${column}'`),
+  );
   if (r.rows.length === 0) return { exists: false };
   return { exists: true, type: r.rows[0].data_type };
 }
