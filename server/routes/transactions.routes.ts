@@ -331,6 +331,7 @@ router.post("/", withAuth(async (req, res) => {
       amount: parseFloat(validated.amount),
       description: validated.description,
       category: validated.category || undefined,
+      categoryId: validated.categoryId ?? null,
       date: validated.date,
       currency: validated.currency || undefined,
       source: 'manual',

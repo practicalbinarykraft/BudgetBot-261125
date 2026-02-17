@@ -133,6 +133,16 @@ describe('POST /api/transactions', () => {
     expect(transactionService.createTransaction).toHaveBeenCalledTimes(1);
   });
 
+  it('passes categoryId to transactionService', async () => {
+    const res = await request(app)
+      .post('/api/transactions')
+      .send({ ...VALID_PAYLOAD, categoryId: 5 });
+
+    expect(res.status).toBe(200);
+    const call = (transactionService.createTransaction as any).mock.calls[0];
+    expect(call[1]).toHaveProperty('categoryId', 5);
+  });
+
   it('rejects payload with invalid amount', async () => {
     const res = await request(app)
       .post('/api/transactions')

@@ -13,6 +13,7 @@ export interface CreateTransactionInput {
   amount: number;
   description: string;
   category?: string;
+  categoryId?: number | null;
   date: string;
   currency?: string;
   source?: string;
@@ -101,8 +102,8 @@ export class TransactionService {
       amountUsd = inputAmount.toFixed(2);
     }
 
-    let categoryId: number | null = null;
-    if (enhanced.category) {
+    let categoryId: number | null = input.categoryId ?? null;
+    if (!categoryId && enhanced.category) {
       const category = await categoryRepository.getCategoryByNameAndUserId(enhanced.category, userId);
       categoryId = category?.id ?? null;
     }
