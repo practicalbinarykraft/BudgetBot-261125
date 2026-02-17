@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { View, Pressable, StyleSheet } from "react-native";
+import { View, Pressable, StyleSheet, Platform } from "react-native";
 import { ThemedText } from "../ThemedText";
 import { TransactionItem } from "../TransactionItem";
 import { Spacing } from "../../constants/theme";
@@ -37,9 +37,17 @@ export function RecentTransactionsSection({
           ref={viewAllRef}
           onPress={onViewAll}
           onLayout={() => {
-            viewAllRef.current?.measureInWindow((x, y, width, height) => {
-              setViewAllRect({ x, y, width, height });
-            });
+            if (Platform.OS === "web") {
+              const node = viewAllRef.current as any;
+              if (node) {
+                const rect = (node as unknown as HTMLElement).getBoundingClientRect?.();
+                if (rect) setViewAllRect({ x: rect.x, y: rect.y, width: rect.width, height: rect.height });
+              }
+            } else {
+              viewAllRef.current?.measureInWindow((x, y, width, height) => {
+                setViewAllRect({ x, y, width, height });
+              });
+            }
           }}
         >
           <ThemedText type="bodySm" color={theme.primary}>

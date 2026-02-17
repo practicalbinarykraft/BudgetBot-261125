@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { View, Pressable, Dimensions, Animated, StyleSheet } from "react-native";
+import { View, Pressable, Dimensions, Animated, StyleSheet, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { Button } from "./Button";
@@ -100,8 +100,8 @@ export default function SpotlightOverlay() {
     pulseAnim.setValue(1);
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.4, duration: 800, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.4, duration: 800, useNativeDriver: Platform.OS !== "web" }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: Platform.OS !== "web" }),
       ]),
     );
     loop.start();

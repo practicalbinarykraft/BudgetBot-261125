@@ -6,6 +6,7 @@ import {
   Animated,
   PanResponder,
   Pressable,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -95,7 +96,7 @@ function ToastView({ toast, onDismiss }: { toast: ToastState; onDismiss: () => v
   useEffect(() => {
     Animated.spring(translateY, {
       toValue: 0,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== "web",
       tension: 80,
       friction: 10,
     }).start();
