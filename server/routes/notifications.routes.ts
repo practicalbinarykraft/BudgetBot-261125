@@ -171,6 +171,7 @@ router.patch("/:id/complete", withAuth(async (req, res) => {
         amount: amount,
         description: transactionData.description,
         category: transactionData.category || undefined,
+        categoryId: transactionData.categoryId ?? null,
         date: transactionData.date,
         currency: transactionData.currency || 'USD',
         walletId: primaryWallet.id,

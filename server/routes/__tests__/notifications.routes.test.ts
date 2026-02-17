@@ -32,9 +32,12 @@ vi.mock('../../services/notification.service', () => ({
 vi.mock('../../middleware/auth-utils', () => ({
   withAuth: (handler: any) => {
     return async (req: any, res: any, next: any) => {
-      // Mock authenticated user
       req.user = { id: '1' };
-      return handler(req, res, next);
+      try {
+        await handler(req, res, next);
+      } catch (err) {
+        next(err);
+      }
     };
   },
 }));
@@ -353,6 +356,59 @@ describe('Notifications Routes', () => {
         status: 'completed',
       });
       expect(response.body.completedAt).toBeDefined();
+    });
+
+    it('should pass categoryId to transactionService when present', async () => {
+      const notification = {
+        id: 2,
+        userId: 1,
+        type: 'planned_expense' as const,
+        title: 'Groceries',
+        message: 'Planned groceries',
+        plannedTransactionId: 1,
+        plannedIncomeId: null,
+        transactionData: {
+          amount: '200.00',
+          currency: 'USD',
+          description: 'Weekly groceries',
+          type: 'expense',
+          date: '2026-02-17',
+          categoryId: 7,
+          category: 'Food & Drinks',
+        } as NotificationTransactionData,
+        status: 'unread' as const,
+        createdAt: new Date(),
+        readAt: null,
+        dismissedAt: null,
+        completedAt: null,
+      };
+
+      const mockWallet = {
+        id: 1, userId: 1, name: 'Wallet', currency: 'USD',
+        balance: '1000.00', isPrimary: true,
+        createdAt: new Date(), updatedAt: new Date(),
+      };
+
+      const mockTransaction = {
+        id: 2, userId: 1, walletId: 1, type: 'expense' as const,
+        amount: '200.00', currency: 'USD', description: 'Weekly groceries',
+        category: 'Food & Drinks', categoryId: 7,
+        date: new Date('2026-02-17'), createdAt: new Date(), updatedAt: new Date(),
+      };
+
+      vi.mocked(notificationRepository.getNotificationById).mockResolvedValue(notification);
+      vi.mocked(getPrimaryWallet).mockResolvedValue(mockWallet);
+      vi.mocked(transactionService.createTransaction).mockResolvedValue(mockTransaction);
+      vi.mocked(notificationRepository.markAsCompleted).mockResolvedValue({
+        ...notification, status: 'completed' as const, completedAt: new Date(),
+      });
+
+      await request(app)
+        .patch('/api/notifications/2/complete')
+        .expect(200);
+
+      const call = vi.mocked(transactionService.createTransaction).mock.calls[0];
+      expect(call[1]).toHaveProperty('categoryId', 7);
     });
 
     it('should return 404 if notification not found', async () => {
