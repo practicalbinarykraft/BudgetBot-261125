@@ -5,6 +5,7 @@ import {
   Pressable,
   useWindowDimensions,
   Animated,
+  Platform,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LineChart } from "react-native-gifted-charts";
@@ -134,10 +135,10 @@ export default function FullscreenChartScreen() {
       // Rotate hint
       if (!rotateShown) {
         setShowRotateHint(true);
-        Animated.timing(rotateOpacity, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+        Animated.timing(rotateOpacity, { toValue: 1, duration: 300, useNativeDriver: Platform.OS !== "web" }).start();
         setTimeout(() => {
           if (cancelled) return;
-          Animated.timing(rotateOpacity, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
+          Animated.timing(rotateOpacity, { toValue: 0, duration: 300, useNativeDriver: Platform.OS !== "web" }).start(() => {
             if (!cancelled) setShowRotateHint(false);
           });
           AsyncStorage.setItem(HINT_ROTATE_KEY, "true");
@@ -149,10 +150,10 @@ export default function FullscreenChartScreen() {
         setTimeout(() => {
           if (cancelled) return;
           setShowSwipeHint(true);
-          Animated.timing(swipeOpacity, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+          Animated.timing(swipeOpacity, { toValue: 1, duration: 300, useNativeDriver: Platform.OS !== "web" }).start();
           setTimeout(() => {
             if (cancelled) return;
-            Animated.timing(swipeOpacity, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
+            Animated.timing(swipeOpacity, { toValue: 0, duration: 300, useNativeDriver: Platform.OS !== "web" }).start(() => {
               if (!cancelled) setShowSwipeHint(false);
             });
             AsyncStorage.setItem(HINT_SWIPE_KEY, "true");
@@ -165,12 +166,12 @@ export default function FullscreenChartScreen() {
   }, []);
 
   const dismissRotateHint = useCallback(() => {
-    Animated.timing(rotateOpacity, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => setShowRotateHint(false));
+    Animated.timing(rotateOpacity, { toValue: 0, duration: 200, useNativeDriver: Platform.OS !== "web" }).start(() => setShowRotateHint(false));
     AsyncStorage.setItem(HINT_ROTATE_KEY, "true");
   }, []);
 
   const dismissSwipeHint = useCallback(() => {
-    Animated.timing(swipeOpacity, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => setShowSwipeHint(false));
+    Animated.timing(swipeOpacity, { toValue: 0, duration: 200, useNativeDriver: Platform.OS !== "web" }).start(() => setShowSwipeHint(false));
     AsyncStorage.setItem(HINT_SWIPE_KEY, "true");
   }, []);
 
