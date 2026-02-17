@@ -8,11 +8,13 @@ CREATE TABLE IF NOT EXISTS "session" (
   "expire" TIMESTAMP(6) NOT NULL
 );
 
--- Add primary key constraint
-ALTER TABLE "session"
-  ADD CONSTRAINT "session_pkey"
-  PRIMARY KEY ("sid")
-  NOT DEFERRABLE INITIALLY IMMEDIATE;
+-- Add primary key constraint (idempotent)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'session_pkey') THEN
+    ALTER TABLE "session" ADD CONSTRAINT "session_pkey" PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE;
+  END IF;
+END $$;
 
 -- Create index on expiration for efficient cleanup
 CREATE INDEX IF NOT EXISTS "IDX_session_expire"

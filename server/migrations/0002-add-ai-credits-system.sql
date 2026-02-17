@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS user_credits (
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_user_credits_user_id ON user_credits(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_credits_user_id ON user_credits(user_id);
 
 -- 2. AI Usage Log (история каждого AI запроса)
 CREATE TABLE IF NOT EXISTS ai_usage_log (
@@ -28,8 +28,8 @@ CREATE TABLE IF NOT EXISTS ai_usage_log (
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_ai_usage_log_user_id ON ai_usage_log(user_id);
-CREATE INDEX idx_ai_usage_log_created_at ON ai_usage_log(created_at);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_log_user_id ON ai_usage_log(user_id);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_log_created_at ON ai_usage_log(created_at);
 
 -- 3. Credit Transactions (история начислений/списаний)
 CREATE TABLE IF NOT EXISTS credit_transactions (
@@ -44,9 +44,9 @@ CREATE TABLE IF NOT EXISTS credit_transactions (
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_credit_transactions_user_id ON credit_transactions(user_id);
-CREATE INDEX idx_credit_transactions_created_at ON credit_transactions(created_at);
-CREATE INDEX idx_credit_transactions_type ON credit_transactions(type);
+CREATE INDEX IF NOT EXISTS idx_credit_transactions_user_id ON credit_transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_credit_transactions_created_at ON credit_transactions(created_at);
+CREATE INDEX IF NOT EXISTS idx_credit_transactions_type ON credit_transactions(type);
 
 -- Grant free credits to existing users
 -- (Только тем, у кого еще нет записи)
