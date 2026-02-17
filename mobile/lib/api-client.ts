@@ -33,7 +33,18 @@ export async function apiRequest<T = any>(
 
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(body.error || `Request failed: ${response.status}`);
+    let message = body.error || `Request failed: ${response.status}`;
+    // Surface Zod validation details so user sees which field failed
+    if (body.details && Array.isArray(body.details)) {
+      const fields = body.details
+        .map((d: { path?: string[]; message?: string }) =>
+          d.path?.length ? `${d.path.join(".")}: ${d.message}` : d.message,
+        )
+        .filter(Boolean)
+        .join("; ");
+      if (fields) message += ` (${fields})`;
+    }
+    throw new Error(message);
   }
 
   return response.json();
