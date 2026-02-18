@@ -15,8 +15,7 @@ export const styles = StyleSheet.create({
 
   balanceContent: { alignItems: "center", gap: Spacing.md },
   balanceAmount: {
-    fontSize: 48, fontWeight: "700", textAlign: "center",
-    alignSelf: "stretch", flexShrink: 1,
+    fontSize: 48, lineHeight: 56, fontWeight: "700", textAlign: "center",
   },
   balanceStats: {
     flexDirection: "row", gap: Spacing.xl,
@@ -33,7 +32,7 @@ export const styles = StyleSheet.create({
   sectionTitle: { fontWeight: "600", marginTop: Spacing.xl, marginBottom: Spacing.md },
   opsGrid: { gap: Spacing.md },
   opCard: {},
-  opContent: { gap: Spacing.sm },
+  opContent: { gap: Spacing.sm, alignItems: "flex-start" as const },
   opIcon: { fontSize: 24 },
 
   tierCard: { marginBottom: Spacing.md },

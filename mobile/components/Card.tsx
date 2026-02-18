@@ -74,8 +74,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   content: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.lg,
+    padding: Spacing.lg,
   },
   footer: {
     padding: Spacing.lg,
