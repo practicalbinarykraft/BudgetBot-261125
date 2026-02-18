@@ -86,7 +86,7 @@ router.post("/receipt-with-items", withAuth(async (req, res) => {
     // Определить валюту (из настроек или USD по умолчанию)
     const currency = settings?.currency || 'USD';
 
-    const validMimeType = mimeType || 'image/jpeg';
+    const validMimeType = (mimeType || 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif';
     const { getSystemKey } = await import('../../services/api-key-manager');
     const openaiKey = getSystemKey('openai');
     const { receipt: parsed, provider } = await parseReceiptWithFallback(

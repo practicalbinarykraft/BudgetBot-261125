@@ -28,7 +28,7 @@ export async function parseReceiptWithFallback(
   images: string[] | ImageInput[],
   anthropicKey: string,
   openaiKey: string,
-  mimeType: string
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
 ): Promise<{ receipt: ParsedReceipt; provider: 'anthropic' | 'openai' }> {
   try {
     const receipt = await parseReceiptWithItems(images, anthropicKey, mimeType);
