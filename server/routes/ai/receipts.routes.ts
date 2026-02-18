@@ -88,7 +88,8 @@ router.post("/receipt-with-items", withAuth(async (req, res) => {
 
     const validMimeType = (mimeType || 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif';
     const { getSystemKey } = await import('../../services/api-key-manager');
-    const openaiKey = getSystemKey('openai');
+    let openaiKey = '';
+    try { openaiKey = getSystemKey('openai'); } catch { /* fallback won't work without key */ }
     const { receipt: parsed, provider } = await parseReceiptWithFallback(
       imageArray, apiKeyInfo.key, openaiKey, validMimeType
     );
