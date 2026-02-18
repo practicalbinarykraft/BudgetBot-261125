@@ -91,6 +91,13 @@ jest.mock("../../tutorial/spotlight/flows", () => ({
         },
       ],
     },
+    skip_test: {
+      id: "skip_test",
+      steps: [
+        { targetId: "missing_target", tooltipKey: "spotlight.flow.create_wallet.step1" },
+        { targetId: "add_wallet_btn", tooltipKey: "spotlight.flow.create_wallet.step2" },
+      ],
+    },
   },
 }));
 
@@ -230,6 +237,29 @@ describe("SpotlightOverlay", () => {
 
     expect(mockNav.navigate).toHaveBeenCalledWith("VoiceInput");
     expect(queryByText("We have voice input and receipt scanning!")).toBeNull();
+  });
+
+  it("auto-skips step when target is not found within timeout", () => {
+    // Step 0 target "missing_target" never registers → should auto-skip to step 1
+    // Step 1 target "add_wallet_btn" resolves immediately
+    mockGetTargetRect.mockImplementation((id: string) => {
+      if (id === "add_wallet_btn") return { x: 50, y: 100, width: 120, height: 40 };
+      return null; // "missing_target" never found
+    });
+
+    const { getByText } = render(<SpotlightOverlay />);
+    act(() => {
+      registeredFlow?.start("skip_test", { navigate: jest.fn() });
+    });
+
+    // 500ms settle + 3000ms timeout = 3500ms for step 0 to fail
+    act(() => { jest.advanceTimersByTime(3600); });
+
+    // After auto-skip, step 1 should resolve (500ms settle)
+    act(() => { jest.advanceTimersByTime(600); });
+
+    // Should now show step 1 tooltip
+    expect(getByText("spotlight.flow.create_wallet.step2")).toBeTruthy();
   });
 
   it("navigateBefore navigates before showing the first step", () => {
