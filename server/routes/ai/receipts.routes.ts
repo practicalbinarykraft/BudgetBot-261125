@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { storage } from "../../storage";
 import { withAuth } from "../../middleware/auth-utils";
-import { parseReceiptWithItems } from "../../services/ocr/receipt-parser.service";
+import { parseReceiptWithFallback } from "../../services/ocr/receipt-ocr-fallback";
 import { receiptItemsRepository } from "../../repositories/receipt-items.repository";
 import { processReceiptItems } from "../../services/product-catalog.service";
 import { getErrorMessage } from "../../lib/errors";
@@ -87,7 +87,11 @@ router.post("/receipt-with-items", withAuth(async (req, res) => {
     const currency = settings?.currency || 'USD';
 
     const validMimeType = mimeType || 'image/jpeg';
-    const parsed = await parseReceiptWithItems(imageArray, apiKeyInfo.key, validMimeType);
+    const { getSystemKey } = await import('../../services/api-key-manager');
+    const openaiKey = getSystemKey('openai');
+    const { receipt: parsed, provider } = await parseReceiptWithFallback(
+      imageArray, apiKeyInfo.key, openaiKey, validMimeType
+    );
     
     // Получить валюту транзакции (если привязан)
     let transactionCurrency: string | null = null;
@@ -164,7 +168,7 @@ router.post("/receipt-with-items", withAuth(async (req, res) => {
       await chargeCredits(
         userId,
         'ocr',
-        apiKeyInfo.provider,
+        provider,
         { input: 1500, output: 500 },
         apiKeyInfo.billingMode === 'free'
       );
@@ -173,7 +177,8 @@ router.post("/receipt-with-items", withAuth(async (req, res) => {
     res.json({
       success: true,
       receipt: parsed,
-      itemsCount: parsed.items.length
+      itemsCount: parsed.items.length,
+      provider
     });
     
   } catch (error: unknown) {
