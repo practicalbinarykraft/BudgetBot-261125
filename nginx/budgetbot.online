@@ -1,0 +1,65 @@
+server {
+    server_name budgetbot.online www.budgetbot.online 5.129.230.171;
+
+    # Mobile UA redirect to m.budgetbot.online
+    set $mobile_redirect 0;
+
+    if ($http_user_agent ~* "(Android|iPhone|iPod|Mobile|webOS|BlackBerry|Opera Mini|IEMobile)") {
+        set $mobile_redirect 1;
+    }
+
+    # Do NOT redirect API or .well-known paths
+    if ($request_uri ~* "^/(api/|\.well-known/)") {
+        set $mobile_redirect 0;
+    }
+
+    if ($mobile_redirect = 1) {
+        return 302 https://m.budgetbot.online$request_uri;
+    }
+
+    # AI routes: allow large payloads (voice audio, receipt images)
+    location /api/ai/ {
+        client_max_body_size 25m;
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120;
+    }
+
+    # All other routes: default 1m body limit
+    location / {
+        client_max_body_size 1m;
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 86400;
+    }
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/budgetbot.online/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/budgetbot.online/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+}
+server {
+    if ($host = www.budgetbot.online) {
+        return 301 https://$host$request_uri;
+    }
+
+    if ($host = budgetbot.online) {
+        return 301 https://$host$request_uri;
+    }
+
+    listen 80;
+    server_name budgetbot.online www.budgetbot.online 5.129.230.171;
+    return 404;
+}
