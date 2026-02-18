@@ -25,4 +25,12 @@ describe("BillingScreen styles", () => {
       expect(s.alignItems).toBe("flex-start");
     });
   });
+
+  describe("opIcon", () => {
+    const s = styles.opIcon as any;
+
+    it("has lineHeight >= fontSize to prevent emoji clipping", () => {
+      expect(s.lineHeight).toBeGreaterThanOrEqual(s.fontSize);
+    });
+  });
 });

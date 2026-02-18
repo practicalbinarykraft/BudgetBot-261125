@@ -33,7 +33,7 @@ export const styles = StyleSheet.create({
   opsGrid: { gap: Spacing.md },
   opCard: {},
   opContent: { gap: Spacing.sm, alignItems: "flex-start" as const },
-  opIcon: { fontSize: 24 },
+  opIcon: { fontSize: 24, lineHeight: 32 },
 
   tierCard: { marginBottom: Spacing.md },
   tierContent: { gap: Spacing.sm },

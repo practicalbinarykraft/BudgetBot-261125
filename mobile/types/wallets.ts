@@ -66,19 +66,24 @@ export interface CreditsData {
 export interface PricingTier {
   id: string;
   name: string;
+  nameRu?: string;
   credits: number | null;
   price: number;
   priceMonthly: number;
   features: string[];
+  featuresRu?: string[];
   popular?: boolean;
 }
 
 export interface OperationPricing {
   name: string;
+  nameRu?: string;
   icon: string;
   credits: number;
   description: string;
+  descriptionRu?: string;
   example: string;
+  exampleRu?: string;
 }
 
 export interface PricingData {
