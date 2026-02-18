@@ -1,12 +1,14 @@
 import { Router } from "express";
 import { storage } from "../storage";
-import { insertWalletSchema } from "@shared/schema";
+import { wallets, insertWalletSchema } from "@shared/schema";
 import { withAuth } from "../middleware/auth-utils";
 import { convertToUSD } from "../services/currency-service";
 import { calibrateWallet } from "../services/calibration.service";
 import { cache, CACHE_TTL } from "../lib/redis";
 import { logAuditEvent, AuditAction, AuditEntityType } from "../services/audit-log.service";
 import { getErrorMessage } from "../lib/errors";
+import { db } from "../db";
+import { eq, and } from "drizzle-orm";
 
 const router = Router();
 
@@ -296,6 +298,46 @@ router.post("/:id/calibrate", withAuth(async (req, res) => {
     await cache.delPattern(`wallets:user:${Number(req.user.id)}:*`);
 
     res.json(result);
+  } catch (error: unknown) {
+    res.status(500).json({ error: getErrorMessage(error) });
+  }
+}));
+
+// PATCH /api/wallets/:id/primary — set wallet as primary (default)
+router.patch("/:id/primary", withAuth(async (req, res) => {
+  try {
+    const userId = Number(req.user.id);
+    const walletId = parseInt(req.params.id);
+
+    if (isNaN(walletId)) {
+      return res.status(400).json({ error: "Invalid wallet id" });
+    }
+
+    const wallet = await storage.getWalletById(walletId);
+    if (!wallet) {
+      return res.status(404).json({ error: "Wallet not found" });
+    }
+    if (wallet.userId !== userId) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    await db.transaction(async (tx) => {
+      // Clear all isPrimary for this user
+      await tx
+        .update(wallets)
+        .set({ isPrimary: 0 })
+        .where(eq(wallets.userId, userId));
+      // Set the chosen wallet as primary
+      await tx
+        .update(wallets)
+        .set({ isPrimary: 1 })
+        .where(and(eq(wallets.id, walletId), eq(wallets.userId, userId)));
+    });
+
+    // Invalidate cache
+    await cache.delPattern(`wallets:user:${userId}:*`);
+
+    res.json({ success: true, walletId });
   } catch (error: unknown) {
     res.status(500).json({ error: getErrorMessage(error) });
   }

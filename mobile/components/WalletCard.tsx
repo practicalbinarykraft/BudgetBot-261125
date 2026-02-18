@@ -2,13 +2,16 @@ import React from "react";
 import { View, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "./ThemedText";
+import { Badge } from "./Badge";
 import { Card, CardHeader, CardContent } from "./Card";
 import { Spacing } from "../constants/theme";
 import { useTheme } from "../hooks/useTheme";
+import { useTranslation } from "../i18n";
 import type { Wallet } from "../types";
 
 interface WalletCardProps {
   wallet: Wallet;
+  onSetPrimary?: (walletId: number) => void;
 }
 
 // Web uses: CreditCard / Coins / Bitcoin (lucide-react)
@@ -28,8 +31,9 @@ const currencySymbols: Record<string, string> = {
   CNY: "\u00A5",
 };
 
-export function WalletCard({ wallet }: WalletCardProps) {
+export function WalletCard({ wallet, onSetPrimary }: WalletCardProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const icon = walletIcons[wallet.type] || "credit-card";
   const balance = parseFloat(wallet.balance).toFixed(2);
   const balanceUsd = parseFloat(wallet.balanceUsd || "0").toFixed(2);
@@ -42,6 +46,9 @@ export function WalletCard({ wallet }: WalletCardProps) {
         <ThemedText type="bodySm" numberOfLines={1} style={{ flex: 1 }}>
           {wallet.name}
         </ThemedText>
+        {wallet.isPrimary === 1 ? (
+          <Badge label={t("wallets.primary_badge")} variant="secondary" />
+        ) : null}
         <Feather name={icon} size={16} color={theme.textSecondary} />
       </CardHeader>
       <CardContent>
@@ -53,9 +60,18 @@ export function WalletCard({ wallet }: WalletCardProps) {
             {"\u2248 $"}{balanceUsd}
           </ThemedText>
         ) : null}
-        <ThemedText type="small" color={theme.textTertiary} style={styles.meta}>
-          {wallet.type} {"\u00B7"} {wallet.currency}
-        </ThemedText>
+        <View style={styles.metaRow}>
+          <ThemedText type="small" color={theme.textTertiary} style={styles.meta}>
+            {wallet.type} {"\u00B7"} {wallet.currency}
+          </ThemedText>
+          {wallet.isPrimary !== 1 && onSetPrimary ? (
+            <Badge
+              label={t("wallets.set_primary")}
+              variant="outline"
+              onPress={() => onSetPrimary(wallet.id)}
+            />
+          ) : null}
+        </View>
       </CardContent>
     </Card>
   );
@@ -71,8 +87,13 @@ const styles = StyleSheet.create({
   usdEquiv: {
     marginTop: 4,
   },
-  meta: {
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginTop: Spacing.sm,
+  },
+  meta: {
     textTransform: "capitalize",
   },
 });
