@@ -167,12 +167,15 @@ export function useAddTransactionScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["wallets"] });
-      navigation.goBack();
       completeTutorialStep("add_transaction");
       if (prefill?.tutorialSource === "voice") {
         completeTutorialStep("voice_input");
+        navigation.goBack();
       } else if (prefill?.tutorialSource === "receipt") {
         completeTutorialStep("receipt_scan");
+        (navigation as any).navigate("Main");
+      } else {
+        navigation.goBack();
       }
     },
     onError: (error: Error) => {
