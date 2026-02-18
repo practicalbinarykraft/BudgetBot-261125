@@ -7,7 +7,7 @@
  * - Background sync for offline transactions (future)
  */
 
-const CACHE_NAME = 'budgetbuddy-v4'; // Update version when deploying new code
+const CACHE_NAME = 'budgetbuddy-v5'; // Update version when deploying new code
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -67,8 +67,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // WebSocket connections - pass through
-  if (url.protocol === 'ws:' || url.protocol === 'wss:') {
+  // Socket.io and WebSocket connections - pass through
+  if (url.protocol === 'ws:' || url.protocol === 'wss:' || url.pathname.startsWith('/socket.io')) {
     return;
   }
 

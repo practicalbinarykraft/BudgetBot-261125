@@ -7,8 +7,9 @@
 
 import { type Request, type Response, type NextFunction } from 'express';
 
-const ALLOWED_ORIGINS: string[] = [
+export const ALLOWED_ORIGINS: string[] = [
   'https://m.budgetbot.online',
+  'https://budgetbot.online',
 ];
 
 if (process.env.NODE_ENV === 'development') {
@@ -16,6 +17,7 @@ if (process.env.NODE_ENV === 'development') {
     'http://localhost:8081',
     'http://localhost:19006',
     'http://localhost:3000',
+    'http://localhost:5000',
   );
 }
 

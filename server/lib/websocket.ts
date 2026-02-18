@@ -12,6 +12,7 @@ import { Server as HTTPServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import logger from './logger';
+import { ALLOWED_ORIGINS } from '../middleware/cors';
 
 let io: SocketIOServer | null = null;
 
@@ -38,7 +39,7 @@ function extractUserId(socket: Socket): number | null {
 export function initializeWebSocket(server: HTTPServer) {
   io = new SocketIOServer(server, {
     cors: {
-      origin: process.env.CLIENT_URL || 'http://localhost:5000',
+      origin: ALLOWED_ORIGINS,
       credentials: true,
     },
     path: '/socket.io',

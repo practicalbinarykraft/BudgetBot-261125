@@ -151,7 +151,7 @@ function selectProvider(operation: AIOperation): AIProvider {
 /**
  * Get system API key for provider
  */
-function getSystemKey(provider: AIProvider): string {
+export function getSystemKey(provider: AIProvider): string {
   const keys: Record<AIProvider, string | undefined> = {
     anthropic: process.env.SYSTEM_ANTHROPIC_API_KEY,
     openai: process.env.SYSTEM_OPENAI_API_KEY,
