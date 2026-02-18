@@ -8,8 +8,8 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useQuery } from "@tanstack/react-query";
-import { normalizePaginatedData } from "../lib/query-client";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { normalizePaginatedData, queryClient } from "../lib/query-client";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "../components/ThemedText";
 import { Card, CardHeader, CardContent } from "../components/Card";
@@ -34,6 +34,14 @@ export default function WalletsScreen() {
   });
 
   const wallets = normalizePaginatedData<Wallet>(data);
+
+  const setPrimaryMutation = useMutation({
+    mutationFn: (walletId: number) =>
+      api.patch(`/api/wallets/${walletId}/primary`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wallets"] });
+    },
+  });
 
   const totalBalanceUsd = wallets.reduce(
     (sum, w) => sum + parseFloat(w.balanceUsd || w.balance || "0"),
@@ -101,7 +109,10 @@ export default function WalletsScreen() {
       keyExtractor={(item) => String(item.id)}
       renderItem={({ item }) => (
         <View style={styles.walletItem}>
-          <WalletCard wallet={item} />
+          <WalletCard
+            wallet={item}
+            onSetPrimary={(id) => setPrimaryMutation.mutate(id)}
+          />
         </View>
       )}
       style={[styles.flex, { backgroundColor: theme.background }]}

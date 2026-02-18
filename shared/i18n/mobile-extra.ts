@@ -39,6 +39,8 @@ export const mobileExtraTranslations: Translations = {
   "recurring.no_recurring": { en: "No recurring payments yet", ru: "Нет повторяющихся платежей" },
   "tags.manage": { en: "Manage your tags", ru: "Управление тегами" },
   "wallets.net_worth": { en: "Total Net Worth", ru: "Общий капитал" },
+  "wallets.primary_badge": { en: "Default", ru: "По умолчанию" },
+  "wallets.set_primary": { en: "Set as default", ru: "Сделать по умолчанию" },
   "wishlist.add": { en: "Add to Wishlist", ru: "Добавить в список" },
   "wishlist.manage": { en: "Plan your purchases", ru: "Планируйте покупки" },
   "receipts.scan": { en: "Scan Receipt", ru: "Сканировать чек" },

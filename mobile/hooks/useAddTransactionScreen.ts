@@ -23,6 +23,17 @@ interface Prefill {
   tutorialSource?: "voice" | "receipt";
 }
 
+export function pickDefaultWalletId(wallets: Wallet[]): number | null {
+  if (wallets.length === 0) return null;
+  const primary = wallets.find((w) => w.isPrimary === 1);
+  if (primary) return primary.id;
+  // Fallback: highest balanceUsd
+  const sorted = [...wallets].sort(
+    (a, b) => parseFloat(b.balanceUsd || "0") - parseFloat(a.balanceUsd || "0"),
+  );
+  return sorted[0].id;
+}
+
 export function computeConvertedAmount(
   amount: string,
   currency: string,
@@ -84,6 +95,20 @@ export function useAddTransactionScreen() {
 
   const rates = exchangeRatesQuery.data?.rates || {};
   const convertedAmount = computeConvertedAmount(amount, currency, rates);
+
+  // Auto-select primary wallet on first load (don't override user's manual pick)
+  const [walletTouched, setWalletTouched] = useState(false);
+  useEffect(() => {
+    if (!walletTouched && wallets.length > 0 && selectedWalletId === null) {
+      const defaultId = pickDefaultWalletId(wallets);
+      if (defaultId !== null) setSelectedWalletId(defaultId);
+    }
+  }, [wallets, walletTouched, selectedWalletId]);
+
+  const handleSetWalletId = (id: number | null) => {
+    setWalletTouched(true);
+    setSelectedWalletId(id);
+  };
 
   // Reset category when switching expense↔income (category belongs to a type)
   useEffect(() => {
@@ -186,7 +211,7 @@ export function useAddTransactionScreen() {
     description, setDescription,
     currency, setCurrency,
     selectedCategoryId, setSelectedCategoryId,
-    selectedWalletId, setSelectedWalletId,
+    selectedWalletId, setSelectedWalletId: handleSetWalletId,
     personalTagId, setPersonalTagId,
     categories, categoriesLoading, wallets, tags,
     convertedAmount,
