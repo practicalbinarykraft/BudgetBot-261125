@@ -17,7 +17,8 @@ import { styles } from "./BillingScreen.styles";
 
 export default function BillingScreen() {
   const { theme } = useTheme();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+  const isRu = language === "ru";
 
   const creditsQuery = useQuery({
     queryKey: ["credits"],
@@ -122,14 +123,14 @@ export default function BillingScreen() {
                 <CardContent style={styles.opContent}>
                   <ThemedText style={styles.opIcon}>{op.icon}</ThemedText>
                   <ThemedText type="bodySm" style={styles.bold}>
-                    {op.name}
+                    {isRu && op.nameRu ? op.nameRu : op.name}
                   </ThemedText>
                   <ThemedText
                     type="small"
                     color={theme.textSecondary}
                     numberOfLines={2}
                   >
-                    {op.example}
+                    {isRu && op.exampleRu ? op.exampleRu : op.example}
                   </ThemedText>
                   <Badge
                     label={op.credits === 1
@@ -155,7 +156,7 @@ export default function BillingScreen() {
               <Card key={tier.id} style={styles.tierCard}>
                 <CardContent style={styles.tierContent}>
                   <ThemedText type="h4" style={styles.bold}>
-                    {tier.name}
+                    {isRu && tier.nameRu ? tier.nameRu : tier.name}
                   </ThemedText>
                   <View style={styles.tierPriceRow}>
                     <ThemedText type="h2" mono>
@@ -174,7 +175,7 @@ export default function BillingScreen() {
                     </ThemedText>
                   ) : null}
                   <View style={styles.featureList}>
-                    {tier.features.map((f, i) => (
+                    {(isRu && tier.featuresRu ? tier.featuresRu : tier.features).map((f, i) => (
                       <View key={i} style={styles.featureRow}>
                         <Feather
                           name="check"
