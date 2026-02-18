@@ -654,6 +654,10 @@ export const adminTranslations: Translations = {
     en: 'Down',
     ru: 'Недоступно',
   },
+  'admin.system.status.not_configured': {
+    en: 'Not configured',
+    ru: 'Не настроен',
+  },
 
   // Status values
   'admin.status.active': {
@@ -1779,6 +1783,10 @@ export const adminTranslations: Translations = {
   'admin.system.metrics.last_run': {
     en: 'Last run: {date}',
     ru: 'Последний запуск: {date}',
+  },
+  'admin.system.metrics.never_run': {
+    en: 'Last run: Never',
+    ru: 'Последний запуск: Никогда',
   },
 
   // Common - Pagination
