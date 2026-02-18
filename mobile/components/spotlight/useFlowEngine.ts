@@ -105,11 +105,19 @@ export function useFlowEngine() {
         if (r) resolve(r);
       }, 100);
 
-      setTimeout(() => { cancelled = true; clearInterval(pollId); unsub?.(); }, 3000);
+      setTimeout(() => {
+        if (!cancelled) {
+          cancelled = true;
+          clearInterval(pollId);
+          unsub?.();
+          // Auto-skip: target not found within timeout → advance to next step
+          advanceFlow();
+        }
+      }, 3000);
     }, SETTLE_MS);
 
     return () => { cancelled = true; clearTimeout(settleTimer); };
-  }, [currentStep]);
+  }, [currentStep, advanceFlow]);
 
   // ── Tap handlers ──
   const handleFlowTap = useCallback(() => {
