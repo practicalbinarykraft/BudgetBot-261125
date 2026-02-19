@@ -1,9 +1,6 @@
-import Anthropic from '@anthropic-ai/sdk';
-import { ParsedTransaction } from './parser';
 import { DEFAULT_CATEGORY_EXPENSE, CATEGORY_KEYWORDS } from './config';
-import { storage } from '../storage';
-import { parseReceiptWithItems } from '../services/ocr/receipt-parser.service';
-import type { ParsedReceiptItem } from '../services/ocr/receipt-parser.service';
+import { runOcr } from '../services/ocr/ocr-orchestrator';
+import type { ParsedReceiptItem, ImageInput } from '../services/ocr/ocr-provider.types';
 import { logInfo, logWarning, logError } from '../lib/logger';
 
 export interface ReceiptData {
@@ -28,12 +25,12 @@ export interface ProcessedReceipt {
 }
 
 /**
- * Распознать чек через Claude Vision API (BYOK - использует API ключ пользователя)
- * Теперь с извлечением товаров!
+ * Распознать чек через OCR (BYOK - использует API ключ пользователя)
+ * Uses orchestrator with automatic fallback between providers.
  *
  * @param userId - ID пользователя (для загрузки API ключа из Settings)
  * @param imageBase64 - Изображение чека в base64
- * @param providedApiKey - Optional: API key (if not provided, loads from user settings)
+ * @param providedApiKey - Optional: Anthropic API key (if not provided, loads from user settings)
  * @param mimeType - MIME тип изображения
  * @returns Распознанные данные с товарами или null
  */
@@ -47,36 +44,62 @@ export async function processReceiptImage(
     logInfo('Starting OCR process', { userId });
 
     // 1. Use provided API key or load from user settings
-    let apiKey = providedApiKey;
+    let anthropicKey = providedApiKey;
 
-    if (!apiKey) {
+    if (!anthropicKey) {
       const { settingsRepository } = await import('../repositories/settings.repository');
-      apiKey = await settingsRepository.getAnthropicApiKey(userId) ?? undefined;
+      anthropicKey = await settingsRepository.getAnthropicApiKey(userId) ?? undefined;
     }
 
-    if (!apiKey) {
-      logError('❌ OCR failed: User has no Anthropic API key in Settings');
+    // 2. Resolve system OpenAI key for fallback (controlled by env flag)
+    const allowSystemKey = process.env.TELEGRAM_OCR_ALLOW_SYSTEM_KEY !== 'false'; // default: true
+    let openaiKey: string | undefined;
+    if (allowSystemKey) {
+      const { getSystemKey } = await import('../services/api-key-manager');
+      try { openaiKey = getSystemKey('openai'); } catch { /* no system key configured */ }
+      if (openaiKey) {
+        logInfo('TELEGRAM_OCR_SYSTEM_KEY_USED', {
+          userId,
+          provider: 'openai',
+          reason: anthropicKey ? 'fallback available' : 'primary — no BYOK key',
+        });
+      }
+    }
+
+    if (!anthropicKey && !openaiKey) {
+      logError('OCR failed: no API keys available (no BYOK key and no system key)', undefined, { userId });
       return null;
     }
-    logInfo('2️⃣ API key found ✅');
+    logInfo('API keys resolved', { userId, hasByokKey: !!anthropicKey, hasSystemFallback: !!openaiKey });
     logInfo('Image size', { bytes: imageBase64.length });
 
-    // 2. Использовать новый сервис с извлечением товаров
-    logInfo('4️⃣ Calling parseReceiptWithItems...');
-    const validMimeType = mimeType as "image/jpeg" | "image/png" | "image/webp" | "image/gif";
-    const parsedReceipt = await parseReceiptWithItems(imageBase64, apiKey, validMimeType);
+    // 3. Use orchestrator with fallback
+    const validMimeType = mimeType as ImageInput['mimeType'];
+    const imageInput: ImageInput[] = [{ base64: imageBase64, mimeType: validMimeType }];
 
-    if (!parsedReceipt) {
-      logError('❌ Failed to parse receipt with items');
+    // Build key resolver: BYOK anthropic key + system OpenAI fallback
+    const getKeyForProvider = (name: string): string | null => {
+      if (name === 'anthropic' && anthropicKey) return anthropicKey;
+      if (name === 'openai' && openaiKey) return openaiKey;
       return null;
-    }
+    };
 
-    logInfo('5️⃣ Parsed result:', {
+    logInfo('Calling OCR orchestrator...');
+    const result = await runOcr(imageInput, validMimeType, getKeyForProvider);
+    const parsedReceipt = result.receipt;
+
+    logInfo('OCR_TG_COMPLETED', {
+      userId,
+      provider: result.provider,
+      providersTried: result.providersTried,
+      fallbackReason: result.fallbackReason,
+      latencyMs: result.latencyMs,
+      imageCount: 1,
+      route: 'tg',
       merchant: parsedReceipt.merchant,
       total: parsedReceipt.total,
       itemsCount: parsedReceipt.items?.length || 0,
-      date: parsedReceipt.date,
-      currency: parsedReceipt.currency
+      currency: parsedReceipt.currency,
     });
 
     // 3. Определить валюту (приоритет):
@@ -90,20 +113,18 @@ export async function processReceiptImage(
     logInfo('Category detected', { category });
 
     // 5. Вернуть результат с товарами
-    const result = {
+    logInfo('OCR completed successfully!');
+    return {
       amount: parsedReceipt.total,
       currency,
       description: parsedReceipt.merchant,
       category,
       type: 'expense' as const,
-      items: parsedReceipt.items || []
+      items: parsedReceipt.items || [],
     };
-    
-    logInfo('✅ OCR completed successfully!');
-    return result;
 
   } catch (error) {
-    logError('❌ OCR Error Details:', {
+    logError('OCR Error Details:', {
       userId,
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
@@ -119,77 +140,14 @@ export async function processReceiptImage(
  */
 function mapCurrency(merchantName: string): string {
   const lower = merchantName.toLowerCase();
-  
+
   // Индонезийские магазины
   if (lower.includes('pepito') || lower.includes('indomaret') || lower.includes('alfamart')) {
     return 'IDR';
   }
-  
+
   // По умолчанию USD (универсальный fallback)
   return 'USD';
-}
-
-/**
- * Промпт для Claude
- */
-function buildOCRPrompt(): string {
-  return `Extract receipt information and return JSON:
-
-{
-  "amount": 295008,
-  "currency": "IDR",
-  "merchantName": "PEPITO MARKET",
-  "description": "groceries"
-}
-
-Rules:
-- amount: total after tax (number only, no commas)
-- currency: IDR for "Rp", USD for "$", RUB for "₽"
-- merchantName: store name from top of receipt
-- description: type of purchase (groceries/coffee/dinner)
-
-Return ONLY JSON, no markdown.`;
-}
-
-/**
- * Распарсить JSON из ответа Claude
- */
-function parseReceiptJSON(text: string): ReceiptData | null {
-  try {
-    // Удалить markdown если есть
-    const cleaned = text.replace(/```json\n?|```\n?/g, '').trim();
-    
-    // Найти JSON
-    const match = cleaned.match(/\{[\s\S]*\}/);
-    if (!match) {
-      logError('No JSON found in response');
-      return null;
-    }
-
-    // Распарсить
-    const data = JSON.parse(match[0]);
-
-    // Валидация amount
-    if (!data.amount || data.amount <= 0) {
-      logError('Invalid amount:', data.amount);
-      return null;
-    }
-
-    // Валидация и нормализация currency
-    const validCurrencies: Array<'USD' | 'RUB' | 'IDR'> = ['USD', 'RUB', 'IDR'];
-    const currency = data.currency?.toUpperCase();
-    if (!currency || !validCurrencies.includes(currency as any)) {
-      logWarning('Invalid or missing currency, defaulting to USD');
-      data.currency = 'USD';
-    } else {
-      data.currency = currency;
-    }
-
-    return data;
-  } catch (error) {
-    logError('JSON parse error:', error);
-    return null;
-  }
 }
 
 /**
@@ -200,7 +158,7 @@ function detectCategory(text?: string): string {
 
   const lower = text.toLowerCase();
 
-  // Известные магазины (используем категории из CATEGORY_KEYWORDS)
+  // Известные магазины
   const stores: Record<string, string> = {
     'pepito': 'Food & Drinks',
     'indomaret': 'Food & Drinks',
@@ -214,14 +172,12 @@ function detectCategory(text?: string): string {
     'shopee': 'Shopping',
   };
 
-  // Проверить известные магазины
   for (const [name, category] of Object.entries(stores)) {
     if (lower.includes(name)) {
       return category;
     }
   }
 
-  // Проверить по ключевым словам
   for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
     for (const keyword of keywords) {
       if (lower.includes(keyword.toLowerCase())) {

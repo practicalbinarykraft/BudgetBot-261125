@@ -2,6 +2,7 @@ import { Router } from "express";
 import { storage } from "../../storage";
 import { withAuth } from "../../middleware/auth-utils";
 import { parseReceiptWithFallback } from "../../services/ocr/receipt-ocr-fallback";
+import { OcrError } from "../../services/ocr/ocr-errors";
 import { receiptItemsRepository } from "../../repositories/receipt-items.repository";
 import { processReceiptItems } from "../../services/product-catalog.service";
 import { getErrorMessage } from "../../lib/errors";
@@ -90,10 +91,19 @@ router.post("/receipt-with-items", withAuth(async (req, res) => {
     const { getSystemKey } = await import('../../services/api-key-manager');
     let openaiKey = '';
     try { openaiKey = getSystemKey('openai'); } catch { /* fallback won't work without key */ }
-    const { receipt: parsed, provider } = await parseReceiptWithFallback(
+    const { receipt: parsed, provider, providersTried, fallbackReason } = await parseReceiptWithFallback(
       imageArray, apiKeyInfo.key, openaiKey, validMimeType
     );
-    
+
+    logInfo('OCR_WEB_COMPLETED', {
+      userId,
+      provider,
+      providersTried,
+      fallbackReason,
+      imageCount: imageArray.length,
+      route: 'web',
+    });
+
     // Получить валюту транзакции (если привязан)
     let transactionCurrency: string | null = null;
     
@@ -179,14 +189,43 @@ router.post("/receipt-with-items", withAuth(async (req, res) => {
       success: true,
       receipt: parsed,
       itemsCount: parsed.items.length,
-      provider
+      provider,
+      providersTried,
+      fallbackReason,
     });
     
   } catch (error: unknown) {
     logError("Receipt parsing error:", error);
+
+    // Normalized error codes for client UI
+    if (error instanceof OcrError) {
+      if (error.code === 'PARSE_FAILED' || error.code === 'BAD_INPUT') {
+        return res.status(422).json({
+          error: "Could not read the receipt. Try a clearer photo.",
+          code: 'OCR_PARSE_FAILED',
+          details: getErrorMessage(error),
+        });
+      }
+      // Retryable provider errors that exhausted all providers
+      return res.status(503).json({
+        error: "OCR is temporarily unavailable. Please try again later or connect your own API key.",
+        code: 'OCR_UNAVAILABLE',
+        details: getErrorMessage(error),
+      });
+    }
+
+    const msg = getErrorMessage(error);
+    if (msg.includes('No OCR providers available') || msg.includes('All OCR providers failed')) {
+      return res.status(503).json({
+        error: "OCR is temporarily unavailable. Please try again later or connect your own API key.",
+        code: 'OCR_UNAVAILABLE',
+        details: msg,
+      });
+    }
+
     res.status(500).json({
       error: "Failed to parse receipt",
-      details: getErrorMessage(error)
+      details: msg,
     });
   }
 }));
