@@ -1,11 +1,12 @@
-import { parseReceiptWithItems, type ParsedReceipt, type ImageInput } from './receipt-parser.service';
-import { parseReceiptWithOpenAI } from './openai-receipt-parser.service';
-import { logWarning } from '../../lib/logger';
+import { runOcr } from './ocr-orchestrator';
+import type { ParsedReceipt, ImageInput, OcrResult } from './ocr-provider.types';
+
+// Re-export for backward compatibility
+export type { OcrResult };
 
 /**
- * Check if error indicates provider is unavailable (billing, rate limit, outage)
- * — these errors should trigger fallback to another provider.
- * Non-retryable errors (bad receipt, parse failure) should NOT trigger fallback.
+ * Check if error indicates provider is unavailable (billing, rate limit, outage).
+ * Kept for backward compatibility — new code should use OcrError.retryable instead.
  */
 export function isProviderUnavailableError(error: unknown): boolean {
   const msg = error instanceof Error ? error.message : String(error);
@@ -22,25 +23,36 @@ export function isProviderUnavailableError(error: unknown): boolean {
 }
 
 /**
- * Parse receipt with automatic fallback: Anthropic → OpenAI
+ * Parse receipt with automatic fallback — thin wrapper around the orchestrator.
+ *
+ * Backward-compatible: same signature and return shape as before.
+ * New callers should use runOcr() directly for full OcrResult metadata.
  */
 export async function parseReceiptWithFallback(
   images: string[] | ImageInput[],
   anthropicKey: string,
   openaiKey: string,
   mimeType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
-): Promise<{ receipt: ParsedReceipt; provider: 'anthropic' | 'openai' }> {
-  try {
-    const receipt = await parseReceiptWithItems(images, anthropicKey, mimeType);
-    return { receipt, provider: 'anthropic' };
-  } catch (err) {
-    if (!isProviderUnavailableError(err)) {
-      throw err;
-    }
-    logWarning(
-      `Anthropic OCR failed (${err instanceof Error ? err.message : err}), falling back to OpenAI`
-    );
-    const receipt = await parseReceiptWithOpenAI(images, openaiKey, mimeType);
-    return { receipt, provider: 'openai' };
-  }
+): Promise<{ receipt: ParsedReceipt; provider: 'anthropic' | 'openai'; providersTried: string[]; fallbackReason?: string }> {
+
+  const imageList: ImageInput[] = images.map(img =>
+    typeof img === 'string'
+      ? { base64: img, mimeType }
+      : img
+  );
+
+  const getKeyForProvider = (name: string): string | null => {
+    if (name === 'anthropic' && anthropicKey) return anthropicKey;
+    if (name === 'openai' && openaiKey) return openaiKey;
+    return null;
+  };
+
+  const result = await runOcr(imageList, mimeType, getKeyForProvider);
+
+  return {
+    receipt: result.receipt,
+    provider: result.provider as 'anthropic' | 'openai',
+    providersTried: result.providersTried,
+    fallbackReason: result.fallbackReason,
+  };
 }
