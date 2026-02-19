@@ -95,7 +95,9 @@ export function validateInitData(
       .update(dataCheckString)
       .digest('hex');
 
-    if (hash !== expectedHash) {
+    const hashBuf = Buffer.from(hash, 'hex');
+    const expectedBuf = Buffer.from(expectedHash, 'hex');
+    if (hashBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(hashBuf, expectedBuf)) {
       return { isValid: false, error: 'Invalid initData signature' };
     }
 

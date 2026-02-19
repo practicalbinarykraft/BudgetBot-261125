@@ -40,6 +40,34 @@ jobs:
       - name: Install mobile dependencies
         run: cd mobile && npm ci
 
+      - name: Lint — no test.skip
+        run: |
+          # Fail if test.skip / it.skip / describe.skip found (skipIf is allowed)
+          if grep -rn --include='*.test.*' -E '\b(test|it|describe)\.skip\(' server/ client/ mobile/; then
+            echo "::error::Found test.skip — remove or use skipIf with a condition"
+            exit 1
+          fi
+
+      - name: Lint — no console.log in server
+        run: |
+          # Server must use structured logger, not console.log
+          if grep -rn --include='*.ts' -E 'console\.(log|debug)\(' \
+            server/ \
+            --exclude-dir='__tests__' \
+            --exclude='env.ts' \
+            --exclude='*.test.*'; then
+            echo "::error::Found console.log in server — use logInfo/logWarning/logError instead"
+            exit 1
+          fi
+
+      - name: Lint — console.log in client (warning)
+        run: |
+          count=$(grep -rn --include='*.ts' --include='*.tsx' -E 'console\.(log|debug)\(' \
+            client/src/ --exclude='*.test.*' 2>/dev/null | wc -l)
+          if [ "$count" -gt 0 ]; then
+            echo "::warning::Found $count console.log calls in client/ — consider replacing with structured logging"
+          fi
+
       - name: Type check
         run: npm run check
 

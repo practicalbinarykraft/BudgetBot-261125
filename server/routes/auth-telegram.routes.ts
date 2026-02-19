@@ -97,13 +97,12 @@ function verifyTelegramAuth(data: TelegramAuthData, botToken: string): boolean {
     .update(dataCheckString)
     .digest('hex'); // ← Convert to hex string (64 characters)
 
-  // STEP 5: Compare hashes
-  // If they match → data is authentic and unmodified ✅
-  // If they don't match → reject! ❌
-  //
-  // SECURITY NOTE: Use crypto.timingSafeEqual() in production to prevent
-  // timing attacks, but simple === is okay for POC
-  return computedHash === hash;
+  // STEP 5: Compare hashes using timing-safe comparison
+  // Prevents timing attacks where attacker measures response time to guess hash
+  const computedBuf = Buffer.from(computedHash, 'hex');
+  const hashBuf = Buffer.from(hash, 'hex');
+  if (computedBuf.length !== hashBuf.length) return false;
+  return crypto.timingSafeEqual(computedBuf, hashBuf);
 }
 
 /**
