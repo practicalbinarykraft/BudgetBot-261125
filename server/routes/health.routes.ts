@@ -11,6 +11,8 @@ import { db } from '../db';
 import { isRedisAvailable, cache } from '../lib/redis';
 import { metrics } from '../lib/metrics';
 import { getAlertStatus } from '../lib/alerts';
+import { getProviderOrder, getProviderNames, getProvider } from '../services/ocr/ocr-registry';
+import { getSystemKey } from '../services/api-key-manager';
 import os from 'os';
 
 const router = Router();
@@ -173,6 +175,47 @@ router.get('/health/alerts', (_req, res) => {
   res.status(status).json({
     timestamp: new Date().toISOString(),
     ...alertStatus,
+  });
+});
+
+/**
+ * OCR health check
+ * Checks provider registration, system keys, and availability.
+ * Does NOT call external APIs — only checks local config.
+ */
+router.get('/health/ocr', (_req, res) => {
+  const providerOrder = getProviderOrder();
+  const registeredNames = getProviderNames();
+
+  // Check which providers are registered, available, and have system keys
+  const providers = providerOrder.map(name => {
+    const provider = getProvider(name);
+    const registered = !!provider;
+    const available = registered ? provider!.isAvailable() : false;
+
+    let hasSystemKey = false;
+    try {
+      getSystemKey(name as any);
+      hasSystemKey = true;
+    } catch {
+      // No system key configured
+    }
+
+    return { name, registered, available, hasSystemKey };
+  });
+
+  const providersConfigured = providers.filter(p => p.registered && p.available).length;
+  const providersWithKeys = providers.filter(p => p.hasSystemKey).length;
+  const healthy = providersConfigured > 0;
+
+  res.status(healthy ? 200 : 503).json({
+    status: healthy ? 'ok' : 'degraded',
+    providerOrder,
+    registeredProviders: registeredNames,
+    providers,
+    providersConfigured,
+    providersWithKeys,
+    timestamp: new Date().toISOString(),
   });
 });
 
