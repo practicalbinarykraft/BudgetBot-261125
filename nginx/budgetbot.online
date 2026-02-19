@@ -9,7 +9,7 @@ server {
     }
 
     # Do NOT redirect API or .well-known paths
-    if ($request_uri ~* "^/(api/|\.well-known/)") {
+    if ($request_uri ~* "^/(api/|\.well-known/|socket\.io/)") {
         set $mobile_redirect 0;
     }
 

@@ -105,21 +105,13 @@ export async function setupAuth(app: Express) {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       httpOnly: true, // Prevent XSS attacks
       sameSite: 'lax', // CSRF protection
+      secure: process.env.NODE_ENV === 'production',
+      domain: process.env.NODE_ENV === 'production' ? '.budgetbot.online' : undefined,
     },
   };
 
   if (app.get("env") === "production") {
     app.set("trust proxy", 1);
-    // Only enable secure cookies if SECURE_COOKIES is not explicitly disabled
-    // For HTTP-only deployments (VPS without HTTPS), set SECURE_COOKIES=false
-    if (env.SECURE_COOKIES) {
-      sessionSettings.cookie = {
-        ...sessionSettings.cookie,
-        secure: true, // HTTPS only
-      };
-    } else {
-      logWarning('⚠️  Running in production without secure cookies (SECURE_COOKIES=false). Sessions will work over HTTP but this is not recommended for production.');
-    }
   }
 
   app.use(session(sessionSettings));
