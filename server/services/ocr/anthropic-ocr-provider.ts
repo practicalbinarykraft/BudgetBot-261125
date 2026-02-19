@@ -13,12 +13,9 @@ export const anthropicOcrProvider: OcrProvider = {
   billingProvider: 'anthropic',
 
   isAvailable(): boolean {
-    try {
-      require.resolve('@anthropic-ai/sdk');
-      return true;
-    } catch {
-      return false;
-    }
+    // If this module loaded, the SDK import at line 1 succeeded.
+    // require.resolve() doesn't work in ESM bundles (esbuild --format=esm).
+    return true;
   },
 
   async parseReceipt(
