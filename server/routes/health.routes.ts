@@ -206,6 +206,8 @@ router.get('/health/ocr', (_req, res) => {
 
   const providersConfigured = providers.filter(p => p.registered && p.available).length;
   const providersWithKeys = providers.filter(p => p.hasSystemKey).length;
+  // 503 only when OCR subsystem is truly broken (no providers registered/available).
+  // Missing system keys is NOT an error — users can still use BYOK keys.
   const healthy = providersConfigured > 0;
 
   res.status(healthy ? 200 : 503).json({
