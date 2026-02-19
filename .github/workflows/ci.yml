@@ -92,6 +92,33 @@ jobs:
       - name: Build
         run: npm run build
 
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Deploy to production
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true
+          script: |
+            cd /root/BudgetBot-Improved
+            git pull origin main
+            npm run build
+            pm2 restart budgetbot
+            sleep 3
+            # Verify process is running (exit 1 if crashed)
+            pm2 show budgetbot | grep -q "status.*online" || {
+              echo "DEPLOY FAILED: budgetbot not online"
+              pm2 logs budgetbot --lines 30 --nostream
+              exit 1
+            }
+            echo "Deploy OK — budgetbot is online"
+
   metrics:
     runs-on: ubuntu-latest
     needs: test
