@@ -7,7 +7,7 @@
  * - Background sync for offline transactions (future)
  */
 
-const CACHE_NAME = 'budgetbuddy-v5'; // Update version when deploying new code
+const CACHE_NAME = 'budgetbuddy-v6'; // Update version when deploying new code
 const STATIC_ASSETS = [
   '/',
   '/index.html',
