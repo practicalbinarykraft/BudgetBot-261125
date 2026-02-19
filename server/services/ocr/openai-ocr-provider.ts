@@ -13,12 +13,9 @@ export const openaiOcrProvider: OcrProvider = {
   billingProvider: 'openai',
 
   isAvailable(): boolean {
-    try {
-      require.resolve('openai');
-      return true;
-    } catch {
-      return false;
-    }
+    // If this module loaded, the SDK import at line 1 succeeded.
+    // require.resolve() doesn't work in ESM bundles (esbuild --format=esm).
+    return true;
   },
 
   async parseReceipt(

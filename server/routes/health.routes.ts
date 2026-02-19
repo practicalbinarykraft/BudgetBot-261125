@@ -182,12 +182,17 @@ router.get('/health/alerts', (_req, res) => {
  * OCR health check
  * Checks provider registration, system keys, and availability.
  * Does NOT call external APIs — only checks local config.
+ *
+ * Statuses:
+ *   ok       — registered providers + system keys exist  (200)
+ *   degraded — registered providers but no system keys    (200)
+ *              (BYOK users can still use OCR)
+ *   down     — no registered providers or empty order     (503)
  */
 router.get('/health/ocr', (_req, res) => {
   const providerOrder = getProviderOrder();
   const registeredNames = getProviderNames();
 
-  // Check which providers are registered, available, and have system keys
   const providers = providerOrder.map(name => {
     const provider = getProvider(name);
     const registered = !!provider;
@@ -204,18 +209,32 @@ router.get('/health/ocr', (_req, res) => {
     return { name, registered, available, hasSystemKey };
   });
 
-  const providersConfigured = providers.filter(p => p.registered && p.available).length;
+  const providersAvailable = providers.filter(p => p.registered && p.available).length;
   const providersWithKeys = providers.filter(p => p.hasSystemKey).length;
-  // 503 only when OCR subsystem is truly broken (no providers registered/available).
-  // Missing system keys is NOT an error — users can still use BYOK keys.
-  const healthy = providersConfigured > 0;
 
-  res.status(healthy ? 200 : 503).json({
-    status: healthy ? 'ok' : 'degraded',
+  // down  = no providers at all → 503
+  // degraded = providers exist but no system keys (BYOK only) → 200
+  // ok = providers + system keys → 200
+  let status: 'ok' | 'degraded' | 'down';
+  let httpCode: number;
+
+  if (providersAvailable === 0) {
+    status = 'down';
+    httpCode = 503;
+  } else if (providersWithKeys === 0) {
+    status = 'degraded';
+    httpCode = 200;
+  } else {
+    status = 'ok';
+    httpCode = 200;
+  }
+
+  res.status(httpCode).json({
+    status,
     providerOrder,
     registeredProviders: registeredNames,
     providers,
-    providersConfigured,
+    providersAvailable,
     providersWithKeys,
     timestamp: new Date().toISOString(),
   });
