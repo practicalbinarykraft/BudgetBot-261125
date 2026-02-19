@@ -71,7 +71,9 @@ export function verifyResetToken(token: string): number | null {
       .update(tokenData)
       .digest('hex');
 
-    if (hash !== expectedHash) {
+    const hashBuf = Buffer.from(hash, 'hex');
+    const expectedBuf = Buffer.from(expectedHash, 'hex');
+    if (hashBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(hashBuf, expectedBuf)) {
       logInfo(`Invalid reset token signature for user ${userId}`);
       return null;
     }
