@@ -1,24 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { parseReceiptWithFallback, isProviderUnavailableError } from '../receipt-ocr-fallback';
-import type { ParsedReceipt } from '../receipt-parser.service';
-
-vi.mock('../receipt-parser.service', () => ({
-  parseReceiptWithItems: vi.fn(),
-}));
-
-vi.mock('../openai-receipt-parser.service', () => ({
-  parseReceiptWithOpenAI: vi.fn(),
-}));
+import { OcrError } from '../ocr-errors';
+import type { ParsedReceipt, OcrResult } from '../ocr-provider.types';
 
 vi.mock('../../../lib/logger', () => ({
+  logInfo: vi.fn(),
   logWarning: vi.fn(),
+  logError: vi.fn(),
 }));
 
-import { parseReceiptWithItems } from '../receipt-parser.service';
-import { parseReceiptWithOpenAI } from '../openai-receipt-parser.service';
+const mockRunOcr = vi.fn();
 
-const mockAnthropicParse = vi.mocked(parseReceiptWithItems);
-const mockOpenAIParse = vi.mocked(parseReceiptWithOpenAI);
+vi.mock('../ocr-orchestrator', () => ({
+  runOcr: (...args: unknown[]) => mockRunOcr(...args),
+}));
+
+import { parseReceiptWithFallback, isProviderUnavailableError } from '../receipt-ocr-fallback';
 
 const fakeReceipt: ParsedReceipt = {
   total: 100,
@@ -52,49 +48,72 @@ describe('isProviderUnavailableError', () => {
 
 describe('parseReceiptWithFallback', () => {
   it('returns Anthropic result when it succeeds', async () => {
-    mockAnthropicParse.mockResolvedValue(fakeReceipt);
+    const ocrResult: OcrResult = {
+      receipt: fakeReceipt,
+      provider: 'anthropic',
+      providersTried: ['anthropic'],
+      latencyMs: 100,
+    };
+    mockRunOcr.mockResolvedValue(ocrResult);
 
     const result = await parseReceiptWithFallback(['img'], 'ak', 'ok', 'image/jpeg');
 
-    expect(result).toEqual({ receipt: fakeReceipt, provider: 'anthropic' });
-    expect(mockOpenAIParse).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      receipt: fakeReceipt,
+      provider: 'anthropic',
+      providersTried: ['anthropic'],
+      fallbackReason: undefined,
+    });
   });
 
-  it('falls back to OpenAI on credit balance error', async () => {
-    mockAnthropicParse.mockRejectedValue(new Error('credit balance is too low'));
-    mockOpenAIParse.mockResolvedValue(fakeReceipt);
+  it('returns OpenAI result on fallback', async () => {
+    const ocrResult: OcrResult = {
+      receipt: fakeReceipt,
+      provider: 'openai',
+      providersTried: ['anthropic', 'openai'],
+      fallbackReason: 'anthropic: RATE_LIMITED — rate limited',
+      latencyMs: 200,
+    };
+    mockRunOcr.mockResolvedValue(ocrResult);
 
     const result = await parseReceiptWithFallback(['img'], 'ak', 'ok', 'image/jpeg');
 
-    expect(result).toEqual({ receipt: fakeReceipt, provider: 'openai' });
+    expect(result.provider).toBe('openai');
+    expect(result.providersTried).toEqual(['anthropic', 'openai']);
+    expect(result.fallbackReason).toContain('RATE_LIMITED');
   });
 
-  it('falls back to OpenAI on rate limit (429)', async () => {
-    mockAnthropicParse.mockRejectedValue(new Error('Request failed with status 429'));
-    mockOpenAIParse.mockResolvedValue(fakeReceipt);
-
-    const result = await parseReceiptWithFallback(['img'], 'ak', 'ok', 'image/jpeg');
-
-    expect(result).toEqual({ receipt: fakeReceipt, provider: 'openai' });
-  });
-
-  it('does NOT fallback on parse error (bad receipt)', async () => {
-    const parseError = new Error('Failed to parse Claude response as JSON. Response: ...');
-    mockAnthropicParse.mockRejectedValue(parseError);
+  it('does NOT fallback on non-retryable error (bad receipt)', async () => {
+    mockRunOcr.mockRejectedValue(new OcrError('Failed to parse response', 'PARSE_FAILED'));
 
     await expect(
       parseReceiptWithFallback(['img'], 'ak', 'ok', 'image/jpeg')
-    ).rejects.toThrow('Failed to parse Claude response');
-
-    expect(mockOpenAIParse).not.toHaveBeenCalled();
+    ).rejects.toThrow('Failed to parse response');
   });
 
-  it('throws if both providers fail', async () => {
-    mockAnthropicParse.mockRejectedValue(new Error('credit balance is too low'));
-    mockOpenAIParse.mockRejectedValue(new Error('OpenAI also failed'));
+  it('throws if all providers fail', async () => {
+    mockRunOcr.mockRejectedValue(new Error('All OCR providers failed'));
 
     await expect(
       parseReceiptWithFallback(['img'], 'ak', 'ok', 'image/jpeg')
-    ).rejects.toThrow('OpenAI also failed');
+    ).rejects.toThrow('All OCR providers failed');
+  });
+
+  it('passes key resolver that maps provider names to keys', async () => {
+    const ocrResult: OcrResult = {
+      receipt: fakeReceipt,
+      provider: 'anthropic',
+      providersTried: ['anthropic'],
+      latencyMs: 50,
+    };
+    mockRunOcr.mockResolvedValue(ocrResult);
+
+    await parseReceiptWithFallback(['img'], 'my-anthro-key', 'my-openai-key', 'image/jpeg');
+
+    // Verify the key resolver was passed correctly
+    const getKeyForProvider = mockRunOcr.mock.calls[0][2];
+    expect(getKeyForProvider('anthropic')).toBe('my-anthro-key');
+    expect(getKeyForProvider('openai')).toBe('my-openai-key');
+    expect(getKeyForProvider('unknown')).toBe(null);
   });
 });

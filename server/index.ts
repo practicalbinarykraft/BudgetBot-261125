@@ -78,6 +78,10 @@ app.use((req, res, next) => {
   // Setup authentication (async - needs to check DB connection)
   await setupAuth(app);
   
+  // Register OCR providers once before any routes use them
+  const { registerOcrProviders } = await import('./services/ocr/register-providers');
+  registerOcrProviders();
+
   logInfo('[SERVER] About to register routes...');
   registerRoutes(app);
   logInfo('[SERVER] Routes registered');
