@@ -50,9 +50,15 @@ vi.mock('../budget/limits-checker.service', () => ({
   sendBudgetAlert: vi.fn(),
 }));
 
+vi.mock('../../lib/logger', () => ({
+  logError: vi.fn(),
+  logInfo: vi.fn(),
+}));
+
 import { TransactionService } from '../transaction.service';
 import { transactionRepository } from '../../repositories/transaction.repository';
 import { walletRepository } from '../../repositories/wallet.repository';
+import { logInfo } from '../../lib/logger';
 
 describe('TransactionService', () => {
   let service: TransactionService;
@@ -137,8 +143,28 @@ describe('TransactionService', () => {
       (transactionRepository.getTransactionById as any).mockResolvedValue(null);
 
       const result = await service.getTransaction(999, 1);
-      
+
       expect(result).toBeNull();
+    });
+
+    it('logs authorization denial when user accesses another user transaction (BUG-02)', async () => {
+      const mockTransaction = {
+        id: 1,
+        userId: 999, // Belongs to user 999
+        amount: '100.00',
+        type: 'expense',
+      };
+
+      (transactionRepository.getTransactionById as any).mockResolvedValue(mockTransaction);
+
+      // Requesting user 123 tries to access transaction belonging to user 999
+      const result = await service.getTransaction(1, 123);
+
+      expect(result).toBeNull();
+      expect(logInfo).toHaveBeenCalledWith(
+        expect.stringContaining('access denied'),
+        expect.objectContaining({ transactionId: 1, requestingUserId: 123 })
+      );
     });
   });
 

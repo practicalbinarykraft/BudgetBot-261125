@@ -271,3 +271,78 @@ describe('Password Recovery Service', () => {
   });
 });
 
+// ========================================
+// BUG-01 Unit Test (no database required)
+// ========================================
+// Uses module isolation to mock DB calls inline.
+// These tests always run regardless of DB availability.
+
+describe('Password Recovery Service - BUG-01 unit tests', () => {
+  it('returns method "none" when user has email but no Telegram (BUG-01)', async () => {
+    const mockDbSelect = vi.fn();
+
+    // Chain: db.select().from().where().limit()
+    const mockChain = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn(),
+    };
+
+    // First call: find user by email -> user with email but no telegramId
+    // Second call: inside sendCodeViaTelegram -> look up telegramId -> returns user with null telegramId
+    // Third call: inside saveRecoveryCode -> db.insert chain
+    mockChain.limit
+      .mockResolvedValueOnce([
+        { id: 42, email: 'email-only@example.com', telegramId: null, name: 'Email Only User' },
+      ])
+      .mockResolvedValueOnce([
+        { telegramId: null },
+      ]);
+
+    mockDbSelect.mockReturnValue(mockChain);
+
+    const mockInsertChain = { values: vi.fn().mockResolvedValue(undefined) };
+    const mockDbInsert = vi.fn().mockReturnValue(mockInsertChain);
+
+    vi.doMock('../../db', () => ({
+      db: {
+        select: mockDbSelect,
+        insert: mockDbInsert,
+      },
+      pool: { query: vi.fn().mockResolvedValue({}) },
+    }));
+
+    vi.doMock('../../telegram/bot', () => ({
+      getTelegramBot: vi.fn().mockReturnValue(null),
+    }));
+
+    vi.doMock('../../lib/logger', () => ({
+      logError: vi.fn(),
+      logInfo: vi.fn(),
+    }));
+
+    vi.doMock('../../lib/env', () => ({
+      env: {
+        NODE_ENV: 'test',
+        PASSWORD_RESET_SECRET: 'test-secret-32-chars-long-enough!!',
+      },
+    }));
+
+    vi.doMock('../../telegram/language', () => ({
+      getUserLanguageByTelegramId: vi.fn().mockResolvedValue('en'),
+    }));
+
+    vi.resetModules();
+
+    const { requestPasswordRecovery: requestRecovery } = await import('../password-recovery.service');
+
+    const result = await requestRecovery('email-only@example.com');
+
+    expect(result.method).toBe('none');
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/email recovery not yet implemented/i);
+
+    vi.resetModules();
+  });
+});
+

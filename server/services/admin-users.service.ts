@@ -308,8 +308,7 @@ export async function getUserDetails(userId: number): Promise<UserDetails | null
         };
       }
     } catch (error) {
-      logDebug('[DEBUG] getUserDetails ERROR getting credits', { error: error instanceof Error ? error.message : String(error) });
-      logDebug('[DEBUG] getUserDetails ERROR stack', { stack: error instanceof Error ? error.stack : 'no stack' });
+      logError('Failed to get credit balance in getUserDetails', error as Error, { userId });
       // Если не удалось получить кредиты, используем значения по умолчанию
       creditsBalance = {
         totalGranted: 0,

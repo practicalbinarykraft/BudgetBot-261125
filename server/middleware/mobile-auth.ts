@@ -63,11 +63,14 @@ export function withMobileAuth<P = any, ResBody = any, ReqBody = any, ReqQuery =
       }
       return result;
     } catch (error) {
-      if (error instanceof jwt.JsonWebTokenError) {
-        return res.status(401).json({ error: "Invalid token" } as any);
-      }
       if (error instanceof jwt.TokenExpiredError) {
         return res.status(401).json({ error: "Token expired" } as any);
+      }
+      if (error instanceof jwt.NotBeforeError) {
+        return res.status(401).json({ error: "Token not yet valid" } as any);
+      }
+      if (error instanceof jwt.JsonWebTokenError) {
+        return res.status(401).json({ error: "Invalid token" } as any);
       }
       next(error);
     }
