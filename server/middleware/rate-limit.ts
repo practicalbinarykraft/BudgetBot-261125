@@ -1,4 +1,5 @@
 import rateLimit from "express-rate-limit";
+import { createRedisStore } from './lib/create-redis-store';
 
 /**
  * Rate limiting middleware for authentication routes
@@ -14,8 +15,7 @@ export const authRateLimiter = rateLimit({
   },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  // Store in memory (for simple deployments)
-  // For production with multiple instances, use Redis store
+  store: createRedisStore('rl:auth:'), // Redis store for persistence across restarts
   skipSuccessfulRequests: false, // Count all requests
   skipFailedRequests: false, // Count failed requests too
 });
@@ -34,6 +34,7 @@ export const aiRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  store: createRedisStore('rl:ai:'), // Redis store for persistence across restarts
   // Use user ID as key (instead of IP) for authenticated routes
   keyGenerator: (req) => {
     // If authenticated, use user ID (no IP fallback needed)
@@ -63,6 +64,7 @@ export const generalRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  store: createRedisStore('rl:general:'), // Redis store for persistence across restarts
   skipSuccessfulRequests: false,
   skipFailedRequests: false,
 });
@@ -81,6 +83,7 @@ export const strictRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  store: createRedisStore('rl:strict:'), // Redis store for persistence across restarts
   skipSuccessfulRequests: false,
   skipFailedRequests: false,
 });
@@ -99,6 +102,7 @@ export const heavyOperationRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  store: createRedisStore('rl:heavy:'), // Redis store for persistence across restarts
   // Use user ID as key (instead of IP) for authenticated routes
   keyGenerator: (req) => {
     const userId = (req.user as any)?.id;
