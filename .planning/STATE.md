@@ -43,6 +43,7 @@
 | BillingScreen: скрыть на iOS | 2026-02-19 | Проще чем IAP; IAP можно добавить в v2 |
 | ESLint 9 flat config | 2026-02-19 | ESM-совместимый, ESLint 8 — EOL |
 | 6 фаз (security → bugs → quality → ios → build → release) | 2026-02-19 | Последовательность снижает риск; audit baseline перед нативной сборкой |
+| PASSWORD_RESET_SECRET separate from SESSION_SECRET | 2026-02-20 | Rotating one secret doesn't invalidate the other; each operation has its own HMAC key |
 | createRedisStore extracted to server/middleware/lib/ | 2026-02-20 | Reusable code 2+ times -> separate function (locked decision) |
 | Unique Redis key prefixes per rate limiter | 2026-02-20 | rl:auth2:, rl:ai2: suffix prevents key collisions between rate-limit.ts and rate-limiter.ts |
 
@@ -54,4 +55,4 @@
 
 ---
 *State initialized: 2026-02-19*
-*Last execution: 01-03 (Redis rate limiter persistence) — 2026-02-20*
+*Last execution: 01-01 (Password Recovery/Reset Security Fixes) — 2026-02-20*
