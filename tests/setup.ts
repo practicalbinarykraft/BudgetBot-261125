@@ -39,6 +39,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'test-session-secret-must-be-32-chars!!';
+process.env.PASSWORD_RESET_SECRET = process.env.PASSWORD_RESET_SECRET || 'test-password-reset-secret-32-chars!!';
 process.env.ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'U4rnuZd9jFqJb5yokp5e1DrI8QCmSZx8HpDX4lLZUqI=';
 
 // Mock localStorage for frontend tests

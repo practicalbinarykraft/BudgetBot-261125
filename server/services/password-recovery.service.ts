@@ -18,6 +18,7 @@ import { getTelegramBot } from '../telegram/bot';
 import { getUserLanguageByTelegramId } from '../telegram/language';
 import { t } from '@shared/i18n';
 import { logError, logInfo } from '../lib/logger';
+import { env } from '../lib/env';
 import crypto from 'crypto';
 
 // ========================================
@@ -79,7 +80,6 @@ async function saveRecoveryCode(
   });
 
   logInfo(`Recovery code generated for user ${userId}`, {
-    code,
     expiresAt: expiresAt.toISOString(),
   });
 }
@@ -296,7 +296,7 @@ export async function verifyRecoveryCode(
     // Token format: base64(userId:timestamp:hash) for URL safety
     // HMAC signature prevents tampering
     const timestamp = Date.now();
-    const secret = process.env.SESSION_SECRET || 'default-secret-change-in-production';
+    const secret = env.PASSWORD_RESET_SECRET;
     const tokenData = `${user.id}:${timestamp}`;
     const hash = crypto
       .createHmac('sha256', secret)

@@ -51,7 +51,7 @@ describe('Password Reset Service - Security Tests', () => {
   });
 
   describe('SEC-02/SEC-03: Secret separation and no fallback (reset)', () => {
-    it('verifyResetToken should use env.PASSWORD_RESET_SECRET', () => {
+    it('verifyResetToken should use env.PASSWORD_RESET_SECRET', async () => {
       const testUserId = 42;
       const testResetSecret = 'test-reset-secret-32-characters!!';
 
@@ -64,7 +64,7 @@ describe('Password Reset Service - Security Tests', () => {
         .digest('hex');
       const token = Buffer.from(`${tokenData}:${hash}`).toString('base64url');
 
-      const { verifyResetToken } = require('../password-reset.service');
+      const { verifyResetToken } = await import('../password-reset.service');
 
       // Act: verify the token signed with PASSWORD_RESET_SECRET
       const result = verifyResetToken(token);
