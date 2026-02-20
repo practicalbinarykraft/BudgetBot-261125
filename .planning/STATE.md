@@ -9,7 +9,7 @@
 | Phase | Name | Status | Requirements |
 |-------|------|--------|-------------|
 | 1 | Security Audit & Fixes | In Progress (3/3 plans executed) | SEC-01..SEC-07 |
-| 2 | Bug Fixes & Stability | In Progress (1/3 plans executed) | BUG-01..BUG-04 |
+| 2 | Bug Fixes & Stability | In Progress (2/2 plans executed) | BUG-01..BUG-04 |
 | 3 | Code Quality | Pending | QUAL-01..QUAL-09 |
 | 4 | App Store Preparation | Pending | IOS-01..IOS-14 |
 | 5 | Build & TestFlight | Pending | BLD-01..BLD-05 |
@@ -17,8 +17,8 @@
 
 ## Progress
 
-- **Requirements:** 42 total, 9 complete (SEC-01, SEC-02, SEC-03, SEC-04, SEC-05, SEC-06, SEC-07, BUG-01, BUG-02)
-- **Phases:** 6 total, 0 complete (Phase 1 all 3 plans executed, pending phase sign-off)
+- **Requirements:** 42 total, 11 complete (SEC-01..SEC-07, BUG-01, BUG-02, BUG-03, BUG-04)
+- **Phases:** 6 total, 0 complete (Phase 1 all 3 plans executed; Phase 2 all 2 plans executed, pending phase sign-off)
 - **Blockers:** None
 
 ## Execution Log
@@ -29,14 +29,14 @@
 | 01 | 02 | HSTS, CORS, and Socket.IO Security Fixes | Complete | 6min | 2026-02-20 |
 | 01 | 03 | Redis Rate Limiter Persistence | Complete | 4min | 2026-02-20 |
 | 02 | 01 | Service Layer Bug Fixes (BUG-01, BUG-02) | Complete | 7min | 2026-02-20 |
+| 02 | 02 | Credits Error Logging and JWT NotBeforeError (BUG-03, BUG-04) | Complete | 7min | 2026-02-20 |
 
 ## Context for Next Session
 
-- Phase 1 (Security Audit & Fixes) complete: all 3 plans executed (01-01, 01-02, 01-03)
-- Phase 2 (Bug Fixes & Stability) started: plan 02-01 complete (BUG-01, BUG-02 fixed)
-- 02-01 complete: password recovery returns honest 'none' method; transaction auth denials logged with context
-- BUG-01 and BUG-02 fixed via TDD (RED -> GREEN commits with unit tests)
-- **Следующий шаг:** Phase 2 plan 02 — remaining bugs BUG-03, BUG-04
+- Phase 2 (Bug Fixes & Stability) complete: all 2 plans executed (02-01, 02-02)
+- 02-02 complete: logError in credits catch block, JWT NotBeforeError + instanceof order fixed
+- All 11 requirements complete (SEC-01..SEC-07, BUG-01..BUG-04)
+- **Следующий шаг:** Phase 3 (Code Quality) — QUAL-01..QUAL-09
 
 ## Key Decisions
 
@@ -55,6 +55,8 @@
 | vi.doMock for per-test env mocking | 2026-02-20 | vi.mock is hoisted to file top by Vitest; vi.doMock is non-hoisted and works with vi.resetModules() per-test |
 | 'email' kept in RecoveryRequestResult type union | 2026-02-20 | Future v2 email service will use it; only runtime return value changed to 'none' for BUG-01 fix |
 | Split compound getTransaction null-check | 2026-02-20 | Two conditions: 'not found' is silent (correct); 'wrong user' logs with context (BUG-02 observability) |
+| vi.spyOn(jwt, 'verify') over vi.mock for JWT error tests | 2026-02-20 | ESM module boundary causes instanceof failures when mocking entire module; spy on real object avoids class reference mismatch |
+| JWT instanceof order: subclasses before parent class | 2026-02-20 | TokenExpiredError and NotBeforeError extend JsonWebTokenError; checking parent first catches all subclasses too early |
 
 ## Open Questions
 
@@ -64,4 +66,4 @@
 
 ---
 *State initialized: 2026-02-19*
-*Last execution: 02-01 (Service Layer Bug Fixes — BUG-01, BUG-02) — 2026-02-20*
+*Last execution: 02-02 (Credits Error Logging and JWT NotBeforeError — BUG-03, BUG-04) — 2026-02-20*
