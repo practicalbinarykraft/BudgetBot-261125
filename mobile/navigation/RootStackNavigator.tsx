@@ -110,6 +110,7 @@ export default function RootStackNavigator() {
       <Stack.Navigator screenOptions={{
         headerShown: false,
         headerBackTitle: t("common.back"),
+        headerShadowVisible: false,
       }}>
         {isAuthenticated ? (
           <>
