@@ -127,6 +127,14 @@ The app will **crash at startup** without this variable — this is intentional 
 - `env.ts` pattern established for adding new required secrets
 - Ready to proceed with 01-02 (HSTS, CORS, security headers) and 01-03 (rate limiter Redis)
 
+## Self-Check: PASSED
+
+- `server/services/__tests__/password-recovery.security.test.ts` - FOUND
+- `server/services/__tests__/password-reset.security.test.ts` - FOUND
+- `.planning/phases/01-security-audit-fixes/01-01-SUMMARY.md` - FOUND
+- commit `2a97780` (RED tests) - FOUND
+- commit `2b637a9` (GREEN fixes) - FOUND
+
 ---
 *Phase: 01-security-audit-fixes*
 *Completed: 2026-02-20*
