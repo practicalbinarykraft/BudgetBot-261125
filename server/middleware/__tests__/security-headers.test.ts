@@ -4,26 +4,42 @@
  * Tests that HSTS is enabled in production and disabled in development.
  *
  * Strategy:
- * - Use vi.resetModules() + dynamic import to re-load the module with a fresh
- *   mock of '../lib/env' so isProduction can be controlled per-test.
- * - Helmet sets headers via res.setHeader(); we spy on that to assert HSTS.
+ * - Use vi.doMock() (not hoisted) + vi.resetModules() + dynamic import to
+ *   re-load the middleware with controlled isProduction values per-test.
  * - Static analysis test: verify source uses isProduction (not hardcoded false).
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { Request, Response, NextFunction } from 'express';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-describe('Security Headers Middleware -- HSTS (SEC-05)', () => {
-  beforeEach(() => {
-    // Reset module registry so each test gets a fresh import
-    vi.resetModules();
-  });
+afterEach(() => {
+  vi.resetModules();
+  vi.restoreAllMocks();
+});
 
+/**
+ * Helper: build a minimal mock res that helmet can use
+ */
+function makeMockRes() {
+  const headers: Record<string, string> = {};
+  return {
+    setHeader: vi.fn((name: string, value: string) => {
+      headers[name.toLowerCase()] = String(value);
+    }),
+    getHeader: vi.fn((name: string) => headers[name.toLowerCase()]),
+    removeHeader: vi.fn((name: string) => {
+      delete headers[name.toLowerCase()];
+    }),
+    _headers: headers,
+  } as unknown as Response & { _headers: Record<string, string> };
+}
+
+describe('Security Headers Middleware -- HSTS (SEC-05)', () => {
   it('should set Strict-Transport-Security header in production', async () => {
-    // Mock env module so isProduction === true
-    vi.mock('../../lib/env', () => ({
+    // Use vi.doMock (not hoisted) so it applies to the subsequent dynamic import
+    vi.doMock('../../lib/env', () => ({
       env: { NODE_ENV: 'production' },
       isProduction: true,
       isDevelopment: false,
@@ -33,33 +49,25 @@ describe('Security Headers Middleware -- HSTS (SEC-05)', () => {
     // Dynamically import after mock is set up
     const { securityHeaders } = await import('../security-headers');
 
-    // Create a realistic mock res that helmet needs
-    const headers: Record<string, string> = {};
+    const res = makeMockRes();
     const req = { headers: {} } as Request;
-    const res = {
-      setHeader: vi.fn((name: string, value: string) => {
-        headers[name.toLowerCase()] = value;
-      }),
-      getHeader: vi.fn((name: string) => headers[name.toLowerCase()]),
-      removeHeader: vi.fn((name: string) => {
-        delete headers[name.toLowerCase()];
-      }),
-    } as unknown as Response;
     const next: NextFunction = vi.fn();
 
-    // Call middleware
     securityHeaders(req, res, next);
 
-    // Assert HSTS header was set
-    expect(res.setHeader).toHaveBeenCalledWith(
-      'Strict-Transport-Security',
-      expect.stringContaining('max-age=')
+    // Assert HSTS header was set in production
+    const hstsCallArgs = (res.setHeader as ReturnType<typeof vi.fn>).mock.calls;
+    const hstsCall = hstsCallArgs.find(
+      ([name]: [string]) => name === 'Strict-Transport-Security'
     );
+
+    expect(hstsCall).toBeDefined();
+    expect(hstsCall[1]).toMatch(/max-age=31536000/);
+    expect(hstsCall[1]).toMatch(/includeSubDomains/);
   });
 
   it('should NOT set Strict-Transport-Security header in development', async () => {
-    // Mock env module so isProduction === false
-    vi.mock('../../lib/env', () => ({
+    vi.doMock('../../lib/env', () => ({
       env: { NODE_ENV: 'development' },
       isProduction: false,
       isDevelopment: true,
@@ -68,17 +76,8 @@ describe('Security Headers Middleware -- HSTS (SEC-05)', () => {
 
     const { securityHeaders } = await import('../security-headers');
 
-    const headers: Record<string, string> = {};
+    const res = makeMockRes();
     const req = { headers: {} } as Request;
-    const res = {
-      setHeader: vi.fn((name: string, value: string) => {
-        headers[name.toLowerCase()] = value;
-      }),
-      getHeader: vi.fn((name: string) => headers[name.toLowerCase()]),
-      removeHeader: vi.fn((name: string) => {
-        delete headers[name.toLowerCase()];
-      }),
-    } as unknown as Response;
     const next: NextFunction = vi.fn();
 
     securityHeaders(req, res, next);
@@ -86,7 +85,7 @@ describe('Security Headers Middleware -- HSTS (SEC-05)', () => {
     // HSTS must NOT be set in development
     const hstsCallArgs = (res.setHeader as ReturnType<typeof vi.fn>).mock.calls;
     const hstsWasSet = hstsCallArgs.some(
-      ([name]: [string]) => name.toLowerCase() === 'strict-transport-security'
+      ([name]: [string]) => name === 'Strict-Transport-Security'
     );
     expect(hstsWasSet).toBe(false);
   });

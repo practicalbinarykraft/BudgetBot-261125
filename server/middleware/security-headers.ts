@@ -8,11 +8,12 @@
  * - X-Content-Type-Options: nosniff (prevents MIME sniffing)
  * - X-Frame-Options: DENY (prevents clickjacking)
  * - X-XSS-Protection: 0 (disabled, CSP is better)
- * - Strict-Transport-Security (HTTPS enforcement)
+ * - Strict-Transport-Security (HTTPS enforcement, production-only)
  * - Content-Security-Policy (XSS prevention)
  */
 
 import helmet from 'helmet';
+import { isProduction } from '../lib/env';
 
 /**
  * Security headers middleware using helmet
@@ -28,9 +29,11 @@ export const securityHeaders = helmet({
   // Hide X-Powered-By header
   hidePoweredBy: true,
 
-  // HSTS - only enable when HTTPS is properly configured
-  // Disabled for HTTP-only deployments to prevent browser lockout
-  hsts: false,
+  // HSTS - Enabled in production (HTTPS via nginx), disabled in development
+  // maxAge: 1 year; includeSubDomains and preload for full HSTS coverage
+  hsts: isProduction
+    ? { maxAge: 31536000, includeSubDomains: true, preload: true }
+    : false,
 
   // Cross-Origin headers for SPA assets
   crossOriginOpenerPolicy: false,
@@ -48,11 +51,11 @@ export const securityHeaders = helmet({
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:", "blob:"],
       connectSrc: [
-        "'self'", 
-        "https://api.anthropic.com", 
+        "'self'",
+        "https://api.anthropic.com",
         "https://fonts.googleapis.com",
         "https://fonts.gstatic.com",
-        "wss:", 
+        "wss:",
         "ws:",
         "http://localhost:*",
         "ws://localhost:*",
