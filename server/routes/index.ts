@@ -49,6 +49,8 @@ import accountRouter from "./account.routes";
 import adminBridgeRouter from "./admin-bridge.routes";
 import supportTicketsRouter from "./support-tickets.routes";
 import tutorialRouter from "./tutorial.routes";
+import referralRouter from "./referral.routes";
+import referralRedirectRouter from "./referral-redirect.routes";
 
 export function registerRoutes(app: Express) {
   // API Documentation (Swagger UI)
@@ -56,6 +58,9 @@ export function registerRoutes(app: Express) {
 
   // Health check endpoints (no auth required)
   app.use("/api", healthRouter);
+
+  // Referral redirect (must be before static serving)
+  app.use("/r", referralRedirectRouter);
 
   // Telegram webhook (must be before other routes, matches TELEGRAM_WEBHOOK_URL)
   app.use("/api/telegram", telegramWebhookRouter);
@@ -82,6 +87,7 @@ export function registerRoutes(app: Express) {
   app.use("/api/audit-logs", auditLogRouter);
   app.use("/api/backup", backupRouter);
   app.use("/api/tutorial", tutorialRouter);
+  app.use("/api/referral", referralRouter);
 
 
   // Stats and analytics (mounted on /api for /api/stats and /api/financial-health)

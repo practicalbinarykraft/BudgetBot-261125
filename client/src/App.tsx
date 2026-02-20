@@ -61,6 +61,7 @@ const AssetsPage = lazy(() => import("@/pages/assets"));
 const AssetDetailPage = lazy(() => import("@/pages/asset-detail"));
 const AdvancedAnalyticsPage = lazy(() => import("@/pages/advanced-analytics-page"));
 const BillingPage = lazy(() => import("@/pages/billing-page"));
+const ReferralPage = lazy(() => import("@/pages/referral-page"));
 
 // Lazy load dialog components
 const AddTransactionDialog = lazy(() =>
@@ -127,6 +128,7 @@ function Router() {
         <ProtectedRoute path="/app/product-catalog/:id" component={ProductDetailPage} />
         <ProtectedRoute path="/app/product-catalog" component={ProductCatalogPage} />
         <ProtectedRoute path="/app/analytics/advanced" component={AdvancedAnalyticsPage} />
+        <ProtectedRoute path="/app/referral" component={ReferralPage} />
 
         {/* 404 redirect */}
         <Route>

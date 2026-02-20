@@ -85,6 +85,7 @@ export default function NavigationGroups() {
 
   const billingItems: NavItemDef[] = [
     { screen: "Billing", icon: "zap", labelKey: "nav.credits_billing" },
+    { screen: "Referral", icon: "gift", labelKey: "nav.referral" },
   ];
 
   return (

@@ -20,6 +20,8 @@ import { createDefaultTags } from '../services/tag.service';
 import { grantWelcomeBonus } from '../services/credits.service';
 import { validateInitData } from '../services/telegram-validation.service';
 import { TELEGRAM_BOT_TOKEN } from '../telegram/config';
+import { grantSignupReward, ensureReferralCode } from '../services/referral.service';
+import { getUserByReferralCode } from '../repositories/referral.repository';
 import type { Request, Response } from 'express';
 
 const router = Router();
@@ -32,12 +34,13 @@ const registerMiniAppSchema = z.object({
   email: z.string().email('Invalid email format'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   name: z.string().min(1, 'Name is required'),
-  telegramId: z.string().optional(), // Optional - will be linked later
+  telegramId: z.string().optional(),
   telegramData: z.object({
     firstName: z.string().optional(),
     username: z.string().optional(),
     photoUrl: z.string().optional(),
   }).optional(),
+  referralCode: z.string().optional(),
 });
 
 /**
@@ -68,7 +71,7 @@ router.post('/register-miniapp', authRateLimiter, async (req: Request, res: Resp
       });
     }
 
-    const { email, password, name, telegramId, telegramData } = validationResult.data;
+    const { email, password, name, telegramId, telegramData, referralCode } = validationResult.data;
 
     // STEP 2: Check if email already exists
     const existingUser = await db
@@ -98,6 +101,17 @@ router.post('/register-miniapp', authRateLimiter, async (req: Request, res: Resp
       }
     }
 
+    // STEP 3.5: Look up referrer
+    let referrerId: number | null = null;
+    if (referralCode) {
+      try {
+        const referrer = await getUserByReferralCode(referralCode);
+        if (referrer) referrerId = referrer.id;
+      } catch (e) {
+        logError('Failed to look up referral code', e as Error);
+      }
+    }
+
     // STEP 4: Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -108,10 +122,11 @@ router.post('/register-miniapp', authRateLimiter, async (req: Request, res: Resp
         email,
         password: hashedPassword,
         name: name || telegramData?.firstName || email.split('@')[0],
-        telegramId: null, // NOT linked yet - user will decide later
+        telegramId: null,
         telegramUsername: null,
         telegramFirstName: null,
         telegramPhotoUrl: null,
+        referredBy: referrerId,
       })
       .returning();
 
@@ -140,6 +155,20 @@ router.post('/register-miniapp', authRateLimiter, async (req: Request, res: Resp
     
     await createDefaultTags(newUser.id);
     await grantWelcomeBonus(newUser.id);
+
+    // Referral: generate code + grant signup reward
+    try {
+      await ensureReferralCode(newUser.id);
+    } catch (e) {
+      logError('Failed to generate referral code', e as Error, { userId: newUser.id });
+    }
+    if (referrerId) {
+      try {
+        await grantSignupReward(referrerId, newUser.id);
+      } catch (e) {
+        logError('Failed to grant referral signup reward', e as Error, { userId: newUser.id, referrerId });
+      }
+    }
 
     // STEP 7: Log audit event
     await logAuditEvent({

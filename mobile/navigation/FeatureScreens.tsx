@@ -19,6 +19,7 @@ import AssetDetailScreen from "../screens/AssetDetailScreen";
 import AddEditAssetScreen from "../screens/AddEditAssetScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
 import SwipeSortScreen from "../screens/SwipeSortScreen";
+import ReferralScreen from "../screens/ReferralScreen";
 
 interface ScreenConfig {
   name: string;
@@ -47,6 +48,7 @@ const screens: ScreenConfig[] = [
   { name: "AddEditAsset", component: AddEditAssetScreen, titleKey: "nav.add_asset", presentation: "modal" },
   { name: "Notifications", component: NotificationsScreen, titleKey: "nav.notifications" },
   { name: "SwipeSort", component: SwipeSortScreen, titleKey: "nav.swipe_sort" },
+  { name: "Referral", component: ReferralScreen, titleKey: "nav.referral" },
 ];
 
 export function getFeatureScreens(

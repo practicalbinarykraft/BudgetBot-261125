@@ -10,6 +10,8 @@ import { users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
 import { logInfo, logWarning, logError } from '../lib/logger';
+import { grantSignupReward, ensureReferralCode } from '../services/referral.service';
+import { getUserByReferralCode } from '../repositories/referral.repository';
 import type { Request, Response } from 'express';
 
 const router = Router();
@@ -314,23 +316,45 @@ router.post('/telegram', async (req: Request, res: Response) => {
       logInfo(`New Telegram user: telegram_id ${telegramId}, name: ${authData.first_name}`);
 
       // Generate display name from Telegram data
-      // Priority: username > first_name > fallback to "User{id}"
-      // Example: "@johndoe" or "John Smith" or "User123456789"
       const name = authData.username || authData.first_name || `User${telegramId}`;
 
+      // Check for referral code (from query param or body)
+      const refCode = (req.query.ref as string) || (req.body.referralCode as string);
+      let referrerId: number | null = null;
+      if (refCode) {
+        try {
+          const referrer = await getUserByReferralCode(refCode);
+          if (referrer) referrerId = referrer.id;
+        } catch (e) {
+          logError('Failed to look up referral code for Telegram user', e as Error);
+        }
+      }
+
       // Create new user in database
-      // IMPORTANT: email and password are NULL (Telegram-only user)
-      // Database CHECK constraint allows this: (email + password) OR telegram_id
-      // User can add email/password later in settings if they want
       const [newUser] = await db.insert(users).values({
-        email: null, // No email for Telegram-only users
-        password: null, // No password for Telegram-only users
+        email: null,
+        password: null,
         name,
         telegramId,
         telegramUsername: authData.username || null,
         telegramFirstName: authData.first_name,
         telegramPhotoUrl: authData.photo_url || null,
+        referredBy: referrerId,
       }).returning();
+
+      // Referral: generate code + grant signup reward
+      try {
+        await ensureReferralCode(newUser.id);
+      } catch (e) {
+        logError('Failed to generate referral code', e as Error, { userId: newUser.id });
+      }
+      if (referrerId) {
+        try {
+          await grantSignupReward(referrerId, newUser.id);
+        } catch (e) {
+          logError('Failed to grant referral signup reward', e as Error, { userId: newUser.id, referrerId });
+        }
+      }
 
       // Create session for newly registered user
       // Same as above: serialize user into session, create cookie

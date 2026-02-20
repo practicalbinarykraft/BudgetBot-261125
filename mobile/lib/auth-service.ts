@@ -16,12 +16,14 @@ export const authService = {
   async register(
     name: string,
     email: string,
-    password: string
+    password: string,
+    referralCode?: string
   ): Promise<AuthResponse> {
     const data = await api.post<AuthResponse>("/api/mobile/auth/register", {
       name,
       email,
       password,
+      ...(referralCode ? { referralCode } : {}),
     });
     await storage.setToken(data.token);
     await storage.setUser(data.user);
