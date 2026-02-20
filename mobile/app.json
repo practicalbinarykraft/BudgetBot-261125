@@ -10,6 +10,9 @@
     "splash": {
       "backgroundColor": "#1a1a2e"
     },
+    "web": {
+      "backgroundColor": "#121212"
+    },
     "ios": {
       "supportsTablet": true
     },
