@@ -46,6 +46,12 @@ Plans:
 
 **Requirements:** BUG-01, BUG-02, BUG-03, BUG-04
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — TDD: Fix password recovery false email method + transaction auth denial logging (BUG-01, BUG-02)
+- [ ] 02-02-PLAN.md — TDD: Fix credits error logging + JWT NotBeforeError handling (BUG-03, BUG-04)
+
 **Scope:**
 - Password recovery: честно сообщать "email recovery не реализован" вместо ложного `method: 'email'`
 - Заменить silent null returns на конкретные ошибки в сервисах
@@ -193,4 +199,4 @@ Phase 1 (Security) → Phase 2 (Bugs) → Phase 3 (Quality)
 
 ---
 *Roadmap created: 2026-02-19*
-*Last updated: 2026-02-20 after Phase 1 execution (all 3 plans complete, SEC-01..SEC-07 done)*
+*Last updated: 2026-02-20 after Phase 2 planning (2 plans created)*
