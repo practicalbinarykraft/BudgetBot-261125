@@ -6,7 +6,7 @@ import { transactionRepository } from '../repositories/transaction.repository';
 import { walletRepository } from '../repositories/wallet.repository';
 import { categoryRepository } from '../repositories/category.repository';
 import { checkCategoryLimit, sendBudgetAlert } from './budget/limits-checker.service';
-import { logError } from '../lib/logger';
+import { logError, logInfo } from '../lib/logger';
 
 export interface CreateTransactionInput {
   type: 'income' | 'expense';
@@ -61,7 +61,11 @@ export class TransactionService {
 
   async getTransaction(id: number, userId: number) {
     const transaction = await transactionRepository.getTransactionById(id);
-    if (!transaction || transaction.userId !== userId) {
+    if (!transaction) {
+      return null;
+    }
+    if (transaction.userId !== userId) {
+      logInfo('Transaction access denied: userId mismatch', { transactionId: id, requestingUserId: userId });
       return null;
     }
     return transaction;
