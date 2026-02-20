@@ -13,9 +13,9 @@ Requirements for iOS App Store release. Each maps to roadmap phases.
 - [x] **SEC-02**: JWT signing и password reset HMAC используют разные секреты — добавлен `PASSWORD_RESET_SECRET`
 - [x] **SEC-03**: Fallback `|| 'default-secret'` удалён — приложение падает при отсутствии секрета
 - [x] **SEC-04**: Rate limiters используют Redis store вместо in-memory
-- [ ] **SEC-05**: HSTS включён в production (`security-headers.ts`)
-- [ ] **SEC-06**: `localhost:5000` удалён из CORS `ALLOWED_ORIGINS`
-- [ ] **SEC-07**: Socket.IO CORS синхронизирован с Express CORS origins
+- [x] **SEC-05**: HSTS включён в production (`security-headers.ts`)
+- [x] **SEC-06**: `localhost:5000` удалён из CORS `ALLOWED_ORIGINS`
+- [x] **SEC-07**: Socket.IO CORS синхронизирован с Express CORS origins
 
 ### Bugs & Stability (BUG)
 
@@ -113,9 +113,9 @@ Deferred to post-launch. Tracked but not in current roadmap.
 | SEC-02 | Phase 1 | Complete |
 | SEC-03 | Phase 1 | Complete |
 | SEC-04 | Phase 1 | Complete |
-| SEC-05 | Phase 1 | Pending |
-| SEC-06 | Phase 1 | Pending |
-| SEC-07 | Phase 1 | Pending |
+| SEC-05 | Phase 1 | Complete |
+| SEC-06 | Phase 1 | Complete |
+| SEC-07 | Phase 1 | Complete |
 | BUG-01 | Phase 2 | Pending |
 | BUG-02 | Phase 2 | Pending |
 | BUG-03 | Phase 2 | Pending |

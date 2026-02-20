@@ -16,9 +16,9 @@
 **Plans:** 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — TDD: Fix password recovery/reset secrets (SEC-01, SEC-02, SEC-03)
-- [ ] 01-02-PLAN.md — TDD: Fix HSTS, CORS, WebSocket CORS sync (SEC-05, SEC-06, SEC-07)
-- [ ] 01-03-PLAN.md — TDD: Add Redis store to rate limiters (SEC-04)
+- [x] 01-01-PLAN.md — TDD: Fix password recovery/reset secrets (SEC-01, SEC-02, SEC-03) [COMPLETE]
+- [x] 01-02-PLAN.md — TDD: Fix HSTS, CORS, WebSocket CORS sync (SEC-05, SEC-06, SEC-07) [COMPLETE]
+- [x] 01-03-PLAN.md — TDD: Add Redis store to rate limiters (SEC-04) [COMPLETE]
 
 **Scope:**
 - Удалить plaintext recovery code из логов (`password-recovery.service.ts:81`)
@@ -193,4 +193,4 @@ Phase 1 (Security) → Phase 2 (Bugs) → Phase 3 (Quality)
 
 ---
 *Roadmap created: 2026-02-19*
-*Last updated: 2026-02-20 after Phase 1 planning*
+*Last updated: 2026-02-20 after Phase 1 execution (all 3 plans complete, SEC-01..SEC-07 done)*
