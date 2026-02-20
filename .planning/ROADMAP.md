@@ -46,7 +46,7 @@ Plans:
 
 **Requirements:** BUG-01, BUG-02, BUG-03, BUG-04
 
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 02-01-PLAN.md — TDD: Fix password recovery false email method + transaction auth denial logging (BUG-01, BUG-02)
