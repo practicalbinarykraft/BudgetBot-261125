@@ -74,6 +74,14 @@ Plans:
 
 **Requirements:** QUAL-01, QUAL-02, QUAL-03, QUAL-04, QUAL-05, QUAL-06, QUAL-07, QUAL-08, QUAL-09
 
+**Plans:** 4 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — ESLint 9 setup, npm audit fix, replace any types (QUAL-01, QUAL-08, QUAL-09)
+- [ ] 03-02-PLAN.md — Split admin-metrics.service.ts into sub-modules (QUAL-02)
+- [ ] 03-03-PLAN.md — Split auth-telegram.routes.ts and transactions.routes.ts (QUAL-03, QUAL-05)
+- [ ] 03-04-PLAN.md — Split admin-users.service.ts and trend-calculator.service.ts, remove debug logs (QUAL-04, QUAL-06, QUAL-07)
+
 **Scope:**
 - Настроить ESLint 9 flat config с `@typescript-eslint` и `eslint-plugin-security`
 - Разбить 5 файлов >500 LOC на модули <150 LOC:
@@ -199,4 +207,4 @@ Phase 1 (Security) → Phase 2 (Bugs) → Phase 3 (Quality)
 
 ---
 *Roadmap created: 2026-02-19*
-*Last updated: 2026-02-20 after Phase 2 planning (2 plans created)*
+*Last updated: 2026-02-20 after Phase 3 planning (4 plans created)*
