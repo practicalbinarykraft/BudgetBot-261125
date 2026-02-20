@@ -166,16 +166,17 @@ function AppContent() {
   const { isOpen: isChatOpen, open: openAiChat } = useChatSidebar();
   
   // Fetch wallets for total balance
-  const { data: wallets } = useQuery<Array<{
+  const { data: walletsResponse } = useQuery<{ data: Array<{
     id: number;
     name: string;
     balanceUsd: string;
-  }>>({
+  }>; pagination: unknown }>({
     queryKey: ['/api/wallets'],
     enabled: !!user,
   });
 
-  const totalBalanceUsd = wallets?.reduce((sum, w) => 
+  const wallets = walletsResponse?.data;
+  const totalBalanceUsd = wallets?.reduce((sum, w) =>
     sum + parseFloat(w.balanceUsd || '0'), 0) || 0;
 
   // Format currency amount (simple version for header)
