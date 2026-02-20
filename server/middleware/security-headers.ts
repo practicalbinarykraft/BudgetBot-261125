@@ -52,6 +52,8 @@ export const securityHeaders = helmet({
       imgSrc: ["'self'", "data:", "https:", "blob:"],
       connectSrc: [
         "'self'",
+        "https://budgetbot.online",
+        "https://m.budgetbot.online",
         "https://api.anthropic.com",
         "https://fonts.googleapis.com",
         "https://fonts.gstatic.com",
