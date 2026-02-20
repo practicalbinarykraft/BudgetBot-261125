@@ -9,9 +9,9 @@ Requirements for iOS App Store release. Each maps to roadmap phases.
 
 ### Security (SEC)
 
-- [ ] **SEC-01**: Recovery code не логируется в plaintext — удалён `code` из `logInfo` в `password-recovery.service.ts`
-- [ ] **SEC-02**: JWT signing и password reset HMAC используют разные секреты — добавлен `PASSWORD_RESET_SECRET`
-- [ ] **SEC-03**: Fallback `|| 'default-secret'` удалён — приложение падает при отсутствии секрета
+- [x] **SEC-01**: Recovery code не логируется в plaintext — удалён `code` из `logInfo` в `password-recovery.service.ts`
+- [x] **SEC-02**: JWT signing и password reset HMAC используют разные секреты — добавлен `PASSWORD_RESET_SECRET`
+- [x] **SEC-03**: Fallback `|| 'default-secret'` удалён — приложение падает при отсутствии секрета
 - [x] **SEC-04**: Rate limiters используют Redis store вместо in-memory
 - [ ] **SEC-05**: HSTS включён в production (`security-headers.ts`)
 - [ ] **SEC-06**: `localhost:5000` удалён из CORS `ALLOWED_ORIGINS`
@@ -109,9 +109,9 @@ Deferred to post-launch. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SEC-01 | Phase 1 | Pending |
-| SEC-02 | Phase 1 | Pending |
-| SEC-03 | Phase 1 | Pending |
+| SEC-01 | Phase 1 | Complete |
+| SEC-02 | Phase 1 | Complete |
+| SEC-03 | Phase 1 | Complete |
 | SEC-04 | Phase 1 | Complete |
 | SEC-05 | Phase 1 | Pending |
 | SEC-06 | Phase 1 | Pending |
