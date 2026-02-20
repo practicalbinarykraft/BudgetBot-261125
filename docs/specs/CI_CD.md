@@ -40,6 +40,7 @@ Steps:
 Environment variables for test:
 - `DATABASE_URL=postgres://test:test@localhost:5432/budgetbot_test`
 - `SESSION_SECRET=test-session-secret-must-be-32-chars`
+- `PASSWORD_RESET_SECRET=test-password-reset-secret-32-chars!!`
 - `ENCRYPTION_KEY=U4rnuZd9jFqJb5yokp5e1DrI8QCmSZx8HpDX4lLZUqI=`
 
 ## Deploy Job
@@ -54,15 +55,30 @@ Runs after `test` passes, only on push to `main`.
 - Connects to production server via SSH key
 - GitHub Secrets: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`
 
-### Deploy Script
+### Deploy Script (`/root/deploy.sh`)
+
+The deploy script lives on the server (not in the repo) and is enforced via SSH `authorized_keys` `command=` restriction. CI triggers it via `appleboy/ssh-action`.
 
 ```bash
 cd /root/BudgetBot-Improved
-git pull origin main
-npm run build
-pm2 restart budgetbot
-sleep 3
+git fetch origin main
+git reset --hard origin/main
+
+npm ci                          # Install deps (including new packages)
+npm run build                   # Vite (client) + esbuild (server)
+
+set -a && source .env && set +a # Load .env into shell
+pm2 restart budgetbot --update-env  # Restart with updated env vars
+
+# Health check loop (5 attempts, 2s interval)
+curl http://localhost:5000/api/health  # Must return 200
 ```
+
+**Key behaviors:**
+- `npm ci` runs on EVERY deploy (ensures new dependencies are installed)
+- `source .env` + `--update-env` ensures new env vars are picked up by pm2
+- If healthcheck fails after 5 attempts, deploy exits with code 1
+- Deploy log written to `/var/log/budgetbot-deploy.log`
 
 ### Post-Deploy Verification
 
@@ -132,6 +148,28 @@ In GitHub Actions: check the "Deploy to production" step output for healthcheck 
 | `DEPLOY_HOST` | Production server IP |
 | `DEPLOY_USER` | SSH username |
 | `DEPLOY_SSH_KEY` | Ed25519 private key for SSH |
+
+## Required Environment Variables (Production)
+
+These must be set in `/root/BudgetBot-Improved/.env` on the production server.
+The deploy script sources this file before restarting pm2.
+
+| Variable | Required | Min Length | Purpose |
+|----------|----------|-----------|---------|
+| `DATABASE_URL` | Yes | — | PostgreSQL connection string |
+| `SESSION_SECRET` | Yes | 32 chars | JWT signing key |
+| `PASSWORD_RESET_SECRET` | Yes | 32 chars | HMAC key for password reset tokens (separate from SESSION_SECRET) |
+| `ENCRYPTION_KEY` | Yes | 32 bytes base64 | AES-256 encryption for API keys |
+| `TELEGRAM_BOT_TOKEN` | No | — | Telegram bot integration |
+| `REDIS_URL` | No | — | Redis cache (rate limiters fall back to in-memory) |
+| `SENTRY_DSN` | No | — | Error tracking |
+
+**When adding a new required env var:**
+1. Add Zod validation in `server/lib/env.ts`
+2. Add to CI test env in `.github/workflows/ci.yml`
+3. Add to `tests/setup.ts` fallback
+4. Add to production `.env` on the server **BEFORE merging the PR**
+5. Update this table
 
 ## Adding New Checks
 

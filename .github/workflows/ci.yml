@@ -82,6 +82,7 @@ jobs:
           NODE_ENV: test
           DATABASE_URL: postgres://test:test@localhost:5432/budgetbot_test
           SESSION_SECRET: test-session-secret-must-be-32-chars
+          PASSWORD_RESET_SECRET: test-password-reset-secret-32-chars!!
           ENCRYPTION_KEY: U4rnuZd9jFqJb5yokp5e1DrI8QCmSZx8HpDX4lLZUqI=
 
       - name: Run mobile tests
