@@ -172,15 +172,16 @@ export default function DashboardV2Page() {
   };
 
   // Fetch wallets for total balance
-  const { data: wallets } = useQuery<Array<{
+  const { data: walletsResponse } = useQuery<{ data: Array<{
     id: number;
     name: string;
     balanceUsd: string;
-  }>>({
+  }>; pagination: unknown }>({
     queryKey: ['/api/wallets'],
   });
 
-  const totalBalanceUsd = wallets?.reduce((sum, w) => 
+  const wallets = walletsResponse?.data;
+  const totalBalanceUsd = wallets?.reduce((sum, w) =>
     sum + parseFloat(w.balanceUsd || '0'), 0) || 0;
 
   // Fetch stats for selected month
