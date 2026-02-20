@@ -81,7 +81,7 @@ describe('Password Reset Service', () => {
       // Этот тест не требует БД, поэтому не зависит от testUser
       const expectedUserId = 999; // Fixed ID для теста без зависимости от БД
       const timestamp = Date.now();
-      const secret = process.env.SESSION_SECRET || 'default-secret-change-in-production';
+      const secret = process.env.PASSWORD_RESET_SECRET || 'test-password-reset-secret-32-chars!!';
       const tokenData = `${expectedUserId}:${timestamp}`;
       const hash = crypto
         .createHmac('sha256', secret)
@@ -101,7 +101,7 @@ describe('Password Reset Service', () => {
       // Этот тест не требует БД, поэтому не зависит от testUser
       const testUserId = 999; // Fixed ID для теста без зависимости от БД
       const timestamp = Date.now() - (2 * RESET_TOKEN_EXPIRY_MS);
-      const secret = process.env.SESSION_SECRET || 'default-secret-change-in-production';
+      const secret = process.env.PASSWORD_RESET_SECRET || 'test-password-reset-secret-32-chars!!';
       const tokenData = `${testUserId}:${timestamp}`;
       const hash = crypto
         .createHmac('sha256', secret)
@@ -144,7 +144,7 @@ describe('Password Reset Service', () => {
     it.skipIf(!dbAvailable)('should reset password with valid token', async () => {
       // Arrange: Create valid token
       const timestamp = Date.now();
-      const secret = process.env.SESSION_SECRET || 'default-secret-change-in-production';
+      const secret = process.env.PASSWORD_RESET_SECRET || 'test-password-reset-secret-32-chars!!';
       const tokenData = `${testUser.id}:${timestamp}`;
       const hash = crypto
         .createHmac('sha256', secret)
@@ -174,7 +174,7 @@ describe('Password Reset Service', () => {
     it.skipIf(!dbAvailable)('should reject weak password', async () => {
       // Arrange: Create valid token
       const timestamp = Date.now();
-      const secret = process.env.SESSION_SECRET || 'default-secret-change-in-production';
+      const secret = process.env.PASSWORD_RESET_SECRET || 'test-password-reset-secret-32-chars!!';
       const tokenData = `${testUser.id}:${timestamp}`;
       const hash = crypto
         .createHmac('sha256', secret)
@@ -202,7 +202,7 @@ describe('Password Reset Service', () => {
     it.skipIf(!dbAvailable)('should reject expired token', async () => {
       // Arrange: Create expired token
       const timestamp = Date.now() - (2 * RESET_TOKEN_EXPIRY_MS);
-      const secret = process.env.SESSION_SECRET || 'default-secret-change-in-production';
+      const secret = process.env.PASSWORD_RESET_SECRET || 'test-password-reset-secret-32-chars!!';
       const tokenData = `${testUser.id}:${timestamp}`;
       const hash = crypto
         .createHmac('sha256', secret)
@@ -221,7 +221,7 @@ describe('Password Reset Service', () => {
     it.skipIf(!dbAvailable)('should return error if user not found', async () => {
       // Arrange: Create token for non-existent user
       const timestamp = Date.now();
-      const secret = process.env.SESSION_SECRET || 'default-secret-change-in-production';
+      const secret = process.env.PASSWORD_RESET_SECRET || 'test-password-reset-secret-32-chars!!';
       const tokenData = `999999:${timestamp}`; // Non-existent user ID
       const hash = crypto
         .createHmac('sha256', secret)

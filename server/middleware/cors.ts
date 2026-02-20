@@ -17,7 +17,6 @@ if (process.env.NODE_ENV === 'development') {
     'http://localhost:8081',
     'http://localhost:19006',
     'http://localhost:3000',
-    'http://localhost:5000',
   );
 }
 
