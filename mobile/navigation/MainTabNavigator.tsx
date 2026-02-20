@@ -37,6 +37,7 @@ export default function MainTabNavigator({
       screenOptions={{
         headerStyle: { backgroundColor: theme.card },
         headerTintColor: theme.text,
+        headerShadowVisible: false,
         tabBarStyle: {
           backgroundColor: theme.tabBar,
           borderTopColor: theme.tabBarBorder,
