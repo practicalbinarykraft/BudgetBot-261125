@@ -198,11 +198,12 @@ export async function requestPasswordRecovery(
 
     // STEP 5: Email fallback (not implemented yet - MVP only Telegram)
     // TODO: Implement email sending when email service is added
+    // NOTE: 'email' is kept in RecoveryRequestResult type union for future use (v2)
     if (user.email) {
       return {
         success: false,
-        method: 'email',
-        error: 'Email recovery not yet implemented. Please use Telegram.',
+        method: 'none',
+        error: 'Email recovery not yet implemented. Please link your Telegram account.',
       };
     }
 
