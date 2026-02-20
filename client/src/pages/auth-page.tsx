@@ -25,6 +25,9 @@ export default function AuthPage() {
   const isMobile = useIsMobile();
   const { isMiniApp, initData, telegramUser } = useTelegramMiniApp();
   
+  // Read referral code from URL query param (?ref=CODE)
+  const referralCode = new URLSearchParams(window.location.search).get("ref") || undefined;
+
   const [activeTab, setActiveTab] = useState("login");
   const [showLinkPrompt, setShowLinkPrompt] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
@@ -121,10 +124,12 @@ export default function AuthPage() {
 
   const onRegister = async (data: { name: string; email: string; password: string }) => {
     try {
-      // If in Mini App, include telegram data
-      const registerData = isMiniApp && pendingTelegramId
-        ? { ...data, telegramId: pendingTelegramId, telegramData: telegramUser }
-        : data;
+      // If in Mini App, include telegram data. Always include referralCode if present.
+      const registerData = {
+        ...data,
+        ...(isMiniApp && pendingTelegramId ? { telegramId: pendingTelegramId, telegramData: telegramUser } : {}),
+        ...(referralCode ? { referralCode } : {}),
+      };
 
       const response = await fetch('/api/auth/register-miniapp', {
         method: 'POST',
