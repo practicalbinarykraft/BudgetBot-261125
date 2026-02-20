@@ -17,8 +17,8 @@
 
 ## Progress
 
-- **Requirements:** 42 total, 4 complete (SEC-01, SEC-02, SEC-03, SEC-04)
-- **Phases:** 6 total, 0 complete (Phase 1 plans executed, pending final verification)
+- **Requirements:** 42 total, 7 complete (SEC-01, SEC-02, SEC-03, SEC-04, SEC-05, SEC-06, SEC-07)
+- **Phases:** 6 total, 0 complete (Phase 1 all 3 plans executed, pending phase sign-off)
 - **Blockers:** None
 
 ## Execution Log
@@ -26,13 +26,15 @@
 | Phase | Plan | Name | Status | Duration | Completed |
 |-------|------|------|--------|----------|-----------|
 | 01 | 01 | Password Recovery/Reset Security Fixes | Complete | 4min | 2026-02-20 |
+| 01 | 02 | HSTS, CORS, and Socket.IO Security Fixes | Complete | 6min | 2026-02-20 |
 | 01 | 03 | Redis Rate Limiter Persistence | Complete | 4min | 2026-02-20 |
 
 ## Context for Next Session
 
-- Phase 1 (Security Audit & Fixes) plans all executed (01-01, 01-02, 01-03)
-- 01-03 complete: Redis persistence added to all 8 rate limiters (SEC-04)
-- **Следующий шаг:** Execute remaining Phase 1 plans or verify Phase 1 complete
+- Phase 1 (Security Audit & Fixes) complete: all 3 plans executed (01-01, 01-02, 01-03)
+- 01-02 complete: HSTS enabled in production, localhost:5000 removed from CORS, Socket.IO sync verified
+- All 7 SEC requirements complete (SEC-01..SEC-07)
+- **Следующий шаг:** Phase 2 (Bug Fixes & Stability) — BUG-01..BUG-04
 
 ## Key Decisions
 
@@ -46,6 +48,9 @@
 | PASSWORD_RESET_SECRET separate from SESSION_SECRET | 2026-02-20 | Rotating one secret doesn't invalidate the other; each operation has its own HMAC key |
 | createRedisStore extracted to server/middleware/lib/ | 2026-02-20 | Reusable code 2+ times -> separate function (locked decision) |
 | Unique Redis key prefixes per rate limiter | 2026-02-20 | rl:auth2:, rl:ai2: suffix prevents key collisions between rate-limit.ts and rate-limiter.ts |
+| HSTS only in production via isProduction guard | 2026-02-20 | Enabling HSTS on HTTP development causes browser lockout; production-only ensures HTTPS-safe behavior |
+| localhost:5000 removed from CORS origins | 2026-02-20 | Port 5000 is the API server itself, never a valid client origin; security misconfiguration |
+| vi.doMock for per-test env mocking | 2026-02-20 | vi.mock is hoisted to file top by Vitest; vi.doMock is non-hoisted and works with vi.resetModules() per-test |
 
 ## Open Questions
 
@@ -55,4 +60,4 @@
 
 ---
 *State initialized: 2026-02-19*
-*Last execution: 01-01 (Password Recovery/Reset Security Fixes) — 2026-02-20*
+*Last execution: 01-02 (HSTS, CORS, Socket.IO Security Fixes) — 2026-02-20*
