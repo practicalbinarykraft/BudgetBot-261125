@@ -48,6 +48,10 @@ const envSchema = z.object({
     .min(32, 'SESSION_SECRET must be at least 32 characters for security')
     .describe('Session secret for cookie signing (generate with: openssl rand -base64 32)'),
 
+  PASSWORD_RESET_SECRET: z.string()
+    .min(32, 'PASSWORD_RESET_SECRET must be at least 32 characters for security')
+    .describe('HMAC secret for password reset tokens (generate with: openssl rand -base64 32)'),
+
   ENCRYPTION_KEY: z.string()
     .length(44, 'ENCRYPTION_KEY must be exactly 44 characters (32 bytes in base64)')
     .refine(
@@ -123,6 +127,7 @@ export const env = (() => {
     console.log(`   PORT: ${parsed.PORT}`);
     console.log(`   DATABASE_URL: ${parsed.DATABASE_URL.substring(0, 20)}...`);
     console.log(`   SESSION_SECRET: ${'*'.repeat(10)} (${parsed.SESSION_SECRET.length} chars)`);
+    console.log(`   PASSWORD_RESET_SECRET: ${'*'.repeat(10)} (${parsed.PASSWORD_RESET_SECRET.length} chars)`);
     console.log(`   ENCRYPTION_KEY: ${'*'.repeat(10)} (${parsed.ENCRYPTION_KEY.length} chars)`);
     console.log(`   TELEGRAM_BOT_TOKEN: ${parsed.TELEGRAM_BOT_TOKEN ? '✅ Set' : '❌ Not set'}`);
     console.log(`   REDIS_URL: ${parsed.REDIS_URL ? '✅ Set' : '❌ Not set'}`);
