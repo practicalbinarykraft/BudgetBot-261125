@@ -11,6 +11,7 @@
  */
 
 import rateLimit from 'express-rate-limit';
+import { createRedisStore } from './lib/create-redis-store';
 
 /**
  * General API rate limiter
@@ -25,6 +26,7 @@ export const apiLimiter = rateLimit({
   },
   standardHeaders: true, // Return rate limit info in headers
   legacyHeaders: false,
+  store: createRedisStore('rl:api:'), // Redis store for persistence across restarts
   skip: (req) => {
     // Skip rate limiting for health checks
     return req.path === '/api/health';
@@ -44,6 +46,7 @@ export const authLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  store: createRedisStore('rl:auth2:'), // Redis store for persistence across restarts
 });
 
 /**
@@ -59,4 +62,5 @@ export const aiLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  store: createRedisStore('rl:ai2:'), // Redis store for persistence across restarts
 });
