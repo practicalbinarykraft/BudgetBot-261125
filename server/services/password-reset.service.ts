@@ -14,6 +14,7 @@ import { db } from '../db';
 import { users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { logError, logInfo } from '../lib/logger';
+import { env } from '../lib/env';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 
@@ -64,7 +65,7 @@ export function verifyResetToken(token: string): number | null {
     }
 
     // Verify HMAC signature
-    const secret = process.env.SESSION_SECRET || 'default-secret-change-in-production';
+    const secret = env.PASSWORD_RESET_SECRET;
     const tokenData = `${userId}:${timestamp}`;
     const expectedHash = crypto
       .createHmac('sha256', secret)
