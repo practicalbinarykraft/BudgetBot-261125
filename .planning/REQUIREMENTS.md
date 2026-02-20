@@ -19,8 +19,8 @@ Requirements for iOS App Store release. Each maps to roadmap phases.
 
 ### Bugs & Stability (BUG)
 
-- [ ] **BUG-01**: Password recovery корректно сообщает об отсутствии email-сервиса вместо ложного `method: 'email'`
-- [ ] **BUG-02**: Сервисы возвращают конкретные ошибки вместо silent null — `transaction.service.ts`, `api-key-manager.ts`, `admin-users.service.ts`
+- [x] **BUG-01**: Password recovery корректно сообщает об отсутствии email-сервиса вместо ложного `method: 'email'`
+- [x] **BUG-02**: Сервисы возвращают конкретные ошибки вместо silent null — `transaction.service.ts`, `api-key-manager.ts`, `admin-users.service.ts`
 - [ ] **BUG-03**: `getUserDetails()` credits calculation — добавлено конкретное логирование ошибок вместо silent zero fallback
 - [ ] **BUG-04**: JWT error handling в `mobile-auth.ts` покрывает все типы ошибок (не только JsonWebTokenError, TokenExpiredError)
 
@@ -116,8 +116,8 @@ Deferred to post-launch. Tracked but not in current roadmap.
 | SEC-05 | Phase 1 | Complete |
 | SEC-06 | Phase 1 | Complete |
 | SEC-07 | Phase 1 | Complete |
-| BUG-01 | Phase 2 | Pending |
-| BUG-02 | Phase 2 | Pending |
+| BUG-01 | Phase 2 | Complete |
+| BUG-02 | Phase 2 | Complete |
 | BUG-03 | Phase 2 | Pending |
 | BUG-04 | Phase 2 | Pending |
 | QUAL-01 | Phase 3 | Pending |
