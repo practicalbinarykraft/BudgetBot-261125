@@ -5,6 +5,7 @@ import {
   Building2,
   Tag,
   Users,
+  UserPlus,
   Repeat,
   Heart,
   Calendar,
@@ -291,7 +292,21 @@ export function AppSidebar() {
                 </SidebarMenuItem>
               </Collapsible>
 
-              {/* 5. Settings - Always visible */}
+              {/* 5. Invite Friends */}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location === "/app/referral"}
+                  aria-label={t("nav.referral")}
+                >
+                  <Link href="/app/referral" data-testid="nav-referral" onClick={handleLinkClick}>
+                    <UserPlus className="w-4 h-4" aria-hidden="true" />
+                    <span>{t("nav.referral")}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              {/* 6. Settings - Always visible */}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild

@@ -54,6 +54,9 @@ export const users = pgTable("users", {
   isBlocked: boolean("is_blocked").default(false).notNull(), // Blocked by admin
   // Billing tier: 'free', 'basic', 'pro', 'mega', 'myself'
   tier: text("tier").default("free").notNull(),
+  // Referral program
+  referralCode: varchar("referral_code", { length: 8 }).unique(),
+  referredBy: integer("referred_by"), // FK to users.id, set via db:push migration
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({
   // CHECK constraint: user must have EITHER email OR telegram_id
@@ -888,6 +891,53 @@ export interface TrainingStats {
 // 🔐 Helper type for storage layer: public insert schemas omit userId for security,
 // but storage needs userId from authenticated session
 export type OwnedInsert<T> = T & { userId: number };
+
+// ========================================
+// REWARD EVENTS (Referral rewards + future tasks)
+// ========================================
+
+export const rewardEvents = pgTable("reward_events", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: varchar("type", { length: 50 }).notNull(), // 'referral_signup', 'referral_signup_bonus', 'referral_onboarding', etc.
+  creditsAwarded: integer("credits_awarded").notNull(),
+  relatedUserId: integer("related_user_id").references(() => users.id, { onDelete: "set null" }),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  uniqueReward: unique().on(table.userId, table.type, table.relatedUserId),
+}));
+
+export const rewardSettings = pgTable("reward_settings", {
+  id: serial("id").primaryKey(),
+  key: varchar("key", { length: 100 }).notNull().unique(),
+  value: integer("value").notNull(),
+  description: text("description"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertRewardEventSchema = createInsertSchema(rewardEvents, {
+  type: z.string().min(1).max(50),
+  creditsAwarded: z.number().int().min(0),
+}).omit({ id: true, createdAt: true });
+
+export const insertRewardSettingSchema = createInsertSchema(rewardSettings, {
+  key: z.string().min(1).max(100),
+  value: z.number().int(),
+  description: z.string().optional(),
+}).omit({ id: true, updatedAt: true });
+
+export type RewardEvent = typeof rewardEvents.$inferSelect;
+export type InsertRewardEvent = z.infer<typeof insertRewardEventSchema>;
+export type RewardSetting = typeof rewardSettings.$inferSelect;
+export type InsertRewardSetting = z.infer<typeof insertRewardSettingSchema>;
+
+export const rewardEventsRelations = relations(rewardEvents, ({ one }) => ({
+  user: one(users, {
+    fields: [rewardEvents.userId],
+    references: [users.id],
+  }),
+}));
 
 // ========================================
 // AUDIT LOG

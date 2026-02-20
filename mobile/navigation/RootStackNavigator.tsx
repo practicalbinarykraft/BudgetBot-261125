@@ -63,6 +63,7 @@ export type RootStackParamList = {
   VoiceInput: undefined;
   Notifications: undefined;
   SwipeSort: undefined;
+  Referral: undefined;
   FullscreenChart: { historyDays?: 7 | 30 | 90 | 365; showForecast?: boolean } | undefined;
 };
 

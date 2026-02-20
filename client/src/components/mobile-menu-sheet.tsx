@@ -33,6 +33,7 @@ import {
   BarChart3,
   Target,
   Home,
+  UserPlus,
   Moon,
   Sun,
 } from "lucide-react";
@@ -390,7 +391,22 @@ export function MobileMenuSheet({ open, onOpenChange }: MobileMenuSheetProps) {
               </CollapsibleContent>
             </Collapsible>
 
-            {/* 6. Settings */}
+            {/* 6. Invite Friends */}
+            <Link href="/app/referral">
+              <button
+                onClick={handleLinkClick}
+                className={cn(
+                  "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg transition-colors text-sm",
+                  "hover:bg-accent",
+                  location === "/app/referral" ? "bg-accent text-primary font-medium" : "text-foreground"
+                )}
+              >
+                <UserPlus className="h-5 w-5" />
+                <span>{t("nav.referral")}</span>
+              </button>
+            </Link>
+
+            {/* 7. Settings */}
             <Link href="/app/settings">
               <button
                 onClick={handleLinkClick}

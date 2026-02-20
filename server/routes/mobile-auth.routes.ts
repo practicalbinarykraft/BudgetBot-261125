@@ -8,6 +8,8 @@ import { signMobileToken, withMobileAuth } from "../middleware/mobile-auth";
 import { authRateLimiter } from "../middleware/rate-limit";
 import { logAuditEvent, AuditAction, AuditEntityType } from "../services/audit-log.service";
 import { logError } from "../lib/logger";
+import { grantSignupReward, ensureReferralCode } from "../services/referral.service";
+import { getUserByReferralCode } from "../repositories/referral.repository";
 import { z } from "zod";
 
 const router = Router();
@@ -21,6 +23,7 @@ const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   name: z.string().min(1),
+  referralCode: z.string().optional(),
 });
 
 const defaultCategories = [
@@ -88,11 +91,22 @@ router.post("/login", authRateLimiter, async (req, res) => {
 // POST /api/mobile/auth/register
 router.post("/register", authRateLimiter, async (req, res) => {
   try {
-    const { email, password, name } = registerSchema.parse(req.body);
+    const { email, password, name, referralCode } = registerSchema.parse(req.body);
 
     const existingUser = await userRepository.getUserByEmail(email);
     if (existingUser) {
       return res.status(400).json({ error: "Email already registered" });
+    }
+
+    // Look up referrer before creating user
+    let referrerId: number | null = null;
+    if (referralCode) {
+      try {
+        const referrer = await getUserByReferralCode(referralCode);
+        if (referrer) referrerId = referrer.id;
+      } catch (e) {
+        logError("Failed to look up referral code", e as Error);
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -101,6 +115,18 @@ router.post("/register", authRateLimiter, async (req, res) => {
       password: hashedPassword,
       name,
     });
+
+    // Set referredBy if valid referral code
+    if (referrerId) {
+      try {
+        const { db } = await import("../db");
+        const { users } = await import("@shared/schema");
+        const { eq } = await import("drizzle-orm");
+        await db.update(users).set({ referredBy: referrerId }).where(eq(users.id, user.id));
+      } catch (e) {
+        logError("Failed to set referredBy", e as Error, { userId: user.id });
+      }
+    }
 
     // Create defaults
     try {
@@ -121,6 +147,21 @@ router.post("/register", authRateLimiter, async (req, res) => {
       await grantWelcomeBonus(user.id);
     } catch (e) {
       logError("Failed to grant welcome bonus for mobile user", e as Error, { userId: user.id });
+    }
+
+    // Referral: generate code + grant signup reward
+    try {
+      await ensureReferralCode(user.id);
+    } catch (e) {
+      logError("Failed to generate referral code", e as Error, { userId: user.id });
+    }
+
+    if (referrerId) {
+      try {
+        await grantSignupReward(referrerId, user.id);
+      } catch (e) {
+        logError("Failed to grant referral signup reward", e as Error, { userId: user.id, referrerId });
+      }
     }
 
     const token = signMobileToken({ userId: user.id, email: user.email! });

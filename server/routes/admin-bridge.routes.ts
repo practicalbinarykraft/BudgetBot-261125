@@ -22,6 +22,7 @@ import { eq, and, sql, inArray } from "drizzle-orm";
 import { getTelegramBot } from "../telegram/bot";
 import { logInfo, logError } from "../lib/logger";
 import type { InsertBroadcastRecipient } from "@shared/schema";
+import { getAllRewardSettings, updateRewardSetting } from "../repositories/reward-settings.repository";
 
 const router = Router();
 
@@ -324,6 +325,49 @@ router.post("/send-message", async (req: Request, res: Response) => {
       return res.status(400).json({ error: `Telegram: ${error.response.body.description}` });
     }
 
+    res.status(500).json({ error: error.message || "Internal server error" });
+  }
+});
+
+/**
+ * GET /reward-settings
+ * List all reward settings.
+ */
+router.get("/reward-settings", async (req: Request, res: Response) => {
+  if (!verifyAdminSecret(req, res)) return;
+
+  try {
+    const settings = await getAllRewardSettings();
+    res.json(settings);
+  } catch (error: any) {
+    logError("Failed to get reward settings", error);
+    res.status(500).json({ error: error.message || "Internal server error" });
+  }
+});
+
+/**
+ * PUT /reward-settings/:key
+ * Update a reward setting value.
+ * Body: { value: number }
+ */
+router.put("/reward-settings/:key", async (req: Request, res: Response) => {
+  if (!verifyAdminSecret(req, res)) return;
+
+  const { key } = req.params;
+  const { value } = req.body;
+
+  if (typeof value !== "number" || value < 0) {
+    return res.status(400).json({ error: "value must be a non-negative number" });
+  }
+
+  try {
+    const updated = await updateRewardSetting(key, value);
+    if (!updated) {
+      return res.status(404).json({ error: `Setting '${key}' not found` });
+    }
+    res.json(updated);
+  } catch (error: any) {
+    logError("Failed to update reward setting", error, { key, value });
     res.status(500).json({ error: error.message || "Internal server error" });
   }
 });

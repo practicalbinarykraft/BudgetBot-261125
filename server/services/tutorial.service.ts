@@ -1,6 +1,7 @@
 import { db } from "../db";
 import { tutorialSteps, userCredits, creditTransactions } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
+import { logError } from "../lib/logger";
 
 const STEP_REWARDS: Record<string, number> = {
   create_wallet: 10,
@@ -101,6 +102,16 @@ export async function completeStep(userId: number, stepId: string): Promise<Comp
         description: `Tutorial step: ${stepId}`,
         metadata: { source: "tutorial", stepId },
       });
+    }
+
+    // Fire-and-forget: check if referral onboarding reward should be granted
+    try {
+      const { grantOnboardingReward } = await import("./referral.service");
+      grantOnboardingReward(userId).catch((err) =>
+        logError("Failed to grant onboarding reward", err as Error, { userId })
+      );
+    } catch (err) {
+      logError("Failed to import referral service", err as Error);
     }
 
     return { alreadyCompleted: false, creditsAwarded: reward };
