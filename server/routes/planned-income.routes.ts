@@ -1,10 +1,12 @@
 import { Router } from "express";
 import { storage } from "../storage";
-import { insertPlannedIncomeSchema } from "@shared/schema";
+import { insertPlannedIncomeSchema, plannedIncome as plannedIncomeTable } from "@shared/schema";
 import { withAuth } from "../middleware/auth-utils";
 import { convertToUSD, getUserExchangeRates } from "../services/currency-service";
 import { getErrorMessage } from "../lib/errors";
 import { applyPlannedIncome } from "../services/planned-wallet-ops.service";
+import { db } from "../db";
+import { eq, and } from "drizzle-orm";
 
 const router = Router();
 
@@ -97,46 +99,64 @@ router.delete("/:id", withAuth(async (req, res) => {
 router.post("/:id/receive", withAuth(async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const plannedItem = await storage.getPlannedIncomeById(id);
-    
-    if (!plannedItem || plannedItem.userId !== Number(req.user.id)) {
-      return res.status(404).json({ error: "Planned income not found" });
-    }
-    
-    if (plannedItem.status !== "pending") {
-      return res.status(400).json({ error: "Only pending income can be received" });
-    }
-    
-    const walletsResult = await storage.getWalletsByUserId(Number(req.user.id));
-    const wallets = walletsResult.wallets;
-    const primaryWallet = wallets.find(w => w.type === "card") || wallets[0];
+    const userId = Number(req.user.id);
+
+    // Fetch wallet outside the transaction (read-only, no lock needed)
+    const walletsResult = await storage.getWalletsByUserId(userId);
+    const walletsList = walletsResult.wallets;
+    const primaryWallet = walletsList.find(w => w.type === "card") || walletsList[0];
 
     if (!primaryWallet) {
       return res.status(400).json({ error: "No wallet found. Please create a wallet first." });
     }
 
-    const transaction = await applyPlannedIncome({
-      userId: Number(req.user.id),
-      walletId: primaryWallet.id,
-      amount: plannedItem.amount,
-      currency: plannedItem.currency || 'USD',
-      amountUsd: plannedItem.amountUsd,
-      description: plannedItem.description,
-      categoryId: plannedItem.categoryId,
-      date: new Date().toISOString().split('T')[0],
-      source: 'manual',
+    // Atomic: lock planned item → check status → create transaction → update status
+    await db.transaction(async (tx) => {
+      // SELECT FOR UPDATE prevents double-tap race condition
+      const [lockedItem] = await tx
+        .select()
+        .from(plannedIncomeTable)
+        .where(and(eq(plannedIncomeTable.id, id), eq(plannedIncomeTable.userId, userId)))
+        .for('update')
+        .limit(1);
+
+      if (!lockedItem) {
+        throw new Error("Planned income not found");
+      }
+      if (lockedItem.status !== "pending") {
+        throw new Error("Only pending income can be received");
+      }
+
+      const transaction = await applyPlannedIncome({
+        userId,
+        walletId: primaryWallet.id,
+        amount: lockedItem.amount,
+        currency: lockedItem.currency || 'USD',
+        amountUsd: lockedItem.amountUsd,
+        description: lockedItem.description,
+        categoryId: lockedItem.categoryId,
+        date: new Date().toISOString().split('T')[0],
+        source: 'manual',
+      }, tx);
+
+      await tx
+        .update(plannedIncomeTable)
+        .set({
+          status: "received",
+          receivedAt: new Date(),
+          transactionId: transaction.id,
+        })
+        .where(eq(plannedIncomeTable.id, id));
     });
 
-    await storage.updatePlannedIncome(id, {
-      status: "received",
-      receivedAt: new Date(),
-      transactionId: transaction.id,
-    } as any);
-    
     const updated = await storage.getPlannedIncomeById(id);
     res.json(updated);
   } catch (error: unknown) {
-    res.status(400).json({ error: getErrorMessage(error) });
+    const msg = getErrorMessage(error);
+    if (msg === "Planned income not found") {
+      return res.status(404).json({ error: msg });
+    }
+    res.status(400).json({ error: msg });
   }
 }));
 

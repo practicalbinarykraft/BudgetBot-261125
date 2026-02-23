@@ -182,4 +182,37 @@ describe('planned-wallet-ops.service', () => {
       expect(passedTx).toBe(tx);
     });
   });
+
+  describe('outerTx parameter', () => {
+    it('uses provided outerTx instead of creating own db.transaction', async () => {
+      const outerTx = createMockTx();
+
+      await applyPlannedPurchase(basePurchaseParams, outerTx as any);
+
+      // Should NOT call db.transaction — uses the provided tx directly
+      expect(mockTransaction).not.toHaveBeenCalled();
+      expect(outerTx.insert).toHaveBeenCalledTimes(1);
+      expect(updateWalletBalance).toHaveBeenCalledWith(10, 1, 50.0, 'expense', outerTx);
+    });
+
+    it('applyPlannedIncome uses provided outerTx', async () => {
+      const outerTx = createMockTx();
+      outerTx.insert().values().returning.mockResolvedValue([{ id: 77, type: 'income' }]);
+
+      const result = await applyPlannedIncome(baseIncomeParams, outerTx as any);
+
+      expect(mockTransaction).not.toHaveBeenCalled();
+      expect(result).toEqual({ id: 77, type: 'income' });
+      expect(updateWalletBalance).toHaveBeenCalledWith(10, 1, 100.0, 'income', outerTx);
+    });
+
+    it('falls back to db.transaction when outerTx not provided', async () => {
+      const tx = createMockTx();
+      mockTransaction.mockImplementation(async (fn) => fn(tx));
+
+      await applyPlannedPurchase(basePurchaseParams);
+
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
+    });
+  });
 });
