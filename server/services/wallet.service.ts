@@ -4,6 +4,7 @@ import { eq, and, desc } from 'drizzle-orm';
 import { convertToUSD, getUserExchangeRates } from './currency-service';
 import { logInfo, logWarning } from '../lib/logger';
 import { validateBalanceDelta } from './wallet-balance-integrity.service';
+import { BadRequestError } from '../lib/errors';
 
 export async function getPrimaryWallet(userId: number) {
   // First, try to get wallet marked as primary (isPrimary = 1)
@@ -147,7 +148,7 @@ export async function updateWalletBalance(
 
   // Overdraft protection: prevent negative balance for expenses
   if (transactionType === 'expense' && newBalanceUsd < 0) {
-    throw new Error(`Insufficient balance: wallet has $${currentBalanceUsd.toFixed(2)} but expense is $${amountUsd.toFixed(2)}`);
+    throw new BadRequestError(`Insufficient balance: wallet has $${currentBalanceUsd.toFixed(2)} but expense is $${amountUsd.toFixed(2)}`);
   }
 
   // Update wallet
