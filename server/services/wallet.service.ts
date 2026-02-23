@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { wallets } from '@shared/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { convertToUSD, getUserExchangeRates } from './currency-service';
 import { logInfo, logWarning } from '../lib/logger';
 import { validateBalanceDelta } from './wallet-balance-integrity.service';
@@ -105,11 +105,11 @@ export async function updateWalletBalance(
   // Guard against NaN/Infinity/absurd values
   validateBalanceDelta(amountUsd, `updateWalletBalance wallet=${walletId}`);
 
-  // Get current wallet
+  // Get current wallet (ownership check: wallet must belong to userId)
   const [wallet] = await q
     .select()
     .from(wallets)
-    .where(eq(wallets.id, walletId))
+    .where(and(eq(wallets.id, walletId), eq(wallets.userId, userId)))
     .limit(1);
 
   if (!wallet) {

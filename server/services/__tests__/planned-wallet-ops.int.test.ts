@@ -191,4 +191,50 @@ describe('planned-wallet-ops (integration)', () => {
       expect(rows).toHaveLength(0);
     }
   );
+
+  it.skipIf(!dbAvailable)(
+    'applyPlannedPurchase rejects wallet belonging to another user',
+    async () => {
+      // Create a second user with their own wallet
+      const [otherUser] = await db.insert(users).values({
+        email: `other-user-${Date.now()}@test.com`,
+        password: 'hashed',
+        name: 'Other User',
+      }).returning();
+
+      const [otherWallet] = await db.insert(wallets).values({
+        userId: otherUser.id,
+        name: 'Other Wallet',
+        type: 'card',
+        balance: '1000.00',
+        balanceUsd: '1000.00',
+        currency: 'USD',
+      }).returning();
+
+      const ownershipMarker = `ownership-${Date.now()}`;
+
+      // testUser tries to use otherUser's wallet
+      await expect(
+        applyPlannedPurchase({
+          userId: testUser.id,
+          walletId: otherWallet.id,
+          amount: '10.00',
+          currency: 'USD',
+          amountUsd: '10.00',
+          description: ownershipMarker,
+          date: new Date().toISOString().split('T')[0],
+          source: 'manual',
+        })
+      ).rejects.toThrow(/Wallet.*not found/);
+
+      // Other user's balance must be untouched
+      const [w] = await db.select().from(wallets)
+        .where(eq(wallets.id, otherWallet.id)).limit(1);
+      expect(w.balance).toBe('1000.00');
+
+      // Cleanup other user
+      await db.delete(wallets).where(eq(wallets.userId, otherUser.id));
+      await db.delete(users).where(eq(users.id, otherUser.id));
+    }
+  );
 });
