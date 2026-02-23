@@ -38,6 +38,7 @@ export function usePlannedIncomeScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["planned-income"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["wallets"] });
     },
     onError: (error: Error) => uiAlert("Error", error.message),
   });
