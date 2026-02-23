@@ -328,6 +328,8 @@ router.post("/", withAuth(async (req, res) => {
       walletId = primaryWallet.id;
     }
 
+    // Atomic: insert + balance update happen inside db.transaction() in the service.
+    // If balance update fails (overdraft, NaN guard), the insert is rolled back.
     const transaction = await transactionService.createTransaction(userId, {
       type: validated.type,
       amount: parseFloat(validated.amount),
@@ -341,10 +343,6 @@ router.post("/", withAuth(async (req, res) => {
       personalTagId: validated.personalTagId !== undefined ? validated.personalTagId : null,
       financialType: validated.financialType || undefined,
     });
-
-    // Update wallet balance (let errors propagate — silent swallowing causes balance drift)
-    const amountUsd = parseFloat(transaction.amountUsd);
-    await updateWalletBalance(walletId, userId, amountUsd, validated.type);
 
     // Log audit event
     await logAuditEvent({
