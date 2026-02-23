@@ -6,6 +6,7 @@ import { transactionRepository } from '../repositories/transaction.repository';
 import { walletRepository } from '../repositories/wallet.repository';
 import { categoryRepository } from '../repositories/category.repository';
 import { checkCategoryLimit, sendBudgetAlert } from './budget/limits-checker.service';
+import { updateWalletBalance } from './wallet.service';
 import { logError } from '../lib/logger';
 
 export interface CreateTransactionInput {
@@ -108,7 +109,7 @@ export class TransactionService {
       categoryId = category?.id ?? null;
     }
 
-    const transaction = await transactionRepository.createTransaction({
+    const transactionData = {
       userId,
       type: input.type,
       amount: inputAmount.toString(),
@@ -125,14 +126,27 @@ export class TransactionService {
       categoryId,
       personalTagId: input.personalTagId || null,
       financialType: input.financialType || 'discretionary',
+    };
+
+    // Atomic: insert row + update wallet balance in one DB transaction.
+    // If updateWalletBalance fails (e.g. overdraft), the insert is rolled back.
+    const transaction = await db.transaction(async (tx) => {
+      const row = await transactionRepository.createTransaction(transactionData, tx);
+
+      if (row.walletId) {
+        const txAmountUsd = parseFloat(row.amountUsd);
+        await updateWalletBalance(row.walletId, userId, txAmountUsd, input.type, tx);
+      }
+
+      return row;
     });
 
+    // Side effects OUTSIDE the transaction — failures here don't roll back the row
     await trainMLCategory(userId, {
       description: transaction.description,
       category: transaction.category ?? undefined
     });
 
-    // Check budget limits (side effect)
     if (transaction.type === 'expense' && transaction.categoryId) {
       checkCategoryLimit(userId, transaction.categoryId)
         .then(async (limitCheck) => {
