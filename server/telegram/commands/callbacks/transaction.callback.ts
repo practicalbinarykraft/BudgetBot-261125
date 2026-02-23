@@ -17,6 +17,7 @@ import { t } from '@shared/i18n';
 import { getUserLanguageByTelegramId, getUserLanguageByUserId } from '../../language';
 import { formatTransactionMessage } from '../utils/format-transaction-message';
 import { pendingEdits } from '../../pending-edits';
+import { deleteTransactionAndReverseBalance } from '../../../services/transaction-delete.service';
 
 export async function handleTransactionCallback(
   bot: TelegramBot,
@@ -78,12 +79,10 @@ export async function handleTransactionCallback(
 
     lang = await getUserLanguageByUserId(user.id);
 
-    await db
-      .delete(transactions)
-      .where(and(
-        eq(transactions.id, transactionId),
-        eq(transactions.userId, user.id)
-      ));
+    await deleteTransactionAndReverseBalance({
+      transactionId,
+      userId: user.id,
+    });
 
     await bot.editMessageText(t('transaction.deleted', lang), {
       chat_id: chatId,
