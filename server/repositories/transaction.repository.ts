@@ -129,8 +129,12 @@ export class TransactionRepository {
         return result[0] || null;
     }
 
-    async createTransaction(transaction: InsertTransaction & { amountUsd: string }): Promise<Transaction> {
-        const result = await db.insert(transactions).values(transaction).returning();
+    async createTransaction(
+        transaction: InsertTransaction & { amountUsd: string },
+        tx?: Parameters<Parameters<typeof db.transaction>[0]>[0]
+    ): Promise<Transaction> {
+        const q = tx ?? db;
+        const result = await q.insert(transactions).values(transaction).returning();
         return result[0];
     }
 
