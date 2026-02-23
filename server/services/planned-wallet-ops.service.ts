@@ -4,6 +4,8 @@ import { insertTransactionSchema } from '@shared/schema';
 import { updateWalletBalance } from './wallet.service';
 import { validateBalanceDelta } from './wallet-balance-integrity.service';
 
+type TxType = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 interface PlannedTransactionParams {
   userId: number;
   walletId: number;
@@ -22,8 +24,12 @@ interface PlannedTransactionParams {
  * balance atomically inside a single DB transaction.
  *
  * Balance logic is delegated to updateWalletBalance() — no duplication.
+ *
+ * @param outerTx — optional drizzle transaction. When provided, reuses the
+ *                   caller's transaction (e.g. for SELECT FOR UPDATE locking).
+ *                   When omitted, creates its own db.transaction().
  */
-export async function applyPlannedPurchase(params: PlannedTransactionParams) {
+export async function applyPlannedPurchase(params: PlannedTransactionParams, outerTx?: TxType) {
   const amountUsdNum = parseFloat(params.amountUsd);
   validateBalanceDelta(amountUsdNum, `applyPlannedPurchase wallet=${params.walletId}`);
 
@@ -40,7 +46,7 @@ export async function applyPlannedPurchase(params: PlannedTransactionParams) {
     source: params.source,
   });
 
-  return await db.transaction(async (tx) => {
+  const run = async (tx: TxType) => {
     const [transaction] = await tx
       .insert(transactions)
       .values({ ...transactionData, amountUsd: params.amountUsd })
@@ -49,14 +55,19 @@ export async function applyPlannedPurchase(params: PlannedTransactionParams) {
     await updateWalletBalance(params.walletId, params.userId, amountUsdNum, 'expense', tx);
 
     return transaction;
-  });
+  };
+
+  if (outerTx) return run(outerTx);
+  return db.transaction(run);
 }
 
 /**
  * Create an income transaction from a planned income and update wallet
  * balance atomically inside a single DB transaction.
+ *
+ * @param outerTx — optional drizzle transaction (see applyPlannedPurchase).
  */
-export async function applyPlannedIncome(params: PlannedTransactionParams) {
+export async function applyPlannedIncome(params: PlannedTransactionParams, outerTx?: TxType) {
   const amountUsdNum = parseFloat(params.amountUsd);
   validateBalanceDelta(amountUsdNum, `applyPlannedIncome wallet=${params.walletId}`);
 
@@ -73,7 +84,7 @@ export async function applyPlannedIncome(params: PlannedTransactionParams) {
     source: params.source,
   });
 
-  return await db.transaction(async (tx) => {
+  const run = async (tx: TxType) => {
     const [transaction] = await tx
       .insert(transactions)
       .values({ ...transactionData, amountUsd: params.amountUsd })
@@ -82,5 +93,8 @@ export async function applyPlannedIncome(params: PlannedTransactionParams) {
     await updateWalletBalance(params.walletId, params.userId, amountUsdNum, 'income', tx);
 
     return transaction;
-  });
+  };
+
+  if (outerTx) return run(outerTx);
+  return db.transaction(run);
 }
