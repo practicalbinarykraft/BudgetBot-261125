@@ -8,14 +8,15 @@
 
 import TelegramBot from 'node-telegram-bot-api';
 import { db } from '../../../db';
-import { users, transactions } from '@shared/schema';
+import { users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { format } from 'date-fns';
 import { t } from '@shared/i18n';
 import { getUserLanguageByTelegramId, getUserLanguageByUserId } from '../../language';
 import { convertToUSD, getUserExchangeRates } from '../../../services/currency-service';
 import { resolveCategoryId } from '../../../services/category-resolution.service';
-import { getPrimaryWallet, updateWalletBalance } from '../../../services/wallet.service';
+import { getPrimaryWallet } from '../../../services/wallet.service';
+import { createTransactionAtomic } from '../../../services/transaction-create-atomic.service';
 import { ReceiptItemsRepository } from '../../../repositories/receipt-items.repository';
 import { formatTransactionMessage } from '../utils/format-transaction-message';
 import { pendingReceipts } from '../../pending-receipts';
@@ -85,9 +86,14 @@ export async function handleReceiptCallback(
     const amountUsd = convertToUSD(parsed.amount, currency, rates);
     const exchangeRate = currency === 'USD' ? 1 : rates[currency] || 1;
 
-    const [transaction] = await db
-      .insert(transactions)
-      .values({
+    // Capture items array once (for type narrowing inside closures)
+    const receiptItems = ('items' in parsed && parsed.items && parsed.items.length > 0)
+      ? parsed.items
+      : null;
+
+    // Atomic: insert transaction + receipt items + update wallet balance
+    const transaction = await createTransactionAtomic({
+      data: {
         userId: user.id,
         date: format(new Date(), 'yyyy-MM-dd'),
         type: 'expense',
@@ -101,23 +107,18 @@ export async function handleReceiptCallback(
         exchangeRate: exchangeRate.toFixed(4),
         source: 'ocr',
         walletId: primaryWallet.id,
-      })
-      .returning();
-
-    // Save receipt items if available (with USD conversion for analytics)
-    if ('items' in parsed && parsed.items && parsed.items.length > 0) {
-      try {
+      },
+      type: 'expense',
+      withinTx: receiptItems ? async (transactionId, tx) => {
         const receiptItemsRepo = new ReceiptItemsRepository();
-        const itemsToSave = parsed.items.map((item: any) => {
-          // Convert item total price to USD
+        const itemsToSave = receiptItems.map((item: any) => {
           const itemTotalUsd = convertToUSD(
             parseFloat(item.totalPrice),
             currency,
             rates
           );
-
           return {
-            transactionId: transaction.id,
+            transactionId,
             itemName: item.name,
             normalizedName: item.normalizedName,
             quantity: item.quantity?.toString(),
@@ -125,68 +126,51 @@ export async function handleReceiptCallback(
             totalPrice: item.totalPrice.toString(),
             currency: currency,
             merchantName: parsed.description,
-            amountUsd: itemTotalUsd.toFixed(2)  // USD conversion for analytics
+            amountUsd: itemTotalUsd.toFixed(2),
           };
         });
+        await receiptItemsRepo.createBulk(itemsToSave, tx);
+        logInfo(`Saved ${itemsToSave.length} receipt items in tx for transaction ${transactionId}`);
+      } : undefined,
+    });
 
-        await receiptItemsRepo.createBulk(itemsToSave);
-        logInfo(`✅ Saved ${itemsToSave.length} items from receipt for transaction ${transaction.id}`);
-      } catch (error) {
-        logError('Failed to save receipt items:', error);
-        // Don't fail the transaction if items fail to save
-      }
-    }
-
-    // Add items to Product Catalog
-    if ('items' in parsed && parsed.items && parsed.items.length > 0) {
+    // Side effect: Add items to Product Catalog (outside tx — failure is non-critical)
+    if (receiptItems) {
       try {
         const userSettings = await storage.getSettingsByUserId(user.id);
         const purchaseDate = ('date' in parsed && typeof parsed.date === 'string')
           ? parsed.date
           : format(new Date(), 'yyyy-MM-dd');
 
-        // Per-item currency resolution (matches web upload logic)
         const getItemCurrency = (item: any): string => {
-          return item.currency       // 1. Per-item currency (future mixed-currency)
-            || parsed.currency       // 2. Receipt-level currency (from OCR)
-            || 'USD';                // 3. Fallback
+          return item.currency || parsed.currency || 'USD';
         };
 
-        // Передать товары с исходной валютой (НЕ конвертировать в USD!)
         await processReceiptItems({
-          receiptItems: parsed.items.map((item: any) => {
+          receiptItems: receiptItems.map((item: any) => {
             const itemTotalPrice = typeof item.totalPrice === 'number'
               ? item.totalPrice
               : (parseFloat(item.totalPrice) || 0);
 
             return {
               name: item.name || item.normalizedName || 'Unknown',
-              price: itemTotalPrice,       // ИСХОДНАЯ цена из чека
-              currency: getItemCurrency(item), // Per-item currency с приоритетом
+              price: itemTotalPrice,
+              currency: getItemCurrency(item),
               quantity: item.quantity || 1
             };
           }),
           userId: user.id,
           storeName: parsed.description || 'Unknown Store',
           purchaseDate,
-          exchangeRates: rates, // Передать курсы для конвертации в сервисе
+          exchangeRates: rates,
           anthropicApiKey: userSettings?.anthropicApiKey || undefined
         });
 
-        logInfo(`✅ Product catalog updated from Telegram receipt (user ${user.id}, ${parsed.items.length} items, currency: ${parsed.currency})`);
+        logInfo(`Product catalog updated from Telegram receipt (user ${user.id}, ${receiptItems.length} items)`);
       } catch (error) {
-        logError('❌ Failed to update product catalog from Telegram:', error);
-        // Don't fail the transaction if catalog update fails
+        logError('Failed to update product catalog from Telegram:', error);
       }
     }
-
-    // Update wallet balance
-    await updateWalletBalance(
-      primaryWallet.id,
-      user.id,
-      amountUsd,
-      'expense'
-    );
 
     const { message, reply_markup } = await formatTransactionMessage(
       user.id,
