@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { storage } from "../storage";
-import { insertPlannedTransactionSchema, insertTransactionSchema } from "@shared/schema";
+import { insertPlannedTransactionSchema } from "@shared/schema";
 import { withAuth } from "../middleware/auth-utils";
 import { getErrorMessage } from "../lib/errors";
 import { getUserExchangeRates, convertToUSD } from "../services/currency-service";
+import { applyPlannedPurchase } from "../services/planned-wallet-ops.service";
 
 const router = Router();
 
@@ -78,9 +79,13 @@ router.post("/:id/purchase", withAuth(async (req, res) => {
     const { wallets } = await storage.getWalletsByUserId(Number(req.user.id));
     const primaryWallet = wallets.find(w => w.type === "card") || wallets[0];
 
+    if (!primaryWallet) {
+      return res.status(400).json({ error: "No wallet found. Please create a wallet first." });
+    }
+
     // Get currency from planned item or fallback to wallet/USD
-    const currency = plannedItem.currency || primaryWallet?.currency || "USD";
-    
+    const currency = plannedItem.currency || primaryWallet.currency || "USD";
+
     // Convert amount to USD if currency is not USD
     let amountUsd: string;
     if (currency !== "USD") {
@@ -91,29 +96,18 @@ router.post("/:id/purchase", withAuth(async (req, res) => {
       amountUsd = plannedItem.amount;
     }
 
-    const transactionData = insertTransactionSchema.parse({
+    const transaction = await applyPlannedPurchase({
       userId: Number(req.user.id),
-      date: new Date().toISOString().split('T')[0],
-      type: "expense",
+      walletId: primaryWallet.id,
       amount: plannedItem.amount,
+      currency,
+      amountUsd,
       description: plannedItem.name,
       category: plannedItem.category,
-      currency: currency,
-      amountUsd: amountUsd,
-      walletId: primaryWallet?.id || null,
-      source: "manual",
+      date: new Date().toISOString().split('T')[0],
+      source: 'manual',
     });
-    
-    const transaction = await storage.createTransaction({ ...transactionData, amountUsd });
-    
-    if (primaryWallet) {
-      const newBalance = parseFloat(primaryWallet.balance) - parseFloat(plannedItem.amount);
-      await storage.updateWallet(primaryWallet.id, {
-        balance: newBalance.toFixed(2),
-        balanceUsd: newBalance.toFixed(2),
-      });
-    }
-    
+
     await storage.updatePlanned(id, {
       status: "purchased",
       purchasedAt: new Date(),

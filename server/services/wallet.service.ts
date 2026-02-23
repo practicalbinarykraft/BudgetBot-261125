@@ -86,17 +86,27 @@ export async function getPrimaryWallet(userId: number) {
   return newWallet;
 }
 
+/**
+ * Update wallet balance with guards (NaN/Infinity/overdraft protection).
+ *
+ * @param tx — optional drizzle transaction. When provided, all reads/writes
+ *             go through tx so the caller can wrap insert+balance in one
+ *             atomic DB transaction. When omitted, uses the global db.
+ */
 export async function updateWalletBalance(
   walletId: number,
   userId: number,
   amountUsd: number,
-  transactionType: 'income' | 'expense'
+  transactionType: 'income' | 'expense',
+  tx?: Parameters<Parameters<typeof db.transaction>[0]>[0]
 ) {
+  const q = tx ?? db;
+
   // Guard against NaN/Infinity/absurd values
   validateBalanceDelta(amountUsd, `updateWalletBalance wallet=${walletId}`);
 
   // Get current wallet
-  const [wallet] = await db
+  const [wallet] = await q
     .select()
     .from(wallets)
     .where(eq(wallets.id, walletId))
@@ -108,12 +118,12 @@ export async function updateWalletBalance(
 
   // Calculate USD delta
   const deltaUsd = transactionType === 'income' ? amountUsd : -amountUsd;
-  
+
   // Update balance in wallet's native currency
   const walletCurrency = wallet.currency || 'USD';
   const currentBalance = parseFloat(wallet.balance);
   const currentBalanceUsd = parseFloat(wallet.balanceUsd || '0');
-  
+
   let newBalance: number;
   let newBalanceUsd: number;
 
@@ -123,10 +133,11 @@ export async function updateWalletBalance(
     newBalanceUsd = newBalance;
   } else {
     // Convert USD delta to wallet currency
+    // rates[currency] = units of currency per 1 USD (e.g. RUB: 92.5)
     const rates = await getUserExchangeRates(userId);
     const rate = rates[walletCurrency] || 1;
     const deltaInWalletCurrency = deltaUsd * rate;
-    
+
     newBalance = currentBalance + deltaInWalletCurrency;
     newBalanceUsd = currentBalanceUsd + deltaUsd;
   }
@@ -140,7 +151,7 @@ export async function updateWalletBalance(
   }
 
   // Update wallet
-  await db
+  await q
     .update(wallets)
     .set({
       balance: newBalance.toFixed(2),
