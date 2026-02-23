@@ -108,11 +108,30 @@ export async function calculateTrend(
     0
   );
 
-  // currentWalletsBalance нужен только для forecast/goals (не для исторического тренда)
+  // currentWalletsBalance — актуальная сумма балансов кошельков (source of truth)
   const currentWalletsBalance = wallets.reduce(
     (sum, w) => sum + Number(w.balanceUsd ?? 0),
     0
   );
+
+  // SYNC: Correct opening balance anchor so today's capital matches actual wallet balances.
+  // Formula: correctedOpening = currentWalletsBalance - net(all transactions)
+  // This ensures capital[today] = SUM(wallet.balanceUsd) without changing income/expense lines.
+  const totalTransactionsNet = transactions.reduce((sum, t) => {
+    const usd = parseFloat(t.amountUsd as unknown as string) || 0;
+    return sum + (t.type === 'income' ? usd : -usd);
+  }, 0);
+
+  const syncedOpeningBalance = currentWalletsBalance - totalTransactionsNet;
+
+  if (Math.abs(syncedOpeningBalance - openingBalancesTotal) > 0.02) {
+    logWarning('[Trend] Opening balance drift corrected', {
+      userId,
+      originalOpening: openingBalancesTotal,
+      syncedOpening: syncedOpeningBalance,
+      drift: syncedOpeningBalance - openingBalancesTotal,
+    });
+  }
 
   // Рассчитать чистую стоимость активов (assets - liabilities)
   const currentAssetsValue = assets
@@ -160,7 +179,7 @@ export async function calculateTrend(
       return sum + (t.type === 'income' ? usd : -usd);
     }, 0);
 
-  const walletsBalanceAtPeriodStart = openingBalancesTotal + allTransactionsNetBeforePeriod;
+  const walletsBalanceAtPeriodStart = syncedOpeningBalance + allTransactionsNetBeforePeriod;
 
   historicalCumulative.forEach(point => {
     const pointDate = new Date(point.date);
@@ -190,7 +209,7 @@ export async function calculateTrend(
     forecastDays,
     currentWalletsBalance,
     walletsBalanceAtPeriodStart,
-    openingBalancesTotal,
+    openingBalancesTotal: syncedOpeningBalance,
     currentAssetsNet,
     assetsRaw,
     historicalCumulative,

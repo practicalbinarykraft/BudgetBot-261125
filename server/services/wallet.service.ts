@@ -3,6 +3,7 @@ import { wallets } from '@shared/schema';
 import { eq, desc } from 'drizzle-orm';
 import { convertToUSD, getUserExchangeRates } from './currency-service';
 import { logInfo, logWarning } from '../lib/logger';
+import { validateBalanceDelta } from './wallet-balance-integrity.service';
 
 export async function getPrimaryWallet(userId: number) {
   // First, try to get wallet marked as primary (isPrimary = 1)
@@ -91,6 +92,9 @@ export async function updateWalletBalance(
   amountUsd: number,
   transactionType: 'income' | 'expense'
 ) {
+  // Guard against NaN/Infinity/absurd values
+  validateBalanceDelta(amountUsd, `updateWalletBalance wallet=${walletId}`);
+
   // Get current wallet
   const [wallet] = await db
     .select()
@@ -126,6 +130,9 @@ export async function updateWalletBalance(
     newBalance = currentBalance + deltaInWalletCurrency;
     newBalanceUsd = currentBalanceUsd + deltaUsd;
   }
+
+  // Validate result before writing
+  validateBalanceDelta(newBalanceUsd, `wallet balance result wallet=${walletId}`);
 
   // Overdraft protection: prevent negative balance for expenses
   if (transactionType === 'expense' && newBalanceUsd < 0) {

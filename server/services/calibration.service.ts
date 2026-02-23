@@ -3,6 +3,7 @@ import { calibrations, wallets, transactions, categories } from '@shared/schema'
 import { eq, and } from 'drizzle-orm';
 import { convertToUSD } from './currency-service';
 import { updateWalletBalance } from './wallet.service';
+import { validateBalanceDelta } from './wallet-balance-integrity.service';
 
 /**
  * Calibrate wallet - sync app balance with real balance.
@@ -39,6 +40,8 @@ export async function calibrateWallet(
 
   // 2. Create adjustment transaction if there's a meaningful difference
   if (Math.abs(difference) > 0.01) {
+    // Guard against absurd calibration
+    validateBalanceDelta(difference, `calibration wallet=${walletId}`);
     const adjustmentAmount = Math.abs(difference);
     const txType = difference > 0 ? 'income' : 'expense';
     const currency = wallet.currency || 'USD';
