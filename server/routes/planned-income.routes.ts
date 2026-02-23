@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { storage } from "../storage";
-import { insertPlannedIncomeSchema, insertTransactionSchema } from "@shared/schema";
+import { insertPlannedIncomeSchema } from "@shared/schema";
 import { withAuth } from "../middleware/auth-utils";
 import { convertToUSD, getUserExchangeRates } from "../services/currency-service";
 import { getErrorMessage } from "../lib/errors";
+import { applyPlannedIncome } from "../services/planned-wallet-ops.service";
 
 const router = Router();
 
@@ -110,42 +111,22 @@ router.post("/:id/receive", withAuth(async (req, res) => {
     const wallets = walletsResult.wallets;
     const primaryWallet = wallets.find(w => w.type === "card") || wallets[0];
 
-    const transactionData = insertTransactionSchema.parse({
+    if (!primaryWallet) {
+      return res.status(400).json({ error: "No wallet found. Please create a wallet first." });
+    }
+
+    const transaction = await applyPlannedIncome({
       userId: Number(req.user.id),
-      date: new Date().toISOString().split('T')[0],
-      type: "income",
+      walletId: primaryWallet.id,
       amount: plannedItem.amount,
+      currency: plannedItem.currency || 'USD',
+      amountUsd: plannedItem.amountUsd,
       description: plannedItem.description,
       categoryId: plannedItem.categoryId,
-      currency: plannedItem.currency || "USD",
-      amountUsd: plannedItem.amountUsd,
-      walletId: primaryWallet?.id || null,
-      source: "manual",
+      date: new Date().toISOString().split('T')[0],
+      source: 'manual',
     });
-    
-    const transaction = await storage.createTransaction({ ...transactionData, amountUsd: plannedItem.amountUsd });
-    
-    if (primaryWallet) {
-      const currentBalanceUsd = parseFloat(primaryWallet.balanceUsd || primaryWallet.balance);
-      const newBalanceUsd = currentBalanceUsd + parseFloat(plannedItem.amountUsd);
-      
-      const walletCurrency = primaryWallet.currency || "USD";
-      const isSameCurrency = walletCurrency === (plannedItem.currency || "USD");
-      
-      if (isSameCurrency) {
-        const currentBalance = parseFloat(primaryWallet.balance);
-        const newBalance = currentBalance + parseFloat(plannedItem.amount);
-        await storage.updateWallet(primaryWallet.id, {
-          balance: newBalance.toFixed(2),
-          balanceUsd: newBalanceUsd.toFixed(2),
-        });
-      } else {
-        await storage.updateWallet(primaryWallet.id, {
-          balanceUsd: newBalanceUsd.toFixed(2),
-        });
-      }
-    }
-    
+
     await storage.updatePlannedIncome(id, {
       status: "received",
       receivedAt: new Date(),
