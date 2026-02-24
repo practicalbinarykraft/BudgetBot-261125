@@ -33,9 +33,9 @@ export async function chatWithOpenRouter(
 ): Promise<OpenRouterChatResponse> {
   const { messages, model = "deepseek/deepseek-chat", maxTokens = 1024 } = params;
 
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const apiKey = process.env.SYSTEM_OPENROUTER_API_KEY;
   if (!apiKey) {
-    throw new Error("OPENROUTER_API_KEY not configured in environment");
+    throw new Error("SYSTEM_OPENROUTER_API_KEY not configured in environment");
   }
 
   if (!messages || messages.length === 0) {
