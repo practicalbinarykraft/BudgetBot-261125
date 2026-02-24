@@ -6,14 +6,13 @@
  */
 
 import TelegramBot from 'node-telegram-bot-api';
-import { db } from '../../../db';
-import { transactions } from '@shared/schema';
 import { format } from 'date-fns';
 import { isShoppingList, parseShoppingList } from '../../shopping-list-parser';
 import { type Language } from '@shared/i18n';
 import { convertToUSD, getUserExchangeRates } from '../../../services/currency-service';
 import { resolveCategoryId } from '../../../services/category-resolution.service';
-import { getPrimaryWallet, updateWalletBalance } from '../../../services/wallet.service';
+import { getPrimaryWallet } from '../../../services/wallet.service';
+import { createTransactionAtomic } from '../../../services/transaction-create-atomic.service';
 import { ReceiptItemsRepository } from '../../../repositories/receipt-items.repository';
 import { logInfo, logError } from '../../../lib/logger';
 import { formatTransactionMessage } from '../utils/format-transaction-message';
@@ -49,10 +48,10 @@ export async function handleShoppingList(
   // Resolve category (use merchant name or default)
   const categoryId = await resolveCategoryId(userId, shoppingList.merchant);
 
-  // Create transaction
-  const [transaction] = await db
-    .insert(transactions)
-    .values({
+  // Atomic: insert transaction + receipt items + update wallet balance
+  const hasItems = shoppingList.items.length > 0;
+  const transaction = await createTransactionAtomic({
+    data: {
       userId,
       date: format(new Date(), 'yyyy-MM-dd'),
       type: 'expense',
@@ -66,19 +65,14 @@ export async function handleShoppingList(
       exchangeRate: exchangeRate.toFixed(4),
       source: 'telegram',
       walletId: primaryWallet.id,
-    })
-    .returning();
-
-  // Save receipt items with USD conversion
-  if (shoppingList.items.length > 0) {
-    try {
+    },
+    type: 'expense',
+    withinTx: hasItems ? async (transactionId, tx) => {
       const receiptItemsRepo = new ReceiptItemsRepository();
       const itemsToSave = shoppingList.items.map(item => {
-        // Convert item price to USD
         const itemUsd = convertToUSD(item.price, shoppingList.currency, rates);
-
         return {
-          transactionId: transaction.id,
+          transactionId,
           itemName: item.name,
           normalizedName: item.normalizedName,
           quantity: '1',
@@ -86,24 +80,13 @@ export async function handleShoppingList(
           totalPrice: item.price.toString(),
           currency: shoppingList.currency,
           merchantName: shoppingList.merchant,
-          amountUsd: itemUsd.toFixed(2)  // USD conversion for analytics
+          amountUsd: itemUsd.toFixed(2),
         };
       });
-
-      await receiptItemsRepo.createBulk(itemsToSave);
-      logInfo(`✅ Saved ${itemsToSave.length} items from shopping list for transaction ${transaction.id}`);
-    } catch (error) {
-      logError('Failed to save shopping list items:', error);
-    }
-  }
-
-  // Update wallet balance
-  await updateWalletBalance(
-    primaryWallet.id,
-    userId,
-    amountUsd,
-    'expense'
-  );
+      await receiptItemsRepo.createBulk(itemsToSave, tx);
+      logInfo(`Saved ${itemsToSave.length} shopping list items in tx for transaction ${transactionId}`);
+    } : undefined,
+  });
 
   // Format response message
   const { message, reply_markup } = await formatTransactionMessage(

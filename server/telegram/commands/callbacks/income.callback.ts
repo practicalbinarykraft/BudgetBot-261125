@@ -8,13 +8,14 @@
 
 import TelegramBot from 'node-telegram-bot-api';
 import { db } from '../../../db';
-import { users, transactions } from '@shared/schema';
+import { users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { format } from 'date-fns';
 import { t } from '@shared/i18n';
 import { getUserLanguageByTelegramId, getUserLanguageByUserId } from '../../language';
 import { convertToUSD, getUserExchangeRates } from '../../../services/currency-service';
-import { getPrimaryWallet, updateWalletBalance } from '../../../services/wallet.service';
+import { getPrimaryWallet } from '../../../services/wallet.service';
+import { createTransactionAtomic } from '../../../services/transaction-create-atomic.service';
 import { formatTransactionMessage } from '../utils/format-transaction-message';
 
 export async function handleIncomeCallback(
@@ -61,9 +62,9 @@ export async function handleIncomeCallback(
     const amountUsd = convertToUSD(parsed.amount, parsed.currency, rates);
     const exchangeRate = parsed.currency === 'USD' ? 1 : rates[parsed.currency] || 1;
 
-    const [transaction] = await db
-      .insert(transactions)
-      .values({
+    // Atomic: insert transaction + update wallet balance in one db.transaction()
+    const transaction = await createTransactionAtomic({
+      data: {
         userId: user.id,
         date: format(new Date(), 'yyyy-MM-dd'),
         type: 'income',
@@ -77,16 +78,9 @@ export async function handleIncomeCallback(
         exchangeRate: exchangeRate.toFixed(4),
         source: 'telegram',
         walletId: primaryWallet.id,
-      })
-      .returning();
-
-    // Update wallet balance
-    await updateWalletBalance(
-      primaryWallet.id,
-      user.id,
-      amountUsd,
-      'income'
-    );
+      },
+      type: 'income',
+    });
 
     const { message, reply_markup } = await formatTransactionMessage(
       user.id,

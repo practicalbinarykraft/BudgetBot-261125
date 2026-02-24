@@ -6,14 +6,13 @@
  */
 
 import TelegramBot from 'node-telegram-bot-api';
-import { db } from '../../../db';
-import { transactions } from '@shared/schema';
 import { format } from 'date-fns';
 import { parseTransactionText } from '../../parser';
 import { t, type Language } from '@shared/i18n';
 import { convertToUSD, getUserExchangeRates } from '../../../services/currency-service';
 import { resolveCategoryId } from '../../../services/category-resolution.service';
-import { getPrimaryWallet, updateWalletBalance } from '../../../services/wallet.service';
+import { getPrimaryWallet } from '../../../services/wallet.service';
+import { createTransactionAtomic } from '../../../services/transaction-create-atomic.service';
 import { formatTransactionMessage } from '../utils/format-transaction-message';
 import { logInfo, logError, logWarning } from '../../../lib/logger';
 
@@ -134,11 +133,10 @@ export async function handleNormalTransaction(
       throw new Error('Failed to convert amount to USD');
     }
 
-    // Create transaction
+    // Atomic: insert transaction + update wallet balance in one db.transaction()
     logInfo('Creating transaction in database', { userId, amount: parsed.amount, currency: parsed.currency, amountUsd });
-    const [transaction] = await db
-      .insert(transactions)
-      .values({
+    const transaction = await createTransactionAtomic({
+      data: {
         userId,
         date: format(new Date(), 'yyyy-MM-dd'),
         type: parsed.type,
@@ -152,35 +150,11 @@ export async function handleNormalTransaction(
         exchangeRate: exchangeRate.toFixed(4),
         source: 'telegram',
         walletId: primaryWallet.id,
-      })
-      .returning();
+      },
+      type: parsed.type,
+    });
 
-    logInfo('Transaction created successfully', { userId, transactionId: transaction.id });
-
-    // Update wallet balance
-    logInfo('Updating wallet balance', { userId, walletId: primaryWallet.id, amountUsd, type: parsed.type });
-    try {
-      await updateWalletBalance(
-        primaryWallet.id,
-        userId,
-        amountUsd,
-        parsed.type
-      );
-      logInfo('Wallet balance updated', { userId, walletId: primaryWallet.id });
-    } catch (error) {
-      logError('Error updating wallet balance', error as Error, {
-        userId,
-        walletId: primaryWallet.id,
-        amountUsd,
-        type: parsed.type,
-      });
-      // Если ошибка "Insufficient balance", пробрасываем её дальше
-      if (error instanceof Error && error.message.includes('Insufficient balance')) {
-        throw error;
-      }
-      // Для других ошибок тоже пробрасываем
-      throw new Error('Failed to update wallet balance');
-    }
+    logInfo('Transaction created + balance updated', { userId, transactionId: transaction.id });
 
     // Format and send confirmation message
     logInfo('Formatting transaction message', { userId, transactionId: transaction.id });
