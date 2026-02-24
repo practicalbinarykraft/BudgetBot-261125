@@ -114,4 +114,26 @@ describe('createTransactionAtomic', () => {
 
     expect(result).toEqual(mockRow);
   });
+
+  it('insert, withinTx, and balance all receive the exact same tx object', async () => {
+    const withinTx = vi.fn().mockResolvedValue(undefined);
+
+    await createTransactionAtomic({
+      data: baseData as any,
+      type: 'expense',
+      withinTx,
+    });
+
+    // All three operations must reference the identical tx object
+    const insertTx = vi.mocked(transactionRepository.createTransaction).mock.calls[0][1];
+    const withinTxArg = withinTx.mock.calls[0][1];
+    const balanceTx = vi.mocked(updateWalletBalance).mock.calls[0][4];
+
+    expect(insertTx).toBe(fakeTx);
+    expect(withinTxArg).toBe(fakeTx);
+    expect(balanceTx).toBe(fakeTx);
+    // All three are the same reference
+    expect(insertTx).toBe(withinTxArg);
+    expect(withinTxArg).toBe(balanceTx);
+  });
 });

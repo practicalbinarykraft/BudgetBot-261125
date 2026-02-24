@@ -97,7 +97,7 @@ export async function calibrateWallet(
         categoryId: adjustmentData.categoryId,
         date: new Date().toISOString().split('T')[0],
         currency: adjustmentData.currency,
-        source: 'calibration' as 'manual',
+        source: 'calibration',
         walletId,
       }, tx);
 
