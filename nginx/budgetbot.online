@@ -8,8 +8,8 @@ server {
         set $mobile_redirect 1;
     }
 
-    # Do NOT redirect API or .well-known paths
-    if ($request_uri ~* "^/(api/|\.well-known/|socket\.io/)") {
+    # Do NOT redirect API, .well-known, PWA files
+    if ($request_uri ~* "^/(api/|\.well-known/|socket\.io/|sw\.js|manifest\.json)") {
         set $mobile_redirect 0;
     }
 

@@ -23,6 +23,19 @@ export function serveStatic(app: Express) {
     );
   }
 
+  // SW and manifest must not be cached by browser (so updates propagate immediately)
+  app.get('/sw.js', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Content-Type', 'application/javascript');
+    res.sendFile(path.resolve(distPath, 'sw.js'));
+  });
+
+  app.get('/manifest.json', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Content-Type', 'application/manifest+json');
+    res.sendFile(path.resolve(distPath, 'manifest.json'));
+  });
+
   app.use(express.static(distPath, {
     // Don't serve index.html for static file requests
     index: false,

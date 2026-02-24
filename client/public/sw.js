@@ -2,29 +2,19 @@
  * Service Worker for Budget Buddy PWA
  *
  * Features:
- * - Cache static assets for offline access
- * - Network-first strategy for API calls
- * - Background sync for offline transactions (future)
+ * - Network-first for HTML navigation (prevents stale bundle crashes)
+ * - Cache static hashed assets for offline access
+ * - Network-only for API calls
  */
 
-const CACHE_NAME = 'budgetbuddy-v7'; // Update version when deploying new code
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-];
+const CACHE_NAME = 'budgetbuddy-v8';
 
-// Install event - cache static assets
+// Install event - activate immediately
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
-    })
-  );
   self.skipWaiting();
 });
 
-// Activate event - clean old caches
+// Activate event - claim clients and clean old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -38,7 +28,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch event - network first, fallback to cache
+// Fetch event
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -48,17 +38,14 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // CRITICAL: Skip ALL external resources (Google Fonts, CDN, etc.)
-  // Service worker MUST NOT intercept external requests to avoid CSP violations
-  // Just return without calling event.respondWith() - browser will handle it naturally
+  // Skip external resources
   if (url.origin !== self.location.origin) {
-    return; // Don't intercept - let browser handle it
+    return;
   }
 
-  // API calls - network only (don't cache)
+  // API calls - network only
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(fetch(request).catch(() => {
-      // Return offline response for API calls if network fails
       return new Response(JSON.stringify({ error: 'Offline' }), {
         status: 503,
         headers: { 'Content-Type': 'application/json' }
@@ -67,51 +54,55 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Socket.io and WebSocket connections - pass through
+  // Socket.io - pass through
   if (url.protocol === 'ws:' || url.protocol === 'wss:' || url.pathname.startsWith('/socket.io')) {
     return;
   }
 
-  // Static assets - cache first, network fallback
-  event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Update cache in background
-        fetch(request).catch(() => {
-          // Ignore fetch errors in background update
-        }).then((networkResponse) => {
-          if (networkResponse && networkResponse.ok) {
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, networkResponse.clone());
-            });
-          }
-        });
-        return cachedResponse;
-      }
-
-      // Network first
-      return fetch(request).then((networkResponse) => {
+  // Navigation requests (HTML) - network-first, cache fallback
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).then((networkResponse) => {
         if (networkResponse.ok) {
-          const responseClone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseClone);
-          });
+          const clone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         }
         return networkResponse;
       }).catch(() => {
-        // Return offline page if network fails
-        return caches.match('/index.html') || new Response('Offline', { status: 503 });
+        return caches.match(request).then((cached) => {
+          return cached || caches.match('/index.html') || new Response('Offline', { status: 503 });
+        });
+      })
+    );
+    return;
+  }
+
+  // Static assets (JS/CSS/images) - cache-first, network fallback
+  event.respondWith(
+    caches.match(request).then((cachedResponse) => {
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+
+      return fetch(request).then((networkResponse) => {
+        if (networkResponse.ok) {
+          const clone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        }
+        return networkResponse;
+      }).catch(() => {
+        return new Response('Offline', { status: 503 });
       });
     })
   );
 });
 
-// Handle messages from client (for manual updates)
+// Handle messages from client
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
-  
+
   if (event.data && event.data.type === 'CACHE_VERSION') {
     event.ports[0].postMessage({ version: CACHE_NAME });
   }
