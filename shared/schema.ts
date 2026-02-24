@@ -83,7 +83,7 @@ export const transactions = pgTable("transactions", {
   originalAmount: decimal("original_amount", { precision: 10, scale: 2 }),
   originalCurrency: text("original_currency"),
   exchangeRate: decimal("exchange_rate", { precision: 10, scale: 4 }),
-  source: text("source").default("manual"), // 'manual', 'telegram', 'ocr'
+  source: text("source").default("manual"), // 'manual', 'telegram', 'ocr', 'calibration'
   walletId: integer("wallet_id").references(() => wallets.id, { onDelete: "set null" }),
   // 👥 Personal Tags: WHO is this transaction for?
   personalTagId: integer("personal_tag_id").references(() => personalTags.id, { onDelete: "set null" }),
@@ -629,7 +629,7 @@ export const insertTransactionSchema = createInsertSchema(transactions, {
   originalCurrency: z.string().optional(),
   exchangeRate: z.string().regex(/^\d+(\.\d{1,4})?$/).optional(),
   type: z.enum(["income", "expense"]),
-  source: z.enum(["manual", "telegram", "ocr"]).optional(),
+  source: z.enum(["manual", "telegram", "ocr", "calibration"]).optional(),
 }).omit({ id: true, createdAt: true });
 
 export const insertWalletSchema = createInsertSchema(wallets, {

@@ -33,10 +33,14 @@ export class ReceiptItemsRepository {
    * Создать несколько товаров за раз
    * Используется при парсинге чека с множеством позиций
    */
-  async createBulk(items: InsertReceiptItem[]): Promise<ReceiptItem[]> {
+  async createBulk(
+    items: InsertReceiptItem[],
+    tx?: Parameters<Parameters<typeof db.transaction>[0]>[0]
+  ): Promise<ReceiptItem[]> {
     if (items.length === 0) return [];
-    
-    return await db
+    const q = tx ?? db;
+
+    return await q
       .insert(receiptItems)
       .values(items)
       .returning();
