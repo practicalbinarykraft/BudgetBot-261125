@@ -23,6 +23,13 @@ export function serveStatic(app: Express) {
     );
   }
 
+  // Favicon — long cache, rarely changes
+  app.get('/favicon.ico', (_req, res) => {
+    res.setHeader('Cache-Control', 'public, max-age=604800'); // 7 days
+    res.setHeader('Content-Type', 'image/x-icon');
+    res.sendFile(path.resolve(distPath, 'favicon.ico'));
+  });
+
   // SW and manifest must not be cached by browser (so updates propagate immediately)
   app.get('/sw.js', (_req, res) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
