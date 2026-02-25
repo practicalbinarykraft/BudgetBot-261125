@@ -1,7 +1,7 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { ThemedText } from "../ThemedText";
+import { MarkdownText } from "./MarkdownText";
 import { Spacing, BorderRadius } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
 import type { AiChatMessage } from "../../types";
@@ -39,13 +39,12 @@ export function ChatMessageBubble({ item }: Props) {
               ],
         ]}
       >
-        <ThemedText
-          type="bodySm"
+        <MarkdownText
           color={isUser ? "#ffffff" : theme.text}
           style={styles.messageText}
         >
           {item.content}
-        </ThemedText>
+        </MarkdownText>
       </View>
       {isUser ? (
         <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
