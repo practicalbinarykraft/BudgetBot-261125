@@ -14,6 +14,17 @@ function escapeHtml(text: string): string {
 }
 
 /**
+ * Apply inline formatting (**bold**, *italic*) to a single line
+ */
+function applyInlineFormatting(line: string): string {
+  // Convert **bold** to <strong>
+  line = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // Convert *italic* to <em> (but not if part of **)
+  line = line.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+  return line;
+}
+
+/**
  * Convert markdown to safe HTML
  * Supports:
  * - **bold text** → <strong>bold text</strong>
@@ -24,15 +35,9 @@ function escapeHtml(text: string): string {
  */
 export function markdownToHtml(markdown: string): string {
   // First escape all HTML
-  let html = escapeHtml(markdown);
+  const html = escapeHtml(markdown);
 
-  // Convert **bold** to <strong> (multiline support with [\s\S])
-  html = html.replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>');
-
-  // Convert *italic* to <em> (but not if part of **)
-  html = html.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
-
-  // Convert lists: "- " / "* " (unordered) and "1. " (ordered)
+  // Process line by line: structure (lists) first, then inline formatting per line
   const lines = html.split('\n');
   let listType: 'ul' | 'ol' | null = null;
   const processedLines: string[] = [];
@@ -48,20 +53,20 @@ export function markdownToHtml(markdown: string): string {
         processedLines.push('<ul class="list-disc list-inside space-y-1 my-2">');
         listType = 'ul';
       }
-      processedLines.push(`<li>${unorderedMatch[1]}</li>`);
+      processedLines.push(`<li>${applyInlineFormatting(unorderedMatch[1])}</li>`);
     } else if (orderedMatch) {
       if (listType !== 'ol') {
         if (listType) processedLines.push(`</${listType}>`);
         processedLines.push('<ol class="list-decimal list-inside space-y-1 my-2">');
         listType = 'ol';
       }
-      processedLines.push(`<li>${orderedMatch[1]}</li>`);
+      processedLines.push(`<li>${applyInlineFormatting(orderedMatch[1])}</li>`);
     } else {
       if (listType) {
         processedLines.push(`</${listType}>`);
         listType = null;
       }
-      processedLines.push(line);
+      processedLines.push(applyInlineFormatting(line));
     }
   }
 
@@ -70,10 +75,10 @@ export function markdownToHtml(markdown: string): string {
     processedLines.push(`</${listType}>`);
   }
 
-  html = processedLines.join('\n');
+  let result = processedLines.join('\n');
 
   // Convert line breaks to <br> (except in lists)
-  html = html.replace(/\n(?!<li|<\/ul|<ul|<\/ol|<ol)/g, '<br>');
+  result = result.replace(/\n(?!<li|<\/ul|<ul|<\/ol|<ol)/g, '<br>');
 
-  return html;
+  return result;
 }
