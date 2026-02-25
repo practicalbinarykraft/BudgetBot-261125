@@ -1,6 +1,6 @@
 /**
  * Lightweight markdown-to-HTML renderer for AI chat messages
- * Supports: **bold**, *italic*, lists, line breaks
+ * Supports: **bold**, *italic*, numbered/bulleted lists, line breaks
  * Security: Escapes HTML to prevent XSS
  */
 
@@ -18,54 +18,62 @@ function escapeHtml(text: string): string {
  * Supports:
  * - **bold text** → <strong>bold text</strong>
  * - *italic text* → <em>italic text</em>
- * - - list item → <li>list item</li>
+ * - - list item / * list item → <ul><li>
+ * - 1. numbered item → <ol><li>
  * - Line breaks preserved
  */
 export function markdownToHtml(markdown: string): string {
   // First escape all HTML
   let html = escapeHtml(markdown);
-  
-  // Convert **bold** to <strong>
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  
+
+  // Convert **bold** to <strong> (multiline support with [\s\S])
+  html = html.replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>');
+
   // Convert *italic* to <em> (but not if part of **)
   html = html.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
-  
-  // Convert lists: lines starting with "- " or "* "
+
+  // Convert lists: "- " / "* " (unordered) and "1. " (ordered)
   const lines = html.split('\n');
-  let inList = false;
+  let listType: 'ul' | 'ol' | null = null;
   const processedLines: string[] = [];
-  
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    const isListItem = /^[\-\*]\s/.test(line);
-    
-    if (isListItem) {
-      if (!inList) {
+    const unorderedMatch = /^[\-\*]\s(.*)/.exec(line);
+    const orderedMatch = /^\d+\.\s(.*)/.exec(line);
+
+    if (unorderedMatch) {
+      if (listType !== 'ul') {
+        if (listType) processedLines.push(`</${listType}>`);
         processedLines.push('<ul class="list-disc list-inside space-y-1 my-2">');
-        inList = true;
+        listType = 'ul';
       }
-      // Remove leading "- " or "* " and wrap in <li>
-      const content = line.replace(/^[\-\*]\s/, '');
-      processedLines.push(`<li>${content}</li>`);
+      processedLines.push(`<li>${unorderedMatch[1]}</li>`);
+    } else if (orderedMatch) {
+      if (listType !== 'ol') {
+        if (listType) processedLines.push(`</${listType}>`);
+        processedLines.push('<ol class="list-decimal list-inside space-y-1 my-2">');
+        listType = 'ol';
+      }
+      processedLines.push(`<li>${orderedMatch[1]}</li>`);
     } else {
-      if (inList) {
-        processedLines.push('</ul>');
-        inList = false;
+      if (listType) {
+        processedLines.push(`</${listType}>`);
+        listType = null;
       }
       processedLines.push(line);
     }
   }
-  
+
   // Close list if still open
-  if (inList) {
-    processedLines.push('</ul>');
+  if (listType) {
+    processedLines.push(`</${listType}>`);
   }
-  
+
   html = processedLines.join('\n');
-  
+
   // Convert line breaks to <br> (except in lists)
-  html = html.replace(/\n(?!<li|<\/ul|<ul)/g, '<br>');
-  
+  html = html.replace(/\n(?!<li|<\/ul|<ul|<\/ol|<ol)/g, '<br>');
+
   return html;
 }
