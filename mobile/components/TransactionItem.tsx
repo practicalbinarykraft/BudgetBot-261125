@@ -42,10 +42,10 @@ export function TransactionItem({ transaction, onPress, category, tag }: Transac
         <ThemedText type="bodySm" style={styles.description} numberOfLines={1}>
           {transaction.description}
         </ThemedText>
-        <View style={styles.meta}>
-          <ThemedText type="small" color={theme.textSecondary}>
-            {formattedDate}
-          </ThemedText>
+        <ThemedText type="small" color={theme.textSecondary}>
+          {formattedDate}
+        </ThemedText>
+        <View style={styles.badges}>
           {tag ? <TagBadge tag={tag} /> : null}
           {category ? (
             <View style={[styles.catBadge, { backgroundColor: (category.color || "#6b7280") + "20" }]}>
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     padding: Spacing.md,
     borderRadius: BorderRadius.lg,
     marginBottom: Spacing.sm,
@@ -87,11 +87,12 @@ const styles = StyleSheet.create({
   description: {
     fontWeight: "500",
   },
-  meta: {
+  badges: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.sm,
     flexWrap: "wrap",
+    minHeight: 22,
   },
   amount: {
     fontWeight: "600",
