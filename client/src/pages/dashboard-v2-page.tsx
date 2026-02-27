@@ -35,7 +35,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useTranslation } from "@/i18n";
-import { getCurrencySymbol, convertFromUSD } from "@/lib/currency-utils";
+import { getCurrencySymbol, convertFromUSD, formatTransactionAmount } from "@/lib/currency-utils";
 import { Transaction, Category, Budget, Notification, PersonalTag } from "@shared/schema";
 import { MobileMenuSheet } from "@/components/mobile-menu-sheet";
 import { AddTransactionDialog } from "@/components/transactions/add-transaction-dialog";
@@ -761,17 +761,17 @@ export default function DashboardV2Page() {
                       handleTransactionTagAction(e, transaction);
                     }
                   }}
-                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted/70 transition-colors"
+                  className="flex items-start justify-between p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted/70 transition-colors"
                 >
                   <div className="flex-1">
                     <div className="font-medium text-sm">{transaction.description}</div>
                     <div className="text-xs text-muted-foreground space-y-1">
                       <div>
-                        {format(new Date(transaction.date), 'd MMM yyyy', { 
-                          locale: language === 'ru' ? ru : undefined 
+                        {format(new Date(transaction.date), 'd MMM yyyy', {
+                          locale: language === 'ru' ? ru : undefined
                         })}
                       </div>
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap min-h-[22px]">
                         {/* Tag first */}
                         {personalTag ? (
                           <span 
@@ -846,8 +846,21 @@ export default function DashboardV2Page() {
                       </div>
                     </div>
                   </div>
-                  <div className={`font-semibold ${isExpense ? 'text-red-600' : 'text-green-600'}`}>
-                    {isExpense ? '-' : '+'}{displayAmount}
+                  <div className="flex flex-col items-end">
+                    <div className={`font-semibold ${isExpense ? 'text-red-600' : 'text-green-600'}`}>
+                      {isExpense ? '-' : '+'}{displayAmount}
+                    </div>
+                    {(() => {
+                      const currInfo = formatTransactionAmount(transaction);
+                      if (currInfo.showConversion) {
+                        return (
+                          <div className="text-xs text-muted-foreground">
+                            {currInfo.mainAmount} {currInfo.mainSymbol}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </div>
               );

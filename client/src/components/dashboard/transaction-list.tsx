@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { selectData } from "@/lib/queryClient";
 import { useTranslateCategory } from "@/lib/category-translations";
 import { calculateBudgetProgress } from "@/lib/budget-helpers";
+import { formatTransactionAmount } from "@/lib/currency-utils";
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -194,18 +195,18 @@ export function TransactionList({ transactions, onDelete, onEdit, showDelete = f
                   <div
                     key={transaction.id}
                     onClick={() => onEdit?.(transaction)}
-                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted/70 transition-colors"
+                    className="flex items-start justify-between p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted/70 transition-colors"
                     data-testid={`transaction-${transaction.id}`}
                   >
                     <div className="flex-1">
                       <div className="font-medium text-sm">{transaction.description}</div>
                       <div className="text-xs text-muted-foreground space-y-1">
                         <div>
-                          {format(parseISO(transaction.date), 'd MMM yyyy', { 
-                            locale: language === 'ru' ? ru : enUS 
+                          {format(parseISO(transaction.date), 'd MMM yyyy', {
+                            locale: language === 'ru' ? ru : enUS
                           })}
                         </div>
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap min-h-[22px]">
                           {/* Tag first */}
                           {personalTag ? (
                             <span 
@@ -257,8 +258,21 @@ export function TransactionList({ transactions, onDelete, onEdit, showDelete = f
                         </div>
                       </div>
                     </div>
-                    <div className={`font-semibold ${isExpense ? 'text-red-600' : 'text-green-600'}`}>
-                      {isExpense ? '-' : '+'}{displayAmount}
+                    <div className="flex flex-col items-end">
+                      <div className={`font-semibold ${isExpense ? 'text-red-600' : 'text-green-600'}`}>
+                        {isExpense ? '-' : '+'}{displayAmount}
+                      </div>
+                      {(() => {
+                        const currInfo = formatTransactionAmount(transaction);
+                        if (currInfo.showConversion) {
+                          return (
+                            <div className="text-xs text-muted-foreground">
+                              {currInfo.mainAmount} {currInfo.mainSymbol}
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   </div>
                 );
