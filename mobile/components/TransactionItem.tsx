@@ -46,14 +46,28 @@ export function TransactionItem({ transaction, onPress, category, tag }: Transac
           {formattedDate}
         </ThemedText>
         <View style={styles.badges}>
-          {tag ? <TagBadge tag={tag} /> : null}
+          {tag ? (
+            <TagBadge tag={tag} />
+          ) : (
+            <View style={styles.outlineBadge}>
+              <ThemedText type="small" color="#3b82f6" style={styles.catText}>
+                {language === 'ru' ? 'Тег' : 'Tag'}+
+              </ThemedText>
+            </View>
+          )}
           {category ? (
             <View style={[styles.catBadge, { backgroundColor: (category.color || "#6b7280") + "20" }]}>
               <ThemedText type="small" color={category.color || "#6b7280"} style={styles.catText}>
                 {category.name}
               </ThemedText>
             </View>
-          ) : null}
+          ) : (
+            <View style={styles.outlineBadge}>
+              <ThemedText type="small" color="#3b82f6" style={styles.catText}>
+                {language === 'ru' ? 'Категория' : 'Category'}+
+              </ThemedText>
+            </View>
+          )}
         </View>
       </View>
       <View style={styles.right}>
@@ -105,6 +119,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingVertical: 3,
     borderRadius: BorderRadius.full,
+  },
+  outlineBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: "#3b82f680",
+    backgroundColor: "#3b82f610",
   },
   catText: {
     fontWeight: "500",
