@@ -5,6 +5,7 @@ import { storage } from '../storage';
 import { getUserCategories } from '../services/categorization.service';
 import { getApiKey } from '../services/api-key-manager';
 import { chargeCredits } from '../services/billing.service';
+import { buildFinancialContext } from '../services/ai/financial-context.service';
 import { BillingError } from '../types/billing';
 
 export async function chatWithTools(
@@ -130,13 +131,26 @@ You can help users with:
 When users ask for information or actions, use the available tools to help them.
 Be concise, friendly, and accurate.`;
   
+  // Load conversation history from DB (user message already saved by route handler)
+  const recentMessages = await storage.getAIChatMessages(userId, 10);
+  const conversationHistory = recentMessages
+    .map(msg => ({
+      role: msg.role as 'user' | 'assistant',
+      content: msg.content
+    }))
+    .reverse(); // DB returns newest first, Claude needs chronological order
+
+  // Build financial context for smarter responses
+  const financialContext = await buildFinancialContext({ userId });
+  const fullSystemPrompt = systemPrompt + '\n\n--- User Financial Data ---\n' + financialContext;
+
   // Call Claude with tools enabled
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-5-20250929',
     max_tokens: 4096,
-    system: systemPrompt,
+    system: fullSystemPrompt,
     tools: ANTHROPIC_TOOLS, // Enable tool calling (clean definitions only)
-    messages: [{ role: 'user', content: message }]
+    messages: conversationHistory.length > 0 ? conversationHistory : [{ role: 'user', content: message }]
   });
   
   // 💳 Charge credits if using system key
